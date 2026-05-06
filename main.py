@@ -10,13 +10,13 @@ from telegram import Bot
 
 from scanner import get_matches, analyze_match
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-
-from ml_model import load_model, predict_btts, predict_over
-from ai_engine import ai_decision
+from ml_model import load_model, predict_btts
 from auto_optimize import load_config
 from results_checker import check_results
 
+# =====================
 # INIT
+# =====================
 load_model()
 cfg = load_config()
 
@@ -134,7 +134,7 @@ async def prematch(bot):
 
 
 # =====================
-# LIVE ULTRA
+# LIVE BTTS ONLY
 # =====================
 async def live(bot):
 
@@ -161,28 +161,28 @@ async def live(bot):
 
                 minute = m["fixture"]["status"]["elapsed"] or 0
 
-                if minute < 30 or minute > 75:
+                if minute < 30 or minute > 72:
                     continue
 
                 gh = m["goals"]["home"] or 0
                 ga = m["goals"]["away"] or 0
                 goals = gh + ga
 
-                # ❌ RED CARD
+                # RED CARD
                 try:
                     if m["cards"]["red"]["home"] or m["cards"]["red"]["away"]:
                         continue
                 except:
                     pass
 
-                # ❌ GAME STATE
+                # GAME STATE
                 if goals == 0 and minute < 40:
                     continue
 
                 if goals == 1 and minute > 65:
                     continue
 
-                # ===== STATS =====
+                # STATS
                 try:
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fid}",
@@ -203,12 +203,15 @@ async def live(bot):
                 total_shots = sh + sa
                 total_att = ah + aa
 
-                # ULTRA FEATURES
+                # FILTERS
+                if total_shots < 6:
+                    continue
+
                 pressure = total_att / max(1, minute)
                 shot_rate = total_shots / max(1, minute)
                 balance = abs(sh - sa)
 
-                if pressure < 1.2:
+                if pressure < 1.3:
                     continue
 
                 if shot_rate < 0.15:
@@ -217,7 +220,7 @@ async def live(bot):
                 if balance > 6:
                     continue
 
-                # ===== ODDS =====
+                # ODDS
                 try:
                     od = requests.get(
                         f"https://v3.football.api-sports.io/odds?fixture={fid}",
@@ -233,60 +236,25 @@ async def live(bot):
                 except:
                     continue
 
-                # ===== AI =====
-                decision = ai_decision(sh, sa, ah, aa, goals, 2.0, "x")
+                # BTTS ONLY
+                ml = predict_btts(sh, sa, ah, aa, goals)
 
-                if not decision:
+                if ml and ml < 0.55:
                     continue
 
-                market, score = decision
-
-                if score < cfg["min_score"]:
-                    continue
-
-                # MARKET LOGIC
-                if market == "BTTS":
-
-                    if goals == 1 and pressure < 1.5:
-                        continue
-
-                    if minute > 70 and total_shots < 8:
-                        continue
-
-                    ml = predict_btts(sh, sa, ah, aa, goals)
-                    if ml and ml < cfg["btts_threshold"]:
-                        continue
-
-                    odd = mk.get("Yes")
-
-                else:
-
-                    if pressure < 1.3:
-                        continue
-
-                    if minute > 70 and total_shots < 7:
-                        continue
-
-                    ml = predict_over(sh, sa, ah, aa, goals)
-                    if ml and ml < cfg["over_threshold"]:
-                        continue
-
-                    odd = mk.get("Over 2.5")
+                odd = mk.get("Yes")
 
                 if not odd:
                     continue
 
-                stake = stake_calc(72, odd)
+                stake = stake_calc(74, odd)
 
-                msg = f"""🔥 LIVE ULTRA
+                msg = f"""🔥 BTTS SIGNAL
 
 🏟 {home} vs {away}
 ⏱ {minute}' ({gh}:{ga})
 
-📊 Pressure: {round(pressure,2)}
-📊 Shots/min: {round(shot_rate,2)}
-
-👉 {market}
+👉 BTTS (YES)
 📈 {odd}
 💰 Stake: {round(stake,2)}
 """
@@ -298,9 +266,7 @@ async def live(bot):
         except Exception as e:
             print("ERROR:", e)
 
-        # 🔥 НАЙ-ВАЖНОТО — AUTO RESULTS
         check_results()
-
         await asyncio.sleep(LIVE_INTERVAL)
 
 
@@ -310,12 +276,13 @@ async def live(bot):
 async def main():
     bot = Bot(token=BOT_TOKEN)
 
-    print("🚀 FINAL PROFIT SYSTEM RUNNING")
+    print("🚀 SYSTEM RUNNING STABLE")
 
     await asyncio.gather(
         prematch(bot),
         live(bot)
     )
+
 
 if __name__ == "__main__":
     asyncio.run(main())
