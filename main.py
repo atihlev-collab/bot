@@ -1,28 +1,28 @@
-import sys
-import types
-
-sys.modules['imghdr'] = types.ModuleType('imghdr')
-
-import os
-os.system("pip install requests python-telegram-bot==13.15")
-
 import asyncio
 import requests
-from telegram import Bot
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 from scanner import get_matches, analyze_match
 
-BOT = Bot(token=BOT_TOKEN)
-
 HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 
 sent = set()
+CHECK_INTERVAL = 300
 
-CHECK_INTERVAL = 300  # 5 минути
+
+def send_telegram(text):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    data = {
+        "chat_id": CHAT_ID,
+        "text": text
+    }
+    try:
+        requests.post(url, data=data, timeout=10)
+    except:
+        pass
 
 
 async def run():
@@ -41,7 +41,6 @@ async def run():
                 if fid in sent:
                     continue
 
-                # време на мача
                 dt = datetime.fromisoformat(
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
@@ -49,19 +48,16 @@ async def run():
                 if dt <= now:
                     continue
 
-                # анализ от PRO scanner
                 res = analyze_match(m, HEADERS)
                 if not res:
                     continue
 
                 pick, prob, odds = max(res, key=lambda x: x[1])
 
-                # 🔥 основен филтър (най-важното)
                 if prob < 77:
                     continue
 
-                # odds контрол
-                if odds < 1.70 or odds > 2.30:
+                if odds < 1.7 or odds > 2.3:
                     continue
 
                 msg = f"""📈 VALUE
@@ -72,7 +68,7 @@ async def run():
 📊 {round(prob,1)}% | 💰 {odds}
 """
 
-                await BOT.send_message(chat_id=CHAT_ID, text=msg)
+                send_telegram(msg)
 
                 sent.add(fid)
                 count += 1
@@ -84,5 +80,7 @@ async def run():
 
 
 if __name__ == "__main__":
+    print("🚀 BOT RUNNING STABLE")
+    asyncio.run(run())_ == "__main__":
     print("🚀 STABLE BOT RUNNING 24/7")
     asyncio.run(run())
