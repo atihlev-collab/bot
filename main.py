@@ -1,3 +1,6 @@
+import os
+os.system("pip install requests python-telegram-bot==13.15")
+
 import asyncio
 import requests
 from telegram import Bot
