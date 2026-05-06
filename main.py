@@ -1,3 +1,8 @@
+import sys
+import types
+
+sys.modules['imghdr'] = types.ModuleType('imghdr')
+
 import os
 os.system("pip install requests python-telegram-bot==13.15")
 
