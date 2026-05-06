@@ -1,34 +1,80 @@
 import asyncio
+import logging
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from telegram import Bot
 
-from config import BOT_TOKEN, API_KEY, CHAT_ID
 from scanner import get_matches, analyze_match
+from config import BOT_TOKEN, API_KEY, CHAT_ID
 
-HEADERS = {"x-apisports-key": API_KEY}
+from ml_model import load_model, predict_btts, predict_over
+from ai_engine import ai_decision
+from auto_optimize import load_config
+from results_checker import check_results
+
+# INIT
+load_model()
+cfg = load_config()
+
 TZ = ZoneInfo("Europe/Sofia")
+HEADERS = {"x-apisports-key": API_KEY}
+
+CHECK_INTERVAL = 300
+LIVE_INTERVAL = 60
+
+MIN_PROB = 72
+MAX_PROB = 80
+MIN_ODDS = 1.60
+
+START_BANK = 100
+bank = START_BANK
+LOSS_STREAK = 0
 
 sent = set()
-CHECK_INTERVAL = 180  # по-често за лайв
+live_sent = set()
+HYBRID = {}
+
+logging.basicConfig(level=logging.WARNING)
+
+# =====================
+# RISK
+# =====================
+def risk_factor():
+    factor = 1.0
+
+    if LOSS_STREAK >= 3:
+        factor *= 0.7
+    if LOSS_STREAK >= 5:
+        factor *= 0.5
+
+    if bank < START_BANK * 0.85:
+        factor *= 0.8
+
+    return factor
 
 
-def send_telegram(text):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    data = {
-        "chat_id": CHAT_ID,
-        "text": text
-    }
-    try:
-        requests.post(url, data=data, timeout=10)
-    except Exception as e:
-        print("Telegram error:", e)
+def stake_calc(prob, odds):
+    p = prob / 100
+    kelly = (p * odds - 1) / (odds - 1)
+
+    if kelly <= 0:
+        return 0
+
+    kelly *= 0.5 * risk_factor()
+    stake = bank * kelly
+
+    return max(min(stake, bank * 0.05), bank * 0.01)
 
 
-async def run():
+# =====================
+# PREMATCH
+# =====================
+async def prematch(bot):
     while True:
         try:
             matches = get_matches(HEADERS)
+            now = datetime.now(TZ)
 
             count = 0
 
@@ -37,19 +83,20 @@ async def run():
                     break
 
                 fid = m["fixture"]["id"]
+
                 if fid in sent:
                     continue
 
-                # 👉 ВЗИМАМЕ ЛАЙВ МАЧОВЕ
-                status = m["fixture"]["status"]["short"]
+                league = m["league"]["name"]
 
-                if status not in ["1H", "2H"]:
+                if league in cfg["bad_leagues"]:
                     continue
 
-                minute = m["fixture"]["status"]["elapsed"]
+                dt = datetime.fromisoformat(
+                    m["fixture"]["date"].replace("Z","+00:00")
+                ).astimezone(TZ)
 
-                # 👉 ИГРАЕМ САМО В ТОЗИ ПРОЗОРЕЦ
-                if not minute or minute < 10 or minute > 75:
+                if dt <= now:
                     continue
 
                 res = analyze_match(m, HEADERS)
@@ -58,28 +105,23 @@ async def run():
 
                 pick, prob, odds = max(res, key=lambda x: x[1])
 
-                # 👉 САМО GOAL ПАЗАРИ
-                if pick not in ["Over 2.5", "BTTS Yes"]:
+                if prob < MIN_PROB or prob > MAX_PROB:
                     continue
 
-                if prob < 72:
+                if odds < MIN_ODDS:
                     continue
 
-                if odds < 1.6 or odds > 2.5:
-                    continue
-
-                msg = f"""🔥 LIVE GOAL
+                msg = f"""📈 PREMATCH
 
 {m['teams']['home']['name']} vs {m['teams']['away']['name']}
-⏱️ {minute} мин
-
 👉 {pick}
 📊 {round(prob,1)}% | 💰 {odds}
 """
 
-                send_telegram(msg)
+                await bot.send_message(chat_id=CHAT_ID, text=msg)
 
                 sent.add(fid)
+                HYBRID[fid] = True
                 count += 1
 
         except Exception as e:
@@ -88,5 +130,189 @@ async def run():
         await asyncio.sleep(CHECK_INTERVAL)
 
 
+# =====================
+# LIVE ULTRA
+# =====================
+async def live(bot):
+
+    while True:
+        try:
+            r = requests.get(
+                "https://v3.football.api-sports.io/fixtures?live=all",
+                headers=HEADERS
+            ).json()
+
+            for m in r.get("response", []):
+
+                fid = m["fixture"]["id"]
+
+                if fid not in HYBRID:
+                    continue
+
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+                key = f"{home}_{away}"
+
+                if key in live_sent:
+                    continue
+
+                minute = m["fixture"]["status"]["elapsed"] or 0
+
+                if minute < 30 or minute > 75:
+                    continue
+
+                gh = m["goals"]["home"] or 0
+                ga = m["goals"]["away"] or 0
+                goals = gh + ga
+
+                # ❌ RED CARD
+                try:
+                    if m["cards"]["red"]["home"] or m["cards"]["red"]["away"]:
+                        continue
+                except:
+                    pass
+
+                # ❌ GAME STATE
+                if goals == 0 and minute < 40:
+                    continue
+
+                if goals == 1 and minute > 65:
+                    continue
+
+                # ===== STATS =====
+                try:
+                    sr = requests.get(
+                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fid}",
+                        headers=HEADERS
+                    ).json()
+
+                    s = sr["response"]
+
+                    sh = int(s[0]["statistics"][2]["value"] or 0)
+                    sa = int(s[1]["statistics"][2]["value"] or 0)
+
+                    ah = int(s[0]["statistics"][0]["value"] or 0)
+                    aa = int(s[1]["statistics"][0]["value"] or 0)
+
+                except:
+                    continue
+
+                total_shots = sh + sa
+                total_att = ah + aa
+
+                # ULTRA FEATURES
+                pressure = total_att / max(1, minute)
+                shot_rate = total_shots / max(1, minute)
+                balance = abs(sh - sa)
+
+                if pressure < 1.2:
+                    continue
+
+                if shot_rate < 0.15:
+                    continue
+
+                if balance > 6:
+                    continue
+
+                # ===== ODDS =====
+                try:
+                    od = requests.get(
+                        f"https://v3.football.api-sports.io/odds?fixture={fid}",
+                        headers=HEADERS
+                    ).json()
+
+                    mk = {
+                        v["value"]: float(v["odd"])
+                        for b in od["response"][0]["bookmakers"]
+                        for bet in b["bets"]
+                        for v in bet["values"]
+                    }
+                except:
+                    continue
+
+                # ===== AI =====
+                decision = ai_decision(sh, sa, ah, aa, goals, 2.0, "x")
+
+                if not decision:
+                    continue
+
+                market, score = decision
+
+                if score < cfg["min_score"]:
+                    continue
+
+                # MARKET LOGIC
+                if market == "BTTS":
+
+                    if goals == 1 and pressure < 1.5:
+                        continue
+
+                    if minute > 70 and total_shots < 8:
+                        continue
+
+                    ml = predict_btts(sh, sa, ah, aa, goals)
+                    if ml and ml < cfg["btts_threshold"]:
+                        continue
+
+                    odd = mk.get("Yes")
+
+                else:
+
+                    if pressure < 1.3:
+                        continue
+
+                    if minute > 70 and total_shots < 7:
+                        continue
+
+                    ml = predict_over(sh, sa, ah, aa, goals)
+                    if ml and ml < cfg["over_threshold"]:
+                        continue
+
+                    odd = mk.get("Over 2.5")
+
+                if not odd:
+                    continue
+
+                stake = stake_calc(72, odd)
+
+                msg = f"""🔥 LIVE ULTRA
+
+🏟 {home} vs {away}
+⏱ {minute}' ({gh}:{ga})
+
+📊 Pressure: {round(pressure,2)}
+📊 Shots/min: {round(shot_rate,2)}
+
+👉 {market}
+📈 {odd}
+💰 Stake: {round(stake,2)}
+"""
+
+                await bot.send_message(chat_id=CHAT_ID, text=msg)
+
+                live_sent.add(key)
+
+        except Exception as e:
+            print("ERROR:", e)
+
+        # 🔥 НАЙ-ВАЖНОТО — AUTO RESULTS
+        check_results()
+
+        await asyncio.sleep(LIVE_INTERVAL)
+
+
+# =====================
+# MAIN
+# =====================
+async def main():
+    bot = Bot(token=BOT_TOKEN)
+
+    print("🚀 FINAL PROFIT SYSTEM RUNNING")
+
+    await asyncio.gather(
+        prematch(bot),
+        live(bot)
+    )
+
 if __name__ == "__main__":
-    asyncio.run(run())
+    asyncio.run(main())
