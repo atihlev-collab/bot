@@ -81,6 +81,7 @@ async def run():
 
 if __name__ == "__main__":
     print("🚀 BOT RUNNING STABLE")
-    asyncio.run(run())_ == "__main__":
+    if __name__ == "__main__":
+    asyncio.run(run())
     print("🚀 STABLE BOT RUNNING 24/7")
     asyncio.run(run())
