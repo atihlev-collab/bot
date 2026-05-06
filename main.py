@@ -1,3 +1,5 @@
+import os
+os.system("pip install joblib numpy scikit-learn")
 import asyncio
 import logging
 import requests
