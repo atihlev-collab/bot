@@ -21,8 +21,8 @@ def send_telegram(text):
     }
     try:
         requests.post(url, data=data, timeout=10)
-    except:
-        pass
+    except Exception as e:
+        print("Telegram error:", e)
 
 
 async def run():
@@ -80,8 +80,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    print("🚀 BOT RUNNING STABLE")
-    if __name__ == "__main__":
-    asyncio.run(run())
-    print("🚀 STABLE BOT RUNNING 24/7")
     asyncio.run(run())
