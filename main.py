@@ -1,5 +1,6 @@
 import os
-os.system("pip install joblib numpy scikit-learn")
+os.system("pip install requests python-telegram-bot==13.15 joblib numpy scikit-learn")
+
 import asyncio
 import logging
 import requests
