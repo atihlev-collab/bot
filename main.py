@@ -10,13 +10,13 @@ from telegram import Bot
 
 from scanner import get_matches, analyze_match
 from config import BOT_TOKEN, API_KEY, CHAT_ID
+
 from ml_model import load_model, predict_btts
+from ai_engine import ai_decision
 from auto_optimize import load_config
 from results_checker import check_results
 
-# =====================
 # INIT
-# =====================
 load_model()
 cfg = load_config()
 
@@ -134,7 +134,7 @@ async def prematch(bot):
 
 
 # =====================
-# LIVE BTTS ONLY
+# LIVE (BTTS ONLY)
 # =====================
 async def live(bot):
 
@@ -203,21 +203,21 @@ async def live(bot):
                 total_shots = sh + sa
                 total_att = ah + aa
 
-                # FILTERS
-                if total_shots < 6:
-                    continue
-
                 pressure = total_att / max(1, minute)
                 shot_rate = total_shots / max(1, minute)
                 balance = abs(sh - sa)
 
+                # 🔥 ФИЛТРИ (по-стегнати)
                 if pressure < 1.3:
                     continue
 
                 if shot_rate < 0.15:
                     continue
 
-                if balance > 6:
+                if balance > 5:
+                    continue
+
+                if total_shots < 6:
                     continue
 
                 # ODDS
@@ -236,25 +236,30 @@ async def live(bot):
                 except:
                     continue
 
-                # BTTS ONLY
-                ml = predict_btts(sh, sa, ah, aa, goals)
-
-                if ml and ml < 0.55:
-                    continue
-
                 odd = mk.get("Yes")
 
-                if not odd:
+                if not odd or odd < 1.55:
                     continue
 
-                stake = stake_calc(74, odd)
+                # ML FILTER
+                try:
+                    ml = predict_btts(sh, sa, ah, aa, goals)
+                    if ml and ml < 0.55:
+                        continue
+                except:
+                    pass
 
-                msg = f"""🔥 BTTS SIGNAL
+                stake = stake_calc(72, odd)
+
+                msg = f"""🔥 LIVE BTTS
 
 🏟 {home} vs {away}
 ⏱ {minute}' ({gh}:{ga})
 
-👉 BTTS (YES)
+📊 Pressure: {round(pressure,2)}
+📊 Shots/min: {round(shot_rate,2)}
+
+👉 GOAL / GOAL
 📈 {odd}
 💰 Stake: {round(stake,2)}
 """
@@ -266,7 +271,9 @@ async def live(bot):
         except Exception as e:
             print("ERROR:", e)
 
+        # 🔥 AUTO LEARNING (върнато)
         check_results()
+
         await asyncio.sleep(LIVE_INTERVAL)
 
 
@@ -276,7 +283,7 @@ async def live(bot):
 async def main():
     bot = Bot(token=BOT_TOKEN)
 
-    print("🚀 SYSTEM RUNNING STABLE")
+    print("🚀 SYSTEM RUNNING")
 
     await asyncio.gather(
         prematch(bot),
