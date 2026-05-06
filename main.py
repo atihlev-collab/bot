@@ -10,7 +10,7 @@ HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 
 sent = set()
-CHECK_INTERVAL = 300
+CHECK_INTERVAL = 180  # по-често за лайв
 
 
 def send_telegram(text):
@@ -29,7 +29,6 @@ async def run():
     while True:
         try:
             matches = get_matches(HEADERS)
-            now = datetime.now(TZ)
 
             count = 0
 
@@ -41,11 +40,16 @@ async def run():
                 if fid in sent:
                     continue
 
-                dt = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
+                # 👉 ВЗИМАМЕ ЛАЙВ МАЧОВЕ
+                status = m["fixture"]["status"]["short"]
 
-                if dt <= now:
+                if status not in ["1H", "2H"]:
+                    continue
+
+                minute = m["fixture"]["status"]["elapsed"]
+
+                # 👉 ИГРАЕМ САМО В ТОЗИ ПРОЗОРЕЦ
+                if not minute or minute < 10 or minute > 75:
                     continue
 
                 res = analyze_match(m, HEADERS)
@@ -54,15 +58,20 @@ async def run():
 
                 pick, prob, odds = max(res, key=lambda x: x[1])
 
-                if prob < 77:
+                # 👉 САМО GOAL ПАЗАРИ
+                if pick not in ["Over 2.5", "BTTS Yes"]:
                     continue
 
-                if odds < 1.7 or odds > 2.3:
+                if prob < 72:
                     continue
 
-                msg = f"""📈 VALUE
+                if odds < 1.6 or odds > 2.5:
+                    continue
+
+                msg = f"""🔥 LIVE GOAL
 
 {m['teams']['home']['name']} vs {m['teams']['away']['name']}
+⏱️ {minute} мин
 
 👉 {pick}
 📊 {round(prob,1)}% | 💰 {odds}
