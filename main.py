@@ -12,7 +12,6 @@ from scanner import get_matches, analyze_match
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
 from ml_model import load_model, predict_btts
-from ai_engine import ai_decision
 from auto_optimize import load_config
 from results_checker import check_results
 
@@ -134,7 +133,7 @@ async def prematch(bot):
 
 
 # =====================
-# LIVE (BTTS ONLY)
+# LIVE (BTTS)
 # =====================
 async def live(bot):
 
@@ -168,21 +167,18 @@ async def live(bot):
                 ga = m["goals"]["away"] or 0
                 goals = gh + ga
 
-                # RED CARD
                 try:
                     if m["cards"]["red"]["home"] or m["cards"]["red"]["away"]:
                         continue
                 except:
                     pass
 
-                # GAME STATE
                 if goals == 0 and minute < 40:
                     continue
 
                 if goals == 1 and minute > 65:
                     continue
 
-                # STATS
                 try:
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fid}",
@@ -207,7 +203,6 @@ async def live(bot):
                 shot_rate = total_shots / max(1, minute)
                 balance = abs(sh - sa)
 
-                # 🔥 ФИЛТРИ (по-стегнати)
                 if pressure < 1.3:
                     continue
 
@@ -220,7 +215,6 @@ async def live(bot):
                 if total_shots < 6:
                     continue
 
-                # ODDS
                 try:
                     od = requests.get(
                         f"https://v3.football.api-sports.io/odds?fixture={fid}",
@@ -241,7 +235,6 @@ async def live(bot):
                 if not odd or odd < 1.55:
                     continue
 
-                # ML FILTER
                 try:
                     ml = predict_btts(sh, sa, ah, aa, goals)
                     if ml and ml < 0.55:
@@ -271,9 +264,7 @@ async def live(bot):
         except Exception as e:
             print("ERROR:", e)
 
-        # 🔥 AUTO LEARNING (върнато)
         check_results()
-
         await asyncio.sleep(LIVE_INTERVAL)
 
 
@@ -282,6 +273,9 @@ async def live(bot):
 # =====================
 async def main():
     bot = Bot(token=BOT_TOKEN)
+
+    # ✅ TEST СЪОБЩЕНИЕ
+    await bot.send_message(chat_id=CHAT_ID, text="TEST")
 
     print("🚀 SYSTEM RUNNING")
 
