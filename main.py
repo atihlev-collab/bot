@@ -25,10 +25,6 @@ HEADERS = {"x-apisports-key": API_KEY}
 CHECK_INTERVAL = 300
 LIVE_INTERVAL = 60
 
-MIN_PROB = 72
-MAX_PROB = 80
-MIN_ODDS = 1.60
-
 START_BANK = 100
 bank = START_BANK
 LOSS_STREAK = 0
@@ -44,15 +40,10 @@ logging.basicConfig(level=logging.WARNING)
 # =====================
 def risk_factor():
     factor = 1.0
-
     if LOSS_STREAK >= 3:
         factor *= 0.7
     if LOSS_STREAK >= 5:
         factor *= 0.5
-
-    if bank < START_BANK * 0.85:
-        factor *= 0.8
-
     return factor
 
 
@@ -64,9 +55,7 @@ def stake_calc(prob, odds):
         return 0
 
     kelly *= 0.5 * risk_factor()
-    stake = bank * kelly
-
-    return max(min(stake, bank * 0.05), bank * 0.01)
+    return max(min(bank * kelly, bank * 0.05), bank * 0.01)
 
 
 # =====================
@@ -78,20 +67,10 @@ async def prematch(bot):
             matches = get_matches(HEADERS)
             now = datetime.now(TZ)
 
-            count = 0
-
-            for m in matches:
-                if count >= 5:
-                    break
-
+            for m in matches[:5]:
                 fid = m["fixture"]["id"]
 
                 if fid in sent:
-                    continue
-
-                league = m["league"]["name"]
-
-                if league in cfg["bad_leagues"]:
                     continue
 
                 dt = datetime.fromisoformat(
@@ -107,10 +86,7 @@ async def prematch(bot):
 
                 pick, prob, odds = max(res, key=lambda x: x[1])
 
-                if prob < MIN_PROB or prob > MAX_PROB:
-                    continue
-
-                if odds < MIN_ODDS:
+                if prob < 70 or odds < 1.50:
                     continue
 
                 msg = f"""📈 PREMATCH
@@ -124,7 +100,6 @@ async def prematch(bot):
 
                 sent.add(fid)
                 HYBRID[fid] = True
-                count += 1
 
         except Exception as e:
             print("ERROR:", e)
@@ -133,10 +108,9 @@ async def prematch(bot):
 
 
 # =====================
-# LIVE (BTTS)
+# LIVE BTTS
 # =====================
 async def live(bot):
-
     while True:
         try:
             r = requests.get(
@@ -147,7 +121,6 @@ async def live(bot):
             for m in r.get("response", []):
 
                 fid = m["fixture"]["id"]
-
                 if fid not in HYBRID:
                     continue
 
@@ -160,25 +133,18 @@ async def live(bot):
 
                 minute = m["fixture"]["status"]["elapsed"] or 0
 
-                if minute < 30 or minute > 72:
+                if minute < 28 or minute > 75:
                     continue
 
                 gh = m["goals"]["home"] or 0
                 ga = m["goals"]["away"] or 0
                 goals = gh + ga
 
-                try:
-                    if m["cards"]["red"]["home"] or m["cards"]["red"]["away"]:
-                        continue
-                except:
-                    pass
-
-                if goals == 0 and minute < 40:
+                # GAME STATE
+                if goals == 0 and minute < 35:
                     continue
 
-                if goals == 1 and minute > 65:
-                    continue
-
+                # STATS
                 try:
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fid}",
@@ -203,18 +169,20 @@ async def live(bot):
                 shot_rate = total_shots / max(1, minute)
                 balance = abs(sh - sa)
 
-                if pressure < 1.3:
+                # 🔓 ОТПУСНАТИ ФИЛТРИ
+                if pressure < 1.1:
                     continue
 
-                if shot_rate < 0.15:
+                if shot_rate < 0.12:
                     continue
 
-                if balance > 5:
+                if balance > 6:
                     continue
 
-                if total_shots < 6:
+                if total_shots < 4:
                     continue
 
+                # ODDS
                 try:
                     od = requests.get(
                         f"https://v3.football.api-sports.io/odds?fixture={fid}",
@@ -232,17 +200,18 @@ async def live(bot):
 
                 odd = mk.get("Yes")
 
-                if not odd or odd < 1.55:
+                if not odd or odd < 1.50:
                     continue
 
+                # ML FILTER
                 try:
                     ml = predict_btts(sh, sa, ah, aa, goals)
-                    if ml and ml < 0.55:
+                    if ml and ml < 0.50:
                         continue
                 except:
                     pass
 
-                stake = stake_calc(72, odd)
+                stake = stake_calc(70, odd)
 
                 msg = f"""🔥 LIVE BTTS
 
@@ -273,9 +242,6 @@ async def live(bot):
 # =====================
 async def main():
     bot = Bot(token=BOT_TOKEN)
-
-    # ✅ TEST СЪОБЩЕНИЕ
-    await bot.send_message(chat_id=CHAT_ID, text="TEST")
 
     print("🚀 SYSTEM RUNNING")
 
