@@ -90,9 +90,9 @@ async def prematch(bot):
                     league = m["league"]["id"]
                     season = m["league"]["season"]
 
-                    # =====================================
+                    # =========================
                     # TEAM STATS
-                    # =====================================
+                    # =========================
                     home_stats = requests.get(
                         f"https://v3.football.api-sports.io/teams/statistics?league={league}&season={season}&team={home_id}",
                         headers=HEADERS
@@ -106,9 +106,9 @@ async def prematch(bot):
                     hs = home_stats["response"]
                     aws = away_stats["response"]
 
-                    # =====================================
+                    # =========================
                     # GOALS AVG
-                    # =====================================
+                    # =========================
                     home_avg = float(
                         hs["goals"]["for"]["average"]["total"]["home"] or 0
                     )
@@ -117,9 +117,9 @@ async def prematch(bot):
                         aws["goals"]["for"]["average"]["total"]["away"] or 0
                     )
 
-                    # =====================================
+                    # =========================
                     # OVER STATS
-                    # =====================================
+                    # =========================
                     home_over = int(
                         hs["fixtures"]["over_2_5"]["total"] or 0
                     )
@@ -128,29 +128,30 @@ async def prematch(bot):
                         aws["fixtures"]["over_2_5"]["total"] or 0
                     )
 
-                    # =====================================
+                    # =========================
                     # SCORE
-                    # =====================================
+                    # =========================
                     score = 0
 
-                    if home_avg >= 1.2:
+                    if home_avg >= 1.1:
                         score += 1
 
-                    if away_avg >= 1.0:
+                    if away_avg >= 0.9:
                         score += 1
 
-                    if home_over >= 5:
+                    if home_over >= 4:
                         score += 1
 
-                    if away_over >= 5:
+                    if away_over >= 4:
                         score += 1
 
+                    # по-лек филтър
                     if score < 2:
                         continue
 
-                    # =====================================
+                    # =========================
                     # ODDS
-                    # =====================================
+                    # =========================
                     od = requests.get(
                         f"https://v3.football.api-sports.io/odds?fixture={fixture}",
                         headers=HEADERS
@@ -179,12 +180,13 @@ async def prematch(bot):
                     if not odd:
                         continue
 
-                    if odd < 1.45 or odd > 2.30:
+                    # по-широк odds range
+                    if odd < 1.35 or odd > 2.50:
                         continue
 
-                    # =====================================
+                    # =========================
                     # MARKET
-                    # =====================================
+                    # =========================
                     if odd <= 1.65:
                         market = "OVER 1.5 GOALS"
                     else:
@@ -205,9 +207,9 @@ async def prematch(bot):
                 except Exception as e:
                     print("PREMATCH MATCH ERROR:", e)
 
-            # =====================================
+            # =========================
             # TOP 3
-            # =====================================
+            # =========================
             prematch_list = sorted(
                 prematch_list,
                 key=lambda x: x["score"],
@@ -278,9 +280,9 @@ async def live(bot):
                     home_goals = m["goals"]["home"] or 0
                     away_goals = m["goals"]["away"] or 0
 
-                    # =====================================
+                    # =========================
                     # STATS
-                    # =====================================
+                    # =========================
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
                         headers=HEADERS
@@ -294,11 +296,11 @@ async def live(bot):
                     h_stats = stats[0]["statistics"]
                     a_stats = stats[1]["statistics"]
 
-                    # ATTACKS
+                    # attacks
                     home_attacks = int(h_stats[0]["value"] or 0)
                     away_attacks = int(a_stats[0]["value"] or 0)
 
-                    # SHOTS
+                    # shots
                     home_shots = int(h_stats[2]["value"] or 0)
                     away_shots = int(a_stats[2]["value"] or 0)
 
@@ -308,9 +310,9 @@ async def live(bot):
                     pressure = total_attacks / max(1, minute)
                     shot_rate = total_shots / max(1, minute)
 
-                    # =====================================
+                    # =========================
                     # ODDS
-                    # =====================================
+                    # =========================
                     od = requests.get(
                         f"https://v3.football.api-sports.io/odds?fixture={fixture}",
                         headers=HEADERS
@@ -340,10 +342,10 @@ async def live(bot):
 
                         if (
                             minute >= 20
-                            and pressure >= 0.60
-                            and shot_rate >= 0.10
-                            and total_attacks >= 24
-                            and total_shots >= 4
+                            and total_attacks >= 16
+                            and total_shots >= 2
+                            and pressure >= 0.40
+                            and shot_rate >= 0.06
                         ):
 
                             odd = (
@@ -385,10 +387,9 @@ async def live(bot):
                         if (
                             minute >= 25
                             and minute <= 70
-                            and pressure <= 0.45
-                            and shot_rate <= 0.05
-                            and total_attacks <= 18
-                            and total_shots <= 2
+                            and total_attacks <= 12
+                            and total_shots <= 1
+                            and pressure <= 0.30
                             and (home_goals + away_goals) <= 1
                         ):
 
@@ -432,10 +433,10 @@ async def live(bot):
                         if (
                             minute >= 20
                             and minute <= 75
-                            and dominance_home >= 15
-                            and home_shots >= away_shots + 3
-                            and home_shots >= 4
-                            and pressure >= 0.70
+                            and dominance_home >= 8
+                            and home_shots >= away_shots + 2
+                            and home_shots >= 2
+                            and pressure >= 0.45
                         ):
 
                             odd = (
@@ -484,10 +485,10 @@ async def live(bot):
                         if (
                             minute >= 20
                             and minute <= 75
-                            and dominance_away >= 15
-                            and away_shots >= home_shots + 3
-                            and away_shots >= 4
-                            and pressure >= 0.70
+                            and dominance_away >= 8
+                            and away_shots >= home_shots + 2
+                            and away_shots >= 2
+                            and pressure >= 0.45
                         ):
 
                             odd = (
