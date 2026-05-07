@@ -75,22 +75,24 @@ async def prematch(bot):
                         m["fixture"]["date"].replace("Z", "+00:00")
                     ).astimezone(TZ)
 
-                    # само мачове след сега
                     if date <= now:
                         continue
 
                     home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
-                    # =====================================
-                    # TEAM STATS
-                    # =====================================
+                    league_name = m["league"]["name"]
+                    country = m["league"]["country"]
+
                     home_id = m["teams"]["home"]["id"]
                     away_id = m["teams"]["away"]["id"]
 
                     league = m["league"]["id"]
                     season = m["league"]["season"]
 
+                    # =====================================
+                    # TEAM STATS
+                    # =====================================
                     home_stats = requests.get(
                         f"https://v3.football.api-sports.io/teams/statistics?league={league}&season={season}&team={home_id}",
                         headers=HEADERS
@@ -105,7 +107,7 @@ async def prematch(bot):
                     aws = away_stats["response"]
 
                     # =====================================
-                    # GOALS
+                    # GOALS AVG
                     # =====================================
                     home_avg = float(
                         hs["goals"]["for"]["average"]["total"]["home"] or 0
@@ -116,7 +118,7 @@ async def prematch(bot):
                     )
 
                     # =====================================
-                    # OVER %
+                    # OVER STATS
                     # =====================================
                     home_over = int(
                         hs["fixtures"]["over_2_5"]["total"] or 0
@@ -180,12 +182,23 @@ async def prematch(bot):
                     if odd < 1.45 or odd > 2.30:
                         continue
 
+                    # =====================================
+                    # MARKET
+                    # =====================================
+                    if odd <= 1.65:
+                        market = "OVER 1.5 GOALS"
+                    else:
+                        market = "OVER 2.5 GOALS"
+
                     prematch_list.append({
                         "fixture": fixture,
                         "home": home,
                         "away": away,
+                        "league": league_name,
+                        "country": country,
                         "score": score,
                         "odd": odd,
+                        "market": market,
                         "time": date.strftime("%H:%M")
                     })
 
@@ -208,10 +221,14 @@ async def prematch(bot):
                 msg = f"""
 📈 PREMATCH
 
+🌍 {game['country']}
+🏆 {game['league']}
+
 🏟 {game['home']} vs {game['away']}
 ⏰ {game['time']}
 
-👉 OVER GOALS
+🎯 MARKET: {game['market']}
+
 📊 Score: {game['score']}/4
 📈 Odd: {game['odd']}
 """
@@ -250,6 +267,9 @@ async def live(bot):
                     home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
+                    league_name = m["league"]["name"]
+                    country = m["league"]["country"]
+
                     minute = m["fixture"]["status"]["elapsed"] or 0
 
                     if minute < 20 or minute > 75:
@@ -274,11 +294,11 @@ async def live(bot):
                     h_stats = stats[0]["statistics"]
                     a_stats = stats[1]["statistics"]
 
-                    # attacks
+                    # ATTACKS
                     home_attacks = int(h_stats[0]["value"] or 0)
                     away_attacks = int(a_stats[0]["value"] or 0)
 
-                    # shots
+                    # SHOTS
                     home_shots = int(h_stats[2]["value"] or 0)
                     away_shots = int(a_stats[2]["value"] or 0)
 
@@ -334,11 +354,16 @@ async def live(bot):
                             if odd and odd >= 1.30:
 
                                 msg = f"""
-🔥 OVER 1.5 GOALS
+🔥 LIVE SIGNAL
+
+🌍 {country}
+🏆 {league_name}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
 ⚽ {home_goals}:{away_goals}
+
+🎯 MARKET: OVER 1.5 GOALS
 
 📊 Total attacks: {total_attacks}
 📊 Total shots: {total_shots}
@@ -372,11 +397,16 @@ async def live(bot):
                             if odd and odd >= 1.40:
 
                                 msg = f"""
-❄️ UNDER 1.5 GOALS
+❄️ LIVE SIGNAL
+
+🌍 {country}
+🏆 {league_name}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
 ⚽ {home_goals}:{away_goals}
+
+🎯 MARKET: UNDER 1.5 GOALS
 
 📊 Total attacks: {total_attacks}
 📊 Total shots: {total_shots}
@@ -416,11 +446,16 @@ async def live(bot):
                             if odd and odd >= 1.50:
 
                                 msg = f"""
-🚨 NEXT GOAL HOME
+🚨 LIVE SIGNAL
+
+🌍 {country}
+🏆 {league_name}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
 ⚽ {home_goals}:{away_goals}
+
+🎯 MARKET: NEXT GOAL HOME
 
 📊 Home attacks: {home_attacks}
 📊 Away attacks: {away_attacks}
@@ -463,11 +498,16 @@ async def live(bot):
                             if odd and odd >= 1.50:
 
                                 msg = f"""
-🚨 NEXT GOAL AWAY
+🚨 LIVE SIGNAL
+
+🌍 {country}
+🏆 {league_name}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
 ⚽ {home_goals}:{away_goals}
+
+🎯 MARKET: NEXT GOAL AWAY
 
 📊 Home attacks: {home_attacks}
 📊 Away attacks: {away_attacks}
