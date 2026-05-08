@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.WARNING)
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
-# SIGNAL STORAGE
+# STORAGE
 # =========================================================
 live_sent = set()
 prematch_sent = set()
@@ -99,7 +99,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH MATCHES
+# PREMATCH SELECTOR
 # =========================================================
 def get_best_matches(mode="today"):
 
@@ -386,7 +386,7 @@ async def live_loop():
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5
+                    # OVER 1.5 GOALS
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
@@ -423,7 +423,7 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5
+                    # UNDER 1.5 GOALS
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
