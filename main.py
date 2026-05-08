@@ -43,6 +43,17 @@ BLOCKED_WORDS = [
     "belarusian"
 ]
 
+BAD_LEAGUES = [
+    "reserve",
+    "reserves",
+    "youth",
+    "u19",
+    "u21",
+    "u23",
+    "women",
+    "friendly"
+]
+
 # =========================================================
 # BLOCK CHECK
 # =========================================================
@@ -50,7 +61,13 @@ def blocked(country, league):
 
     text = f"{country} {league}".lower()
 
-    return any(word in text for word in BLOCKED_WORDS)
+    if any(word in text for word in BLOCKED_WORDS):
+        return True
+
+    if any(word in text for word in BAD_LEAGUES):
+        return True
+
+    return False
 
 # =========================================================
 # GET STAT
@@ -129,6 +146,9 @@ def get_best_matches(mode="today"):
                 odd = 1.50
                 market = "OVER 1.5 GOALS"
 
+                # =================================================
+                # ODDS
+                # =================================================
                 try:
 
                     od = requests.get(
@@ -158,7 +178,7 @@ def get_best_matches(mode="today"):
 
                             odd = odds_map.get("Over 2.5")
 
-                            if odd >= 1.60:
+                            if odd >= 1.70:
                                 market = "OVER 2.5 GOALS"
 
                         elif odds_map.get("Over 1.5"):
@@ -262,6 +282,8 @@ async def prematch_loop():
 
         try:
 
+            prematch_sent.clear()
+
             matches = get_best_matches("today")
 
             for game in matches:
@@ -364,7 +386,7 @@ async def live_loop():
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5 (MORE ACTIVE)
+                    # OVER 1.5
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
@@ -373,9 +395,8 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 72
-                            and total_attacks >= 9
-                            and total_shots >= 2
-                            and pressure >= 0.18
+                            and total_attacks >= 7
+                            and pressure >= 0.16
                         ):
 
                             msg = f"""
@@ -402,7 +423,7 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5 (MUCH TIGHTER)
+                    # UNDER 1.5
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
@@ -441,7 +462,7 @@ async def live_loop():
                             live_sent.add(under_key)
 
                     # =================================================
-                    # NEXT GOAL HOME (EASIER)
+                    # NEXT GOAL HOME
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
@@ -450,9 +471,8 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and home_attacks >= away_attacks + 4
-                            and home_shots >= away_shots + 1
-                            and home_shots >= 2
+                            and home_attacks >= away_attacks + 3
+                            and home_shots >= away_shots
                         ):
 
                             msg = f"""
@@ -482,7 +502,7 @@ async def live_loop():
                             live_sent.add(next_home_key)
 
                     # =================================================
-                    # NEXT GOAL AWAY (EASIER)
+                    # NEXT GOAL AWAY
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
@@ -491,9 +511,8 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and away_attacks >= home_attacks + 4
-                            and away_shots >= home_shots + 1
-                            and away_shots >= 2
+                            and away_attacks >= home_attacks + 3
+                            and away_shots >= home_shots
                         ):
 
                             msg = f"""
