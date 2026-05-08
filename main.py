@@ -24,12 +24,14 @@ HEADERS = {
 TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_INTERVAL = 60
+PREMATCH_INTERVAL = 1800
 
 logging.basicConfig(level=logging.WARNING)
 
 bot = Bot(token=BOT_TOKEN)
 
 live_sent = set()
+prematch_sent = set()
 
 # =========================================================
 # BLOCKED
@@ -103,13 +105,17 @@ def get_best_matches(mode="today"):
 
                 hour = date.hour
 
+                # =====================================
                 # TODAY
+                # =====================================
                 if mode == "today":
 
                     if hour < 8 or hour > 23:
                         continue
 
+                # =====================================
                 # NIGHT
+                # =====================================
                 if mode == "night":
 
                     if hour >= 8 and hour <= 23:
@@ -129,7 +135,9 @@ def get_best_matches(mode="today"):
                 odd = 1.50
                 market = "OVER 1.5 GOALS"
 
+                # =====================================
                 # ODDS
+                # =====================================
                 try:
 
                     od = requests.get(
@@ -170,6 +178,7 @@ def get_best_matches(mode="today"):
                     pass
 
                 prematch_list.append({
+                    "fixture": fixture,
                     "home": home,
                     "away": away,
                     "country": country,
@@ -182,7 +191,9 @@ def get_best_matches(mode="today"):
             except Exception as e:
                 print("MATCH ERROR:", e)
 
+        # =====================================
         # FALLBACK
+        # =====================================
         if not prematch_list:
 
             for m in matches[:3]:
@@ -203,6 +214,7 @@ def get_best_matches(mode="today"):
                     ).astimezone(TZ)
 
                     prematch_list.append({
+                        "fixture": m["fixture"]["id"],
                         "home": home,
                         "away": away,
                         "country": country,
@@ -230,7 +242,7 @@ def get_best_matches(mode="today"):
         return []
 
 # =========================================================
-# TODAY
+# TODAY COMMAND
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -260,7 +272,7 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT
+# NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -288,6 +300,49 @@ def night(update: Update, context: CallbackContext):
 """
 
     update.message.reply_text(msg)
+
+# =========================================================
+# PREMATCH LOOP
+# =========================================================
+async def prematch_loop():
+
+    while True:
+
+        try:
+
+            matches = get_best_matches("today")
+
+            for game in matches:
+
+                fixture = game["fixture"]
+
+                if fixture in prematch_sent:
+                    continue
+
+                msg = f"""
+📈 PREMATCH SIGNAL
+
+🌍 {game['country']}
+🏆 {game['league']}
+
+🏟 {game['home']} vs {game['away']}
+⏰ {game['time']}
+
+🎯 {game['market']}
+📈 Odd: {game['odd']}
+"""
+
+                await bot.send_message(
+                    chat_id=CHAT_ID,
+                    text=msg
+                )
+
+                prematch_sent.add(fixture)
+
+        except Exception as e:
+            print("PREMATCH ERROR:", e)
+
+        await asyncio.sleep(PREMATCH_INTERVAL)
 
 # =========================================================
 # LIVE LOOP
@@ -395,7 +450,7 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =====================================
-                    # UNDER 1.5 (TIGHTER)
+                    # UNDER 1.5
                     # =====================================
                     under_key = f"UNDER15_{fixture}"
 
@@ -518,7 +573,7 @@ async def live_loop():
         await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
-# START LIVE THREAD
+# START THREADS
 # =========================================================
 def start_live_loop():
 
@@ -526,6 +581,13 @@ def start_live_loop():
     asyncio.set_event_loop(loop)
 
     loop.run_until_complete(live_loop())
+
+def start_prematch_loop():
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(prematch_loop())
 
 # =========================================================
 # MAIN
@@ -543,11 +605,16 @@ def main():
 
     updater.start_polling()
 
-    thread = threading.Thread(
+    live_thread = threading.Thread(
         target=start_live_loop
     )
 
-    thread.start()
+    prematch_thread = threading.Thread(
+        target=start_prematch_loop
+    )
+
+    live_thread.start()
+    prematch_thread.start()
 
     updater.idle()
 
