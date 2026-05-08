@@ -53,26 +53,10 @@ BAD_LEAGUES = [
     "u21",
     "u23",
     "women",
-    "friendly"
-]
-
-# =========================================================
-# TOP LEAGUES
-# =========================================================
-TOP_LEAGUES = [
-    "Premier League",
-    "Champions League",
-    "Europa League",
-    "Conference League",
-    "La Liga",
-    "Serie A",
-    "Bundesliga",
-    "Ligue 1",
-    "Eredivisie",
-    "Primeira Liga",
-    "MLS",
-    "Brasileirao",
-    "Copa Libertadores"
+    "friendly",
+    "next pro",
+    "amateur",
+    "regional"
 ]
 
 # =========================================================
@@ -143,77 +127,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# GET MATCHES
-# =========================================================
-def get_matches(mode="today"):
-
-    result = []
-
-    try:
-
-        r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=150",
-            headers=HEADERS,
-            timeout=20
-        ).json()
-
-        matches = r.get("response", [])
-
-        for m in matches:
-
-            try:
-
-                league = m["league"]["name"]
-                country = m["league"]["country"]
-
-                if blocked(country, league):
-                    continue
-
-                if not any(
-                    x.lower() in league.lower()
-                    for x in TOP_LEAGUES
-                ):
-                    continue
-
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-
-                hour = date.hour
-
-                if mode == "today":
-
-                    if hour < 8 or hour > 23:
-                        continue
-
-                if mode == "night":
-
-                    if 8 <= hour <= 23:
-                        continue
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                result.append({
-                    "league": league,
-                    "country": country,
-                    "home": home,
-                    "away": away,
-                    "time": date.strftime("%H:%M")
-                })
-
-            except:
-                pass
-
-        return result[:3]
-
-    except Exception as e:
-
-        print("MATCH ERROR:", e)
-        return []
-
-# =========================================================
-# PREMATCH MATCHES
+# BEST PREMATCH MATCHES
 # =========================================================
 def get_prematch_matches():
 
@@ -222,7 +136,7 @@ def get_prematch_matches():
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=80",
+            "https://v3.football.api-sports.io/fixtures?next=120",
             headers=HEADERS,
             timeout=20
         ).json()
@@ -237,12 +151,6 @@ def get_prematch_matches():
                 country = m["league"]["country"]
 
                 if blocked(country, league):
-                    continue
-
-                if not any(
-                    x.lower() in league.lower()
-                    for x in TOP_LEAGUES
-                ):
                     continue
 
                 date = datetime.fromisoformat(
@@ -254,17 +162,87 @@ def get_prematch_matches():
 
                 fixture = m["fixture"]["id"]
 
+                # =================================================
+                # SCORE SYSTEM
+                # =================================================
+                score = 0
+
+                market = "OVER 1.5 GOALS"
+
+                # HIGH SCORING LEAGUES
+                if "Bundesliga" in league:
+                    score += 10
+                    market = "OVER 2.5 GOALS"
+
+                if "Eredivisie" in league:
+                    score += 10
+                    market = "OVER 2.5 GOALS"
+
+                if "MLS" in league:
+                    score += 8
+                    market = "OVER 2.5 GOALS"
+
+                if "Brasileirao" in league:
+                    score += 7
+
+                if "Libertadores" in league:
+                    score += 7
+
+                if "Premier League" in league:
+                    score += 9
+
+                if "La Liga" in league:
+                    score += 8
+
+                if "Serie A" in league:
+                    score += 7
+
+                if "Champions League" in league:
+                    score += 9
+
+                # BIG TEAMS
+                big_teams = [
+                    "Manchester",
+                    "Liverpool",
+                    "Arsenal",
+                    "Barcelona",
+                    "Real Madrid",
+                    "Bayern",
+                    "Dortmund",
+                    "PSG",
+                    "Inter",
+                    "Milan",
+                    "Juventus",
+                    "Ajax",
+                    "Benfica",
+                    "Porto"
+                ]
+
+                if any(x.lower() in home.lower() for x in big_teams):
+                    score += 3
+
+                if any(x.lower() in away.lower() for x in big_teams):
+                    score += 3
+
                 result.append({
                     "fixture": fixture,
                     "country": country,
                     "league": league,
                     "home": home,
                     "away": away,
-                    "time": date.strftime("%H:%M")
+                    "time": date.strftime("%H:%M"),
+                    "score": score,
+                    "market": market
                 })
 
             except:
                 pass
+
+        result = sorted(
+            result,
+            key=lambda x: x["score"],
+            reverse=True
+        )
 
         return result[:3]
 
@@ -278,9 +256,7 @@ def get_prematch_matches():
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
-    print("TODAY COMMAND RECEIVED")
-
-    matches = get_matches("today")
+    matches = get_prematch_matches()
 
     if not matches:
 
@@ -300,6 +276,8 @@ def today(update: Update, context: CallbackContext):
 
 🏟 {g['home']} vs {g['away']}
 ⏰ {g['time']}
+
+🎯 {g['market']}
 """
 
     update.message.reply_text(msg)
@@ -309,9 +287,7 @@ def today(update: Update, context: CallbackContext):
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
-    print("NIGHT COMMAND RECEIVED")
-
-    matches = get_matches("night")
+    matches = get_prematch_matches()
 
     if not matches:
 
@@ -324,13 +300,19 @@ def night(update: Update, context: CallbackContext):
 
     for g in matches:
 
-        msg += f"""
+        hour = int(g["time"].split(":")[0])
+
+        if hour < 0 or hour > 8:
+
+            msg += f"""
 
 🌍 {g['country']}
 🏆 {g['league']}
 
 🏟 {g['home']} vs {g['away']}
 ⏰ {g['time']}
+
+🎯 {g['market']}
 """
 
     update.message.reply_text(msg)
@@ -362,7 +344,7 @@ async def prematch_loop():
 🏟 {g['home']} vs {g['away']}
 ⏰ {g['time']}
 
-🎯 GOOD PREMATCH MATCH
+🎯 {g['market']}
 """
 
                 await bot.send_message(
