@@ -25,19 +25,61 @@ LIVE_INTERVAL = 60
 
 logging.basicConfig(level=logging.WARNING)
 
+bot = Bot(token=BOT_TOKEN)
+
 live_sent = set()
 
-BLOCKED_COUNTRIES = [
-    "Russia",
-    "Belarus"
+# =========================================================
+# BLOCKED
+# =========================================================
+BLOCKED_WORDS = [
+    "russia",
+    "russian",
+    "belarus",
+    "belarusian"
 ]
 
-bot = Bot(token=BOT_TOKEN)
+# =========================================================
+# HELPERS
+# =========================================================
+def blocked(country, league):
+
+    text = f"{country} {league}".lower()
+
+    return any(word in text for word in BLOCKED_WORDS)
+
+# =========================================================
+# GET STAT
+# =========================================================
+def get_stat(stats, name):
+
+    try:
+
+        for s in stats:
+
+            if s["type"] == name:
+
+                value = s["value"]
+
+                if value is None:
+                    return 0
+
+                if isinstance(value, str):
+                    value = value.replace("%", "")
+
+                return int(value)
+
+    except:
+        pass
+
+    return 0
 
 # =========================================================
 # GET BEST MATCHES
 # =========================================================
 def get_best_matches(mode="today"):
+
+    prematch_list = []
 
     try:
 
@@ -48,13 +90,9 @@ def get_best_matches(mode="today"):
 
         matches = r.get("response", [])
 
-        prematch_list = []
-
         for m in matches:
 
             try:
-
-                fixture = m["fixture"]["id"]
 
                 date = datetime.fromisoformat(
                     m["fixture"]["date"].replace("Z", "+00:00")
@@ -63,16 +101,19 @@ def get_best_matches(mode="today"):
                 hour = date.hour
 
                 # =====================================
-                # TODAY / NIGHT FILTER
+                # TODAY
                 # =====================================
                 if mode == "today":
 
-                    if hour < 8 or hour > 22:
+                    if hour < 8 or hour > 23:
                         continue
 
+                # =====================================
+                # NIGHT
+                # =====================================
                 if mode == "night":
 
-                    if hour >= 8 and hour <= 22:
+                    if hour >= 8 and hour <= 23:
                         continue
 
                 home = m["teams"]["home"]["name"]
@@ -81,86 +122,24 @@ def get_best_matches(mode="today"):
                 country = m["league"]["country"]
                 league_name = m["league"]["name"]
 
-                if country in BLOCKED_COUNTRIES:
+                # =====================================
+                # BLOCKED
+                # =====================================
+                if blocked(country, league_name):
                     continue
 
-                home_id = m["teams"]["home"]["id"]
-                away_id = m["teams"]["away"]["id"]
-
-                league = m["league"]["id"]
-                season = m["league"]["season"]
-
                 # =====================================
-                # TEAM STATS
+                # BASIC SCORE
                 # =====================================
-                home_stats = requests.get(
-                    f"https://v3.football.api-sports.io/teams/statistics?league={league}&season={season}&team={home_id}",
-                    headers=HEADERS
-                ).json()
-
-                away_stats = requests.get(
-                    f"https://v3.football.api-sports.io/teams/statistics?league={league}&season={season}&team={away_id}",
-                    headers=HEADERS
-                ).json()
-
-                hs = home_stats.get("response", {})
-                aws = away_stats.get("response", {})
-
-                # =====================================
-                # GOALS AVG
-                # =====================================
-                try:
-                    home_avg = float(
-                        hs["goals"]["for"]["average"]["total"]["home"] or 0
-                    )
-                except:
-                    home_avg = 0
-
-                try:
-                    away_avg = float(
-                        aws["goals"]["for"]["average"]["total"]["away"] or 0
-                    )
-                except:
-                    away_avg = 0
-
-                # =====================================
-                # OVER STATS
-                # =====================================
-                try:
-                    home_over = int(
-                        hs["fixtures"]["over_2_5"]["total"] or 0
-                    )
-                except:
-                    home_over = 0
-
-                try:
-                    away_over = int(
-                        aws["fixtures"]["over_2_5"]["total"] or 0
-                    )
-                except:
-                    away_over = 0
-
-                # =====================================
-                # SCORE
-                # =====================================
-                score = 0
-
-                if home_avg >= 1.0:
-                    score += 1
-
-                if away_avg >= 0.8:
-                    score += 1
-
-                if home_over >= 2:
-                    score += 1
-
-                if away_over >= 2:
-                    score += 1
+                score = 1
 
                 # =====================================
                 # ODDS
                 # =====================================
                 odd = 1.50
+                market = "OVER 1.5 GOALS"
+
+                fixture = m["fixture"]["id"]
 
                 try:
 
@@ -183,82 +162,41 @@ def get_best_matches(mode="today"):
 
                                     odds_map[v["value"]] = float(v["odd"])
 
-                        odd = (
-                            odds_map.get("Over 2.5")
-                            or odds_map.get("Over 1.5")
-                            or 1.50
-                        )
+                        if odds_map.get("Over 2.5"):
+
+                            odd = odds_map.get("Over 2.5")
+
+                            if odd >= 1.60:
+                                market = "OVER 2.5 GOALS"
+
+                        elif odds_map.get("Over 1.5"):
+
+                            odd = odds_map.get("Over 1.5")
+                            market = "OVER 1.5 GOALS"
 
                 except:
                     pass
 
-                if odd < 1.25 or odd > 3.20:
-                    continue
-
-                # =====================================
-                # MARKET
-                # =====================================
-                if odd <= 1.65:
-                    market = "OVER 1.5 GOALS"
-                else:
-                    market = "OVER 2.5 GOALS"
-
                 prematch_list.append({
                     "home": home,
                     "away": away,
-                    "league": league_name,
                     "country": country,
-                    "score": score,
-                    "odd": odd,
+                    "league": league_name,
+                    "time": date.strftime("%H:%M"),
                     "market": market,
-                    "time": date.strftime("%H:%M")
+                    "odd": odd,
+                    "score": score
                 })
 
             except Exception as e:
                 print("MATCH ERROR:", e)
 
         # =====================================
-        # FALLBACK
-        # =====================================
-        if not prematch_list:
-
-            for m in matches[:3]:
-
-                try:
-
-                    home = m["teams"]["home"]["name"]
-                    away = m["teams"]["away"]["name"]
-
-                    country = m["league"]["country"]
-                    league_name = m["league"]["name"]
-
-                    if country in BLOCKED_COUNTRIES:
-                        continue
-
-                    date = datetime.fromisoformat(
-                        m["fixture"]["date"].replace("Z", "+00:00")
-                    ).astimezone(TZ)
-
-                    prematch_list.append({
-                        "home": home,
-                        "away": away,
-                        "league": league_name,
-                        "country": country,
-                        "score": 1,
-                        "odd": 1.50,
-                        "market": "OVER 1.5 GOALS",
-                        "time": date.strftime("%H:%M")
-                    })
-
-                except:
-                    pass
-
-        # =====================================
         # SORT
         # =====================================
         prematch_list = sorted(
             prematch_list,
-            key=lambda x: (x["score"], x["odd"]),
+            key=lambda x: x["odd"],
             reverse=True
         )
 
@@ -266,6 +204,7 @@ def get_best_matches(mode="today"):
 
     except Exception as e:
         print("GET MATCHES ERROR:", e)
+
         return []
 
 # =========================================================
@@ -294,7 +233,6 @@ def today(update: Update, context: CallbackContext):
 
 🎯 {game['market']}
 
-📊 Score: {game['score']}/4
 📈 Odd: {game['odd']}
 """
 
@@ -326,14 +264,13 @@ def night(update: Update, context: CallbackContext):
 
 🎯 {game['market']}
 
-📊 Score: {game['score']}/4
 📈 Odd: {game['odd']}
 """
 
     update.message.reply_text(msg)
 
 # =========================================================
-# LIVE SYSTEM
+# LIVE LOOP
 # =========================================================
 async def live_loop():
 
@@ -360,7 +297,10 @@ async def live_loop():
                     country = m["league"]["country"]
                     league_name = m["league"]["name"]
 
-                    if country in BLOCKED_COUNTRIES:
+                    # =====================================
+                    # BLOCKED
+                    # =====================================
+                    if blocked(country, league_name):
                         continue
 
                     minute = m["fixture"]["status"]["elapsed"] or 0
@@ -387,51 +327,19 @@ async def live_loop():
                     h_stats = stats[0]["statistics"]
                     a_stats = stats[1]["statistics"]
 
-                    home_attacks = int(h_stats[0]["value"] or 0)
-                    away_attacks = int(a_stats[0]["value"] or 0)
+                    # =====================================
+                    # REAL STATS
+                    # =====================================
+                    home_attacks = get_stat(h_stats, "Attacks")
+                    away_attacks = get_stat(a_stats, "Attacks")
 
-                    home_shots = int(h_stats[2]["value"] or 0)
-                    away_shots = int(a_stats[2]["value"] or 0)
+                    home_shots = get_stat(h_stats, "Shots on Goal")
+                    away_shots = get_stat(a_stats, "Shots on Goal")
 
                     total_attacks = home_attacks + away_attacks
                     total_shots = home_shots + away_shots
 
                     pressure = total_attacks / max(1, minute)
-
-                    # =====================================
-                    # ODDS
-                    # =====================================
-                    odd = 1.50
-
-                    try:
-
-                        od = requests.get(
-                            f"https://v3.football.api-sports.io/odds?fixture={fixture}",
-                            headers=HEADERS
-                        ).json()
-
-                        bookmakers = od.get("response", [])
-
-                        if bookmakers:
-
-                            odds_map = {}
-
-                            for b in bookmakers[0]["bookmakers"]:
-
-                                for bet in b["bets"]:
-
-                                    for v in bet["values"]:
-
-                                        odds_map[v["value"]] = float(v["odd"])
-
-                            odd = (
-                                odds_map.get("Over 1.5")
-                                or odds_map.get("Over 2.5")
-                                or 1.50
-                            )
-
-                    except:
-                        pass
 
                     # =====================================
                     # OVER 1.5
@@ -441,9 +349,9 @@ async def live_loop():
                     if over_key not in live_sent:
 
                         if (
-                            total_attacks >= 16
-                            and total_shots >= 2
-                            and pressure >= 0.40
+                            total_attacks >= 10
+                            and total_shots >= 1
+                            and pressure >= 0.25
                         ):
 
                             msg = f"""
@@ -460,8 +368,6 @@ async def live_loop():
 
 📊 Attacks: {total_attacks}
 📊 Shots: {total_shots}
-
-📈 Odd: {odd}
 """
 
                             await bot.send_message(
@@ -480,9 +386,9 @@ async def live_loop():
 
                         if (
                             minute >= 25
-                            and total_attacks <= 12
-                            and total_shots <= 1
-                            and pressure <= 0.30
+                            and total_attacks <= 8
+                            and total_shots == 0
+                            and pressure <= 0.20
                         ):
 
                             msg = f"""
@@ -499,8 +405,6 @@ async def live_loop():
 
 📊 Attacks: {total_attacks}
 📊 Shots: {total_shots}
-
-📈 Odd: {odd}
 """
 
                             await bot.send_message(
@@ -509,6 +413,84 @@ async def live_loop():
                             )
 
                             live_sent.add(under_key)
+
+                    # =====================================
+                    # NEXT GOAL HOME
+                    # =====================================
+                    next_home_key = f"NEXTHOME_{fixture}"
+
+                    if next_home_key not in live_sent:
+
+                        if (
+                            home_attacks >= away_attacks + 6
+                            and home_shots >= away_shots + 1
+                            and home_shots >= 2
+                        ):
+
+                            msg = f"""
+🚨 LIVE SIGNAL
+
+🌍 {country}
+🏆 {league_name}
+
+🏟 {home} vs {away}
+⏱ {minute}'
+⚽ {home_goals}:{away_goals}
+
+🎯 NEXT GOAL HOME
+
+📊 Home attacks: {home_attacks}
+📊 Away attacks: {away_attacks}
+
+📊 Home shots: {home_shots}
+📊 Away shots: {away_shots}
+"""
+
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
+
+                            live_sent.add(next_home_key)
+
+                    # =====================================
+                    # NEXT GOAL AWAY
+                    # =====================================
+                    next_away_key = f"NEXTAWAY_{fixture}"
+
+                    if next_away_key not in live_sent:
+
+                        if (
+                            away_attacks >= home_attacks + 6
+                            and away_shots >= home_shots + 1
+                            and away_shots >= 2
+                        ):
+
+                            msg = f"""
+🚨 LIVE SIGNAL
+
+🌍 {country}
+🏆 {league_name}
+
+🏟 {home} vs {away}
+⏱ {minute}'
+⚽ {home_goals}:{away_goals}
+
+🎯 NEXT GOAL AWAY
+
+📊 Home attacks: {home_attacks}
+📊 Away attacks: {away_attacks}
+
+📊 Home shots: {home_shots}
+📊 Away shots: {away_shots}
+"""
+
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
+
+                            live_sent.add(next_away_key)
 
                 except Exception as e:
                     print("LIVE MATCH ERROR:", e)
@@ -519,11 +501,14 @@ async def live_loop():
         await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
-# MAIN
+# ASYNC
 # =========================================================
 async def run_live():
     await live_loop()
 
+# =========================================================
+# MAIN
+# =========================================================
 def main():
 
     print("🚀 SYSTEM RUNNING")
