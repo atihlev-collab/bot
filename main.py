@@ -364,17 +364,18 @@ async def live_loop():
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5 (BALANCED)
+                    # OVER 1.5 (BALANCED FIX)
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
                     if over_key not in live_sent:
 
                         if (
-                            minute >= 20
-                            and total_attacks >= 8
-                            and total_shots >= 2
-                            and pressure >= 0.18
+                            minute >= 22
+                            and minute <= 70
+                            and total_attacks >= 10
+                            and total_shots >= 3
+                            and pressure >= 0.22
                         ):
 
                             msg = f"""
@@ -401,7 +402,7 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5 (BALANCED)
+                    # UNDER 1.5 (GOOD)
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
@@ -440,7 +441,7 @@ async def live_loop():
                             live_sent.add(under_key)
 
                     # =================================================
-                    # NEXT GOAL HOME
+                    # NEXT GOAL HOME (BALANCED FIX)
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
@@ -448,9 +449,10 @@ async def live_loop():
 
                         if (
                             minute >= 20
-                            and home_attacks >= away_attacks + 5
-                            and home_shots >= away_shots + 1
-                            and home_shots >= 2
+                            and minute <= 75
+                            and home_attacks >= away_attacks + 7
+                            and home_shots >= away_shots + 2
+                            and home_shots >= 3
                         ):
 
                             msg = f"""
@@ -480,7 +482,7 @@ async def live_loop():
                             live_sent.add(next_home_key)
 
                     # =================================================
-                    # NEXT GOAL AWAY
+                    # NEXT GOAL AWAY (BALANCED FIX)
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
@@ -488,9 +490,10 @@ async def live_loop():
 
                         if (
                             minute >= 20
-                            and away_attacks >= home_attacks + 5
-                            and away_shots >= home_shots + 1
-                            and away_shots >= 2
+                            and minute <= 75
+                            and away_attacks >= home_attacks + 7
+                            and away_shots >= home_shots + 2
+                            and away_shots >= 3
                         ):
 
                             msg = f"""
