@@ -364,18 +364,18 @@ async def live_loop():
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5 (BALANCED FIX)
+                    # OVER 1.5 (MORE ACTIVE)
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
                     if over_key not in live_sent:
 
                         if (
-                            minute >= 22
-                            and minute <= 70
-                            and total_attacks >= 10
-                            and total_shots >= 3
-                            and pressure >= 0.22
+                            minute >= 20
+                            and minute <= 72
+                            and total_attacks >= 9
+                            and total_shots >= 2
+                            and pressure >= 0.18
                         ):
 
                             msg = f"""
@@ -402,19 +402,19 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5 (GOOD)
+                    # UNDER 1.5 (MUCH TIGHTER)
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
                     if under_key not in live_sent:
 
                         if (
-                            minute >= 30
-                            and minute <= 70
-                            and total_goals <= 1
-                            and total_attacks <= 7
-                            and total_shots <= 1
-                            and pressure <= 0.14
+                            minute >= 45
+                            and minute <= 65
+                            and total_goals == 0
+                            and total_attacks <= 3
+                            and total_shots == 0
+                            and pressure <= 0.08
                         ):
 
                             msg = f"""
@@ -441,7 +441,7 @@ async def live_loop():
                             live_sent.add(under_key)
 
                     # =================================================
-                    # NEXT GOAL HOME (BALANCED FIX)
+                    # NEXT GOAL HOME (EASIER)
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
@@ -450,9 +450,9 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and home_attacks >= away_attacks + 7
-                            and home_shots >= away_shots + 2
-                            and home_shots >= 3
+                            and home_attacks >= away_attacks + 4
+                            and home_shots >= away_shots + 1
+                            and home_shots >= 2
                         ):
 
                             msg = f"""
@@ -482,7 +482,7 @@ async def live_loop():
                             live_sent.add(next_home_key)
 
                     # =================================================
-                    # NEXT GOAL AWAY (BALANCED FIX)
+                    # NEXT GOAL AWAY (EASIER)
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
@@ -491,9 +491,9 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and away_attacks >= home_attacks + 7
-                            and away_shots >= home_shots + 2
-                            and away_shots >= 3
+                            and away_attacks >= home_attacks + 4
+                            and away_shots >= home_shots + 1
+                            and away_shots >= 2
                         ):
 
                             msg = f"""
