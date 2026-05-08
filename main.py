@@ -103,17 +103,13 @@ def get_best_matches(mode="today"):
 
                 hour = date.hour
 
-                # =====================================
                 # TODAY
-                # =====================================
                 if mode == "today":
 
                     if hour < 8 or hour > 23:
                         continue
 
-                # =====================================
                 # NIGHT
-                # =====================================
                 if mode == "night":
 
                     if hour >= 8 and hour <= 23:
@@ -133,9 +129,7 @@ def get_best_matches(mode="today"):
                 odd = 1.50
                 market = "OVER 1.5 GOALS"
 
-                # =====================================
                 # ODDS
-                # =====================================
                 try:
 
                     od = requests.get(
@@ -188,9 +182,7 @@ def get_best_matches(mode="today"):
             except Exception as e:
                 print("MATCH ERROR:", e)
 
-        # =====================================
         # FALLBACK
-        # =====================================
         if not prematch_list:
 
             for m in matches[:3]:
@@ -337,6 +329,8 @@ async def live_loop():
                     home_goals = m["goals"]["home"] or 0
                     away_goals = m["goals"]["away"] or 0
 
+                    total_goals = home_goals + away_goals
+
                     # =====================================
                     # STATS
                     # =====================================
@@ -401,15 +395,19 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =====================================
-                    # UNDER 1.5
+                    # UNDER 1.5 (TIGHTER)
                     # =====================================
                     under_key = f"UNDER15_{fixture}"
 
                     if under_key not in live_sent:
 
                         if (
-                            minute >= 25
-                            and total_attacks <= 6
+                            minute >= 35
+                            and minute <= 70
+                            and total_goals == 0
+                            and total_attacks <= 4
+                            and total_shots == 0
+                            and pressure <= 0.10
                         ):
 
                             msg = f"""
@@ -543,10 +541,8 @@ def main():
     dp.add_handler(CommandHandler("today", today))
     dp.add_handler(CommandHandler("night", night))
 
-    # TELEGRAM
     updater.start_polling()
 
-    # LIVE THREAD
     thread = threading.Thread(
         target=start_live_loop
     )
