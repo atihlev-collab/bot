@@ -6,14 +6,15 @@ import logging
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
 from telegram import Bot, Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
-# =========================
+# =========================================================
 # CONFIG
-# =========================
+# =========================================================
 HEADERS = {
     "x-apisports-key": API_KEY
 }
@@ -31,13 +32,10 @@ BLOCKED_COUNTRIES = [
     "Belarus"
 ]
 
-# =========================
-# TELEGRAM BOT
-# =========================
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
-# HELPERS
+# GET BEST MATCHES
 # =========================================================
 def get_best_matches(mode="today"):
 
@@ -51,8 +49,6 @@ def get_best_matches(mode="today"):
         matches = r.get("response", [])
 
         prematch_list = []
-
-        now = datetime.now(TZ)
 
         for m in matches:
 
@@ -76,7 +72,7 @@ def get_best_matches(mode="today"):
 
                 if mode == "night":
 
-                    if hour < 22 and hour > 7:
+                    if hour >= 8 and hour <= 22:
                         continue
 
                 home = m["teams"]["home"]["name"]
@@ -107,77 +103,96 @@ def get_best_matches(mode="today"):
                     headers=HEADERS
                 ).json()
 
-                hs = home_stats["response"]
-                aws = away_stats["response"]
+                hs = home_stats.get("response", {})
+                aws = away_stats.get("response", {})
 
-                home_avg = float(
-                    hs["goals"]["for"]["average"]["total"]["home"] or 0
-                )
+                # =====================================
+                # GOALS AVG
+                # =====================================
+                try:
+                    home_avg = float(
+                        hs["goals"]["for"]["average"]["total"]["home"] or 0
+                    )
+                except:
+                    home_avg = 0
 
-                away_avg = float(
-                    aws["goals"]["for"]["average"]["total"]["away"] or 0
-                )
+                try:
+                    away_avg = float(
+                        aws["goals"]["for"]["average"]["total"]["away"] or 0
+                    )
+                except:
+                    away_avg = 0
 
-                home_over = int(
-                    hs["fixtures"]["over_2_5"]["total"] or 0
-                )
+                # =====================================
+                # OVER STATS
+                # =====================================
+                try:
+                    home_over = int(
+                        hs["fixtures"]["over_2_5"]["total"] or 0
+                    )
+                except:
+                    home_over = 0
 
-                away_over = int(
-                    aws["fixtures"]["over_2_5"]["total"] or 0
-                )
+                try:
+                    away_over = int(
+                        aws["fixtures"]["over_2_5"]["total"] or 0
+                    )
+                except:
+                    away_over = 0
 
                 # =====================================
                 # SCORE
                 # =====================================
                 score = 0
 
-                if home_avg >= 1.1:
+                if home_avg >= 1.0:
                     score += 1
 
-                if away_avg >= 0.9:
+                if away_avg >= 0.8:
                     score += 1
 
-                if home_over >= 4:
+                if home_over >= 2:
                     score += 1
 
-                if away_over >= 4:
+                if away_over >= 2:
                     score += 1
-
-                if score < 2:
-                    continue
 
                 # =====================================
                 # ODDS
                 # =====================================
-                od = requests.get(
-                    f"https://v3.football.api-sports.io/odds?fixture={fixture}",
-                    headers=HEADERS
-                ).json()
+                odd = 1.50
 
-                odds_response = od.get("response", [])
+                try:
 
-                if not odds_response:
-                    continue
+                    od = requests.get(
+                        f"https://v3.football.api-sports.io/odds?fixture={fixture}",
+                        headers=HEADERS
+                    ).json()
 
-                odds_map = {}
+                    odds_response = od.get("response", [])
 
-                for b in odds_response[0]["bookmakers"]:
+                    if odds_response:
 
-                    for bet in b["bets"]:
+                        odds_map = {}
 
-                        for v in bet["values"]:
+                        for b in odds_response[0]["bookmakers"]:
 
-                            odds_map[v["value"]] = float(v["odd"])
+                            for bet in b["bets"]:
 
-                odd = (
-                    odds_map.get("Over 2.5")
-                    or odds_map.get("Over 1.5")
-                )
+                                for v in bet["values"]:
 
-                if not odd:
-                    continue
+                                    odds_map[v["value"]] = float(v["odd"])
 
-                if odd < 1.35 or odd > 2.50:
+                        odd = (
+                            odds_map.get("Over 2.5")
+                            or odds_map.get("Over 1.5")
+                            or 1.50
+                        )
+
+                except:
+                    pass
+
+                if odd < 1.25 or odd > 3.20:
                     continue
 
                 # =====================================
@@ -201,6 +216,42 @@ def get_best_matches(mode="today"):
 
             except Exception as e:
                 print("MATCH ERROR:", e)
+
+        # =====================================
+        # FALLBACK
+        # =====================================
+        if not prematch_list:
+
+            for m in matches[:3]:
+
+                try:
+
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    country = m["league"]["country"]
+                    league_name = m["league"]["name"]
+
+                    if country in BLOCKED_COUNTRIES:
+                        continue
+
+                    date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace("Z", "+00:00")
+                    ).astimezone(TZ)
+
+                    prematch_list.append({
+                        "home": home,
+                        "away": away,
+                        "league": league_name,
+                        "country": country,
+                        "score": 1,
+                        "odd": 1.50,
+                        "market": "OVER 1.5 GOALS",
+                        "time": date.strftime("%H:%M")
+                    })
+
+                except:
+                    pass
 
         # =====================================
         # SORT
@@ -306,8 +357,8 @@ async def live_loop():
                     home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
-                    league_name = m["league"]["name"]
                     country = m["league"]["country"]
+                    league_name = m["league"]["name"]
 
                     if country in BLOCKED_COUNTRIES:
                         continue
@@ -350,29 +401,41 @@ async def live_loop():
                     # =====================================
                     # ODDS
                     # =====================================
-                    od = requests.get(
-                        f"https://v3.football.api-sports.io/odds?fixture={fixture}",
-                        headers=HEADERS
-                    ).json()
+                    odd = 1.50
 
-                    bookmakers = od.get("response", [])
+                    try:
 
-                    if not bookmakers:
-                        continue
+                        od = requests.get(
+                            f"https://v3.football.api-sports.io/odds?fixture={fixture}",
+                            headers=HEADERS
+                        ).json()
 
-                    odds_map = {}
+                        bookmakers = od.get("response", [])
 
-                    for b in bookmakers[0]["bookmakers"]:
+                        if bookmakers:
 
-                        for bet in b["bets"]:
+                            odds_map = {}
 
-                            for v in bet["values"]:
+                            for b in bookmakers[0]["bookmakers"]:
 
-                                odds_map[v["value"]] = float(v["odd"])
+                                for bet in b["bets"]:
 
-                    # =====================================================
+                                    for v in bet["values"]:
+
+                                        odds_map[v["value"]] = float(v["odd"])
+
+                            odd = (
+                                odds_map.get("Over 1.5")
+                                or odds_map.get("Over 2.5")
+                                or 1.50
+                            )
+
+                    except:
+                        pass
+
+                    # =====================================
                     # OVER 1.5
-                    # =====================================================
+                    # =====================================
                     over_key = f"OVER15_{fixture}"
 
                     if over_key not in live_sent:
@@ -383,14 +446,7 @@ async def live_loop():
                             and pressure >= 0.40
                         ):
 
-                            odd = (
-                                odds_map.get("Over 1.5")
-                                or odds_map.get("Over 2.5")
-                            )
-
-                            if odd and odd >= 1.30:
-
-                                msg = f"""
+                            msg = f"""
 🔥 LIVE SIGNAL
 
 🌍 {country}
@@ -408,16 +464,16 @@ async def live_loop():
 📈 Odd: {odd}
 """
 
-                                await bot.send_message(
-                                    chat_id=CHAT_ID,
-                                    text=msg
-                                )
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
 
-                                live_sent.add(over_key)
+                            live_sent.add(over_key)
 
-                    # =====================================================
+                    # =====================================
                     # UNDER 1.5
-                    # =====================================================
+                    # =====================================
                     under_key = f"UNDER15_{fixture}"
 
                     if under_key not in live_sent:
@@ -429,11 +485,7 @@ async def live_loop():
                             and pressure <= 0.30
                         ):
 
-                            odd = odds_map.get("Under 1.5")
-
-                            if odd and odd >= 1.40:
-
-                                msg = f"""
+                            msg = f"""
 ❄️ LIVE SIGNAL
 
 🌍 {country}
@@ -451,12 +503,12 @@ async def live_loop():
 📈 Odd: {odd}
 """
 
-                                await bot.send_message(
-                                    chat_id=CHAT_ID,
-                                    text=msg
-                                )
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
 
-                                live_sent.add(under_key)
+                            live_sent.add(under_key)
 
                 except Exception as e:
                     print("LIVE MATCH ERROR:", e)
