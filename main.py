@@ -146,9 +146,6 @@ def get_best_matches(mode="today"):
                 odd = 1.50
                 market = "OVER 1.5 GOALS"
 
-                # =================================================
-                # ODDS
-                # =================================================
                 try:
 
                     od = requests.get(
@@ -386,7 +383,7 @@ async def live_loop():
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5
+                    # OVER 1.5 GOALS
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
@@ -395,8 +392,8 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 72
-                            and total_attacks >= 7
-                            and pressure >= 0.16
+                            and total_attacks >= 6
+                            and pressure >= 0.12
                         ):
 
                             msg = f"""
@@ -411,8 +408,8 @@ async def live_loop():
 
 🎯 OVER 1.5 GOALS
 
-📊 Attacks: {total_attacks}
-📊 Shots: {total_shots}
+📊 Total attacks: {total_attacks}
+📊 Total shots: {total_shots}
 """
 
                             await bot.send_message(
@@ -423,7 +420,7 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5
+                    # UNDER 1.5 GOALS
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
@@ -450,8 +447,8 @@ async def live_loop():
 
 🎯 UNDER 1.5 GOALS
 
-📊 Attacks: {total_attacks}
-📊 Shots: {total_shots}
+📊 Total attacks: {total_attacks}
+📊 Total shots: {total_shots}
 """
 
                             await bot.send_message(
@@ -471,8 +468,7 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and home_attacks >= away_attacks + 3
-                            and home_shots >= away_shots
+                            and home_attacks >= away_attacks + 2
                         ):
 
                             msg = f"""
@@ -511,8 +507,7 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and away_attacks >= home_attacks + 3
-                            and away_shots >= home_shots
+                            and away_attacks >= home_attacks + 2
                         ):
 
                             msg = f"""
