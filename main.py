@@ -29,6 +29,7 @@ HEADERS = {
 TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_INTERVAL = 60
+PREMATCH_INTERVAL = 7200
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -62,6 +63,7 @@ TOP_LEAGUES = [
     "Premier League",
     "Champions League",
     "Europa League",
+    "Conference League",
     "La Liga",
     "Serie A",
     "Bundesliga",
@@ -78,6 +80,7 @@ TOP_LEAGUES = [
 # =========================================================
 history = {}
 sent_signals = {}
+prematch_sent = {}
 
 # =========================================================
 # BLOCK CHECK
@@ -97,7 +100,7 @@ def blocked(country, league):
 # =========================================================
 # DUPLICATE
 # =========================================================
-def can_send(key, cooldown=7200):
+def can_send(key, cooldown=1500):
 
     now = time.time()
 
@@ -107,6 +110,7 @@ def can_send(key, cooldown=7200):
             return False
 
     return True
+
 
 def save_signal(key):
 
@@ -165,7 +169,10 @@ def get_matches(mode="today"):
                 if blocked(country, league):
                     continue
 
-                if not any(x.lower() in league.lower() for x in TOP_LEAGUES):
+                if not any(
+                    x.lower() in league.lower()
+                    for x in TOP_LEAGUES
+                ):
                     continue
 
                 date = datetime.fromisoformat(
@@ -174,16 +181,14 @@ def get_matches(mode="today"):
 
                 hour = date.hour
 
-                # TODAY
                 if mode == "today":
 
                     if hour < 8 or hour > 23:
                         continue
 
-                # NIGHT
                 if mode == "night":
 
-                    if hour >= 8 and hour <= 23:
+                    if 8 <= hour <= 23:
                         continue
 
                 home = m["teams"]["home"]["name"]
@@ -208,9 +213,72 @@ def get_matches(mode="today"):
         return []
 
 # =========================================================
-# TODAY
+# PREMATCH MATCHES
+# =========================================================
+def get_prematch_matches():
+
+    result = []
+
+    try:
+
+        r = requests.get(
+            "https://v3.football.api-sports.io/fixtures?next=80",
+            headers=HEADERS,
+            timeout=20
+        ).json()
+
+        matches = r.get("response", [])
+
+        for m in matches:
+
+            try:
+
+                league = m["league"]["name"]
+                country = m["league"]["country"]
+
+                if blocked(country, league):
+                    continue
+
+                if not any(
+                    x.lower() in league.lower()
+                    for x in TOP_LEAGUES
+                ):
+                    continue
+
+                date = datetime.fromisoformat(
+                    m["fixture"]["date"].replace("Z", "+00:00")
+                ).astimezone(TZ)
+
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                fixture = m["fixture"]["id"]
+
+                result.append({
+                    "fixture": fixture,
+                    "country": country,
+                    "league": league,
+                    "home": home,
+                    "away": away,
+                    "time": date.strftime("%H:%M")
+                })
+
+            except:
+                pass
+
+        return result[:3]
+
+    except Exception as e:
+
+        print("PREMATCH ERROR:", e)
+        return []
+
+# =========================================================
+# TODAY COMMAND
 # =========================================================
 def today(update: Update, context: CallbackContext):
+
+    print("TODAY COMMAND RECEIVED")
 
     matches = get_matches("today")
 
@@ -237,9 +305,11 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT
+# NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
+
+    print("NIGHT COMMAND RECEIVED")
 
     matches = get_matches("night")
 
@@ -264,6 +334,49 @@ def night(update: Update, context: CallbackContext):
 """
 
     update.message.reply_text(msg)
+
+# =========================================================
+# PREMATCH LOOP
+# =========================================================
+async def prematch_loop():
+
+    while True:
+
+        try:
+
+            matches = get_prematch_matches()
+
+            for g in matches:
+
+                fixture = g["fixture"]
+
+                if fixture in prematch_sent:
+                    continue
+
+                msg = f"""
+📈 PREMATCH SIGNAL
+
+🌍 {g['country']}
+🏆 {g['league']}
+
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
+
+🎯 GOOD PREMATCH MATCH
+"""
+
+                await bot.send_message(
+                    chat_id=CHAT_ID,
+                    text=msg
+                )
+
+                prematch_sent[fixture] = time.time()
+
+        except Exception as e:
+
+            print("PREMATCH LOOP ERROR:", e)
+
+        await asyncio.sleep(PREMATCH_INTERVAL)
 
 # =========================================================
 # LIVE LOOP
@@ -321,18 +434,12 @@ async def live_loop():
                     hs = stats[0]["statistics"]
                     as_ = stats[1]["statistics"]
 
-                    # =================================================
-                    # STATS
-                    # =================================================
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
 
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
-                    # =================================================
-                    # HISTORY
-                    # =================================================
                     if fixture not in history:
 
                         history[fixture] = []
@@ -544,16 +651,21 @@ async def live_loop():
         await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
-# THREAD
+# THREADS
 # =========================================================
 def start_live_loop():
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    loop.run_until_complete(
-        live_loop()
-    )
+    loop.run_until_complete(live_loop())
+
+def start_prematch_loop():
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(prematch_loop())
 
 # =========================================================
 # MAIN
@@ -579,10 +691,20 @@ def main():
     print("✅ COMMANDS ACTIVE")
 
     live_thread = threading.Thread(
-        target=start_live_loop
+        target=start_live_loop,
+        daemon=True
+    )
+
+    prematch_thread = threading.Thread(
+        target=start_prematch_loop,
+        daemon=True
     )
 
     live_thread.start()
+    prematch_thread.start()
+
+    print("✅ LIVE THREAD STARTED")
+    print("✅ PREMATCH THREAD STARTED")
 
     updater.idle()
 
