@@ -99,7 +99,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH SELECTOR
+# PREMATCH
 # =========================================================
 def get_best_matches(mode="today"):
 
@@ -214,7 +214,7 @@ def get_best_matches(mode="today"):
         return []
 
 # =========================================================
-# TODAY COMMAND
+# TODAY
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -244,7 +244,7 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT COMMAND
+# NIGHT
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -386,7 +386,7 @@ async def live_loop():
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5 GOALS
+                    # OVER 1.5
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
@@ -395,7 +395,7 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 72
-                            and total_attacks >= 5
+                            and total_attacks >= 8
                             and pressure >= 0.10
                         ):
 
@@ -423,17 +423,17 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5 GOALS
+                    # UNDER 1.5
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
                     if under_key not in live_sent:
 
                         if (
-                            minute >= 50
+                            minute >= 55
                             and minute <= 65
                             and goals == 0
-                            and total_attacks <= 2
+                            and total_attacks <= 1
                             and total_shots == 0
                             and pressure <= 0.06
                         ):
@@ -471,7 +471,8 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and ha > aa
+                            and ha >= aa + 4
+                            and hsh >= ash
                         ):
 
                             msg = f"""
@@ -488,6 +489,9 @@ async def live_loop():
 
 📊 Home attacks: {ha}
 📊 Away attacks: {aa}
+
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
                             await bot.send_message(
@@ -507,7 +511,8 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and aa > ha
+                            and aa >= ha + 4
+                            and ash >= hsh
                         ):
 
                             msg = f"""
@@ -524,6 +529,9 @@ async def live_loop():
 
 📊 Home attacks: {ha}
 📊 Away attacks: {aa}
+
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
                             await bot.send_message(
