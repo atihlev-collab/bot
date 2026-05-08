@@ -3,7 +3,9 @@ os.system("pip install requests python-telegram-bot==13.15")
 
 import asyncio
 import logging
+import threading
 import requests
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -40,7 +42,7 @@ BLOCKED_WORDS = [
 ]
 
 # =========================================================
-# HELPERS
+# BLOCK CHECK
 # =========================================================
 def blocked(country, league):
 
@@ -85,7 +87,8 @@ def get_best_matches(mode="today"):
 
         r = requests.get(
             "https://v3.football.api-sports.io/fixtures?next=100",
-            headers=HEADERS
+            headers=HEADERS,
+            timeout=20
         ).json()
 
         matches = r.get("response", [])
@@ -122,30 +125,23 @@ def get_best_matches(mode="today"):
                 country = m["league"]["country"]
                 league_name = m["league"]["name"]
 
-                # =====================================
-                # BLOCKED
-                # =====================================
                 if blocked(country, league_name):
                     continue
 
-                # =====================================
-                # BASIC SCORE
-                # =====================================
-                score = 1
+                fixture = m["fixture"]["id"]
+
+                odd = 1.50
+                market = "OVER 1.5 GOALS"
 
                 # =====================================
                 # ODDS
                 # =====================================
-                odd = 1.50
-                market = "OVER 1.5 GOALS"
-
-                fixture = m["fixture"]["id"]
-
                 try:
 
                     od = requests.get(
                         f"https://v3.football.api-sports.io/odds?fixture={fixture}",
-                        headers=HEADERS
+                        headers=HEADERS,
+                        timeout=10
                     ).json()
 
                     odds_response = od.get("response", [])
@@ -160,7 +156,10 @@ def get_best_matches(mode="today"):
 
                                 for v in bet["values"]:
 
-                                    odds_map[v["value"]] = float(v["odd"])
+                                    try:
+                                        odds_map[v["value"]] = float(v["odd"])
+                                    except:
+                                        pass
 
                         if odds_map.get("Over 2.5"):
 
@@ -172,7 +171,6 @@ def get_best_matches(mode="today"):
                         elif odds_map.get("Over 1.5"):
 
                             odd = odds_map.get("Over 1.5")
-                            market = "OVER 1.5 GOALS"
 
                 except:
                     pass
@@ -184,16 +182,47 @@ def get_best_matches(mode="today"):
                     "league": league_name,
                     "time": date.strftime("%H:%M"),
                     "market": market,
-                    "odd": odd,
-                    "score": score
+                    "odd": odd
                 })
 
             except Exception as e:
                 print("MATCH ERROR:", e)
 
         # =====================================
-        # SORT
+        # FALLBACK
         # =====================================
+        if not prematch_list:
+
+            for m in matches[:3]:
+
+                try:
+
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    country = m["league"]["country"]
+                    league_name = m["league"]["name"]
+
+                    if blocked(country, league_name):
+                        continue
+
+                    date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace("Z", "+00:00")
+                    ).astimezone(TZ)
+
+                    prematch_list.append({
+                        "home": home,
+                        "away": away,
+                        "country": country,
+                        "league": league_name,
+                        "time": date.strftime("%H:%M"),
+                        "market": "OVER 1.5 GOALS",
+                        "odd": 1.50
+                    })
+
+                except:
+                    pass
+
         prematch_list = sorted(
             prematch_list,
             key=lambda x: x["odd"],
@@ -203,12 +232,13 @@ def get_best_matches(mode="today"):
         return prematch_list[:3]
 
     except Exception as e:
+
         print("GET MATCHES ERROR:", e)
 
         return []
 
 # =========================================================
-# TODAY COMMAND
+# TODAY
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -232,14 +262,13 @@ def today(update: Update, context: CallbackContext):
 ⏰ {game['time']}
 
 🎯 {game['market']}
-
 📈 Odd: {game['odd']}
 """
 
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT COMMAND
+# NIGHT
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -263,7 +292,6 @@ def night(update: Update, context: CallbackContext):
 ⏰ {game['time']}
 
 🎯 {game['market']}
-
 📈 Odd: {game['odd']}
 """
 
@@ -280,7 +308,8 @@ async def live_loop():
 
             r = requests.get(
                 "https://v3.football.api-sports.io/fixtures?live=all",
-                headers=HEADERS
+                headers=HEADERS,
+                timeout=20
             ).json()
 
             matches = r.get("response", [])
@@ -297,9 +326,6 @@ async def live_loop():
                     country = m["league"]["country"]
                     league_name = m["league"]["name"]
 
-                    # =====================================
-                    # BLOCKED
-                    # =====================================
                     if blocked(country, league_name):
                         continue
 
@@ -316,7 +342,8 @@ async def live_loop():
                     # =====================================
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
-                        headers=HEADERS
+                        headers=HEADERS,
+                        timeout=10
                     ).json()
 
                     stats = sr.get("response", [])
@@ -327,9 +354,6 @@ async def live_loop():
                     h_stats = stats[0]["statistics"]
                     a_stats = stats[1]["statistics"]
 
-                    # =====================================
-                    # REAL STATS
-                    # =====================================
                     home_attacks = get_stat(h_stats, "Attacks")
                     away_attacks = get_stat(a_stats, "Attacks")
 
@@ -349,9 +373,8 @@ async def live_loop():
                     if over_key not in live_sent:
 
                         if (
-                            total_attacks >= 10
-                            and total_shots >= 1
-                            and pressure >= 0.25
+                            total_attacks >= 6
+                            and pressure >= 0.15
                         ):
 
                             msg = f"""
@@ -386,9 +409,7 @@ async def live_loop():
 
                         if (
                             minute >= 25
-                            and total_attacks <= 8
-                            and total_shots == 0
-                            and pressure <= 0.20
+                            and total_attacks <= 6
                         ):
 
                             msg = f"""
@@ -422,9 +443,8 @@ async def live_loop():
                     if next_home_key not in live_sent:
 
                         if (
-                            home_attacks >= away_attacks + 6
-                            and home_shots >= away_shots + 1
-                            and home_shots >= 2
+                            home_attacks >= away_attacks + 4
+                            and home_shots >= away_shots
                         ):
 
                             msg = f"""
@@ -461,9 +481,8 @@ async def live_loop():
                     if next_away_key not in live_sent:
 
                         if (
-                            away_attacks >= home_attacks + 6
-                            and away_shots >= home_shots + 1
-                            and away_shots >= 2
+                            away_attacks >= home_attacks + 4
+                            and away_shots >= home_shots
                         ):
 
                             msg = f"""
@@ -501,10 +520,14 @@ async def live_loop():
         await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
-# ASYNC
+# START LIVE THREAD
 # =========================================================
-async def run_live():
-    await live_loop()
+def start_live_loop():
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(live_loop())
 
 # =========================================================
 # MAIN
@@ -520,10 +543,15 @@ def main():
     dp.add_handler(CommandHandler("today", today))
     dp.add_handler(CommandHandler("night", night))
 
+    # TELEGRAM
     updater.start_polling()
 
-    loop = asyncio.get_event_loop()
-    loop.create_task(run_live())
+    # LIVE THREAD
+    thread = threading.Thread(
+        target=start_live_loop
+    )
+
+    thread.start()
 
     updater.idle()
 
