@@ -28,6 +28,14 @@ sent_prematch = set()
 live_sent = set()
 
 # =========================
+# BLOCKED COUNTRIES
+# =========================
+BLOCKED_COUNTRIES = [
+    "Russia",
+    "Belarus"
+]
+
+# =========================
 # TELEGRAM
 # =========================
 async def send_signal(bot, msg):
@@ -83,6 +91,12 @@ async def prematch(bot):
 
                     league_name = m["league"]["name"]
                     country = m["league"]["country"]
+
+                    # =========================
+                    # BLOCK COUNTRIES
+                    # =========================
+                    if country in BLOCKED_COUNTRIES:
+                        continue
 
                     home_id = m["teams"]["home"]["id"]
                     away_id = m["teams"]["away"]["id"]
@@ -145,7 +159,6 @@ async def prematch(bot):
                     if away_over >= 4:
                         score += 1
 
-                    # по-лек филтър
                     if score < 2:
                         continue
 
@@ -180,7 +193,6 @@ async def prematch(bot):
                     if not odd:
                         continue
 
-                    # по-широк odds range
                     if odd < 1.35 or odd > 2.50:
                         continue
 
@@ -271,6 +283,12 @@ async def live(bot):
 
                     league_name = m["league"]["name"]
                     country = m["league"]["country"]
+
+                    # =========================
+                    # BLOCK COUNTRIES
+                    # =========================
+                    if country in BLOCKED_COUNTRIES:
+                        continue
 
                     minute = m["fixture"]["status"]["elapsed"] or 0
 
