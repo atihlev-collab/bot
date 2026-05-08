@@ -36,6 +36,7 @@ bot = Bot(token=BOT_TOKEN)
 # =========================================================
 live_sent = {}
 prematch_sent = set()
+match_history = {}
 
 # =========================================================
 # BLOCKED
@@ -59,11 +60,6 @@ BAD_LEAGUES = [
 ]
 
 # =========================================================
-# MATCH HISTORY
-# =========================================================
-match_history = {}
-
-# =========================================================
 # BLOCK CHECK
 # =========================================================
 def blocked(country, league):
@@ -84,7 +80,6 @@ def blocked(country, league):
 def get_stat(stats, name):
 
     try:
-
         for s in stats:
 
             if s["type"] == name:
@@ -105,20 +100,25 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# DUPLICATE PROTECTION
+# DUPLICATE CHECK
 # =========================================================
-def already_sent(key):
+def recently_sent(key, cooldown=7200):
 
     now = time.time()
 
     if key in live_sent:
 
-        if now - live_sent[key] < 7200:
+        if now - live_sent[key] < cooldown:
             return True
 
-    live_sent[key] = now
-
     return False
+
+# =========================================================
+# SAVE SIGNAL
+# =========================================================
+def save_signal(key):
+
+    live_sent[key] = time.time()
 
 # =========================================================
 # PREMATCH
@@ -168,7 +168,7 @@ def get_best_matches(mode="today"):
 
                 fixture = m["fixture"]["id"]
 
-                odd = 1.65
+                odd = 1.60
                 market = "OVER 1.5 GOALS"
 
                 try:
@@ -198,9 +198,11 @@ def get_best_matches(mode="today"):
 
                         if odds_map.get("Over 2.5"):
 
-                            if 1.70 <= odds_map["Over 2.5"] <= 2.40:
+                            o25 = odds_map["Over 2.5"]
 
-                                odd = odds_map["Over 2.5"]
+                            if 1.70 <= o25 <= 2.40:
+
+                                odd = o25
                                 market = "OVER 2.5 GOALS"
 
                         elif odds_map.get("Over 1.5"):
@@ -402,18 +404,14 @@ async def live_loop():
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
-                    total_attacks = ha + aa
-                    total_shots = hsh + ash
-
                     # =================================================
-                    # SAVE HISTORY
+                    # HISTORY
                     # =================================================
                     if fixture not in match_history:
 
                         match_history[fixture] = []
 
                     match_history[fixture].append({
-                        "minute": minute,
                         "ha": ha,
                         "aa": aa,
                         "hsh": hsh,
@@ -435,12 +433,13 @@ async def live_loop():
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
-                    if not already_sent(over_key):
+                    if not recently_sent(over_key):
 
                         if (
                             minute >= 20
-                            and avg_attacks >= 8
-                            and avg_shots >= 2
+                            and minute <= 75
+                            and avg_attacks >= 6
+                            and avg_shots >= 1
                         ):
 
                             msg = f"""
@@ -464,18 +463,20 @@ async def live_loop():
                                 text=msg
                             )
 
+                            save_signal(over_key)
+
                     # =================================================
                     # UNDER 1.5
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
-                    if not already_sent(under_key):
+                    if not recently_sent(under_key):
 
                         if (
                             minute >= 55
                             and minute <= 70
                             and goals == 0
-                            and avg_attacks <= 2
+                            and avg_attacks <= 1
                             and avg_shots == 0
                         ):
 
@@ -500,17 +501,19 @@ async def live_loop():
                                 text=msg
                             )
 
+                            save_signal(under_key)
+
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
-                    if not already_sent(next_home_key):
+                    if not recently_sent(next_home_key):
 
                         if (
                             minute >= 20
+                            and minute <= 75
                             and ha >= aa + 2
-                            and hsh >= ash
                         ):
 
                             msg = f"""
@@ -527,9 +530,6 @@ async def live_loop():
 
 📊 Home attacks: {ha}
 📊 Away attacks: {aa}
-
-📊 Home shots: {hsh}
-📊 Away shots: {ash}
 """
 
                             await bot.send_message(
@@ -537,17 +537,19 @@ async def live_loop():
                                 text=msg
                             )
 
+                            save_signal(next_home_key)
+
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
-                    if not already_sent(next_away_key):
+                    if not recently_sent(next_away_key):
 
                         if (
                             minute >= 20
+                            and minute <= 75
                             and aa >= ha + 2
-                            and ash >= hsh
                         ):
 
                             msg = f"""
@@ -564,15 +566,14 @@ async def live_loop():
 
 📊 Home attacks: {ha}
 📊 Away attacks: {aa}
-
-📊 Home shots: {hsh}
-📊 Away shots: {ash}
 """
 
                             await bot.send_message(
                                 chat_id=CHAT_ID,
                                 text=msg
                             )
+
+                            save_signal(next_away_key)
 
                 except Exception as e:
                     print("LIVE MATCH ERROR:", e)
