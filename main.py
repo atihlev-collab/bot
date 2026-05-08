@@ -105,17 +105,11 @@ def get_best_matches(mode="today"):
 
                 hour = date.hour
 
-                # =====================================
-                # TODAY
-                # =====================================
                 if mode == "today":
 
                     if hour < 8 or hour > 23:
                         continue
 
-                # =====================================
-                # NIGHT
-                # =====================================
                 if mode == "night":
 
                     if hour >= 8 and hour <= 23:
@@ -135,9 +129,6 @@ def get_best_matches(mode="today"):
                 odd = 1.50
                 market = "OVER 1.5 GOALS"
 
-                # =====================================
-                # ODDS
-                # =====================================
                 try:
 
                     od = requests.get(
@@ -188,44 +179,8 @@ def get_best_matches(mode="today"):
                     "odd": odd
                 })
 
-            except Exception as e:
-                print("MATCH ERROR:", e)
-
-        # =====================================
-        # FALLBACK
-        # =====================================
-        if not prematch_list:
-
-            for m in matches[:3]:
-
-                try:
-
-                    home = m["teams"]["home"]["name"]
-                    away = m["teams"]["away"]["name"]
-
-                    country = m["league"]["country"]
-                    league_name = m["league"]["name"]
-
-                    if blocked(country, league_name):
-                        continue
-
-                    date = datetime.fromisoformat(
-                        m["fixture"]["date"].replace("Z", "+00:00")
-                    ).astimezone(TZ)
-
-                    prematch_list.append({
-                        "fixture": m["fixture"]["id"],
-                        "home": home,
-                        "away": away,
-                        "country": country,
-                        "league": league_name,
-                        "time": date.strftime("%H:%M"),
-                        "market": "OVER 1.5 GOALS",
-                        "odd": 1.50
-                    })
-
-                except:
-                    pass
+            except:
+                pass
 
         prematch_list = sorted(
             prematch_list,
@@ -235,14 +190,11 @@ def get_best_matches(mode="today"):
 
         return prematch_list[:3]
 
-    except Exception as e:
-
-        print("GET MATCHES ERROR:", e)
-
+    except:
         return []
 
 # =========================================================
-# TODAY COMMAND
+# TODAY
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -272,7 +224,7 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT COMMAND
+# NIGHT
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -386,9 +338,6 @@ async def live_loop():
 
                     total_goals = home_goals + away_goals
 
-                    # =====================================
-                    # STATS
-                    # =====================================
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
                         headers=HEADERS,
@@ -414,16 +363,18 @@ async def live_loop():
 
                     pressure = total_attacks / max(1, minute)
 
-                    # =====================================
-                    # OVER 1.5
-                    # =====================================
+                    # =================================================
+                    # OVER 1.5 (BALANCED)
+                    # =================================================
                     over_key = f"OVER15_{fixture}"
 
                     if over_key not in live_sent:
 
                         if (
-                            total_attacks >= 6
-                            and pressure >= 0.15
+                            minute >= 20
+                            and total_attacks >= 8
+                            and total_shots >= 2
+                            and pressure >= 0.18
                         ):
 
                             msg = f"""
@@ -449,20 +400,20 @@ async def live_loop():
 
                             live_sent.add(over_key)
 
-                    # =====================================
-                    # UNDER 1.5
-                    # =====================================
+                    # =================================================
+                    # UNDER 1.5 (BALANCED)
+                    # =================================================
                     under_key = f"UNDER15_{fixture}"
 
                     if under_key not in live_sent:
 
                         if (
-                            minute >= 35
+                            minute >= 30
                             and minute <= 70
-                            and total_goals == 0
-                            and total_attacks <= 4
-                            and total_shots == 0
-                            and pressure <= 0.10
+                            and total_goals <= 1
+                            and total_attacks <= 7
+                            and total_shots <= 1
+                            and pressure <= 0.14
                         ):
 
                             msg = f"""
@@ -488,16 +439,18 @@ async def live_loop():
 
                             live_sent.add(under_key)
 
-                    # =====================================
+                    # =================================================
                     # NEXT GOAL HOME
-                    # =====================================
+                    # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
                     if next_home_key not in live_sent:
 
                         if (
-                            home_attacks >= away_attacks + 4
-                            and home_shots >= away_shots
+                            minute >= 20
+                            and home_attacks >= away_attacks + 5
+                            and home_shots >= away_shots + 1
+                            and home_shots >= 2
                         ):
 
                             msg = f"""
@@ -526,16 +479,18 @@ async def live_loop():
 
                             live_sent.add(next_home_key)
 
-                    # =====================================
+                    # =================================================
                     # NEXT GOAL AWAY
-                    # =====================================
+                    # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
                     if next_away_key not in live_sent:
 
                         if (
-                            away_attacks >= home_attacks + 4
-                            and away_shots >= home_shots
+                            minute >= 20
+                            and away_attacks >= home_attacks + 5
+                            and away_shots >= home_shots + 1
+                            and away_shots >= 2
                         ):
 
                             msg = f"""
@@ -573,7 +528,7 @@ async def live_loop():
         await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
-# START THREADS
+# THREADS
 # =========================================================
 def start_live_loop():
 
