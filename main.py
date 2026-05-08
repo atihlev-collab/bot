@@ -7,9 +7,6 @@ import threading
 import requests
 import time
 
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
 from telegram import Bot, Update
 from telegram.ext import (
     Updater,
@@ -25,8 +22,6 @@ from config import BOT_TOKEN, API_KEY, CHAT_ID
 HEADERS = {
     "x-apisports-key": API_KEY
 }
-
-TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_INTERVAL = 60
 
@@ -58,8 +53,8 @@ BAD_LEAGUES = [
 # =========================================================
 # STORAGE
 # =========================================================
-sent_signals = {}
 history = {}
+sent_signals = {}
 
 # =========================================================
 # BLOCK CHECK
@@ -200,9 +195,6 @@ async def live_loop():
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
-                    total_attacks = ha + aa
-                    total_shots = hsh + ash
-
                     # =================================================
                     # HISTORY
                     # =================================================
@@ -215,40 +207,34 @@ async def live_loop():
                         "ha": ha,
                         "aa": aa,
                         "hsh": hsh,
-                        "ash": ash,
-                        "total_attacks": total_attacks,
-                        "total_shots": total_shots
+                        "ash": ash
                     })
 
-                    # пазим само последните 20 проверки
-                    history[fixture] = history[fixture][-20:]
+                    # пазим последните 25 проверки
+                    history[fixture] = history[fixture][-25:]
 
                     hist = history[fixture]
 
                     # =================================================
-                    # OVER 1.5
-                    # =================================================
-                    # И ДВАТА ОТБОРА АТАКУВАТ
-                    # ИМА УДАРИ
-                    # 20 МИНУТИ ТЕМПО
+                    # OVER 1.5 GOALS
+                    # двата отбора имат над 2 удара
+                    # в последните 25 минути
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
                     if can_send(over_key):
 
-                        active_ticks = 0
+                        over_ticks = 0
 
                         for h in hist:
 
                             if (
-                                h["total_attacks"] >= 15
-                                and h["total_shots"] >= 3
-                                and h["ha"] >= 5
-                                and h["aa"] >= 5
+                                h["hsh"] >= 2
+                                and h["ash"] >= 2
                             ):
-                                active_ticks += 1
+                                over_ticks += 1
 
-                        if active_ticks >= 8:
+                        if over_ticks >= 8:
 
                             msg = f"""
 🔥 LIVE SIGNAL
@@ -262,8 +248,8 @@ async def live_loop():
 
 🎯 OVER 1.5 GOALS
 
-📊 Total attacks: {total_attacks}
-📊 Total shots: {total_shots}
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
                             await bot.send_message(
@@ -274,31 +260,31 @@ async def live_loop():
                             save_signal(over_key)
 
                     # =================================================
-                    # UNDER 1.5
-                    # =================================================
-                    # НЯМА АТАКИ
-                    # НЯМА УДАРИ
-                    # DEAD GAME
+                    # UNDER 1.5 GOALS
+                    # малко атаки
+                    # под 2 удара
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
                     if can_send(under_key):
 
-                        dead_ticks = 0
+                        under_ticks = 0
 
                         for h in hist:
 
                             if (
-                                h["total_attacks"] <= 4
-                                and h["total_shots"] == 0
+                                h["ha"] <= 5
+                                and h["aa"] <= 5
+                                and h["hsh"] < 2
+                                and h["ash"] < 2
                             ):
-                                dead_ticks += 1
+                                under_ticks += 1
 
                         if (
                             minute >= 25
                             and minute <= 70
                             and goals == 0
-                            and dead_ticks >= 10
+                            and under_ticks >= 10
                         ):
 
                             msg = f"""
@@ -313,8 +299,11 @@ async def live_loop():
 
 🎯 UNDER 1.5 GOALS
 
-📊 Total attacks: {total_attacks}
-📊 Total shots: {total_shots}
+📊 Home attacks: {ha}
+📊 Away attacks: {aa}
+
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
                             await bot.send_message(
@@ -326,25 +315,24 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL HOME
-                    # =================================================
-                    # ДОМАШНИЯТ НАТИСКА 20 МИНУТИ
+                    # домакинът натиска
+                    # над 2 удара
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
                     if can_send(next_home_key):
 
-                        dom_ticks = 0
+                        home_ticks = 0
 
                         for h in hist:
 
                             if (
-                                h["ha"] >= 15
-                                and h["hsh"] >= 3
-                                and h["ha"] >= h["aa"] + 5
+                                h["ha"] >= h["aa"] + 5
+                                and h["hsh"] >= 2
                             ):
-                                dom_ticks += 1
+                                home_ticks += 1
 
-                        if dom_ticks >= 8:
+                        if home_ticks >= 8:
 
                             msg = f"""
 🚨 LIVE SIGNAL
@@ -374,23 +362,24 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL AWAY
+                    # гостът натиска
+                    # над 2 удара
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
                     if can_send(next_away_key):
 
-                        dom_ticks = 0
+                        away_ticks = 0
 
                         for h in hist:
 
                             if (
-                                h["aa"] >= 15
-                                and h["ash"] >= 3
-                                and h["aa"] >= h["ha"] + 5
+                                h["aa"] >= h["ha"] + 5
+                                and h["ash"] >= 2
                             ):
-                                dom_ticks += 1
+                                away_ticks += 1
 
-                        if dom_ticks >= 8:
+                        if away_ticks >= 8:
 
                             msg = f"""
 🚨 LIVE SIGNAL
