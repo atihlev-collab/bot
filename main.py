@@ -11,7 +11,11 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from telegram import Bot, Update
-from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.ext import (
+    Updater,
+    CommandHandler,
+    CallbackContext
+)
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
@@ -80,6 +84,7 @@ def blocked(country, league):
 def get_stat(stats, name):
 
     try:
+
         for s in stats:
 
             if s["type"] == name:
@@ -130,7 +135,7 @@ def get_best_matches(mode="today"):
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=150",
+            "https://v3.football.api-sports.io/fixtures?next=200",
             headers=HEADERS,
             timeout=20
         ).json()
@@ -200,7 +205,7 @@ def get_best_matches(mode="today"):
 
                             o25 = odds_map["Over 2.5"]
 
-                            if 1.70 <= o25 <= 2.40:
+                            if 1.70 <= o25 <= 2.50:
 
                                 odd = o25
                                 market = "OVER 2.5 GOALS"
@@ -234,26 +239,32 @@ def get_best_matches(mode="today"):
 
         return result[:3]
 
-    except:
+    except Exception as e:
+
+        print("PREMATCH SELECT ERROR:", e)
         return []
 
 # =========================================================
-# TODAY
+# TODAY COMMAND
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
-    matches = get_best_matches("today")
+    try:
 
-    if not matches:
+        matches = get_best_matches("today")
 
-        update.message.reply_text("❌ Няма намерени мачове.")
-        return
+        if not matches:
 
-    msg = "📈 TODAY TOP MATCHES\n"
+            update.message.reply_text(
+                "❌ Няма намерени мачове."
+            )
+            return
 
-    for g in matches:
+        msg = "📈 TODAY TOP MATCHES\n"
 
-        msg += f"""
+        for g in matches:
+
+            msg += f"""
 
 🌍 {g['country']}
 🏆 {g['league']}
@@ -265,25 +276,33 @@ def today(update: Update, context: CallbackContext):
 📈 Odd: {g['odd']}
 """
 
-    update.message.reply_text(msg)
+        update.message.reply_text(msg)
+
+    except Exception as e:
+
+        print("TODAY COMMAND ERROR:", e)
 
 # =========================================================
-# NIGHT
+# NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
-    matches = get_best_matches("night")
+    try:
 
-    if not matches:
+        matches = get_best_matches("night")
 
-        update.message.reply_text("❌ Няма намерени нощни мачове.")
-        return
+        if not matches:
 
-    msg = "🌙 NIGHT TOP MATCHES\n"
+            update.message.reply_text(
+                "❌ Няма намерени нощни мачове."
+            )
+            return
 
-    for g in matches:
+        msg = "🌙 NIGHT TOP MATCHES\n"
 
-        msg += f"""
+        for g in matches:
+
+            msg += f"""
 
 🌍 {g['country']}
 🏆 {g['league']}
@@ -295,7 +314,11 @@ def night(update: Update, context: CallbackContext):
 📈 Odd: {g['odd']}
 """
 
-    update.message.reply_text(msg)
+        update.message.reply_text(msg)
+
+    except Exception as e:
+
+        print("NIGHT COMMAND ERROR:", e)
 
 # =========================================================
 # PREMATCH LOOP
@@ -338,7 +361,8 @@ async def prematch_loop():
                 prematch_sent.add(fixture)
 
         except Exception as e:
-            print("PREMATCH ERROR:", e)
+
+            print("PREMATCH LOOP ERROR:", e)
 
         await asyncio.sleep(PREMATCH_INTERVAL)
 
@@ -576,10 +600,12 @@ async def live_loop():
                             save_signal(next_away_key)
 
                 except Exception as e:
+
                     print("LIVE MATCH ERROR:", e)
 
         except Exception as e:
-            print("LIVE ERROR:", e)
+
+            print("LIVE LOOP ERROR:", e)
 
         await asyncio.sleep(LIVE_INTERVAL)
 
@@ -605,17 +631,26 @@ def start_prematch_loop():
 # =========================================================
 def main():
 
-    print("🚀 LIVE SYSTEM RUNNING")
+    print("🚀 BOT STARTED")
 
-    updater = Updater(BOT_TOKEN, use_context=True)
+    updater = Updater(
+        token=BOT_TOKEN,
+        use_context=True
+    )
 
     dp = updater.dispatcher
 
+    # COMMANDS
     dp.add_handler(CommandHandler("today", today))
     dp.add_handler(CommandHandler("night", night))
 
-    updater.start_polling()
+    updater.start_polling(
+        drop_pending_updates=True
+    )
 
+    print("✅ COMMANDS ACTIVE")
+
+    # THREADS
     live_thread = threading.Thread(
         target=start_live_loop
     )
@@ -629,5 +664,8 @@ def main():
 
     updater.idle()
 
+# =========================================================
+# START
+# =========================================================
 if __name__ == "__main__":
     main()
