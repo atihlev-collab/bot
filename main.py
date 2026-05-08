@@ -30,6 +30,9 @@ logging.basicConfig(level=logging.WARNING)
 
 bot = Bot(token=BOT_TOKEN)
 
+# =========================================================
+# SIGNAL STORAGE
+# =========================================================
 live_sent = set()
 prematch_sent = set()
 
@@ -96,11 +99,11 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# GET BEST MATCHES
+# PREMATCH MATCHES
 # =========================================================
 def get_best_matches(mode="today"):
 
-    prematch_list = []
+    result = []
 
     try:
 
@@ -129,21 +132,21 @@ def get_best_matches(mode="today"):
 
                 if mode == "night":
 
-                    if hour >= 8 and hour <= 23:
+                    if 8 <= hour <= 23:
                         continue
 
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
                 country = m["league"]["country"]
-                league_name = m["league"]["name"]
+                league = m["league"]["name"]
 
-                if blocked(country, league_name):
+                if blocked(country, league):
                     continue
 
                 fixture = m["fixture"]["id"]
 
-                odd = 1.50
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                odd = 1.60
                 market = "OVER 1.5 GOALS"
 
                 try:
@@ -173,24 +176,24 @@ def get_best_matches(mode="today"):
 
                         if odds_map.get("Over 2.5"):
 
-                            odd = odds_map.get("Over 2.5")
+                            if odds_map["Over 2.5"] >= 1.75:
 
-                            if odd >= 1.70:
+                                odd = odds_map["Over 2.5"]
                                 market = "OVER 2.5 GOALS"
 
                         elif odds_map.get("Over 1.5"):
 
-                            odd = odds_map.get("Over 1.5")
+                            odd = odds_map["Over 1.5"]
 
                 except:
                     pass
 
-                prematch_list.append({
+                result.append({
                     "fixture": fixture,
+                    "country": country,
+                    "league": league,
                     "home": home,
                     "away": away,
-                    "country": country,
-                    "league": league_name,
                     "time": date.strftime("%H:%M"),
                     "market": market,
                     "odd": odd
@@ -199,19 +202,19 @@ def get_best_matches(mode="today"):
             except:
                 pass
 
-        prematch_list = sorted(
-            prematch_list,
+        result = sorted(
+            result,
             key=lambda x: x["odd"],
             reverse=True
         )
 
-        return prematch_list[:3]
+        return result[:3]
 
     except:
         return []
 
 # =========================================================
-# TODAY
+# TODAY COMMAND
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -222,26 +225,26 @@ def today(update: Update, context: CallbackContext):
         update.message.reply_text("❌ Няма намерени мачове.")
         return
 
-    msg = "📈 TOP TODAY MATCHES\n"
+    msg = "📈 TODAY MATCHES\n"
 
-    for game in matches:
+    for g in matches:
 
         msg += f"""
 
-🌍 {game['country']}
-🏆 {game['league']}
+🌍 {g['country']}
+🏆 {g['league']}
 
-🏟 {game['home']} vs {game['away']}
-⏰ {game['time']}
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
 
-🎯 {game['market']}
-📈 Odd: {game['odd']}
+🎯 {g['market']}
+📈 Odd: {g['odd']}
 """
 
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT
+# NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -252,20 +255,20 @@ def night(update: Update, context: CallbackContext):
         update.message.reply_text("❌ Няма намерени нощни мачове.")
         return
 
-    msg = "🌙 TOP NIGHT MATCHES\n"
+    msg = "🌙 NIGHT MATCHES\n"
 
-    for game in matches:
+    for g in matches:
 
         msg += f"""
 
-🌍 {game['country']}
-🏆 {game['league']}
+🌍 {g['country']}
+🏆 {g['league']}
 
-🏟 {game['home']} vs {game['away']}
-⏰ {game['time']}
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
 
-🎯 {game['market']}
-📈 Odd: {game['odd']}
+🎯 {g['market']}
+📈 Odd: {g['odd']}
 """
 
     update.message.reply_text(msg)
@@ -283,9 +286,9 @@ async def prematch_loop():
 
             matches = get_best_matches("today")
 
-            for game in matches:
+            for g in matches:
 
-                fixture = game["fixture"]
+                fixture = g["fixture"]
 
                 if fixture in prematch_sent:
                     continue
@@ -293,14 +296,14 @@ async def prematch_loop():
                 msg = f"""
 📈 PREMATCH SIGNAL
 
-🌍 {game['country']}
-🏆 {game['league']}
+🌍 {g['country']}
+🏆 {g['league']}
 
-🏟 {game['home']} vs {game['away']}
-⏰ {game['time']}
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
 
-🎯 {game['market']}
-📈 Odd: {game['odd']}
+🎯 {g['market']}
+📈 Odd: {g['odd']}
 """
 
                 await bot.send_message(
@@ -342,9 +345,9 @@ async def live_loop():
                     away = m["teams"]["away"]["name"]
 
                     country = m["league"]["country"]
-                    league_name = m["league"]["name"]
+                    league = m["league"]["name"]
 
-                    if blocked(country, league_name):
+                    if blocked(country, league):
                         continue
 
                     minute = m["fixture"]["status"]["elapsed"] or 0
@@ -352,10 +355,10 @@ async def live_loop():
                     if minute < 20 or minute > 75:
                         continue
 
-                    home_goals = m["goals"]["home"] or 0
-                    away_goals = m["goals"]["away"] or 0
+                    gh = m["goals"]["home"] or 0
+                    ga = m["goals"]["away"] or 0
 
-                    total_goals = home_goals + away_goals
+                    goals = gh + ga
 
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
@@ -368,22 +371,22 @@ async def live_loop():
                     if len(stats) < 2:
                         continue
 
-                    h_stats = stats[0]["statistics"]
-                    a_stats = stats[1]["statistics"]
+                    hs = stats[0]["statistics"]
+                    as_ = stats[1]["statistics"]
 
-                    home_attacks = get_stat(h_stats, "Attacks")
-                    away_attacks = get_stat(a_stats, "Attacks")
+                    ha = get_stat(hs, "Attacks")
+                    aa = get_stat(as_, "Attacks")
 
-                    home_shots = get_stat(h_stats, "Shots on Goal")
-                    away_shots = get_stat(a_stats, "Shots on Goal")
+                    hsh = get_stat(hs, "Shots on Goal")
+                    ash = get_stat(as_, "Shots on Goal")
 
-                    total_attacks = home_attacks + away_attacks
-                    total_shots = home_shots + away_shots
+                    total_attacks = ha + aa
+                    total_shots = hsh + ash
 
                     pressure = total_attacks / max(1, minute)
 
                     # =================================================
-                    # OVER 1.5 GOALS
+                    # OVER 1.5
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
@@ -392,24 +395,24 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 72
-                            and total_attacks >= 6
-                            and pressure >= 0.12
+                            and total_attacks >= 5
+                            and pressure >= 0.10
                         ):
 
                             msg = f"""
 🔥 LIVE SIGNAL
 
 🌍 {country}
-🏆 {league_name}
+🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-⚽ {home_goals}:{away_goals}
+⚽ {gh}:{ga}
 
 🎯 OVER 1.5 GOALS
 
-📊 Total attacks: {total_attacks}
-📊 Total shots: {total_shots}
+📊 Attacks: {total_attacks}
+📊 Shots: {total_shots}
 """
 
                             await bot.send_message(
@@ -420,35 +423,35 @@ async def live_loop():
                             live_sent.add(over_key)
 
                     # =================================================
-                    # UNDER 1.5 GOALS
+                    # UNDER 1.5
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
                     if under_key not in live_sent:
 
                         if (
-                            minute >= 45
+                            minute >= 50
                             and minute <= 65
-                            and total_goals == 0
-                            and total_attacks <= 3
+                            and goals == 0
+                            and total_attacks <= 2
                             and total_shots == 0
-                            and pressure <= 0.08
+                            and pressure <= 0.06
                         ):
 
                             msg = f"""
 ❄️ LIVE SIGNAL
 
 🌍 {country}
-🏆 {league_name}
+🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-⚽ {home_goals}:{away_goals}
+⚽ {gh}:{ga}
 
 🎯 UNDER 1.5 GOALS
 
-📊 Total attacks: {total_attacks}
-📊 Total shots: {total_shots}
+📊 Attacks: {total_attacks}
+📊 Shots: {total_shots}
 """
 
                             await bot.send_message(
@@ -468,26 +471,23 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and home_attacks >= away_attacks + 2
+                            and ha > aa
                         ):
 
                             msg = f"""
 🚨 LIVE SIGNAL
 
 🌍 {country}
-🏆 {league_name}
+🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-⚽ {home_goals}:{away_goals}
+⚽ {gh}:{ga}
 
 🎯 NEXT GOAL HOME
 
-📊 Home attacks: {home_attacks}
-📊 Away attacks: {away_attacks}
-
-📊 Home shots: {home_shots}
-📊 Away shots: {away_shots}
+📊 Home attacks: {ha}
+📊 Away attacks: {aa}
 """
 
                             await bot.send_message(
@@ -507,26 +507,23 @@ async def live_loop():
                         if (
                             minute >= 20
                             and minute <= 75
-                            and away_attacks >= home_attacks + 2
+                            and aa > ha
                         ):
 
                             msg = f"""
 🚨 LIVE SIGNAL
 
 🌍 {country}
-🏆 {league_name}
+🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-⚽ {home_goals}:{away_goals}
+⚽ {gh}:{ga}
 
 🎯 NEXT GOAL AWAY
 
-📊 Home attacks: {home_attacks}
-📊 Away attacks: {away_attacks}
-
-📊 Home shots: {home_shots}
-📊 Away shots: {away_shots}
+📊 Home attacks: {ha}
+📊 Away attacks: {aa}
 """
 
                             await bot.send_message(
