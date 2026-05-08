@@ -7,6 +7,9 @@ import threading
 import requests
 import time
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 from telegram import Bot, Update
 from telegram.ext import (
     Updater,
@@ -22,6 +25,8 @@ from config import BOT_TOKEN, API_KEY, CHAT_ID
 HEADERS = {
     "x-apisports-key": API_KEY
 }
+
+TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_INTERVAL = 60
 
@@ -48,6 +53,24 @@ BAD_LEAGUES = [
     "u23",
     "women",
     "friendly"
+]
+
+# =========================================================
+# TOP LEAGUES
+# =========================================================
+TOP_LEAGUES = [
+    "Premier League",
+    "Champions League",
+    "Europa League",
+    "La Liga",
+    "Serie A",
+    "Bundesliga",
+    "Ligue 1",
+    "Eredivisie",
+    "Primeira Liga",
+    "MLS",
+    "Brasileirao",
+    "Copa Libertadores"
 ]
 
 # =========================================================
@@ -116,19 +139,131 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# COMMANDS
+# GET MATCHES
+# =========================================================
+def get_matches(mode="today"):
+
+    result = []
+
+    try:
+
+        r = requests.get(
+            "https://v3.football.api-sports.io/fixtures?next=150",
+            headers=HEADERS,
+            timeout=20
+        ).json()
+
+        matches = r.get("response", [])
+
+        for m in matches:
+
+            try:
+
+                league = m["league"]["name"]
+                country = m["league"]["country"]
+
+                if blocked(country, league):
+                    continue
+
+                if not any(x.lower() in league.lower() for x in TOP_LEAGUES):
+                    continue
+
+                date = datetime.fromisoformat(
+                    m["fixture"]["date"].replace("Z", "+00:00")
+                ).astimezone(TZ)
+
+                hour = date.hour
+
+                # TODAY
+                if mode == "today":
+
+                    if hour < 8 or hour > 23:
+                        continue
+
+                # NIGHT
+                if mode == "night":
+
+                    if hour >= 8 and hour <= 23:
+                        continue
+
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                result.append({
+                    "league": league,
+                    "country": country,
+                    "home": home,
+                    "away": away,
+                    "time": date.strftime("%H:%M")
+                })
+
+            except:
+                pass
+
+        return result[:3]
+
+    except Exception as e:
+
+        print("MATCH ERROR:", e)
+        return []
+
+# =========================================================
+# TODAY
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
-    update.message.reply_text(
-        "✅ LIVE SYSTEM ACTIVE"
-    )
+    matches = get_matches("today")
 
+    if not matches:
+
+        update.message.reply_text(
+            "❌ Няма намерени мачове."
+        )
+        return
+
+    msg = "📈 TODAY TOP MATCHES\n"
+
+    for g in matches:
+
+        msg += f"""
+
+🌍 {g['country']}
+🏆 {g['league']}
+
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
+"""
+
+    update.message.reply_text(msg)
+
+# =========================================================
+# NIGHT
+# =========================================================
 def night(update: Update, context: CallbackContext):
 
-    update.message.reply_text(
-        "🌙 NIGHT MODE ACTIVE"
-    )
+    matches = get_matches("night")
+
+    if not matches:
+
+        update.message.reply_text(
+            "❌ Няма намерени нощни мачове."
+        )
+        return
+
+    msg = "🌙 NIGHT TOP MATCHES\n"
+
+    for g in matches:
+
+        msg += f"""
+
+🌍 {g['country']}
+🏆 {g['league']}
+
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
+"""
+
+    update.message.reply_text(msg)
 
 # =========================================================
 # LIVE LOOP
@@ -210,15 +345,12 @@ async def live_loop():
                         "ash": ash
                     })
 
-                    # пазим последните 25 проверки
                     history[fixture] = history[fixture][-25:]
 
                     hist = history[fixture]
 
                     # =================================================
-                    # OVER 1.5 GOALS
-                    # двата отбора имат над 2 удара
-                    # в последните 25 минути
+                    # OVER 1.5
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
@@ -260,9 +392,7 @@ async def live_loop():
                             save_signal(over_key)
 
                     # =================================================
-                    # UNDER 1.5 GOALS
-                    # малко атаки
-                    # под 2 удара
+                    # UNDER 1.5
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
@@ -315,8 +445,6 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL HOME
-                    # домакинът натиска
-                    # над 2 удара
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
@@ -362,8 +490,6 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL AWAY
-                    # гостът натиска
-                    # над 2 удара
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
