@@ -5,6 +5,7 @@ import asyncio
 import logging
 import threading
 import requests
+import re
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -44,7 +45,7 @@ LIVE_SENT_FILE = "live_sent.txt"
 # =========================================================
 try:
 
-    with open(LIVE_SENT_FILE, "r") as f:
+    with open(LIVE_SENT_FILE, "r", encoding="utf-8") as f:
 
         live_sent = set(
             x.strip() for x in f.readlines()
@@ -58,7 +59,6 @@ except:
 # STORAGE
 # =========================================================
 history = {}
-
 prematch_sent = set()
 
 # =========================================================
@@ -86,6 +86,30 @@ BAD_LEAGUES = [
 ]
 
 # =========================================================
+# NORMALIZE
+# =========================================================
+def normalize(text):
+
+    text = str(text).lower().strip()
+
+    text = re.sub(r"\s+", " ", text)
+
+    text = re.sub(r"[^a-z0-9 ]", "", text)
+
+    return text
+
+# =========================================================
+# UNIQUE KEY
+# =========================================================
+def unique_key(home, away, market):
+
+    home = normalize(home)
+    away = normalize(away)
+    market = normalize(market)
+
+    return f"{home}_{away}_{market}"
+
+# =========================================================
 # SAVE SIGNAL
 # =========================================================
 def save_live_signal(key):
@@ -95,15 +119,8 @@ def save_live_signal(key):
 
     live_sent.add(key)
 
-    with open(LIVE_SENT_FILE, "a") as f:
+    with open(LIVE_SENT_FILE, "a", encoding="utf-8") as f:
         f.write(key + "\n")
-
-# =========================================================
-# UNIQUE KEY
-# =========================================================
-def unique_key(home, away, market):
-
-    return f"{home.strip()}_{away.strip()}_{market}".lower()
 
 # =========================================================
 # BLOCK CHECK
@@ -183,7 +200,7 @@ def get_prematch_matches():
                 prematch_key = unique_key(
                     home,
                     away,
-                    "PREMATCH"
+                    "prematch"
                 )
 
                 if prematch_key in prematch_sent:
@@ -459,7 +476,11 @@ async def live_loop():
 
                     goals = gh + ga
 
-                    fixture_name = f"{home}_{away}"
+                    fixture_name = unique_key(
+                        home,
+                        away,
+                        "history"
+                    )
 
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={m['fixture']['id']}",
@@ -701,6 +722,10 @@ async def live_loop():
         except Exception as e:
 
             print("LIVE ERROR:", e)
+
+        # CLEAN OLD HISTORY
+        if len(history) > 500:
+            history.clear()
 
         await asyncio.sleep(LIVE_INTERVAL)
 
