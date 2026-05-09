@@ -6,7 +6,6 @@ import logging
 import threading
 import requests
 import re
-import time
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -44,12 +43,9 @@ history = {}
 prematch_sent = set()
 
 # =========================================================
-# SIGNAL MEMORY
+# ACTIVE MATCH SIGNALS
 # =========================================================
-signal_memory = {}
-
-SIGNAL_COOLDOWN = 14400
-# 4 часа
+active_match_signals = {}
 
 # =========================================================
 # BLOCKED
@@ -100,32 +96,31 @@ def unique_key(home, away, market):
     return f"{home}_{away}_{market}"
 
 # =========================================================
-# CAN SEND SIGNAL
+# SIGNAL SYSTEM
 # =========================================================
-def can_send_signal(home, away, market):
+def can_send_signal(fixture_id, market):
 
-    key = unique_key(home, away, market)
+    key = f"{fixture_id}_{market}"
 
-    now = time.time()
+    return key not in active_match_signals
 
-    if key not in signal_memory:
-        return True
+def save_signal(fixture_id, market):
 
-    last_time = signal_memory[key]
+    key = f"{fixture_id}_{market}"
 
-    if now - last_time >= SIGNAL_COOLDOWN:
-        return True
+    active_match_signals[key] = True
 
-    return False
+def clear_match_signals(fixture_id):
 
-# =========================================================
-# SAVE SIGNAL
-# =========================================================
-def save_signal(home, away, market):
+    remove_keys = []
 
-    key = unique_key(home, away, market)
+    for k in active_match_signals:
 
-    signal_memory[key] = time.time()
+        if str(fixture_id) in k:
+            remove_keys.append(k)
+
+    for k in remove_keys:
+        del active_match_signals[k]
 
 # =========================================================
 # BLOCK CHECK
@@ -455,6 +450,18 @@ async def live_loop():
 
                 try:
 
+                    fixture_id = m["fixture"]["id"]
+
+                    status = m["fixture"]["status"]["short"]
+
+                    if status in ["FT", "AET", "PEN"]:
+
+                        clear_match_signals(
+                            fixture_id
+                        )
+
+                        continue
+
                     minute = m["fixture"]["status"]["elapsed"] or 0
 
                     if minute < 20 or minute > 75:
@@ -481,7 +488,7 @@ async def live_loop():
                     )
 
                     sr = requests.get(
-                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={m['fixture']['id']}",
+                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture_id}",
                         headers=HEADERS,
                         timeout=10
                     ).json()
@@ -523,7 +530,7 @@ async def live_loop():
                     # OVER 1.5
                     # =====================================================
 
-                    if can_send_signal(home, away, "OVER15"):
+                    if can_send_signal(fixture_id, "OVER15"):
 
                         over_ticks = 0
 
@@ -560,8 +567,7 @@ async def live_loop():
                             )
 
                             save_signal(
-                                home,
-                                away,
+                                fixture_id,
                                 "OVER15"
                             )
 
@@ -569,7 +575,7 @@ async def live_loop():
                     # UNDER 1.5
                     # =====================================================
 
-                    if can_send_signal(home, away, "UNDER15"):
+                    if can_send_signal(fixture_id, "UNDER15"):
 
                         under_ticks = 0
 
@@ -609,8 +615,7 @@ async def live_loop():
                             )
 
                             save_signal(
-                                home,
-                                away,
+                                fixture_id,
                                 "UNDER15"
                             )
 
@@ -618,7 +623,7 @@ async def live_loop():
                     # NEXT GOAL HOME
                     # =====================================================
 
-                    if can_send_signal(home, away, "NEXTHOME"):
+                    if can_send_signal(fixture_id, "NEXTHOME"):
 
                         home_ticks = 0
 
@@ -654,8 +659,7 @@ async def live_loop():
                             )
 
                             save_signal(
-                                home,
-                                away,
+                                fixture_id,
                                 "NEXTHOME"
                             )
 
@@ -663,7 +667,7 @@ async def live_loop():
                     # NEXT GOAL AWAY
                     # =====================================================
 
-                    if can_send_signal(home, away, "NEXTAWAY"):
+                    if can_send_signal(fixture_id, "NEXTAWAY"):
 
                         away_ticks = 0
 
@@ -699,8 +703,7 @@ async def live_loop():
                             )
 
                             save_signal(
-                                home,
-                                away,
+                                fixture_id,
                                 "NEXTAWAY"
                             )
 
