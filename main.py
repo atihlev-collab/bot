@@ -63,8 +63,15 @@ BAD_LEAGUES = [
 # STORAGE
 # =========================================================
 history = {}
+
+# cooldown duplicate
 sent_signals = {}
+
+# prematch duplicate
 prematch_sent = {}
+
+# ONE SIGNAL PER MARKET PER MATCH
+match_markets_sent = {}
 
 # =========================================================
 # BLOCK CHECK
@@ -95,10 +102,24 @@ def can_send(key, cooldown=1500):
 
     return True
 
-
 def save_signal(key):
 
     sent_signals[key] = time.time()
+
+# =========================================================
+# ONE SIGNAL PER MARKET
+# =========================================================
+def already_sent_market(fixture, market):
+
+    key = f"{fixture}_{market}"
+
+    return key in match_markets_sent
+
+def save_market(fixture, market):
+
+    key = f"{fixture}_{market}"
+
+    match_markets_sent[key] = time.time()
 
 # =========================================================
 # GET STAT
@@ -162,14 +183,12 @@ def get_prematch_matches():
 
                 fixture = m["fixture"]["id"]
 
-                # =================================================
-                # SCORE SYSTEM
-                # =================================================
                 score = 0
-
                 market = "OVER 1.5 GOALS"
 
-                # HIGH SCORING LEAGUES
+                # =================================================
+                # LEAGUE SCORE
+                # =================================================
                 if "Bundesliga" in league:
                     score += 10
                     market = "OVER 2.5 GOALS"
@@ -178,33 +197,35 @@ def get_prematch_matches():
                     score += 10
                     market = "OVER 2.5 GOALS"
 
+                if "Premier League" in league:
+                    score += 9
+                    market = "OVER 2.5 GOALS"
+
+                if "Champions League" in league:
+                    score += 9
+                    market = "OVER 2.5 GOALS"
+
+                if "La Liga" in league:
+                    score += 8
+
                 if "MLS" in league:
                     score += 8
                     market = "OVER 2.5 GOALS"
 
-                if "Brasileirao" in league:
+                if "Serie A" in league:
                     score += 7
 
                 if "Libertadores" in league:
                     score += 7
 
-                if "Premier League" in league:
-                    score += 9
-
-                if "La Liga" in league:
-                    score += 8
-
-                if "Serie A" in league:
-                    score += 7
-
-                if "Champions League" in league:
-                    score += 9
-
+                # =================================================
                 # BIG TEAMS
+                # =================================================
                 big_teams = [
                     "Manchester",
                     "Liverpool",
                     "Arsenal",
+                    "Chelsea",
                     "Barcelona",
                     "Real Madrid",
                     "Bayern",
@@ -252,7 +273,7 @@ def get_prematch_matches():
         return []
 
 # =========================================================
-# TODAY COMMAND
+# TODAY
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -283,7 +304,7 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT COMMAND
+# NIGHT
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -302,7 +323,7 @@ def night(update: Update, context: CallbackContext):
 
         hour = int(g["time"].split(":")[0])
 
-        if hour < 0 or hour > 8:
+        if hour <= 8:
 
             msg += f"""
 
@@ -422,6 +443,9 @@ async def live_loop():
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
+                    # =================================================
+                    # HISTORY
+                    # =================================================
                     if fixture not in history:
 
                         history[fixture] = []
@@ -443,7 +467,10 @@ async def live_loop():
                     # =================================================
                     over_key = f"OVER15_{fixture}"
 
-                    if can_send(over_key):
+                    if (
+                        can_send(over_key)
+                        and not already_sent_market(fixture, "OVER15")
+                    ):
 
                         over_ticks = 0
 
@@ -479,13 +506,17 @@ async def live_loop():
                             )
 
                             save_signal(over_key)
+                            save_market(fixture, "OVER15")
 
                     # =================================================
                     # UNDER 1.5
                     # =================================================
                     under_key = f"UNDER15_{fixture}"
 
-                    if can_send(under_key):
+                    if (
+                        can_send(under_key)
+                        and not already_sent_market(fixture, "UNDER15")
+                    ):
 
                         under_ticks = 0
 
@@ -531,13 +562,17 @@ async def live_loop():
                             )
 
                             save_signal(under_key)
+                            save_market(fixture, "UNDER15")
 
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
                     next_home_key = f"NEXTHOME_{fixture}"
 
-                    if can_send(next_home_key):
+                    if (
+                        can_send(next_home_key)
+                        and not already_sent_market(fixture, "NEXTHOME")
+                    ):
 
                         home_ticks = 0
 
@@ -576,13 +611,17 @@ async def live_loop():
                             )
 
                             save_signal(next_home_key)
+                            save_market(fixture, "NEXTHOME")
 
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
                     next_away_key = f"NEXTAWAY_{fixture}"
 
-                    if can_send(next_away_key):
+                    if (
+                        can_send(next_away_key)
+                        and not already_sent_market(fixture, "NEXTAWAY")
+                    ):
 
                         away_ticks = 0
 
@@ -621,6 +660,7 @@ async def live_loop():
                             )
 
                             save_signal(next_away_key)
+                            save_market(fixture, "NEXTAWAY")
 
                 except Exception as e:
 
