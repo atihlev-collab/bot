@@ -64,15 +64,11 @@ BAD_LEAGUES = [
 # =========================================================
 history = {}
 
-# cooldown duplicate
-sent_signals = {}
-
 # prematch duplicate
 prematch_sent = set()
 
-# HARD BLOCK
-# един мач = един пазар = един сигнал ЗАВИНАГИ
-markets_sent = set()
+# HARD ANTI SPAM
+already_sent_matches = set()
 
 # =========================================================
 # BLOCK CHECK
@@ -90,19 +86,20 @@ def blocked(country, league):
     return False
 
 # =========================================================
-# DUPLICATE
+# HARD ANTI SPAM
 # =========================================================
-def already_sent(fixture, market):
+def signal_sent(home, away, market):
 
-    key = f"{fixture}_{market}"
+    key = f"{home}_{away}_{market}".lower()
 
-    return key in markets_sent
+    return key in already_sent_matches
 
-def save_sent(fixture, market):
 
-    key = f"{fixture}_{market}"
+def save_signal(home, away, market):
 
-    markets_sent.add(key)
+    key = f"{home}_{away}_{market}".lower()
+
+    already_sent_matches.add(key)
 
 # =========================================================
 # GET STAT
@@ -388,8 +385,6 @@ async def live_loop():
 
                 try:
 
-                    fixture = m["fixture"]["id"]
-
                     minute = m["fixture"]["status"]["elapsed"] or 0
 
                     if minute < 20 or minute > 75:
@@ -409,8 +404,10 @@ async def live_loop():
 
                     goals = gh + ga
 
+                    fixture = f"{home}_{away}"
+
                     sr = requests.get(
-                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
+                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={m['fixture']['id']}",
                         headers=HEADERS,
                         timeout=10
                     ).json()
@@ -451,7 +448,7 @@ async def live_loop():
                     # =================================================
                     # OVER 1.5
                     # =================================================
-                    if not already_sent(fixture, "OVER15"):
+                    if not signal_sent(home, away, "OVER15"):
 
                         over_ticks = 0
 
@@ -483,12 +480,12 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_sent(fixture, "OVER15")
+                            save_signal(home, away, "OVER15")
 
                     # =================================================
                     # UNDER 1.5
                     # =================================================
-                    if not already_sent(fixture, "UNDER15"):
+                    if not signal_sent(home, away, "UNDER15"):
 
                         under_ticks = 0
 
@@ -527,12 +524,12 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_sent(fixture, "UNDER15")
+                            save_signal(home, away, "UNDER15")
 
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
-                    if not already_sent(fixture, "NEXTHOME"):
+                    if not signal_sent(home, away, "NEXTHOME"):
 
                         home_ticks = 0
 
@@ -564,12 +561,12 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_sent(fixture, "NEXTHOME")
+                            save_signal(home, away, "NEXTHOME")
 
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
-                    if not already_sent(fixture, "NEXTAWAY"):
+                    if not signal_sent(home, away, "NEXTAWAY"):
 
                         away_ticks = 0
 
@@ -601,7 +598,7 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_sent(fixture, "NEXTAWAY")
+                            save_signal(home, away, "NEXTAWAY")
 
                 except Exception as e:
 
@@ -655,7 +652,7 @@ def main():
 
     live_thread = threading.Thread(
         target=start_live_loop,
-       daemon=True
+        daemon=True
     )
 
     prematch_thread = threading.Thread(
