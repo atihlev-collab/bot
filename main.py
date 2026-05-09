@@ -6,6 +6,7 @@ import logging
 import threading
 import requests
 import re
+import time
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -36,30 +37,19 @@ logging.basicConfig(level=logging.WARNING)
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
-# FILES
-# =========================================================
-LIVE_SENT_FILE = "live_sent.txt"
-
-# =========================================================
-# LOAD LIVE SIGNALS
-# =========================================================
-try:
-
-    with open(LIVE_SENT_FILE, "r", encoding="utf-8") as f:
-
-        live_sent = set(
-            x.strip() for x in f.readlines()
-        )
-
-except:
-
-    live_sent = set()
-
-# =========================================================
 # STORAGE
 # =========================================================
 history = {}
+
 prematch_sent = set()
+
+# =========================================================
+# SIGNAL MEMORY
+# =========================================================
+signal_memory = {}
+
+SIGNAL_COOLDOWN = 14400
+# 4 часа
 
 # =========================================================
 # BLOCKED
@@ -110,17 +100,32 @@ def unique_key(home, away, market):
     return f"{home}_{away}_{market}"
 
 # =========================================================
+# CAN SEND SIGNAL
+# =========================================================
+def can_send_signal(home, away, market):
+
+    key = unique_key(home, away, market)
+
+    now = time.time()
+
+    if key not in signal_memory:
+        return True
+
+    last_time = signal_memory[key]
+
+    if now - last_time >= SIGNAL_COOLDOWN:
+        return True
+
+    return False
+
+# =========================================================
 # SAVE SIGNAL
 # =========================================================
-def save_live_signal(key):
+def save_signal(home, away, market):
 
-    if key in live_sent:
-        return
+    key = unique_key(home, away, market)
 
-    live_sent.add(key)
-
-    with open(LIVE_SENT_FILE, "a", encoding="utf-8") as f:
-        f.write(key + "\n")
+    signal_memory[key] = time.time()
 
 # =========================================================
 # BLOCK CHECK
@@ -164,7 +169,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH MATCHES
+# PREMATCH
 # =========================================================
 def get_prematch_matches():
 
@@ -210,7 +215,7 @@ def get_prematch_matches():
                 market = "OVER 1.5 GOALS"
 
                 # =====================================================
-                # LEAGUE SCORE
+                # LEAGUES
                 # =====================================================
 
                 if "Bundesliga" in league:
@@ -335,10 +340,7 @@ def today(update: Update, context: CallbackContext):
     matches = get_prematch_matches()
 
     if not matches:
-
-        update.message.reply_text(
-            "❌ Няма намерени мачове."
-        )
+        update.message.reply_text("❌ Няма мачове.")
         return
 
     msg = "📈 TODAY TOP MATCHES\n"
@@ -366,10 +368,7 @@ def night(update: Update, context: CallbackContext):
     matches = get_prematch_matches()
 
     if not matches:
-
-        update.message.reply_text(
-            "❌ Няма намерени нощни мачове."
-        )
+        update.message.reply_text("❌ Няма нощни мачове.")
         return
 
     msg = "🌙 NIGHT TOP MATCHES\n"
@@ -431,7 +430,6 @@ async def prematch_loop():
                 )
 
         except Exception as e:
-
             print("PREMATCH LOOP ERROR:", e)
 
         await asyncio.sleep(PREMATCH_INTERVAL)
@@ -507,7 +505,6 @@ async def live_loop():
                     # =====================================================
 
                     if fixture_name not in history:
-
                         history[fixture_name] = []
 
                     history[fixture_name].append({
@@ -526,13 +523,7 @@ async def live_loop():
                     # OVER 1.5
                     # =====================================================
 
-                    over_key = unique_key(
-                        home,
-                        away,
-                        "OVER15"
-                    )
-
-                    if over_key not in live_sent:
+                    if can_send_signal(home, away, "OVER15"):
 
                         over_ticks = 0
 
@@ -568,19 +559,17 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_live_signal(over_key)
+                            save_signal(
+                                home,
+                                away,
+                                "OVER15"
+                            )
 
                     # =====================================================
                     # UNDER 1.5
                     # =====================================================
 
-                    under_key = unique_key(
-                        home,
-                        away,
-                        "UNDER15"
-                    )
-
-                    if under_key not in live_sent:
+                    if can_send_signal(home, away, "UNDER15"):
 
                         under_ticks = 0
 
@@ -619,19 +608,17 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_live_signal(under_key)
+                            save_signal(
+                                home,
+                                away,
+                                "UNDER15"
+                            )
 
                     # =====================================================
                     # NEXT GOAL HOME
                     # =====================================================
 
-                    next_home_key = unique_key(
-                        home,
-                        away,
-                        "NEXTHOME"
-                    )
-
-                    if next_home_key not in live_sent:
+                    if can_send_signal(home, away, "NEXTHOME"):
 
                         home_ticks = 0
 
@@ -666,19 +653,17 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_live_signal(next_home_key)
+                            save_signal(
+                                home,
+                                away,
+                                "NEXTHOME"
+                            )
 
                     # =====================================================
                     # NEXT GOAL AWAY
                     # =====================================================
 
-                    next_away_key = unique_key(
-                        home,
-                        away,
-                        "NEXTAWAY"
-                    )
-
-                    if next_away_key not in live_sent:
+                    if can_send_signal(home, away, "NEXTAWAY"):
 
                         away_ticks = 0
 
@@ -713,17 +698,18 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_live_signal(next_away_key)
+                            save_signal(
+                                home,
+                                away,
+                                "NEXTAWAY"
+                            )
 
                 except Exception as e:
-
                     print("MATCH ERROR:", e)
 
         except Exception as e:
-
             print("LIVE ERROR:", e)
 
-        # CLEAN OLD HISTORY
         if len(history) > 500:
             history.clear()
 
