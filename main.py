@@ -1,6 +1,5 @@
 import os
-os.system("pip install requests python-telegram-bot==13.15")
-
+import sqlite3
 import asyncio
 import logging
 import threading
@@ -36,16 +35,30 @@ logging.basicConfig(level=logging.WARNING)
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
+# SQLITE
+# =========================================================
+conn = sqlite3.connect(
+    "signals.db",
+    check_same_thread=False
+)
+
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS sent_signals (
+    fixture_id TEXT,
+    market TEXT,
+    PRIMARY KEY (fixture_id, market)
+)
+""")
+
+conn.commit()
+
+# =========================================================
 # STORAGE
 # =========================================================
 history = {}
-
 prematch_sent = set()
-
-# =========================================================
-# ACTIVE MATCH SIGNALS
-# =========================================================
-active_match_signals = {}
 
 # =========================================================
 # BLOCKED
@@ -96,31 +109,56 @@ def unique_key(home, away, market):
     return f"{home}_{away}_{market}"
 
 # =========================================================
-# SIGNAL SYSTEM
+# SIGNAL DB
 # =========================================================
 def can_send_signal(fixture_id, market):
 
-    key = f"{fixture_id}_{market}"
+    cursor.execute(
+        """
+        SELECT 1 FROM sent_signals
+        WHERE fixture_id=? AND market=?
+        """,
+        (str(fixture_id), market)
+    )
 
-    return key not in active_match_signals
+    row = cursor.fetchone()
+
+    return row is None
 
 def save_signal(fixture_id, market):
 
-    key = f"{fixture_id}_{market}"
+    try:
 
-    active_match_signals[key] = True
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO sent_signals
+            (fixture_id, market)
+            VALUES (?, ?)
+            """,
+            (str(fixture_id), market)
+        )
+
+        conn.commit()
+
+    except:
+        pass
 
 def clear_match_signals(fixture_id):
 
-    remove_keys = []
+    try:
 
-    for k in active_match_signals:
+        cursor.execute(
+            """
+            DELETE FROM sent_signals
+            WHERE fixture_id=?
+            """,
+            (str(fixture_id),)
+        )
 
-        if str(fixture_id) in k:
-            remove_keys.append(k)
+        conn.commit()
 
-    for k in remove_keys:
-        del active_match_signals[k]
+    except:
+        pass
 
 # =========================================================
 # BLOCK CHECK
@@ -209,10 +247,6 @@ def get_prematch_matches():
                 score = 0
                 market = "OVER 1.5 GOALS"
 
-                # =====================================================
-                # LEAGUES
-                # =====================================================
-
                 if "Bundesliga" in league:
                     score += 10
                     market = "OVER 2.5 GOALS"
@@ -271,10 +305,6 @@ def get_prematch_matches():
 
                 if "Brazil" in country:
                     score += 6
-
-                # =====================================================
-                # BIG TEAMS
-                # =====================================================
 
                 big_teams = [
                     "Manchester",
@@ -506,10 +536,6 @@ async def live_loop():
 
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
-
-                    # =====================================================
-                    # HISTORY
-                    # =====================================================
 
                     if fixture_name not in history:
                         history[fixture_name] = []
