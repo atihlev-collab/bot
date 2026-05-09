@@ -195,6 +195,7 @@ def get_prematch_matches():
                 # =====================================================
                 # LEAGUE SCORE
                 # =====================================================
+
                 if "Bundesliga" in league:
                     score += 10
                     market = "OVER 2.5 GOALS"
@@ -239,9 +240,25 @@ def get_prematch_matches():
                 if "Switzerland" in country:
                     score += 5
 
+                if "Norway" in country:
+                    score += 5
+
+                if "Sweden" in country:
+                    score += 5
+
+                if "Denmark" in country:
+                    score += 5
+
+                if "Argentina" in country:
+                    score += 5
+
+                if "Brazil" in country:
+                    score += 6
+
                 # =====================================================
                 # BIG TEAMS
                 # =====================================================
+
                 big_teams = [
                     "Manchester",
                     "Liverpool",
@@ -286,7 +303,7 @@ def get_prematch_matches():
             reverse=True
         )
 
-        return result[:6]
+        return result[:10]
 
     except Exception as e:
 
@@ -467,6 +484,7 @@ async def live_loop():
                     # =====================================================
                     # HISTORY
                     # =====================================================
+
                     if fixture_name not in history:
 
                         history[fixture_name] = []
@@ -486,6 +504,7 @@ async def live_loop():
                     # =====================================================
                     # OVER 1.5
                     # =====================================================
+
                     over_key = unique_key(
                         home,
                         away,
@@ -504,7 +523,11 @@ async def live_loop():
                             ):
                                 over_ticks += 1
 
-                        if over_ticks >= 8:
+                        if (
+                            over_ticks >= 10
+                            and hsh >= 3
+                            and ash >= 3
+                        ):
 
                             msg = f"""
 🔥 LIVE SIGNAL
@@ -529,6 +552,7 @@ async def live_loop():
                     # =====================================================
                     # UNDER 1.5
                     # =====================================================
+
                     under_key = unique_key(
                         home,
                         away,
@@ -553,7 +577,7 @@ async def live_loop():
                             minute >= 25
                             and minute <= 70
                             and goals == 0
-                            and under_ticks >= 10
+                            and under_ticks >= 12
                         ):
 
                             msg = f"""
@@ -579,6 +603,7 @@ async def live_loop():
                     # =====================================================
                     # NEXT GOAL HOME
                     # =====================================================
+
                     next_home_key = unique_key(
                         home,
                         away,
@@ -597,7 +622,10 @@ async def live_loop():
                             ):
                                 home_ticks += 1
 
-                        if home_ticks >= 8:
+                        if (
+                            home_ticks >= 10
+                            and hsh >= 3
+                        ):
 
                             msg = f"""
 🚨 LIVE SIGNAL
@@ -622,6 +650,7 @@ async def live_loop():
                     # =====================================================
                     # NEXT GOAL AWAY
                     # =====================================================
+
                     next_away_key = unique_key(
                         home,
                         away,
@@ -640,7 +669,10 @@ async def live_loop():
                             ):
                                 away_ticks += 1
 
-                        if away_ticks >= 8:
+                        if (
+                            away_ticks >= 10
+                            and ash >= 3
+                        ):
 
                             msg = f"""
 🚨 LIVE SIGNAL
