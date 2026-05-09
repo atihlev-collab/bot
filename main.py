@@ -35,6 +35,33 @@ logging.basicConfig(level=logging.WARNING)
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
+# FILES
+# =========================================================
+LIVE_SENT_FILE = "live_sent.txt"
+
+# =========================================================
+# LOAD LIVE SIGNALS
+# =========================================================
+try:
+
+    with open(LIVE_SENT_FILE, "r") as f:
+
+        live_sent = set(
+            x.strip() for x in f.readlines()
+        )
+
+except:
+
+    live_sent = set()
+
+# =========================================================
+# STORAGE
+# =========================================================
+history = {}
+
+prematch_sent = set()
+
+# =========================================================
 # BLOCKED
 # =========================================================
 BLOCKED_WORDS = [
@@ -59,15 +86,24 @@ BAD_LEAGUES = [
 ]
 
 # =========================================================
-# STORAGE
+# SAVE SIGNAL
 # =========================================================
-history = {}
+def save_live_signal(key):
 
-# LIVE DUPLICATES
-live_sent = set()
+    if key in live_sent:
+        return
 
-# PREMATCH DUPLICATES
-prematch_sent = set()
+    live_sent.add(key)
+
+    with open(LIVE_SENT_FILE, "a") as f:
+        f.write(key + "\n")
+
+# =========================================================
+# UNIQUE KEY
+# =========================================================
+def unique_key(home, away, market):
+
+    return f"{home.strip()}_{away.strip()}_{market}".lower()
 
 # =========================================================
 # BLOCK CHECK
@@ -83,13 +119,6 @@ def blocked(country, league):
         return True
 
     return False
-
-# =========================================================
-# UNIQUE KEY
-# =========================================================
-def unique_key(home, away, market):
-
-    return f"{home.strip()}_{away.strip()}_{market}".lower()
 
 # =========================================================
 # GET STAT
@@ -157,9 +186,6 @@ def get_prematch_matches():
                     "PREMATCH"
                 )
 
-                # =====================================================
-                # NEVER REPEAT SAME PREMATCH
-                # =====================================================
                 if prematch_key in prematch_sent:
                     continue
 
@@ -366,9 +392,6 @@ async def prematch_loop():
                     text=msg
                 )
 
-                # =====================================================
-                # SAVE SENT
-                # =====================================================
                 prematch_sent.add(
                     g["prematch_key"]
                 )
@@ -501,7 +524,7 @@ async def live_loop():
                                 text=msg
                             )
 
-                            live_sent.add(over_key)
+                            save_live_signal(over_key)
 
                     # =====================================================
                     # UNDER 1.5
@@ -551,7 +574,7 @@ async def live_loop():
                                 text=msg
                             )
 
-                            live_sent.add(under_key)
+                            save_live_signal(under_key)
 
                     # =====================================================
                     # NEXT GOAL HOME
@@ -594,7 +617,7 @@ async def live_loop():
                                 text=msg
                             )
 
-                            live_sent.add(next_home_key)
+                            save_live_signal(next_home_key)
 
                     # =====================================================
                     # NEXT GOAL AWAY
@@ -637,7 +660,7 @@ async def live_loop():
                                 text=msg
                             )
 
-                            live_sent.add(next_away_key)
+                            save_live_signal(next_away_key)
 
                 except Exception as e:
 
