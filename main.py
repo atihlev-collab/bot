@@ -63,10 +63,11 @@ BAD_LEAGUES = [
 # =========================================================
 history = {}
 
-prematch_sent = set()
+# LIVE DUPLICATES
+live_sent = set()
 
-# HARD ANTI SPAM
-already_sent_matches = set()
+# PREMATCH DUPLICATES
+prematch_sent = set()
 
 # =========================================================
 # BLOCK CHECK
@@ -84,20 +85,11 @@ def blocked(country, league):
     return False
 
 # =========================================================
-# HARD ANTI SPAM
+# UNIQUE KEY
 # =========================================================
-def signal_sent(home, away, market):
+def unique_key(home, away, market):
 
-    key = f"{home}_{away}_{market}".lower()
-
-    return key in already_sent_matches
-
-
-def save_signal(home, away, market):
-
-    key = f"{home}_{away}_{market}".lower()
-
-    already_sent_matches.add(key)
+    return f"{home.strip()}_{away.strip()}_{market}".lower()
 
 # =========================================================
 # GET STAT
@@ -152,11 +144,6 @@ def get_prematch_matches():
                 if blocked(country, league):
                     continue
 
-                fixture = m["fixture"]["id"]
-
-                if fixture in prematch_sent:
-                    continue
-
                 date = datetime.fromisoformat(
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
@@ -164,13 +151,24 @@ def get_prematch_matches():
                 home = m["teams"]["home"]["name"]
                 away = m["teams"]["away"]["name"]
 
+                prematch_key = unique_key(
+                    home,
+                    away,
+                    "PREMATCH"
+                )
+
+                # =====================================================
+                # NEVER REPEAT SAME PREMATCH
+                # =====================================================
+                if prematch_key in prematch_sent:
+                    continue
+
                 score = 0
                 market = "OVER 1.5 GOALS"
 
-                # =================================================
+                # =====================================================
                 # LEAGUE SCORE
-                # =========================================================
-
+                # =====================================================
                 if "Bundesliga" in league:
                     score += 10
                     market = "OVER 2.5 GOALS"
@@ -215,10 +213,9 @@ def get_prematch_matches():
                 if "Switzerland" in country:
                     score += 5
 
-                # =================================================
+                # =====================================================
                 # BIG TEAMS
-                # =========================================================
-
+                # =====================================================
                 big_teams = [
                     "Manchester",
                     "Liverpool",
@@ -244,14 +241,14 @@ def get_prematch_matches():
                     score += 3
 
                 result.append({
-                    "fixture": fixture,
                     "country": country,
                     "league": league,
                     "home": home,
                     "away": away,
                     "time": date.strftime("%H:%M"),
                     "score": score,
-                    "market": market
+                    "market": market,
+                    "prematch_key": prematch_key
                 })
 
             except:
@@ -349,9 +346,7 @@ async def prematch_loop():
 
             for g in matches:
 
-                fixture = g["fixture"]
-
-                if fixture in prematch_sent:
+                if g["prematch_key"] in prematch_sent:
                     continue
 
                 msg = f"""
@@ -371,7 +366,12 @@ async def prematch_loop():
                     text=msg
                 )
 
-                prematch_sent.add(fixture)
+                # =====================================================
+                # SAVE SENT
+                # =====================================================
+                prematch_sent.add(
+                    g["prematch_key"]
+                )
 
         except Exception as e:
 
@@ -419,7 +419,7 @@ async def live_loop():
 
                     goals = gh + ga
 
-                    fixture = f"{home}_{away}"
+                    fixture_name = f"{home}_{away}"
 
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={m['fixture']['id']}",
@@ -441,15 +441,14 @@ async def live_loop():
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
-                    # =========================================================
+                    # =====================================================
                     # HISTORY
-                    # =========================================================
+                    # =====================================================
+                    if fixture_name not in history:
 
-                    if fixture not in history:
+                        history[fixture_name] = []
 
-                        history[fixture] = []
-
-                    history[fixture].append({
+                    history[fixture_name].append({
                         "minute": minute,
                         "ha": ha,
                         "aa": aa,
@@ -457,15 +456,20 @@ async def live_loop():
                         "ash": ash
                     })
 
-                    history[fixture] = history[fixture][-25:]
+                    history[fixture_name] = history[fixture_name][-25:]
 
-                    hist = history[fixture]
+                    hist = history[fixture_name]
 
-                    # =========================================================
+                    # =====================================================
                     # OVER 1.5
-                    # =========================================================
+                    # =====================================================
+                    over_key = unique_key(
+                        home,
+                        away,
+                        "OVER15"
+                    )
 
-                    if not signal_sent(home, away, "OVER15"):
+                    if over_key not in live_sent:
 
                         over_ticks = 0
 
@@ -497,13 +501,18 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(home, away, "OVER15")
+                            live_sent.add(over_key)
 
-                    # =========================================================
+                    # =====================================================
                     # UNDER 1.5
-                    # =========================================================
+                    # =====================================================
+                    under_key = unique_key(
+                        home,
+                        away,
+                        "UNDER15"
+                    )
 
-                    if not signal_sent(home, away, "UNDER15"):
+                    if under_key not in live_sent:
 
                         under_ticks = 0
 
@@ -542,13 +551,18 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(home, away, "UNDER15")
+                            live_sent.add(under_key)
 
-                    # =========================================================
+                    # =====================================================
                     # NEXT GOAL HOME
-                    # =========================================================
+                    # =====================================================
+                    next_home_key = unique_key(
+                        home,
+                        away,
+                        "NEXTHOME"
+                    )
 
-                    if not signal_sent(home, away, "NEXTHOME"):
+                    if next_home_key not in live_sent:
 
                         home_ticks = 0
 
@@ -580,13 +594,18 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(home, away, "NEXTHOME")
+                            live_sent.add(next_home_key)
 
-                    # =========================================================
+                    # =====================================================
                     # NEXT GOAL AWAY
-                    # =========================================================
+                    # =====================================================
+                    next_away_key = unique_key(
+                        home,
+                        away,
+                        "NEXTAWAY"
+                    )
 
-                    if not signal_sent(home, away, "NEXTAWAY"):
+                    if next_away_key not in live_sent:
 
                         away_ticks = 0
 
@@ -618,7 +637,7 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(home, away, "NEXTAWAY")
+                            live_sent.add(next_away_key)
 
                 except Exception as e:
 
