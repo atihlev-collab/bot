@@ -92,7 +92,6 @@ def normalize(text):
     text = str(text).lower().strip()
 
     text = re.sub(r"\s+", " ", text)
-
     text = re.sub(r"[^a-z0-9 ]", "", text)
 
     return text
@@ -109,7 +108,7 @@ def unique_key(home, away, market):
     return f"{home}_{away}_{market}"
 
 # =========================================================
-# SIGNAL DB
+# SIGNAL DATABASE
 # =========================================================
 def can_send_signal(fixture_id, market):
 
@@ -202,7 +201,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH
+# PREMATCH MATCHES
 # =========================================================
 def get_prematch_matches():
 
@@ -358,7 +357,7 @@ def get_prematch_matches():
         return []
 
 # =========================================================
-# TODAY
+# TODAY COMMAND
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -386,7 +385,7 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT
+# NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -466,6 +465,11 @@ async def live_loop():
 
     while True:
 
+        # =================================================
+        # PROCESS ONLY ONCE PER LOOP
+        # =================================================
+        processed_fixtures = set()
+
         try:
 
             r = requests.get(
@@ -481,6 +485,14 @@ async def live_loop():
                 try:
 
                     fixture_id = m["fixture"]["id"]
+
+                    # =================================================
+                    # STOP DUPLICATE PROCESSING
+                    # =================================================
+                    if fixture_id in processed_fixtures:
+                        continue
+
+                    processed_fixtures.add(fixture_id)
 
                     status = m["fixture"]["status"]["short"]
 
@@ -537,6 +549,9 @@ async def live_loop():
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
+                    # =================================================
+                    # HISTORY
+                    # =================================================
                     if fixture_name not in history:
                         history[fixture_name] = []
 
@@ -552,11 +567,13 @@ async def live_loop():
 
                     hist = history[fixture_name]
 
-                    # =====================================================
+                    # =================================================
                     # OVER 1.5
-                    # =====================================================
-
-                    if can_send_signal(fixture_id, "OVER15"):
+                    # =================================================
+                    if can_send_signal(
+                        fixture_id,
+                        "OVER15"
+                    ):
 
                         over_ticks = 0
 
@@ -597,11 +614,13 @@ async def live_loop():
                                 "OVER15"
                             )
 
-                    # =====================================================
+                    # =================================================
                     # UNDER 1.5
-                    # =====================================================
-
-                    if can_send_signal(fixture_id, "UNDER15"):
+                    # =================================================
+                    if can_send_signal(
+                        fixture_id,
+                        "UNDER15"
+                    ):
 
                         under_ticks = 0
 
@@ -645,11 +664,13 @@ async def live_loop():
                                 "UNDER15"
                             )
 
-                    # =====================================================
+                    # =================================================
                     # NEXT GOAL HOME
-                    # =====================================================
-
-                    if can_send_signal(fixture_id, "NEXTHOME"):
+                    # =================================================
+                    if can_send_signal(
+                        fixture_id,
+                        "NEXTHOME"
+                    ):
 
                         home_ticks = 0
 
@@ -689,11 +710,13 @@ async def live_loop():
                                 "NEXTHOME"
                             )
 
-                    # =====================================================
+                    # =================================================
                     # NEXT GOAL AWAY
-                    # =====================================================
-
-                    if can_send_signal(fixture_id, "NEXTAWAY"):
+                    # =================================================
+                    if can_send_signal(
+                        fixture_id,
+                        "NEXTAWAY"
+                    ):
 
                         away_ticks = 0
 
