@@ -5,7 +5,6 @@ import asyncio
 import logging
 import threading
 import requests
-import time
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -64,7 +63,6 @@ BAD_LEAGUES = [
 # =========================================================
 history = {}
 
-# prematch duplicate
 prematch_sent = set()
 
 # HARD ANTI SPAM
@@ -137,7 +135,7 @@ def get_prematch_matches():
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=120",
+            "https://v3.football.api-sports.io/fixtures?next=300",
             headers=HEADERS,
             timeout=20
         ).json()
@@ -171,7 +169,8 @@ def get_prematch_matches():
 
                 # =================================================
                 # LEAGUE SCORE
-                # =================================================
+                # =========================================================
+
                 if "Bundesliga" in league:
                     score += 10
                     market = "OVER 2.5 GOALS"
@@ -201,9 +200,25 @@ def get_prematch_matches():
                 if "Libertadores" in league:
                     score += 7
 
+                if "Championship" in league:
+                    score += 6
+
+                if "Turkey" in country:
+                    score += 6
+
+                if "Belgium" in country:
+                    score += 6
+
+                if "Austria" in country:
+                    score += 6
+
+                if "Switzerland" in country:
+                    score += 5
+
                 # =================================================
                 # BIG TEAMS
-                # =================================================
+                # =========================================================
+
                 big_teams = [
                     "Manchester",
                     "Liverpool",
@@ -248,7 +263,7 @@ def get_prematch_matches():
             reverse=True
         )
 
-        return result[:3]
+        return result[:6]
 
     except Exception as e:
 
@@ -426,9 +441,10 @@ async def live_loop():
                     hsh = get_stat(hs, "Shots on Goal")
                     ash = get_stat(as_, "Shots on Goal")
 
-                    # =================================================
+                    # =========================================================
                     # HISTORY
-                    # =================================================
+                    # =========================================================
+
                     if fixture not in history:
 
                         history[fixture] = []
@@ -445,9 +461,10 @@ async def live_loop():
 
                     hist = history[fixture]
 
-                    # =================================================
+                    # =========================================================
                     # OVER 1.5
-                    # =================================================
+                    # =========================================================
+
                     if not signal_sent(home, away, "OVER15"):
 
                         over_ticks = 0
@@ -482,9 +499,10 @@ async def live_loop():
 
                             save_signal(home, away, "OVER15")
 
-                    # =================================================
+                    # =========================================================
                     # UNDER 1.5
-                    # =================================================
+                    # =========================================================
+
                     if not signal_sent(home, away, "UNDER15"):
 
                         under_ticks = 0
@@ -526,9 +544,10 @@ async def live_loop():
 
                             save_signal(home, away, "UNDER15")
 
-                    # =================================================
+                    # =========================================================
                     # NEXT GOAL HOME
-                    # =================================================
+                    # =========================================================
+
                     if not signal_sent(home, away, "NEXTHOME"):
 
                         home_ticks = 0
@@ -563,9 +582,10 @@ async def live_loop():
 
                             save_signal(home, away, "NEXTHOME")
 
-                    # =================================================
+                    # =========================================================
                     # NEXT GOAL AWAY
-                    # =================================================
+                    # =========================================================
+
                     if not signal_sent(home, away, "NEXTAWAY"):
 
                         away_ticks = 0
