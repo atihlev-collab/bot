@@ -1,5 +1,3 @@
-import os
-import sqlite3
 import asyncio
 import logging
 import threading
@@ -35,48 +33,13 @@ logging.basicConfig(level=logging.WARNING)
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
-# SQLITE
-# =========================================================
-DB_PATH = os.path.join(
-    os.path.dirname(__file__),
-    "signals.db"
-)
-
-print("SQLITE FILE:", DB_PATH)
-
-conn = sqlite3.connect(
-    DB_PATH,
-    check_same_thread=False
-)
-
-cursor = conn.cursor()
-
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS sent_signals (
-    fixture_id TEXT,
-    market TEXT,
-    PRIMARY KEY (fixture_id, market)
-)
-""")
-
-conn.commit()
-
-# =========================================================
-# CLEAR OLD SIGNALS ON START
-# =========================================================
-cursor.execute(
-    "DELETE FROM sent_signals"
-)
-
-conn.commit()
-
-# =========================================================
 # STORAGE
 # =========================================================
 pressure_home = {}
 pressure_away = {}
 pressure_over = {}
 
+sent_signals = set()
 prematch_sent = set()
 
 # =========================================================
@@ -125,58 +88,6 @@ def unique_key(home, away, market):
     market = normalize(market)
 
     return f"{home}_{away}_{market}"
-
-# =========================================================
-# SIGNAL DATABASE
-# =========================================================
-def can_send_signal(fixture_id, market):
-
-    cursor.execute(
-        """
-        SELECT 1 FROM sent_signals
-        WHERE fixture_id=? AND market=?
-        """,
-        (str(fixture_id), market)
-    )
-
-    row = cursor.fetchone()
-
-    return row is None
-
-def save_signal(fixture_id, market):
-
-    try:
-
-        cursor.execute(
-            """
-            INSERT OR IGNORE INTO sent_signals
-            (fixture_id, market)
-            VALUES (?, ?)
-            """,
-            (str(fixture_id), market)
-        )
-
-        conn.commit()
-
-    except:
-        pass
-
-def clear_match_signals(fixture_id):
-
-    try:
-
-        cursor.execute(
-            """
-            DELETE FROM sent_signals
-            WHERE fixture_id=?
-            """,
-            (str(fixture_id),)
-        )
-
-        conn.commit()
-
-    except:
-        pass
 
 # =========================================================
 # BLOCK CHECK
@@ -262,6 +173,10 @@ def get_prematch_matches():
                 score = 0
                 market = "OVER 2.5 GOALS"
 
+                # =====================================================
+                # LEAGUES
+                # =====================================================
+
                 if "Bundesliga" in league:
                     score += 10
 
@@ -282,6 +197,10 @@ def get_prematch_matches():
 
                 if "Serie A" in league:
                     score += 7
+
+                # =====================================================
+                # BIG TEAMS
+                # =====================================================
 
                 big_teams = [
                     "Manchester",
@@ -308,6 +227,10 @@ def get_prematch_matches():
                     for x in big_teams
                 ):
                     score += 3
+
+                # =====================================================
+                # MARKETS
+                # =====================================================
 
                 if (
                     "Bundesliga" in league
@@ -376,7 +299,7 @@ def today(update: Update, context: CallbackContext):
 
     msg = "📈 TODAY TOP MATCHES\n"
 
-    for g in matches:
+    for g in matches[:3]:
 
         msg += f"""
 
@@ -408,11 +331,15 @@ def night(update: Update, context: CallbackContext):
 
     msg = "🌙 NIGHT TOP MATCHES\n"
 
+    count = 0
+
     for g in matches:
 
         hour = int(g["time"].split(":")[0])
 
         if hour <= 8:
+
+            count += 1
 
             msg += f"""
 
@@ -424,6 +351,9 @@ def night(update: Update, context: CallbackContext):
 
 🎯 {g['market']}
 """
+
+            if count >= 3:
+                break
 
     update.message.reply_text(msg)
 
@@ -438,7 +368,7 @@ async def prematch_loop():
 
             matches = get_prematch_matches()
 
-            for g in matches:
+            for g in matches[:5]:
 
                 if g["prematch_key"] in prematch_sent:
                     continue
@@ -495,11 +425,10 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
+                    # =================================================
+                    # CLEAR AFTER FT
+                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
-
-                        clear_match_signals(
-                            fixture_id
-                        )
 
                         pressure_home.pop(
                             fixture_id,
@@ -552,6 +481,9 @@ async def live_loop():
                     hs = stats[0]["statistics"]
                     as_ = stats[1]["statistics"]
 
+                    # =================================================
+                    # STATS
+                    # =================================================
                     ha = get_stat(
                         hs,
                         "Attacks"
@@ -573,6 +505,27 @@ async def live_loop():
                     )
 
                     # =================================================
+                    # KEYS
+                    # =================================================
+                    over_key = unique_key(
+                        home,
+                        away,
+                        "OVER15"
+                    )
+
+                    home_key = unique_key(
+                        home,
+                        away,
+                        "NEXTHOME"
+                    )
+
+                    away_key = unique_key(
+                        home,
+                        away,
+                        "NEXTAWAY"
+                    )
+
+                    # =================================================
                     # INIT COUNTERS
                     # =================================================
                     if fixture_id not in pressure_home:
@@ -589,7 +542,7 @@ async def live_loop():
                     # =================================================
                     if (
                         hsh + ash >= 3
-                        and ha + aa >= 18
+                        and ha + aa >= 15
                     ):
 
                         pressure_over[
@@ -608,13 +561,10 @@ async def live_loop():
                         )
 
                     if (
-                        can_send_signal(
-                            fixture_id,
-                            "OVER15"
-                        )
-                        and pressure_over[
+                        pressure_over[
                             fixture_id
-                        ] >= 3
+                        ] >= 2
+                        and over_key not in sent_signals
                     ):
 
                         msg = f"""
@@ -636,17 +586,16 @@ async def live_loop():
                             text=msg
                         )
 
-                        save_signal(
-                            fixture_id,
-                            "OVER15"
+                        sent_signals.add(
+                            over_key
                         )
 
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
                     if (
-                        ha > aa + 4
-                        and hsh >= 2
+                        ha > aa + 3
+                        and hsh >= 1
                     ):
 
                         pressure_home[
@@ -665,13 +614,10 @@ async def live_loop():
                         )
 
                     if (
-                        can_send_signal(
-                            fixture_id,
-                            "NEXTHOME"
-                        )
-                        and pressure_home[
+                        pressure_home[
                             fixture_id
-                        ] >= 3
+                        ] >= 2
+                        and home_key not in sent_signals
                     ):
 
                         msg = f"""
@@ -693,17 +639,16 @@ async def live_loop():
                             text=msg
                         )
 
-                        save_signal(
-                            fixture_id,
-                            "NEXTHOME"
+                        sent_signals.add(
+                            home_key
                         )
 
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
                     if (
-                        aa > ha + 4
-                        and ash >= 2
+                        aa > ha + 3
+                        and ash >= 1
                     ):
 
                         pressure_away[
@@ -722,13 +667,10 @@ async def live_loop():
                         )
 
                     if (
-                        can_send_signal(
-                            fixture_id,
-                            "NEXTAWAY"
-                        )
-                        and pressure_away[
+                        pressure_away[
                             fixture_id
-                        ] >= 3
+                        ] >= 2
+                        and away_key not in sent_signals
                     ):
 
                         msg = f"""
@@ -750,9 +692,8 @@ async def live_loop():
                             text=msg
                         )
 
-                        save_signal(
-                            fixture_id,
-                            "NEXTAWAY"
+                        sent_signals.add(
+                            away_key
                         )
 
                 except Exception as e:
