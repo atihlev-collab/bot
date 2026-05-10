@@ -465,9 +465,6 @@ async def live_loop():
 
     while True:
 
-        # =================================================
-        # PROCESS ONLY ONCE PER LOOP
-        # =================================================
         processed_fixtures = set()
 
         try:
@@ -487,7 +484,7 @@ async def live_loop():
                     fixture_id = m["fixture"]["id"]
 
                     # =================================================
-                    # STOP DUPLICATE PROCESSING
+                    # PROCESS ONLY ONCE
                     # =================================================
                     if fixture_id in processed_fixtures:
                         continue
@@ -496,6 +493,9 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
+                    # =================================================
+                    # CLEAR AFTER FINISHED
+                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
                         clear_match_signals(
@@ -506,7 +506,10 @@ async def live_loop():
 
                     minute = m["fixture"]["status"]["elapsed"] or 0
 
-                    if minute < 20 or minute > 75:
+                    # =================================================
+                    # TIGHTER LIVE WINDOW
+                    # =================================================
+                    if minute < 25 or minute > 75:
                         continue
 
                     country = m["league"]["country"]
@@ -520,8 +523,6 @@ async def live_loop():
 
                     gh = m["goals"]["home"] or 0
                     ga = m["goals"]["away"] or 0
-
-                    goals = gh + ga
 
                     fixture_name = unique_key(
                         home,
@@ -546,8 +547,25 @@ async def live_loop():
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
 
-                    hsh = get_stat(hs, "Shots on Goal")
-                    ash = get_stat(as_, "Shots on Goal")
+                    hda = get_stat(
+                        hs,
+                        "Dangerous Attacks"
+                    )
+
+                    ada = get_stat(
+                        as_,
+                        "Dangerous Attacks"
+                    )
+
+                    hsh = get_stat(
+                        hs,
+                        "Shots on Goal"
+                    )
+
+                    ash = get_stat(
+                        as_,
+                        "Shots on Goal"
+                    )
 
                     # =================================================
                     # HISTORY
@@ -559,11 +577,15 @@ async def live_loop():
                         "minute": minute,
                         "ha": ha,
                         "aa": aa,
+                        "hda": hda,
+                        "ada": ada,
                         "hsh": hsh,
                         "ash": ash
                     })
 
-                    history[fixture_name] = history[fixture_name][-25:]
+                    history[fixture_name] = history[
+                        fixture_name
+                    ][-25:]
 
                     hist = history[fixture_name]
 
@@ -575,30 +597,35 @@ async def live_loop():
                         "OVER15"
                     ):
 
-                        over_ticks = 0
+                        pressure_ticks = 0
 
                         for h in hist:
 
                             if (
-                                h["hsh"] >= 2
-                                and h["ash"] >= 2
+                                h["hsh"] >= 3
+                                and h["ash"] >= 3
+                                and h["hda"] >= 20
+                                and h["ada"] >= 20
                             ):
-                                over_ticks += 1
+                                pressure_ticks += 1
 
                         if (
-                            over_ticks >= 10
-                            and hsh >= 3
-                            and ash >= 3
+                            pressure_ticks >= 12
+                            and hsh >= 4
+                            and ash >= 4
+                            and hda >= 25
+                            and ada >= 25
                         ):
 
                             msg = f"""
-🔥 LIVE SIGNAL
+🔥 STRONG LIVE SIGNAL
 
 🌍 {country}
 🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
+
 ⚽ {gh}:{ga}
 
 🎯 OVER 1.5 GOALS
@@ -615,56 +642,6 @@ async def live_loop():
                             )
 
                     # =================================================
-                    # UNDER 1.5
-                    # =================================================
-                    if can_send_signal(
-                        fixture_id,
-                        "UNDER15"
-                    ):
-
-                        under_ticks = 0
-
-                        for h in hist:
-
-                            if (
-                                h["ha"] <= 5
-                                and h["aa"] <= 5
-                                and h["hsh"] < 2
-                                and h["ash"] < 2
-                            ):
-                                under_ticks += 1
-
-                        if (
-                            minute >= 25
-                            and minute <= 70
-                            and goals == 0
-                            and under_ticks >= 12
-                        ):
-
-                            msg = f"""
-❄️ LIVE SIGNAL
-
-🌍 {country}
-🏆 {league}
-
-🏟 {home} vs {away}
-⏱ {minute}'
-⚽ {gh}:{ga}
-
-🎯 UNDER 1.5 GOALS
-"""
-
-                            await bot.send_message(
-                                chat_id=CHAT_ID,
-                                text=msg
-                            )
-
-                            save_signal(
-                                fixture_id,
-                                "UNDER15"
-                            )
-
-                    # =================================================
                     # NEXT GOAL HOME
                     # =================================================
                     if can_send_signal(
@@ -672,29 +649,32 @@ async def live_loop():
                         "NEXTHOME"
                     ):
 
-                        home_ticks = 0
+                        home_pressure = 0
 
                         for h in hist:
 
                             if (
-                                h["ha"] >= h["aa"] + 5
-                                and h["hsh"] >= 2
+                                h["ha"] >= h["aa"] + 10
+                                and h["hda"] >= h["ada"] + 10
+                                and h["hsh"] >= 3
                             ):
-                                home_ticks += 1
+                                home_pressure += 1
 
                         if (
-                            home_ticks >= 10
-                            and hsh >= 3
+                            home_pressure >= 12
+                            and hsh >= 4
+                            and hda >= ada + 15
                         ):
 
                             msg = f"""
-🚨 LIVE SIGNAL
+🚨 STRONG LIVE SIGNAL
 
 🌍 {country}
 🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
+
 ⚽ {gh}:{ga}
 
 🎯 NEXT GOAL HOME
@@ -718,29 +698,32 @@ async def live_loop():
                         "NEXTAWAY"
                     ):
 
-                        away_ticks = 0
+                        away_pressure = 0
 
                         for h in hist:
 
                             if (
-                                h["aa"] >= h["ha"] + 5
-                                and h["ash"] >= 2
+                                h["aa"] >= h["ha"] + 10
+                                and h["ada"] >= h["hda"] + 10
+                                and h["ash"] >= 3
                             ):
-                                away_ticks += 1
+                                away_pressure += 1
 
                         if (
-                            away_ticks >= 10
-                            and ash >= 3
+                            away_pressure >= 12
+                            and ash >= 4
+                            and ada >= hda + 15
                         ):
 
                             msg = f"""
-🚨 LIVE SIGNAL
+🚨 STRONG LIVE SIGNAL
 
 🌍 {country}
 🏆 {league}
 
 🏟 {home} vs {away}
 ⏱ {minute}'
+
 ⚽ {gh}:{ga}
 
 🎯 NEXT GOAL AWAY
@@ -762,6 +745,9 @@ async def live_loop():
         except Exception as e:
             print("LIVE ERROR:", e)
 
+        # =================================================
+        # CLEAN HISTORY
+        # =================================================
         if len(history) > 500:
             history.clear()
 
