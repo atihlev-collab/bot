@@ -204,7 +204,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH MATCHES
+# PREMATCH
 # =========================================================
 def get_prematch_matches():
 
@@ -244,8 +244,11 @@ def get_prematch_matches():
                 )
 
                 score = 0
-
                 market = "OVER 2.5 GOALS"
+
+                # =====================================================
+                # LEAGUES
+                # =====================================================
 
                 if "Bundesliga" in league:
                     score += 10
@@ -267,6 +270,10 @@ def get_prematch_matches():
 
                 if "Serie A" in league:
                     score += 7
+
+                # =====================================================
+                # BIG TEAMS
+                # =====================================================
 
                 big_teams = [
                     "Manchester",
@@ -293,6 +300,10 @@ def get_prematch_matches():
                     for x in big_teams
                 ):
                     score += 3
+
+                # =====================================================
+                # MARKETS
+                # =====================================================
 
                 if (
                     "Bundesliga" in league
@@ -336,7 +347,7 @@ def get_prematch_matches():
             reverse=True
         )
 
-        return result[:40]
+        return result[:20]
 
     except Exception as e:
 
@@ -345,7 +356,7 @@ def get_prematch_matches():
         return []
 
 # =========================================================
-# TODAY COMMAND
+# TODAY
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
@@ -377,7 +388,7 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT COMMAND
+# NIGHT
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
@@ -480,6 +491,9 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
+                    # =================================================
+                    # CLEAR AFTER FT
+                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
                         clear_match_signals(
@@ -508,7 +522,7 @@ async def live_loop():
                         or 0
                     )
 
-                    if minute < 1 or minute > 75:
+                    if minute < 5 or minute > 75:
                         continue
 
                     country = m["league"]["country"]
@@ -537,15 +551,11 @@ async def live_loop():
                     hs = stats[0]["statistics"]
                     as_ = stats[1]["statistics"]
 
-                    ha = get_stat(
-                        hs,
-                        "Attacks"
-                    )
-
-                    aa = get_stat(
-                        as_,
-                        "Attacks"
-                    )
+                    # =================================================
+                    # STATS
+                    # =================================================
+                    ha = get_stat(hs, "Attacks")
+                    aa = get_stat(as_, "Attacks")
 
                     hsh = get_stat(
                         hs,
@@ -573,8 +583,8 @@ async def live_loop():
                     # OVER 1.5
                     # =================================================
                     if (
-                        hsh + ash >= 2
-                        and ha + aa >= 15
+                        hsh + ash >= 3
+                        and ha + aa >= 18
                     ):
 
                         pressure_over[
@@ -599,7 +609,7 @@ async def live_loop():
                         )
                         and pressure_over[
                             fixture_id
-                        ] >= 2
+                        ] >= 3
                     ):
 
                         msg = f"""
@@ -630,7 +640,7 @@ async def live_loop():
                     # NEXT GOAL HOME
                     # =================================================
                     if (
-                        ha > aa + 2
+                        ha > aa + 4
                         and hsh >= 2
                     ):
 
@@ -656,7 +666,7 @@ async def live_loop():
                         )
                         and pressure_home[
                             fixture_id
-                        ] >= 2
+                        ] >= 3
                     ):
 
                         msg = f"""
@@ -687,7 +697,7 @@ async def live_loop():
                     # NEXT GOAL AWAY
                     # =================================================
                     if (
-                        aa > ha + 2
+                        aa > ha + 4
                         and ash >= 2
                     ):
 
@@ -713,7 +723,7 @@ async def live_loop():
                         )
                         and pressure_away[
                             fixture_id
-                        ] >= 2
+                        ] >= 3
                     ):
 
                         msg = f"""
