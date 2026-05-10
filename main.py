@@ -241,9 +241,6 @@ def get_prematch_matches():
                     "prematch"
                 )
 
-                if prematch_key in prematch_sent:
-                    continue
-
                 score = 0
 
                 market = "OVER 2.5 GOALS"
@@ -369,7 +366,7 @@ def get_prematch_matches():
             reverse=True
         )
 
-        return result[:20]
+        return result[:40]
 
     except Exception as e:
 
@@ -598,6 +595,9 @@ async def live_loop():
                         "ash": ash
                     })
 
+                    # =================================================
+                    # LAST 15 MINUTES
+                    # =================================================
                     history[fixture_name] = [
                         x for x in history[fixture_name]
                         if minute - x["minute"] <= 15
@@ -606,7 +606,7 @@ async def live_loop():
                     hist = history[fixture_name]
 
                     # =================================================
-                    # OVER 1.5
+                    # OVER 1.5 GOALS
                     # =================================================
                     if can_send_signal(
                         fixture_id,
@@ -620,14 +620,14 @@ async def live_loop():
                             if (
                                 h["hsh"] >= 2
                                 and h["ash"] >= 2
-                                and h["ha"] >= 15
-                                and h["aa"] >= 15
+                                and h["ha"] >= 10
+                                and h["aa"] >= 10
                             ):
                                 active_minutes += 1
 
                         if (
-                            len(hist) >= 12
-                            and active_minutes >= 12
+                            len(hist) >= 8
+                            and active_minutes >= 8
                         ):
 
                             msg = f"""
@@ -673,8 +673,8 @@ async def live_loop():
                                 pressure_minutes += 1
 
                         if (
-                            len(hist) >= 12
-                            and pressure_minutes >= 12
+                            len(hist) >= 8
+                            and pressure_minutes >= 8
                         ):
 
                             msg = f"""
@@ -720,8 +720,8 @@ async def live_loop():
                                 pressure_minutes += 1
 
                         if (
-                            len(hist) >= 12
-                            and pressure_minutes >= 12
+                            len(hist) >= 8
+                            and pressure_minutes >= 8
                         ):
 
                             msg = f"""
