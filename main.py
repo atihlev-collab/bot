@@ -5,7 +5,6 @@ import asyncio
 import logging
 import threading
 import requests
-import time
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -78,7 +77,9 @@ TOP_LEAGUES = [
 # STORAGE
 # =========================================================
 history = {}
-sent_signals = {}
+
+# пази вече изпратените сигнали
+sent_signals = set()
 
 # =========================================================
 # BLOCK CHECK
@@ -100,14 +101,11 @@ def blocked(country, league):
 # =========================================================
 def can_send(key):
 
-    if key in sent_signals:
-        return False
-
-    return True
+    return key not in sent_signals
 
 def save_signal(key):
 
-    sent_signals[key] = time.time()
+    sent_signals.add(key)
 
 # =========================================================
 # GET STAT
@@ -291,6 +289,19 @@ async def live_loop():
                 try:
 
                     fixture = m["fixture"]["id"]
+
+                    status = m["fixture"]["status"]["short"]
+
+                    # чисти паметта след края на мача
+                    if status in ["FT", "AET", "PEN"]:
+
+                        sent_signals.discard(f"OVER15_{fixture}")
+                        sent_signals.discard(f"NEXTHOME_{fixture}")
+                        sent_signals.discard(f"NEXTAWAY_{fixture}")
+
+                        history.pop(fixture, None)
+
+                        continue
 
                     minute = m["fixture"]["status"]["elapsed"] or 0
 
