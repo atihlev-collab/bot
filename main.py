@@ -78,7 +78,7 @@ TOP_LEAGUES = [
 # =========================================================
 history = {}
 
-# пази вече изпратените сигнали
+# ТУК пазим вече изпратените сигнали
 sent_signals = set()
 
 # =========================================================
@@ -99,11 +99,15 @@ def blocked(country, league):
 # =========================================================
 # DUPLICATE
 # =========================================================
-def can_send(key):
+def already_sent(fixture, market):
 
-    return key not in sent_signals
+    key = f"{fixture}_{market}"
 
-def save_signal(key):
+    return key in sent_signals
+
+def mark_sent(fixture, market):
+
+    key = f"{fixture}_{market}"
 
     sent_signals.add(key)
 
@@ -172,13 +176,11 @@ def get_matches(mode="today"):
 
                 hour = date.hour
 
-                # TODAY
                 if mode == "today":
 
                     if hour < 8 or hour > 23:
                         continue
 
-                # NIGHT
                 if mode == "night":
 
                     if 8 <= hour <= 23:
@@ -210,8 +212,6 @@ def get_matches(mode="today"):
 # =========================================================
 def today(update: Update, context: CallbackContext):
 
-    print("TODAY COMMAND RECEIVED")
-
     matches = get_matches("today")
 
     if not matches:
@@ -240,8 +240,6 @@ def today(update: Update, context: CallbackContext):
 # NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
-
-    print("NIGHT COMMAND RECEIVED")
 
     matches = get_matches("night")
 
@@ -292,12 +290,10 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
-                    # чисти паметта след края на мача
+                    # =================================================
+                    # CLEAR AFTER MATCH END
+                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
-
-                        sent_signals.discard(f"OVER15_{fixture}")
-                        sent_signals.discard(f"NEXTHOME_{fixture}")
-                        sent_signals.discard(f"NEXTAWAY_{fixture}")
 
                         history.pop(fixture, None)
 
@@ -365,9 +361,7 @@ async def live_loop():
                     # =================================================
                     # OVER 1.5
                     # =================================================
-                    over_key = f"OVER15_{fixture}"
-
-                    if can_send(over_key):
+                    if not already_sent(fixture, "OVER15"):
 
                         over_ticks = 0
 
@@ -402,14 +396,15 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(over_key)
+                            mark_sent(
+                                fixture,
+                                "OVER15"
+                            )
 
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
-                    next_home_key = f"NEXTHOME_{fixture}"
-
-                    if can_send(next_home_key):
+                    if not already_sent(fixture, "NEXTHOME"):
 
                         home_ticks = 0
 
@@ -447,14 +442,15 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(next_home_key)
+                            mark_sent(
+                                fixture,
+                                "NEXTHOME"
+                            )
 
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
-                    next_away_key = f"NEXTAWAY_{fixture}"
-
-                    if can_send(next_away_key):
+                    if not already_sent(fixture, "NEXTAWAY"):
 
                         away_ticks = 0
 
@@ -492,7 +488,10 @@ async def live_loop():
                                 text=msg
                             )
 
-                            save_signal(next_away_key)
+                            mark_sent(
+                                fixture,
+                                "NEXTAWAY"
+                            )
 
                 except Exception as e:
 
@@ -530,7 +529,6 @@ def main():
 
     dp = updater.dispatcher
 
-    # COMMANDS
     dp.add_handler(CommandHandler("today", today))
     dp.add_handler(CommandHandler("night", night))
 
