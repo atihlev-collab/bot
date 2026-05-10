@@ -28,7 +28,7 @@ HEADERS = {
 TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_INTERVAL = 60
-PREMATCH_INTERVAL = 7200
+PREMATCH_INTERVAL = 1800
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -58,6 +58,7 @@ conn.commit()
 # STORAGE
 # =========================================================
 history = {}
+
 prematch_sent = set()
 
 # =========================================================
@@ -201,7 +202,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH MATCHES
+# PREMATCH
 # =========================================================
 def get_prematch_matches():
 
@@ -246,6 +247,10 @@ def get_prematch_matches():
                 score = 0
                 market = "OVER 1.5 GOALS"
 
+                # =====================================================
+                # LEAGUE SCORING
+                # =====================================================
+
                 if "Bundesliga" in league:
                     score += 10
                     market = "OVER 2.5 GOALS"
@@ -264,7 +269,6 @@ def get_prematch_matches():
 
                 if "MLS" in league:
                     score += 8
-                    market = "OVER 2.5 GOALS"
 
                 if "La Liga" in league:
                     score += 8
@@ -272,38 +276,15 @@ def get_prematch_matches():
                 if "Serie A" in league:
                     score += 7
 
-                if "Libertadores" in league:
-                    score += 7
-
-                if "Championship" in league:
+                if "Brazil" in country:
                     score += 6
-
-                if "Turkey" in country:
-                    score += 6
-
-                if "Belgium" in country:
-                    score += 6
-
-                if "Austria" in country:
-                    score += 6
-
-                if "Switzerland" in country:
-                    score += 5
-
-                if "Norway" in country:
-                    score += 5
-
-                if "Sweden" in country:
-                    score += 5
-
-                if "Denmark" in country:
-                    score += 5
 
                 if "Argentina" in country:
                     score += 5
 
-                if "Brazil" in country:
-                    score += 6
+                # =====================================================
+                # BIG TEAMS
+                # =====================================================
 
                 big_teams = [
                     "Manchester",
@@ -313,14 +294,10 @@ def get_prematch_matches():
                     "Barcelona",
                     "Real Madrid",
                     "Bayern",
-                    "Dortmund",
                     "PSG",
                     "Inter",
                     "Milan",
-                    "Juventus",
-                    "Ajax",
-                    "Benfica",
-                    "Porto"
+                    "Juventus"
                 ]
 
                 if any(x.lower() in home.lower() for x in big_teams):
@@ -349,7 +326,7 @@ def get_prematch_matches():
             reverse=True
         )
 
-        return result[:10]
+        return result[:20]
 
     except Exception as e:
 
@@ -364,7 +341,11 @@ def today(update: Update, context: CallbackContext):
     matches = get_prematch_matches()
 
     if not matches:
-        update.message.reply_text("❌ Няма мачове.")
+
+        update.message.reply_text(
+            "❌ Няма мачове."
+        )
+
         return
 
     msg = "📈 TODAY TOP MATCHES\n"
@@ -392,7 +373,11 @@ def night(update: Update, context: CallbackContext):
     matches = get_prematch_matches()
 
     if not matches:
-        update.message.reply_text("❌ Няма нощни мачове.")
+
+        update.message.reply_text(
+            "❌ Няма нощни мачове."
+        )
+
         return
 
     msg = "🌙 NIGHT TOP MATCHES\n"
@@ -454,6 +439,7 @@ async def prematch_loop():
                 )
 
         except Exception as e:
+
             print("PREMATCH LOOP ERROR:", e)
 
         await asyncio.sleep(PREMATCH_INTERVAL)
@@ -494,7 +480,7 @@ async def live_loop():
                     status = m["fixture"]["status"]["short"]
 
                     # =================================================
-                    # CLEAR AFTER FINISHED
+                    # CLEAR AFTER FT
                     # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
@@ -504,12 +490,15 @@ async def live_loop():
 
                         continue
 
-                    minute = m["fixture"]["status"]["elapsed"] or 0
+                    minute = (
+                        m["fixture"]["status"]["elapsed"]
+                        or 0
+                    )
 
                     # =================================================
-                    # TIGHTER LIVE WINDOW
+                    # LIVE WINDOW
                     # =================================================
-                    if minute < 25 or minute > 75:
+                    if minute < 1 or minute > 75:
                         continue
 
                     country = m["league"]["country"]
@@ -544,18 +533,11 @@ async def live_loop():
                     hs = stats[0]["statistics"]
                     as_ = stats[1]["statistics"]
 
+                    # =================================================
+                    # STATS
+                    # =================================================
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
-
-                    hda = get_stat(
-                        hs,
-                        "Dangerous Attacks"
-                    )
-
-                    ada = get_stat(
-                        as_,
-                        "Dangerous Attacks"
-                    )
 
                     hsh = get_stat(
                         hs,
@@ -577,48 +559,48 @@ async def live_loop():
                         "minute": minute,
                         "ha": ha,
                         "aa": aa,
-                        "hda": hda,
-                        "ada": ada,
                         "hsh": hsh,
                         "ash": ash
                     })
 
-                    history[fixture_name] = history[
-                        fixture_name
-                    ][-25:]
+                    # =================================================
+                    # LAST 15 MINUTES
+                    # =================================================
+                    history[fixture_name] = [
+                        x for x in history[fixture_name]
+                        if minute - x["minute"] <= 15
+                    ]
 
                     hist = history[fixture_name]
 
                     # =================================================
-                    # OVER 1.5
+                    # OVER 1.5 GOALS
+                    # BOTH TEAMS ATTACKING
                     # =================================================
                     if can_send_signal(
                         fixture_id,
                         "OVER15"
                     ):
 
-                        pressure_ticks = 0
+                        active_minutes = 0
 
                         for h in hist:
 
                             if (
-                                h["hsh"] >= 3
-                                and h["ash"] >= 3
-                                and h["hda"] >= 20
-                                and h["ada"] >= 20
+                                h["hsh"] >= 2
+                                and h["ash"] >= 2
+                                and h["ha"] >= 15
+                                and h["aa"] >= 15
                             ):
-                                pressure_ticks += 1
+                                active_minutes += 1
 
                         if (
-                            pressure_ticks >= 12
-                            and hsh >= 4
-                            and ash >= 4
-                            and hda >= 25
-                            and ada >= 25
+                            len(hist) >= 12
+                            and active_minutes >= 12
                         ):
 
                             msg = f"""
-🔥 STRONG LIVE SIGNAL
+🔥 LIVE SIGNAL
 
 🌍 {country}
 🏆 {league}
@@ -643,31 +625,30 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL HOME
+                    # ONLY HOME PRESSURE
                     # =================================================
                     if can_send_signal(
                         fixture_id,
                         "NEXTHOME"
                     ):
 
-                        home_pressure = 0
+                        pressure_minutes = 0
 
                         for h in hist:
 
                             if (
-                                h["ha"] >= h["aa"] + 10
-                                and h["hda"] >= h["ada"] + 10
-                                and h["hsh"] >= 3
+                                h["ha"] > h["aa"]
+                                and h["hsh"] >= 2
                             ):
-                                home_pressure += 1
+                                pressure_minutes += 1
 
                         if (
-                            home_pressure >= 12
-                            and hsh >= 4
-                            and hda >= ada + 15
+                            len(hist) >= 12
+                            and pressure_minutes >= 12
                         ):
 
                             msg = f"""
-🚨 STRONG LIVE SIGNAL
+🚨 LIVE SIGNAL
 
 🌍 {country}
 🏆 {league}
@@ -692,31 +673,30 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL AWAY
+                    # ONLY AWAY PRESSURE
                     # =================================================
                     if can_send_signal(
                         fixture_id,
                         "NEXTAWAY"
                     ):
 
-                        away_pressure = 0
+                        pressure_minutes = 0
 
                         for h in hist:
 
                             if (
-                                h["aa"] >= h["ha"] + 10
-                                and h["ada"] >= h["hda"] + 10
-                                and h["ash"] >= 3
+                                h["aa"] > h["ha"]
+                                and h["ash"] >= 2
                             ):
-                                away_pressure += 1
+                                pressure_minutes += 1
 
                         if (
-                            away_pressure >= 12
-                            and ash >= 4
-                            and ada >= hda + 15
+                            len(hist) >= 12
+                            and pressure_minutes >= 12
                         ):
 
                             msg = f"""
-🚨 STRONG LIVE SIGNAL
+🚨 LIVE SIGNAL
 
 🌍 {country}
 🏆 {league}
@@ -740,9 +720,11 @@ async def live_loop():
                             )
 
                 except Exception as e:
+
                     print("MATCH ERROR:", e)
 
         except Exception as e:
+
             print("LIVE ERROR:", e)
 
         # =================================================
@@ -759,16 +741,22 @@ async def live_loop():
 def start_live_loop():
 
     loop = asyncio.new_event_loop()
+
     asyncio.set_event_loop(loop)
 
-    loop.run_until_complete(live_loop())
+    loop.run_until_complete(
+        live_loop()
+    )
 
 def start_prematch_loop():
 
     loop = asyncio.new_event_loop()
+
     asyncio.set_event_loop(loop)
 
-    loop.run_until_complete(prematch_loop())
+    loop.run_until_complete(
+        prematch_loop()
+    )
 
 # =========================================================
 # MAIN
@@ -784,8 +772,19 @@ def main():
 
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("today", today))
-    dp.add_handler(CommandHandler("night", night))
+    dp.add_handler(
+        CommandHandler(
+            "today",
+            today
+        )
+    )
+
+    dp.add_handler(
+        CommandHandler(
+            "night",
+            night
+        )
+    )
 
     updater.start_polling(
         drop_pending_updates=True
