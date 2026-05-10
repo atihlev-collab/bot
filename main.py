@@ -37,8 +37,15 @@ bot = Bot(token=BOT_TOKEN)
 # =========================================================
 # SQLITE
 # =========================================================
+DB_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "signals.db"
+)
+
+print("SQLITE FILE:", DB_PATH)
+
 conn = sqlite3.connect(
-    "signals.db",
+    DB_PATH,
     check_same_thread=False
 )
 
@@ -51,6 +58,15 @@ CREATE TABLE IF NOT EXISTS sent_signals (
     PRIMARY KEY (fixture_id, market)
 )
 """)
+
+conn.commit()
+
+# =========================================================
+# CLEAR OLD SIGNALS ON START
+# =========================================================
+cursor.execute(
+    "DELETE FROM sent_signals"
+)
 
 conn.commit()
 
@@ -246,10 +262,6 @@ def get_prematch_matches():
                 score = 0
                 market = "OVER 2.5 GOALS"
 
-                # =====================================================
-                # LEAGUES
-                # =====================================================
-
                 if "Bundesliga" in league:
                     score += 10
 
@@ -270,10 +282,6 @@ def get_prematch_matches():
 
                 if "Serie A" in league:
                     score += 7
-
-                # =====================================================
-                # BIG TEAMS
-                # =====================================================
 
                 big_teams = [
                     "Manchester",
@@ -300,10 +308,6 @@ def get_prematch_matches():
                     for x in big_teams
                 ):
                     score += 3
-
-                # =====================================================
-                # MARKETS
-                # =====================================================
 
                 if (
                     "Bundesliga" in league
@@ -491,9 +495,6 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
-                    # =================================================
-                    # CLEAR AFTER FT
-                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
                         clear_match_signals(
@@ -551,11 +552,15 @@ async def live_loop():
                     hs = stats[0]["statistics"]
                     as_ = stats[1]["statistics"]
 
-                    # =================================================
-                    # STATS
-                    # =================================================
-                    ha = get_stat(hs, "Attacks")
-                    aa = get_stat(as_, "Attacks")
+                    ha = get_stat(
+                        hs,
+                        "Attacks"
+                    )
+
+                    aa = get_stat(
+                        as_,
+                        "Attacks"
+                    )
 
                     hsh = get_stat(
                         hs,
