@@ -19,6 +19,7 @@ from config import BOT_TOKEN, API_KEY, CHAT_ID
 # =========================================================
 # CONFIG
 # =========================================================
+
 HEADERS = {
     "x-apisports-key": API_KEY
 }
@@ -35,6 +36,7 @@ bot = Bot(token=BOT_TOKEN)
 # =========================================================
 # STORAGE
 # =========================================================
+
 pressure_home = {}
 pressure_away = {}
 pressure_over = {}
@@ -43,8 +45,9 @@ sent_signals = set()
 prematch_sent = set()
 
 # =========================================================
-# BLOCKED
+# FILTERS
 # =========================================================
+
 BLOCKED_WORDS = [
     "russia",
     "russian",
@@ -67,8 +70,9 @@ BAD_LEAGUES = [
 ]
 
 # =========================================================
-# NORMALIZE
+# HELPERS
 # =========================================================
+
 def normalize(text):
 
     text = str(text).lower().strip()
@@ -78,20 +82,10 @@ def normalize(text):
 
     return text
 
-# =========================================================
-# UNIQUE KEY
-# =========================================================
 def unique_key(home, away, market):
 
-    home = normalize(home)
-    away = normalize(away)
-    market = normalize(market)
+    return f"{normalize(home)}_{normalize(away)}_{market}"
 
-    return f"{home}_{away}_{market}"
-
-# =========================================================
-# BLOCK CHECK
-# =========================================================
 def blocked(country, league):
 
     text = f"{country} {league}".lower()
@@ -104,9 +98,6 @@ def blocked(country, league):
 
     return False
 
-# =========================================================
-# GET STAT
-# =========================================================
 def get_stat(stats, name):
 
     try:
@@ -133,6 +124,7 @@ def get_stat(stats, name):
 # =========================================================
 # PREMATCH
 # =========================================================
+
 def get_prematch_matches():
 
     result = []
@@ -140,7 +132,7 @@ def get_prematch_matches():
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=300",
+            "https://v3.football.api-sports.io/fixtures?next=200",
             headers=HEADERS,
             timeout=20
         ).json()
@@ -157,10 +149,6 @@ def get_prematch_matches():
                 if blocked(country, league):
                     continue
 
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-
                 home = m["teams"]["home"]["name"]
                 away = m["teams"]["away"]["name"]
 
@@ -170,11 +158,16 @@ def get_prematch_matches():
                     "prematch"
                 )
 
+                date = datetime.fromisoformat(
+                    m["fixture"]["date"].replace("Z", "+00:00")
+                ).astimezone(TZ)
+
                 score = 0
+
                 market = "OVER 2.5 GOALS"
 
                 # =====================================================
-                # LEAGUES
+                # GOOD LEAGUES
                 # =====================================================
 
                 if "Bundesliga" in league:
@@ -229,7 +222,7 @@ def get_prematch_matches():
                     score += 3
 
                 # =====================================================
-                # MARKETS
+                # MARKET
                 # =====================================================
 
                 if (
@@ -274,7 +267,7 @@ def get_prematch_matches():
             reverse=True
         )
 
-        return result[:20]
+        return result[:10]
 
     except Exception as e:
 
@@ -283,8 +276,9 @@ def get_prematch_matches():
         return []
 
 # =========================================================
-# TODAY
+# COMMANDS
 # =========================================================
+
 def today(update: Update, context: CallbackContext):
 
     matches = get_prematch_matches()
@@ -299,7 +293,7 @@ def today(update: Update, context: CallbackContext):
 
     msg = "📈 TODAY TOP MATCHES\n"
 
-    for g in matches[:3]:
+    for g in matches:
 
         msg += f"""
 
@@ -315,51 +309,9 @@ def today(update: Update, context: CallbackContext):
     update.message.reply_text(msg)
 
 # =========================================================
-# NIGHT
-# =========================================================
-def night(update: Update, context: CallbackContext):
-
-    matches = get_prematch_matches()
-
-    if not matches:
-
-        update.message.reply_text(
-            "❌ Няма нощни мачове."
-        )
-
-        return
-
-    msg = "🌙 NIGHT TOP MATCHES\n"
-
-    count = 0
-
-    for g in matches:
-
-        hour = int(g["time"].split(":")[0])
-
-        if hour <= 8:
-
-            count += 1
-
-            msg += f"""
-
-🌍 {g['country']}
-🏆 {g['league']}
-
-🏟 {g['home']} vs {g['away']}
-⏰ {g['time']}
-
-🎯 {g['market']}
-"""
-
-            if count >= 3:
-                break
-
-    update.message.reply_text(msg)
-
-# =========================================================
 # PREMATCH LOOP
 # =========================================================
+
 async def prematch_loop():
 
     while True:
@@ -403,6 +355,7 @@ async def prematch_loop():
 # =========================================================
 # LIVE LOOP
 # =========================================================
+
 async def live_loop():
 
     while True:
@@ -422,30 +375,6 @@ async def live_loop():
                 try:
 
                     fixture_id = m["fixture"]["id"]
-
-                    status = m["fixture"]["status"]["short"]
-
-                    # =================================================
-                    # CLEAR AFTER FT
-                    # =================================================
-                    if status in ["FT", "AET", "PEN"]:
-
-                        pressure_home.pop(
-                            fixture_id,
-                            None
-                        )
-
-                        pressure_away.pop(
-                            fixture_id,
-                            None
-                        )
-
-                        pressure_over.pop(
-                            fixture_id,
-                            None
-                        )
-
-                        continue
 
                     minute = (
                         m["fixture"]["status"]["elapsed"]
@@ -484,15 +413,9 @@ async def live_loop():
                     # =================================================
                     # STATS
                     # =================================================
-                    ha = get_stat(
-                        hs,
-                        "Attacks"
-                    )
 
-                    aa = get_stat(
-                        as_,
-                        "Attacks"
-                    )
+                    ha = get_stat(hs, "Attacks")
+                    aa = get_stat(as_, "Attacks")
 
                     hsh = get_stat(
                         hs,
@@ -505,8 +428,9 @@ async def live_loop():
                     )
 
                     # =================================================
-                    # KEYS
+                    # UNIQUE SIGNAL KEYS
                     # =================================================
+
                     over_key = unique_key(
                         home,
                         away,
@@ -526,8 +450,9 @@ async def live_loop():
                     )
 
                     # =================================================
-                    # INIT COUNTERS
+                    # INIT
                     # =================================================
+
                     if fixture_id not in pressure_home:
                         pressure_home[fixture_id] = 0
 
@@ -540,9 +465,10 @@ async def live_loop():
                     # =================================================
                     # OVER 1.5
                     # =================================================
+
                     if (
-                        hsh + ash >= 3
-                        and ha + aa >= 15
+                        hsh + ash >= 2
+                        and ha + aa >= 12
                     ):
 
                         pressure_over[
@@ -593,8 +519,9 @@ async def live_loop():
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
+
                     if (
-                        ha > aa + 3
+                        ha > aa + 2
                         and hsh >= 1
                     ):
 
@@ -646,8 +573,9 @@ async def live_loop():
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
+
                     if (
-                        aa > ha + 3
+                        aa > ha + 2
                         and ash >= 1
                     ):
 
@@ -711,6 +639,7 @@ async def live_loop():
 # =========================================================
 # THREADS
 # =========================================================
+
 def start_live_loop():
 
     loop = asyncio.new_event_loop()
@@ -734,6 +663,7 @@ def start_prematch_loop():
 # =========================================================
 # MAIN
 # =========================================================
+
 def main():
 
     print("🚀 LIVE SYSTEM RUNNING")
@@ -749,13 +679,6 @@ def main():
         CommandHandler(
             "today",
             today
-        )
-    )
-
-    dp.add_handler(
-        CommandHandler(
-            "night",
-            night
         )
     )
 
@@ -786,5 +709,6 @@ def main():
 # =========================================================
 # START
 # =========================================================
+
 if __name__ == "__main__":
     main()
