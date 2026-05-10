@@ -573,8 +573,8 @@ async def live_loop():
                     # OVER 1.5
                     # =================================================
                     if (
-                        hsh + ash >= 3
-                        and ha + aa >= 20
+                        hsh + ash >= 2
+                        and ha + aa >= 15
                     ):
 
                         pressure_over[
@@ -585,7 +585,12 @@ async def live_loop():
 
                         pressure_over[
                             fixture_id
-                        ] = 0
+                        ] = max(
+                            0,
+                            pressure_over[
+                                fixture_id
+                            ] - 1
+                        )
 
                     if (
                         can_send_signal(
@@ -625,7 +630,7 @@ async def live_loop():
                     # NEXT GOAL HOME
                     # =================================================
                     if (
-                        ha > aa + 5
+                        ha > aa + 2
                         and hsh >= 2
                     ):
 
@@ -637,7 +642,12 @@ async def live_loop():
 
                         pressure_home[
                             fixture_id
-                        ] = 0
+                        ] = max(
+                            0,
+                            pressure_home[
+                                fixture_id
+                            ] - 1
+                        )
 
                     if (
                         can_send_signal(
@@ -677,7 +687,7 @@ async def live_loop():
                     # NEXT GOAL AWAY
                     # =================================================
                     if (
-                        aa > ha + 5
+                        aa > ha + 2
                         and ash >= 2
                     ):
 
@@ -689,7 +699,12 @@ async def live_loop():
 
                         pressure_away[
                             fixture_id
-                        ] = 0
+                        ] = max(
+                            0,
+                            pressure_away[
+                                fixture_id
+                            ] - 1
+                        )
 
                     if (
                         can_send_signal(
