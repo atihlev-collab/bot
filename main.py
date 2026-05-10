@@ -58,7 +58,6 @@ conn.commit()
 # STORAGE
 # =========================================================
 history = {}
-
 prematch_sent = set()
 
 # =========================================================
@@ -510,6 +509,9 @@ async def live_loop():
 
                     fixture_id = m["fixture"]["id"]
 
+                    # =================================================
+                    # PROCESS ONLY ONCE
+                    # =================================================
                     if fixture_id in processed_fixtures:
                         continue
 
@@ -517,6 +519,9 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
+                    # =================================================
+                    # CLEAR AFTER FINISHED
+                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
                         clear_match_signals(
@@ -530,6 +535,9 @@ async def live_loop():
                         or 0
                     )
 
+                    # =================================================
+                    # LIVE WINDOW
+                    # =================================================
                     if minute < 1 or minute > 75:
                         continue
 
@@ -551,6 +559,9 @@ async def live_loop():
                         "history"
                     )
 
+                    # =================================================
+                    # STATS REQUEST
+                    # =================================================
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture_id}",
                         headers=HEADERS,
@@ -618,16 +629,14 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["hsh"] >= 2
-                                and h["ash"] >= 2
-                                and h["ha"] >= 10
-                                and h["aa"] >= 10
+                                h["hsh"] + h["ash"] >= 4
+                                and h["ha"] + h["aa"] >= 25
                             ):
                                 active_minutes += 1
 
                         if (
-                            len(hist) >= 8
-                            and active_minutes >= 8
+                            len(hist) >= 5
+                            and active_minutes >= 5
                         ):
 
                             msg = f"""
@@ -667,14 +676,14 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["ha"] > h["aa"]
+                                h["ha"] > h["aa"] + 5
                                 and h["hsh"] >= 2
                             ):
                                 pressure_minutes += 1
 
                         if (
-                            len(hist) >= 8
-                            and pressure_minutes >= 8
+                            len(hist) >= 5
+                            and pressure_minutes >= 5
                         ):
 
                             msg = f"""
@@ -714,14 +723,14 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["aa"] > h["ha"]
+                                h["aa"] > h["ha"] + 5
                                 and h["ash"] >= 2
                             ):
                                 pressure_minutes += 1
 
                         if (
-                            len(hist) >= 8
-                            and pressure_minutes >= 8
+                            len(hist) >= 5
+                            and pressure_minutes >= 5
                         ):
 
                             msg = f"""
@@ -756,6 +765,9 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
+        # =================================================
+        # CLEAN HISTORY
+        # =================================================
         if len(history) > 500:
             history.clear()
 
