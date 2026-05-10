@@ -1,8 +1,11 @@
+import os
+os.system("pip install requests python-telegram-bot==13.15")
+
 import asyncio
 import logging
 import threading
 import requests
-import re
+import time
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -19,7 +22,6 @@ from config import BOT_TOKEN, API_KEY, CHAT_ID
 # =========================================================
 # CONFIG
 # =========================================================
-
 HEADERS = {
     "x-apisports-key": API_KEY
 }
@@ -27,27 +29,14 @@ HEADERS = {
 TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_INTERVAL = 60
-PREMATCH_INTERVAL = 1800
 
 logging.basicConfig(level=logging.WARNING)
 
 bot = Bot(token=BOT_TOKEN)
 
 # =========================================================
-# STORAGE
+# BLOCKED
 # =========================================================
-
-pressure_home = {}
-pressure_away = {}
-pressure_over = {}
-
-sent_signals = set()
-prematch_sent = set()
-
-# =========================================================
-# FILTERS
-# =========================================================
-
 BLOCKED_WORDS = [
     "russia",
     "russian",
@@ -63,29 +52,37 @@ BAD_LEAGUES = [
     "u21",
     "u23",
     "women",
-    "friendly",
-    "next pro",
-    "amateur",
-    "regional"
+    "friendly"
 ]
 
 # =========================================================
-# HELPERS
+# TOP LEAGUES
 # =========================================================
+TOP_LEAGUES = [
+    "Premier League",
+    "Champions League",
+    "Europa League",
+    "Conference League",
+    "La Liga",
+    "Serie A",
+    "Bundesliga",
+    "Ligue 1",
+    "Eredivisie",
+    "Primeira Liga",
+    "MLS",
+    "Brasileirao",
+    "Copa Libertadores"
+]
 
-def normalize(text):
+# =========================================================
+# STORAGE
+# =========================================================
+history = {}
+sent_signals = {}
 
-    text = str(text).lower().strip()
-
-    text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"[^a-z0-9 ]", "", text)
-
-    return text
-
-def unique_key(home, away, market):
-
-    return f"{normalize(home)}_{normalize(away)}_{market}"
-
+# =========================================================
+# BLOCK CHECK
+# =========================================================
 def blocked(country, league):
 
     text = f"{country} {league}".lower()
@@ -98,6 +95,23 @@ def blocked(country, league):
 
     return False
 
+# =========================================================
+# DUPLICATE
+# =========================================================
+def can_send(key):
+
+    if key in sent_signals:
+        return False
+
+    return True
+
+def save_signal(key):
+
+    sent_signals[key] = time.time()
+
+# =========================================================
+# GET STAT
+# =========================================================
 def get_stat(stats, name):
 
     try:
@@ -122,17 +136,16 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH
+# GET MATCHES
 # =========================================================
-
-def get_prematch_matches():
+def get_matches(mode="today"):
 
     result = []
 
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=200",
+            "https://v3.football.api-sports.io/fixtures?next=150",
             headers=HEADERS,
             timeout=20
         ).json()
@@ -149,146 +162,65 @@ def get_prematch_matches():
                 if blocked(country, league):
                     continue
 
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                prematch_key = unique_key(
-                    home,
-                    away,
-                    "prematch"
-                )
+                if not any(
+                    x.lower() in league.lower()
+                    for x in TOP_LEAGUES
+                ):
+                    continue
 
                 date = datetime.fromisoformat(
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                score = 0
+                hour = date.hour
 
-                market = "OVER 2.5 GOALS"
+                # TODAY
+                if mode == "today":
 
-                # =====================================================
-                # GOOD LEAGUES
-                # =====================================================
+                    if hour < 8 or hour > 23:
+                        continue
 
-                if "Bundesliga" in league:
-                    score += 10
+                # NIGHT
+                if mode == "night":
 
-                if "Eredivisie" in league:
-                    score += 10
+                    if 8 <= hour <= 23:
+                        continue
 
-                if "Premier League" in league:
-                    score += 9
-
-                if "Champions League" in league:
-                    score += 9
-
-                if "MLS" in league:
-                    score += 8
-
-                if "La Liga" in league:
-                    score += 8
-
-                if "Serie A" in league:
-                    score += 7
-
-                # =====================================================
-                # BIG TEAMS
-                # =====================================================
-
-                big_teams = [
-                    "Manchester",
-                    "Liverpool",
-                    "Arsenal",
-                    "Chelsea",
-                    "Barcelona",
-                    "Real Madrid",
-                    "Bayern",
-                    "PSG",
-                    "Inter",
-                    "Milan",
-                    "Juventus"
-                ]
-
-                if any(
-                    x.lower() in home.lower()
-                    for x in big_teams
-                ):
-                    score += 3
-
-                if any(
-                    x.lower() in away.lower()
-                    for x in big_teams
-                ):
-                    score += 3
-
-                # =====================================================
-                # MARKET
-                # =====================================================
-
-                if (
-                    "Bundesliga" in league
-                    or "Eredivisie" in league
-                    or "MLS" in league
-                ):
-                    market = "GOAL GOAL"
-
-                if score >= 14:
-                    market = "OVER 2.5 GOALS"
-
-                if (
-                    any(
-                        x.lower() in home.lower()
-                        for x in big_teams
-                    )
-                    or any(
-                        x.lower() in away.lower()
-                        for x in big_teams
-                    )
-                ):
-                    market = "1 OR 2"
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
 
                 result.append({
-                    "country": country,
                     "league": league,
+                    "country": country,
                     "home": home,
                     "away": away,
-                    "time": date.strftime("%H:%M"),
-                    "score": score,
-                    "market": market,
-                    "prematch_key": prematch_key
+                    "time": date.strftime("%H:%M")
                 })
 
             except:
                 pass
 
-        result = sorted(
-            result,
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
-        return result[:10]
+        return result[:3]
 
     except Exception as e:
 
-        print("PREMATCH ERROR:", e)
-
+        print("MATCH ERROR:", e)
         return []
 
 # =========================================================
-# COMMANDS
+# TODAY COMMAND
 # =========================================================
-
 def today(update: Update, context: CallbackContext):
 
-    matches = get_prematch_matches()
+    print("TODAY COMMAND RECEIVED")
+
+    matches = get_matches("today")
 
     if not matches:
 
         update.message.reply_text(
-            "❌ Няма мачове."
+            "❌ Няма намерени мачове."
         )
-
         return
 
     msg = "📈 TODAY TOP MATCHES\n"
@@ -302,60 +234,44 @@ def today(update: Update, context: CallbackContext):
 
 🏟 {g['home']} vs {g['away']}
 ⏰ {g['time']}
-
-🎯 {g['market']}
 """
 
     update.message.reply_text(msg)
 
 # =========================================================
-# PREMATCH LOOP
+# NIGHT COMMAND
 # =========================================================
+def night(update: Update, context: CallbackContext):
 
-async def prematch_loop():
+    print("NIGHT COMMAND RECEIVED")
 
-    while True:
+    matches = get_matches("night")
 
-        try:
+    if not matches:
 
-            matches = get_prematch_matches()
+        update.message.reply_text(
+            "❌ Няма намерени нощни мачове."
+        )
+        return
 
-            for g in matches[:5]:
+    msg = "🌙 NIGHT TOP MATCHES\n"
 
-                if g["prematch_key"] in prematch_sent:
-                    continue
+    for g in matches:
 
-                msg = f"""
-📈 PREMATCH SIGNAL
+        msg += f"""
 
 🌍 {g['country']}
 🏆 {g['league']}
 
 🏟 {g['home']} vs {g['away']}
 ⏰ {g['time']}
-
-🎯 {g['market']}
 """
 
-                await bot.send_message(
-                    chat_id=CHAT_ID,
-                    text=msg
-                )
-
-                prematch_sent.add(
-                    g["prematch_key"]
-                )
-
-        except Exception as e:
-
-            print("PREMATCH LOOP ERROR:", e)
-
-        await asyncio.sleep(PREMATCH_INTERVAL)
+    update.message.reply_text(msg)
 
 # =========================================================
 # LIVE LOOP
 # =========================================================
-
 async def live_loop():
 
     while True:
@@ -374,14 +290,11 @@ async def live_loop():
 
                 try:
 
-                    fixture_id = m["fixture"]["id"]
+                    fixture = m["fixture"]["id"]
 
-                    minute = (
-                        m["fixture"]["status"]["elapsed"]
-                        or 0
-                    )
+                    minute = m["fixture"]["status"]["elapsed"] or 0
 
-                    if minute < 5 or minute > 75:
+                    if minute < 20 or minute > 75:
                         continue
 
                     country = m["league"]["country"]
@@ -397,7 +310,7 @@ async def live_loop():
                     ga = m["goals"]["away"] or 0
 
                     sr = requests.get(
-                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture_id}",
+                        f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
                         headers=HEADERS,
                         timeout=10
                     ).json()
@@ -413,87 +326,51 @@ async def live_loop():
                     # =================================================
                     # STATS
                     # =================================================
-
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
 
-                    hsh = get_stat(
-                        hs,
-                        "Shots on Goal"
-                    )
-
-                    ash = get_stat(
-                        as_,
-                        "Shots on Goal"
-                    )
+                    hsh = get_stat(hs, "Shots on Goal")
+                    ash = get_stat(as_, "Shots on Goal")
 
                     # =================================================
-                    # UNIQUE SIGNAL KEYS
+                    # HISTORY
                     # =================================================
+                    if fixture not in history:
 
-                    over_key = unique_key(
-                        home,
-                        away,
-                        "OVER15"
-                    )
+                        history[fixture] = []
 
-                    home_key = unique_key(
-                        home,
-                        away,
-                        "NEXTHOME"
-                    )
+                    history[fixture].append({
+                        "minute": minute,
+                        "ha": ha,
+                        "aa": aa,
+                        "hsh": hsh,
+                        "ash": ash
+                    })
 
-                    away_key = unique_key(
-                        home,
-                        away,
-                        "NEXTAWAY"
-                    )
+                    history[fixture] = history[fixture][-25:]
 
-                    # =================================================
-                    # INIT
-                    # =================================================
-
-                    if fixture_id not in pressure_home:
-                        pressure_home[fixture_id] = 0
-
-                    if fixture_id not in pressure_away:
-                        pressure_away[fixture_id] = 0
-
-                    if fixture_id not in pressure_over:
-                        pressure_over[fixture_id] = 0
+                    hist = history[fixture]
 
                     # =================================================
                     # OVER 1.5
                     # =================================================
+                    over_key = f"OVER15_{fixture}"
 
-                    if (
-                        hsh + ash >= 2
-                        and ha + aa >= 12
-                    ):
+                    if can_send(over_key):
 
-                        pressure_over[
-                            fixture_id
-                        ] += 1
+                        over_ticks = 0
 
-                    else:
+                        for h in hist:
 
-                        pressure_over[
-                            fixture_id
-                        ] = max(
-                            0,
-                            pressure_over[
-                                fixture_id
-                            ] - 1
-                        )
+                            if (
+                                h["hsh"] >= 2
+                                and h["ash"] >= 2
+                            ):
+                                over_ticks += 1
 
-                    if (
-                        pressure_over[
-                            fixture_id
-                        ] >= 2
-                        and over_key not in sent_signals
-                    ):
+                        if over_ticks >= 8:
 
-                        msg = f"""
+                            msg = f"""
 🔥 LIVE SIGNAL
 
 🌍 {country}
@@ -501,53 +378,41 @@ async def live_loop():
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-
 ⚽ {gh}:{ga}
 
 🎯 OVER 1.5 GOALS
+
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
-                        await bot.send_message(
-                            chat_id=CHAT_ID,
-                            text=msg
-                        )
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
 
-                        sent_signals.add(
-                            over_key
-                        )
+                            save_signal(over_key)
 
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
+                    next_home_key = f"NEXTHOME_{fixture}"
 
-                    if (
-                        ha > aa + 2
-                        and hsh >= 1
-                    ):
+                    if can_send(next_home_key):
 
-                        pressure_home[
-                            fixture_id
-                        ] += 1
+                        home_ticks = 0
 
-                    else:
+                        for h in hist:
 
-                        pressure_home[
-                            fixture_id
-                        ] = max(
-                            0,
-                            pressure_home[
-                                fixture_id
-                            ] - 1
-                        )
+                            if (
+                                h["ha"] >= h["aa"] + 5
+                                and h["hsh"] >= 2
+                            ):
+                                home_ticks += 1
 
-                    if (
-                        pressure_home[
-                            fixture_id
-                        ] >= 2
-                        and home_key not in sent_signals
-                    ):
+                        if home_ticks >= 8:
 
-                        msg = f"""
+                            msg = f"""
 🚨 LIVE SIGNAL
 
 🌍 {country}
@@ -555,53 +420,44 @@ async def live_loop():
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-
 ⚽ {gh}:{ga}
 
 🎯 NEXT GOAL HOME
+
+📊 Home attacks: {ha}
+📊 Away attacks: {aa}
+
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
-                        await bot.send_message(
-                            chat_id=CHAT_ID,
-                            text=msg
-                        )
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
 
-                        sent_signals.add(
-                            home_key
-                        )
+                            save_signal(next_home_key)
 
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
+                    next_away_key = f"NEXTAWAY_{fixture}"
 
-                    if (
-                        aa > ha + 2
-                        and ash >= 1
-                    ):
+                    if can_send(next_away_key):
 
-                        pressure_away[
-                            fixture_id
-                        ] += 1
+                        away_ticks = 0
 
-                    else:
+                        for h in hist:
 
-                        pressure_away[
-                            fixture_id
-                        ] = max(
-                            0,
-                            pressure_away[
-                                fixture_id
-                            ] - 1
-                        )
+                            if (
+                                h["aa"] >= h["ha"] + 5
+                                and h["ash"] >= 2
+                            ):
+                                away_ticks += 1
 
-                    if (
-                        pressure_away[
-                            fixture_id
-                        ] >= 2
-                        and away_key not in sent_signals
-                    ):
+                        if away_ticks >= 8:
 
-                        msg = f"""
+                            msg = f"""
 🚨 LIVE SIGNAL
 
 🌍 {country}
@@ -609,20 +465,23 @@ async def live_loop():
 
 🏟 {home} vs {away}
 ⏱ {minute}'
-
 ⚽ {gh}:{ga}
 
 🎯 NEXT GOAL AWAY
+
+📊 Home attacks: {ha}
+📊 Away attacks: {aa}
+
+📊 Home shots: {hsh}
+📊 Away shots: {ash}
 """
 
-                        await bot.send_message(
-                            chat_id=CHAT_ID,
-                            text=msg
-                        )
+                            await bot.send_message(
+                                chat_id=CHAT_ID,
+                                text=msg
+                            )
 
-                        sent_signals.add(
-                            away_key
-                        )
+                            save_signal(next_away_key)
 
                 except Exception as e:
 
@@ -632,38 +491,23 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
-        await asyncio.sleep(
-            LIVE_INTERVAL
-        )
+        await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
-# THREADS
+# THREAD
 # =========================================================
-
 def start_live_loop():
 
     loop = asyncio.new_event_loop()
-
     asyncio.set_event_loop(loop)
 
     loop.run_until_complete(
         live_loop()
     )
 
-def start_prematch_loop():
-
-    loop = asyncio.new_event_loop()
-
-    asyncio.set_event_loop(loop)
-
-    loop.run_until_complete(
-        prematch_loop()
-    )
-
 # =========================================================
 # MAIN
 # =========================================================
-
 def main():
 
     print("🚀 LIVE SYSTEM RUNNING")
@@ -675,40 +519,31 @@ def main():
 
     dp = updater.dispatcher
 
-    dp.add_handler(
-        CommandHandler(
-            "today",
-            today
-        )
-    )
+    # COMMANDS
+    dp.add_handler(CommandHandler("today", today))
+    dp.add_handler(CommandHandler("night", night))
+
+    print("✅ COMMANDS LOADED")
 
     updater.start_polling(
         drop_pending_updates=True
     )
 
-    print("✅ COMMANDS ACTIVE")
+    print("✅ POLLING STARTED")
 
     live_thread = threading.Thread(
         target=start_live_loop,
         daemon=True
     )
 
-    prematch_thread = threading.Thread(
-        target=start_prematch_loop,
-        daemon=True
-    )
-
     live_thread.start()
-    prematch_thread.start()
 
     print("✅ LIVE THREAD STARTED")
-    print("✅ PREMATCH THREAD STARTED")
 
     updater.idle()
 
 # =========================================================
 # START
 # =========================================================
-
 if __name__ == "__main__":
     main()
