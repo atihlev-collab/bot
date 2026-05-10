@@ -78,7 +78,8 @@ TOP_LEAGUES = [
 # =========================================================
 history = {}
 
-# ТУК СЕ ПАЗЯТ ВСИЧКИ ИЗПРАТЕНИ СИГНАЛИ
+# ТУК пазим изпратените сигнали
+# ВАЖНО: fixture_id + market
 sent_signals = set()
 
 # =========================================================
@@ -121,6 +122,21 @@ def get_stat(stats, name):
         pass
 
     return 0
+
+# =========================================================
+# UNIQUE SIGNAL
+# =========================================================
+def signal_exists(fixture_id, market):
+
+    key = f"{fixture_id}_{market}"
+
+    return key in sent_signals
+
+def save_signal(fixture_id, market):
+
+    key = f"{fixture_id}_{market}"
+
+    sent_signals.add(key)
 
 # =========================================================
 # GET MATCHES
@@ -343,13 +359,21 @@ async def live_loop():
 
                         history[fixture] = []
 
-                    history[fixture].append({
-                        "minute": minute,
-                        "ha": ha,
-                        "aa": aa,
-                        "hsh": hsh,
-                        "ash": ash
-                    })
+                    # НЕ ДОБАВЯЙ ЕДНА И СЪЩА МИНУТА
+                    last_minute = None
+
+                    if len(history[fixture]) > 0:
+                        last_minute = history[fixture][-1]["minute"]
+
+                    if last_minute != minute:
+
+                        history[fixture].append({
+                            "minute": minute,
+                            "ha": ha,
+                            "aa": aa,
+                            "hsh": hsh,
+                            "ash": ash
+                        })
 
                     history[fixture] = history[fixture][-25:]
 
@@ -358,11 +382,7 @@ async def live_loop():
                     # =================================================
                     # OVER 1.5
                     # =================================================
-                    over_signal_id = (
-                        f"{fixture}_OVER15"
-                    )
-
-                    if over_signal_id not in sent_signals:
+                    if not signal_exists(fixture, "OVER15"):
 
                         over_ticks = 0
 
@@ -375,6 +395,12 @@ async def live_loop():
                                 over_ticks += 1
 
                         if over_ticks >= 8:
+
+                            # ПЪРВО ЗАПИСВАМЕ
+                            save_signal(
+                                fixture,
+                                "OVER15"
+                            )
 
                             msg = f"""
 🔥 LIVE SIGNAL
@@ -397,19 +423,10 @@ async def live_loop():
                                 text=msg
                             )
 
-                            # МАРКИРАМЕ ГО ВЕДНАГА
-                            sent_signals.add(
-                                over_signal_id
-                            )
-
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
-                    next_home_signal_id = (
-                        f"{fixture}_NEXTHOME"
-                    )
-
-                    if next_home_signal_id not in sent_signals:
+                    if not signal_exists(fixture, "NEXTHOME"):
 
                         home_ticks = 0
 
@@ -422,6 +439,12 @@ async def live_loop():
                                 home_ticks += 1
 
                         if home_ticks >= 8:
+
+                            # ПЪРВО ЗАПИСВАМЕ
+                            save_signal(
+                                fixture,
+                                "NEXTHOME"
+                            )
 
                             msg = f"""
 🚨 LIVE SIGNAL
@@ -447,19 +470,10 @@ async def live_loop():
                                 text=msg
                             )
 
-                            # МАРКИРАМЕ ГО ВЕДНАГА
-                            sent_signals.add(
-                                next_home_signal_id
-                            )
-
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
-                    next_away_signal_id = (
-                        f"{fixture}_NEXTAWAY"
-                    )
-
-                    if next_away_signal_id not in sent_signals:
+                    if not signal_exists(fixture, "NEXTAWAY"):
 
                         away_ticks = 0
 
@@ -472,6 +486,12 @@ async def live_loop():
                                 away_ticks += 1
 
                         if away_ticks >= 8:
+
+                            # ПЪРВО ЗАПИСВАМЕ
+                            save_signal(
+                                fixture,
+                                "NEXTAWAY"
+                            )
 
                             msg = f"""
 🚨 LIVE SIGNAL
@@ -495,11 +515,6 @@ async def live_loop():
                             await bot.send_message(
                                 chat_id=CHAT_ID,
                                 text=msg
-                            )
-
-                            # МАРКИРАМЕ ГО ВЕДНАГА
-                            sent_signals.add(
-                                next_away_signal_id
                             )
 
                 except Exception as e:
