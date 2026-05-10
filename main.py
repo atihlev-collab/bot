@@ -78,7 +78,7 @@ TOP_LEAGUES = [
 # =========================================================
 history = {}
 
-# ТУК пазим вече изпратените сигнали
+# ТУК СЕ ПАЗЯТ ВСИЧКИ ИЗПРАТЕНИ СИГНАЛИ
 sent_signals = set()
 
 # =========================================================
@@ -95,21 +95,6 @@ def blocked(country, league):
         return True
 
     return False
-
-# =========================================================
-# DUPLICATE
-# =========================================================
-def already_sent(fixture, market):
-
-    key = f"{fixture}_{market}"
-
-    return key in sent_signals
-
-def mark_sent(fixture, market):
-
-    key = f"{fixture}_{market}"
-
-    sent_signals.add(key)
 
 # =========================================================
 # GET STAT
@@ -286,12 +271,14 @@ async def live_loop():
 
                 try:
 
-                    fixture = m["fixture"]["id"]
+                    fixture = str(
+                        m["fixture"]["id"]
+                    )
 
                     status = m["fixture"]["status"]["short"]
 
                     # =================================================
-                    # CLEAR AFTER MATCH END
+                    # END MATCH
                     # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
@@ -299,7 +286,10 @@ async def live_loop():
 
                         continue
 
-                    minute = m["fixture"]["status"]["elapsed"] or 0
+                    minute = (
+                        m["fixture"]["status"]["elapsed"]
+                        or 0
+                    )
 
                     if minute < 20 or minute > 75:
                         continue
@@ -336,8 +326,15 @@ async def live_loop():
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
 
-                    hsh = get_stat(hs, "Shots on Goal")
-                    ash = get_stat(as_, "Shots on Goal")
+                    hsh = get_stat(
+                        hs,
+                        "Shots on Goal"
+                    )
+
+                    ash = get_stat(
+                        as_,
+                        "Shots on Goal"
+                    )
 
                     # =================================================
                     # HISTORY
@@ -361,7 +358,11 @@ async def live_loop():
                     # =================================================
                     # OVER 1.5
                     # =================================================
-                    if not already_sent(fixture, "OVER15"):
+                    over_signal_id = (
+                        f"{fixture}_OVER15"
+                    )
+
+                    if over_signal_id not in sent_signals:
 
                         over_ticks = 0
 
@@ -396,15 +397,19 @@ async def live_loop():
                                 text=msg
                             )
 
-                            mark_sent(
-                                fixture,
-                                "OVER15"
+                            # МАРКИРАМЕ ГО ВЕДНАГА
+                            sent_signals.add(
+                                over_signal_id
                             )
 
                     # =================================================
                     # NEXT GOAL HOME
                     # =================================================
-                    if not already_sent(fixture, "NEXTHOME"):
+                    next_home_signal_id = (
+                        f"{fixture}_NEXTHOME"
+                    )
+
+                    if next_home_signal_id not in sent_signals:
 
                         home_ticks = 0
 
@@ -442,15 +447,19 @@ async def live_loop():
                                 text=msg
                             )
 
-                            mark_sent(
-                                fixture,
-                                "NEXTHOME"
+                            # МАРКИРАМЕ ГО ВЕДНАГА
+                            sent_signals.add(
+                                next_home_signal_id
                             )
 
                     # =================================================
                     # NEXT GOAL AWAY
                     # =================================================
-                    if not already_sent(fixture, "NEXTAWAY"):
+                    next_away_signal_id = (
+                        f"{fixture}_NEXTAWAY"
+                    )
+
+                    if next_away_signal_id not in sent_signals:
 
                         away_ticks = 0
 
@@ -488,9 +497,9 @@ async def live_loop():
                                 text=msg
                             )
 
-                            mark_sent(
-                                fixture,
-                                "NEXTAWAY"
+                            # МАРКИРАМЕ ГО ВЕДНАГА
+                            sent_signals.add(
+                                next_away_signal_id
                             )
 
                 except Exception as e:
@@ -501,7 +510,9 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
-        await asyncio.sleep(LIVE_INTERVAL)
+        await asyncio.sleep(
+            LIVE_INTERVAL
+        )
 
 # =========================================================
 # THREAD
@@ -509,6 +520,7 @@ async def live_loop():
 def start_live_loop():
 
     loop = asyncio.new_event_loop()
+
     asyncio.set_event_loop(loop)
 
     loop.run_until_complete(
@@ -529,8 +541,13 @@ def main():
 
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("today", today))
-    dp.add_handler(CommandHandler("night", night))
+    dp.add_handler(
+        CommandHandler("today", today)
+    )
+
+    dp.add_handler(
+        CommandHandler("night", night)
+    )
 
     print("✅ COMMANDS LOADED")
 
