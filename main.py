@@ -202,7 +202,7 @@ def get_stat(stats, name):
     return 0
 
 # =========================================================
-# PREMATCH
+# PREMATCH MATCHES
 # =========================================================
 def get_prematch_matches():
 
@@ -245,27 +245,24 @@ def get_prematch_matches():
                     continue
 
                 score = 0
-                market = "OVER 1.5 GOALS"
+
+                market = "OVER 2.5 GOALS"
 
                 # =====================================================
-                # LEAGUE SCORING
+                # LEAGUE SCORE
                 # =====================================================
 
                 if "Bundesliga" in league:
                     score += 10
-                    market = "OVER 2.5 GOALS"
 
                 if "Eredivisie" in league:
                     score += 10
-                    market = "OVER 2.5 GOALS"
 
                 if "Premier League" in league:
                     score += 9
-                    market = "OVER 2.5 GOALS"
 
                 if "Champions League" in league:
                     score += 9
-                    market = "OVER 2.5 GOALS"
 
                 if "MLS" in league:
                     score += 8
@@ -297,14 +294,60 @@ def get_prematch_matches():
                     "PSG",
                     "Inter",
                     "Milan",
-                    "Juventus"
+                    "Juventus",
+                    "Ajax",
+                    "Benfica",
+                    "Porto"
                 ]
 
-                if any(x.lower() in home.lower() for x in big_teams):
+                if any(
+                    x.lower() in home.lower()
+                    for x in big_teams
+                ):
                     score += 3
 
-                if any(x.lower() in away.lower() for x in big_teams):
+                if any(
+                    x.lower() in away.lower()
+                    for x in big_teams
+                ):
                     score += 3
+
+                # =====================================================
+                # GOAL GOAL
+                # =====================================================
+
+                if (
+                    "Bundesliga" in league
+                    or "Eredivisie" in league
+                    or "MLS" in league
+                    or "Champions League" in league
+                ):
+
+                    market = "GOAL GOAL"
+
+                # =====================================================
+                # 1 OR 2
+                # =====================================================
+
+                if (
+                    any(
+                        x.lower() in home.lower()
+                        for x in big_teams
+                    )
+                    or any(
+                        x.lower() in away.lower()
+                        for x in big_teams
+                    )
+                ):
+
+                    market = "1 OR 2"
+
+                # =====================================================
+                # VERY HIGH SCORING
+                # =====================================================
+
+                if score >= 14:
+                    market = "OVER 2.5 GOALS"
 
                 result.append({
                     "country": country,
@@ -331,6 +374,7 @@ def get_prematch_matches():
     except Exception as e:
 
         print("PREMATCH ERROR:", e)
+
         return []
 
 # =========================================================
@@ -469,9 +513,6 @@ async def live_loop():
 
                     fixture_id = m["fixture"]["id"]
 
-                    # =================================================
-                    # PROCESS ONLY ONCE
-                    # =================================================
                     if fixture_id in processed_fixtures:
                         continue
 
@@ -479,9 +520,6 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
-                    # =================================================
-                    # CLEAR AFTER FT
-                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
                         clear_match_signals(
@@ -495,9 +533,6 @@ async def live_loop():
                         or 0
                     )
 
-                    # =================================================
-                    # LIVE WINDOW
-                    # =================================================
                     if minute < 1 or minute > 75:
                         continue
 
@@ -563,9 +598,6 @@ async def live_loop():
                         "ash": ash
                     })
 
-                    # =================================================
-                    # LAST 15 MINUTES
-                    # =================================================
                     history[fixture_name] = [
                         x for x in history[fixture_name]
                         if minute - x["minute"] <= 15
@@ -574,8 +606,7 @@ async def live_loop():
                     hist = history[fixture_name]
 
                     # =================================================
-                    # OVER 1.5 GOALS
-                    # BOTH TEAMS ATTACKING
+                    # OVER 1.5
                     # =================================================
                     if can_send_signal(
                         fixture_id,
@@ -625,7 +656,6 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL HOME
-                    # ONLY HOME PRESSURE
                     # =================================================
                     if can_send_signal(
                         fixture_id,
@@ -673,7 +703,6 @@ async def live_loop():
 
                     # =================================================
                     # NEXT GOAL AWAY
-                    # ONLY AWAY PRESSURE
                     # =================================================
                     if can_send_signal(
                         fixture_id,
@@ -727,9 +756,6 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
-        # =================================================
-        # CLEAN HISTORY
-        # =================================================
         if len(history) > 500:
             history.clear()
 
