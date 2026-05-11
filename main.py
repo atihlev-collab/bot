@@ -55,25 +55,6 @@ BAD_LEAGUES = [
 ]
 
 # =========================================================
-# TOP LEAGUES
-# =========================================================
-TOP_LEAGUES = [
-    "Premier League",
-    "Champions League",
-    "Europa League",
-    "Conference League",
-    "La Liga",
-    "Serie A",
-    "Bundesliga",
-    "Ligue 1",
-    "Eredivisie",
-    "Primeira Liga",
-    "MLS",
-    "Brasileirao",
-    "Copa Libertadores"
-]
-
-# =========================================================
 # STORAGE
 # =========================================================
 history = {}
@@ -160,12 +141,6 @@ def today(update: Update, context: CallbackContext):
                 if blocked(country, league):
                     continue
 
-                if not any(
-                    x.lower() in league.lower()
-                    for x in TOP_LEAGUES
-                ):
-                    continue
-
                 home = m["teams"]["home"]["name"]
                 away = m["teams"]["away"]["name"]
 
@@ -209,6 +184,11 @@ def today(update: Update, context: CallbackContext):
 
                     pick = "UNDER 2.5 GOALS"
                     score += 8
+
+                else:
+
+                    pick = "OVER 2.5 GOALS"
+                    score += 5
 
                 # =================================================
                 # BIG TEAMS
@@ -258,17 +238,15 @@ def today(update: Update, context: CallbackContext):
 
                         pick = "2"
 
-                if pick:
-
-                    results.append({
-                        "league": league,
-                        "country": country,
-                        "home": home,
-                        "away": away,
-                        "time": date.strftime("%H:%M"),
-                        "pick": pick,
-                        "score": score
-                    })
+                results.append({
+                    "league": league,
+                    "country": country,
+                    "home": home,
+                    "away": away,
+                    "time": date.strftime("%H:%M"),
+                    "pick": pick,
+                    "score": score
+                })
 
             except:
                 pass
@@ -279,13 +257,22 @@ def today(update: Update, context: CallbackContext):
             reverse=True
         )
 
-        results = results[:3]
+        if len(results) > 3:
+            results = results[:3]
 
         if not results:
 
-            update.message.reply_text(
-                "❌ Няма намерени мачове."
-            )
+            msg = """
+📈 TODAY BEST PICKS
+
+🎯 OVER 2.5 GOALS
+🎯 GOAL GOAL
+🎯 1
+
+⚠️ Няма намерени топ value мачове в момента.
+"""
+
+            update.message.reply_text(msg)
 
             return
 
