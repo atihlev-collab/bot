@@ -388,7 +388,7 @@ async def live_loop():
 
                         if (
                             goals <= 2
-                            and over_ticks >= 6
+                            and over_ticks >= 4
                         ):
 
                             save_signal(
@@ -429,7 +429,7 @@ async def live_loop():
                             ):
                                 home_ticks += 1
 
-                        if home_ticks >= 5:
+                        if home_ticks >= 3:
 
                             save_signal(
                                 fixture,
@@ -469,7 +469,7 @@ async def live_loop():
                             ):
                                 away_ticks += 1
 
-                        if away_ticks >= 5:
+                        if away_ticks >= 3:
 
                             save_signal(
                                 fixture,
