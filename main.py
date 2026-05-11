@@ -271,7 +271,6 @@ def today(update: Update, context: CallbackContext):
 
                 hour = date.hour
 
-                # само дневни
                 if hour < 8 or hour > 23:
                     continue
 
@@ -381,7 +380,6 @@ def night(update: Update, context: CallbackContext):
 
                 hour = date.hour
 
-                # нощни часове
                 if 8 <= hour <= 23:
                     continue
 
@@ -392,7 +390,6 @@ def night(update: Update, context: CallbackContext):
                     away
                 )
 
-                # Южна Америка = по-висок scoring
                 score += 2
 
                 valid_matches.append({
@@ -563,17 +560,19 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["hsh"] >= 2
-                                and h["ash"] >= 2
+                                (
+                                    h["hsh"] >= 2
+                                    or h["ash"] >= 2
+                                )
                                 and (
                                     h["ha"] + h["aa"]
-                                ) >= 15
+                                ) >= 12
                             ):
                                 over_ticks += 1
 
                         if (
                             goals <= 2
-                            and over_ticks >= 4
+                            and over_ticks >= 3
                         ):
 
                             save_signal(
@@ -609,7 +608,7 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["ha"] >= h["aa"] + 3
+                                h["ha"] >= h["aa"] + 2
                                 and h["hsh"] >= 1
                             ):
                                 home_ticks += 1
@@ -649,7 +648,7 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["aa"] >= h["ha"] + 3
+                                h["aa"] >= h["ha"] + 2
                                 and h["ash"] >= 1
                             ):
                                 away_ticks += 1
