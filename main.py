@@ -78,8 +78,7 @@ TOP_LEAGUES = [
 # =========================================================
 history = {}
 
-# ТУК пазим изпратените сигнали
-# ВАЖНО: fixture_id + market
+# пази изпратените сигнали
 sent_signals = set()
 
 # =========================================================
@@ -322,6 +321,8 @@ async def live_loop():
                     gh = m["goals"]["home"] or 0
                     ga = m["goals"]["away"] or 0
 
+                    goals = gh + ga
+
                     sr = requests.get(
                         f"https://v3.football.api-sports.io/fixtures/statistics?fixture={fixture}",
                         headers=HEADERS,
@@ -359,12 +360,12 @@ async def live_loop():
 
                         history[fixture] = []
 
-                    # НЕ ДОБАВЯЙ ЕДНА И СЪЩА МИНУТА
                     last_minute = None
 
                     if len(history[fixture]) > 0:
                         last_minute = history[fixture][-1]["minute"]
 
+                    # не добавяй една и съща минута
                     if last_minute != minute:
 
                         history[fixture].append({
@@ -380,9 +381,9 @@ async def live_loop():
                     hist = history[fixture]
 
                     # =================================================
-                    # OVER 1.5
+                    # OVER 2.5
                     # =================================================
-                    if not signal_exists(fixture, "OVER15"):
+                    if not signal_exists(fixture, "OVER25"):
 
                         over_ticks = 0
 
@@ -391,15 +392,20 @@ async def live_loop():
                             if (
                                 h["hsh"] >= 2
                                 and h["ash"] >= 2
+                                and (
+                                    h["ha"] + h["aa"]
+                                ) >= 15
                             ):
                                 over_ticks += 1
 
-                        if over_ticks >= 8:
+                        if (
+                            goals <= 2
+                            and over_ticks >= 6
+                        ):
 
-                            # ПЪРВО ЗАПИСВАМЕ
                             save_signal(
                                 fixture,
-                                "OVER15"
+                                "OVER25"
                             )
 
                             msg = f"""
@@ -412,7 +418,10 @@ async def live_loop():
 ⏱ {minute}'
 ⚽ {gh}:{ga}
 
-🎯 OVER 1.5 GOALS
+🎯 OVER 2.5 GOALS
+
+📊 Home attacks: {ha}
+📊 Away attacks: {aa}
 
 📊 Home shots: {hsh}
 📊 Away shots: {ash}
@@ -433,14 +442,13 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["ha"] >= h["aa"] + 5
-                                and h["hsh"] >= 2
+                                h["ha"] >= h["aa"] + 3
+                                and h["hsh"] >= 1
                             ):
                                 home_ticks += 1
 
-                        if home_ticks >= 8:
+                        if home_ticks >= 5:
 
-                            # ПЪРВО ЗАПИСВАМЕ
                             save_signal(
                                 fixture,
                                 "NEXTHOME"
@@ -480,14 +488,13 @@ async def live_loop():
                         for h in hist:
 
                             if (
-                                h["aa"] >= h["ha"] + 5
-                                and h["ash"] >= 2
+                                h["aa"] >= h["ha"] + 3
+                                and h["ash"] >= 1
                             ):
                                 away_ticks += 1
 
-                        if away_ticks >= 8:
+                        if away_ticks >= 5:
 
-                            # ПЪРВО ЗАПИСВАМЕ
                             save_signal(
                                 fixture,
                                 "NEXTAWAY"
