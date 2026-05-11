@@ -134,7 +134,7 @@ def today(update: Update, context: CallbackContext):
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=30",
+            "https://v3.football.api-sports.io/fixtures?next=50",
             headers=HEADERS,
             timeout=20
         ).json()
@@ -167,10 +167,9 @@ def today(update: Update, context: CallbackContext):
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                # =====================================================
-                # DEFAULT PICK
-                # =====================================================
+                score = 0
                 pick = "OVER 2.5 GOALS"
+                odd = "1.85"
 
                 # =====================================================
                 # LOW SCORING COUNTRIES
@@ -181,23 +180,20 @@ def today(update: Update, context: CallbackContext):
                 ):
 
                     pick = "UNDER 2.5 GOALS"
+                    odd = "1.70"
+                    score += 7
 
                 # =====================================================
-                # LEAGUE LOGIC
+                # LEAGUES
                 # =====================================================
-                elif (
-                    "Serie A" in league
-                    or "Ligue 1" in league
-                ):
-
-                    pick = "UNDER 2.5 GOALS"
-
                 elif (
                     "Premier League" in league
                     or "Champions League" in league
                 ):
 
                     pick = "GOAL GOAL"
+                    odd = "1.80"
+                    score += 10
 
                 elif (
                     "Bundesliga" in league
@@ -206,6 +202,17 @@ def today(update: Update, context: CallbackContext):
                 ):
 
                     pick = "OVER 2.5 GOALS"
+                    odd = "1.75"
+                    score += 9
+
+                elif (
+                    "Serie A" in league
+                    or "Ligue 1" in league
+                ):
+
+                    pick = "UNDER 2.5 GOALS"
+                    odd = "1.65"
+                    score += 8
 
                 # =====================================================
                 # BIG TEAMS
@@ -230,6 +237,8 @@ def today(update: Update, context: CallbackContext):
                 ):
 
                     pick = "1"
+                    odd = "1.65"
+                    score += 5
 
                 elif any(
                     x.lower() in away.lower()
@@ -237,6 +246,8 @@ def today(update: Update, context: CallbackContext):
                 ):
 
                     pick = "2"
+                    odd = "1.75"
+                    score += 5
 
                 valid_matches.append({
                     "country": country,
@@ -244,7 +255,9 @@ def today(update: Update, context: CallbackContext):
                     "home": home,
                     "away": away,
                     "time": date.strftime("%H:%M"),
-                    "pick": pick
+                    "pick": pick,
+                    "odd": odd,
+                    "score": score
                 })
 
             except:
@@ -258,8 +271,14 @@ def today(update: Update, context: CallbackContext):
             return
 
         # =====================================================
-        # 1 ДО 3 МАЧА
+        # НАЙ-ДОБРИТЕ МАЧОВЕ
         # =====================================================
+        valid_matches = sorted(
+            valid_matches,
+            key=lambda x: x["score"],
+            reverse=True
+        )
+
         picks_count = random.randint(1, 3)
 
         selected = valid_matches[:picks_count]
@@ -277,6 +296,7 @@ def today(update: Update, context: CallbackContext):
 ⏰ {g['time']}
 
 🎯 {g['pick']}
+💰 Odd: {g['odd']}
 """
 
         update.message.reply_text(msg)
@@ -370,15 +390,8 @@ async def live_loop():
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
 
-                    hsh = get_stat(
-                        hs,
-                        "Shots on Goal"
-                    )
-
-                    ash = get_stat(
-                        as_,
-                        "Shots on Goal"
-                    )
+                    hsh = get_stat(hs, "Shots on Goal")
+                    ash = get_stat(as_, "Shots on Goal")
 
                     # =================================================
                     # HISTORY
@@ -540,9 +553,7 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
-        await asyncio.sleep(
-            LIVE_INTERVAL
-        )
+        await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
 # THREAD
