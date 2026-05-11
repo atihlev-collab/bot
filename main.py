@@ -56,6 +56,17 @@ BAD_LEAGUES = [
 ]
 
 # =========================================================
+# LOW SCORING COUNTRIES
+# =========================================================
+LOW_SCORING_COUNTRIES = [
+    "Poland",
+    "Romania",
+    "Bulgaria",
+    "Croatia",
+    "Slovenia"
+]
+
+# =========================================================
 # STORAGE
 # =========================================================
 history = {}
@@ -156,9 +167,25 @@ def today(update: Update, context: CallbackContext):
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
+                # =====================================================
+                # DEFAULT PICK
+                # =====================================================
                 pick = "OVER 2.5 GOALS"
 
-                if (
+                # =====================================================
+                # LOW SCORING COUNTRIES
+                # =====================================================
+                if any(
+                    x.lower() in country.lower()
+                    for x in LOW_SCORING_COUNTRIES
+                ):
+
+                    pick = "UNDER 2.5 GOALS"
+
+                # =====================================================
+                # LEAGUE LOGIC
+                # =====================================================
+                elif (
                     "Serie A" in league
                     or "Ligue 1" in league
                 ):
@@ -172,6 +199,17 @@ def today(update: Update, context: CallbackContext):
 
                     pick = "GOAL GOAL"
 
+                elif (
+                    "Bundesliga" in league
+                    or "Eredivisie" in league
+                    or "MLS" in league
+                ):
+
+                    pick = "OVER 2.5 GOALS"
+
+                # =====================================================
+                # BIG TEAMS
+                # =====================================================
                 big_teams = [
                     "Manchester",
                     "Liverpool",
