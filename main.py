@@ -3,6 +3,7 @@ os.system("pip install requests python-telegram-bot==13.15")
 
 import asyncio
 import logging
+import random
 import threading
 import requests
 
@@ -122,14 +123,21 @@ def today(update: Update, context: CallbackContext):
     try:
 
         r = requests.get(
-            "https://v3.football.api-sports.io/fixtures?next=150",
+            "https://v3.football.api-sports.io/fixtures?next=30",
             headers=HEADERS,
             timeout=20
         ).json()
 
         matches = r.get("response", [])
 
-        results = []
+        if not matches:
+
+            update.message.reply_text(
+                "❌ Няма мачове."
+            )
+            return
+
+        valid_matches = []
 
         for m in matches:
 
@@ -148,51 +156,22 @@ def today(update: Update, context: CallbackContext):
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                score = 0
-                pick = None
+                pick = "OVER 2.5 GOALS"
 
-                # =================================================
-                # OVER 2.5
-                # =================================================
                 if (
-                    "Bundesliga" in league
-                    or "Eredivisie" in league
-                    or "MLS" in league
+                    "Serie A" in league
+                    or "Ligue 1" in league
                 ):
 
-                    pick = "OVER 2.5 GOALS"
-                    score += 10
+                    pick = "UNDER 2.5 GOALS"
 
-                # =================================================
-                # GOAL GOAL
-                # =================================================
                 elif (
                     "Premier League" in league
                     or "Champions League" in league
                 ):
 
                     pick = "GOAL GOAL"
-                    score += 9
 
-                # =================================================
-                # UNDER 2.5
-                # =================================================
-                elif (
-                    "Serie A" in league
-                    or "Ligue 1" in league
-                ):
-
-                    pick = "UNDER 2.5 GOALS"
-                    score += 8
-
-                else:
-
-                    pick = "OVER 2.5 GOALS"
-                    score += 5
-
-                # =================================================
-                # BIG TEAMS
-                # =================================================
                 big_teams = [
                     "Manchester",
                     "Liverpool",
@@ -211,74 +190,45 @@ def today(update: Update, context: CallbackContext):
                     x.lower() in home.lower()
                     for x in big_teams
                 ):
-                    score += 3
 
-                if any(
+                    pick = "1"
+
+                elif any(
                     x.lower() in away.lower()
                     for x in big_teams
                 ):
-                    score += 3
 
-                # =================================================
-                # 1 OR 2
-                # =================================================
-                if score >= 14:
+                    pick = "2"
 
-                    if any(
-                        x.lower() in home.lower()
-                        for x in big_teams
-                    ):
-
-                        pick = "1"
-
-                    elif any(
-                        x.lower() in away.lower()
-                        for x in big_teams
-                    ):
-
-                        pick = "2"
-
-                results.append({
-                    "league": league,
+                valid_matches.append({
                     "country": country,
+                    "league": league,
                     "home": home,
                     "away": away,
                     "time": date.strftime("%H:%M"),
-                    "pick": pick,
-                    "score": score
+                    "pick": pick
                 })
 
             except:
                 pass
 
-        results = sorted(
-            results,
-            key=lambda x: x["score"],
-            reverse=True
-        )
+        if not valid_matches:
 
-        if len(results) > 3:
-            results = results[:3]
-
-        if not results:
-
-            msg = """
-📈 TODAY BEST PICKS
-
-🎯 OVER 2.5 GOALS
-🎯 GOAL GOAL
-🎯 1
-
-⚠️ Няма намерени топ value мачове в момента.
-"""
-
-            update.message.reply_text(msg)
-
+            update.message.reply_text(
+                "❌ Няма подходящи мачове."
+            )
             return
+
+        # =====================================================
+        # 1 ДО 3 МАЧА
+        # =====================================================
+        picks_count = random.randint(1, 3)
+
+        selected = valid_matches[:picks_count]
 
         msg = "📈 TODAY BEST PICKS\n"
 
-        for g in results:
+        for g in selected:
 
             msg += f"""
 
