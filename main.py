@@ -67,6 +67,21 @@ LOW_SCORING_COUNTRIES = [
 ]
 
 # =========================================================
+# NIGHT COUNTRIES
+# =========================================================
+NIGHT_COUNTRIES = [
+    "Brazil",
+    "Argentina",
+    "USA",
+    "Mexico",
+    "Colombia",
+    "Chile",
+    "Uruguay",
+    "Paraguay",
+    "Peru"
+]
+
+# =========================================================
 # STORAGE
 # =========================================================
 history = {}
@@ -127,6 +142,100 @@ def save_signal(fixture_id, market):
     )
 
 # =========================================================
+# PICK LOGIC
+# =========================================================
+def generate_pick(country, league, home, away):
+
+    pick = "OVER 2.5 GOALS"
+    odd = "1.85"
+    score = 5
+
+    # =====================================================
+    # LOW SCORING COUNTRIES
+    # =====================================================
+    if any(
+        x.lower() in country.lower()
+        for x in LOW_SCORING_COUNTRIES
+    ):
+
+        pick = "UNDER 2.5 GOALS"
+        odd = "1.70"
+        score += 7
+
+    # =====================================================
+    # LEAGUES
+    # =====================================================
+    elif (
+        "Premier League" in league
+        or "Champions League" in league
+    ):
+
+        pick = "GOAL GOAL"
+        odd = "1.80"
+        score += 10
+
+    elif (
+        "Bundesliga" in league
+        or "Eredivisie" in league
+        or "MLS" in league
+        or "Brasileirao" in league
+    ):
+
+        pick = "OVER 2.5 GOALS"
+        odd = "1.75"
+        score += 9
+
+    elif (
+        "Serie A" in league
+        or "Ligue 1" in league
+    ):
+
+        pick = "UNDER 2.5 GOALS"
+        odd = "1.65"
+        score += 8
+
+    # =====================================================
+    # BIG TEAMS
+    # =====================================================
+    big_teams = [
+        "Manchester",
+        "Liverpool",
+        "Arsenal",
+        "Chelsea",
+        "Barcelona",
+        "Real Madrid",
+        "Bayern",
+        "PSG",
+        "Inter",
+        "Milan",
+        "Juventus",
+        "Flamengo",
+        "Palmeiras",
+        "River Plate",
+        "Boca Juniors"
+    ]
+
+    if any(
+        x.lower() in home.lower()
+        for x in big_teams
+    ):
+
+        pick = "1"
+        odd = "1.65"
+        score += 5
+
+    elif any(
+        x.lower() in away.lower()
+        for x in big_teams
+    ):
+
+        pick = "2"
+        odd = "1.75"
+        score += 5
+
+    return pick, odd, score
+
+# =========================================================
 # TODAY COMMAND
 # =========================================================
 def today(update: Update, context: CallbackContext):
@@ -140,13 +249,6 @@ def today(update: Update, context: CallbackContext):
         ).json()
 
         matches = r.get("response", [])
-
-        if not matches:
-
-            update.message.reply_text(
-                "❌ Няма мачове."
-            )
-            return
 
         valid_matches = []
 
@@ -167,87 +269,18 @@ def today(update: Update, context: CallbackContext):
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                score = 0
-                pick = "OVER 2.5 GOALS"
-                odd = "1.85"
+                hour = date.hour
 
-                # =====================================================
-                # LOW SCORING COUNTRIES
-                # =====================================================
-                if any(
-                    x.lower() in country.lower()
-                    for x in LOW_SCORING_COUNTRIES
-                ):
+                # само дневни
+                if hour < 8 or hour > 23:
+                    continue
 
-                    pick = "UNDER 2.5 GOALS"
-                    odd = "1.70"
-                    score += 7
-
-                # =====================================================
-                # LEAGUES
-                # =====================================================
-                elif (
-                    "Premier League" in league
-                    or "Champions League" in league
-                ):
-
-                    pick = "GOAL GOAL"
-                    odd = "1.80"
-                    score += 10
-
-                elif (
-                    "Bundesliga" in league
-                    or "Eredivisie" in league
-                    or "MLS" in league
-                ):
-
-                    pick = "OVER 2.5 GOALS"
-                    odd = "1.75"
-                    score += 9
-
-                elif (
-                    "Serie A" in league
-                    or "Ligue 1" in league
-                ):
-
-                    pick = "UNDER 2.5 GOALS"
-                    odd = "1.65"
-                    score += 8
-
-                # =====================================================
-                # BIG TEAMS
-                # =====================================================
-                big_teams = [
-                    "Manchester",
-                    "Liverpool",
-                    "Arsenal",
-                    "Chelsea",
-                    "Barcelona",
-                    "Real Madrid",
-                    "Bayern",
-                    "PSG",
-                    "Inter",
-                    "Milan",
-                    "Juventus"
-                ]
-
-                if any(
-                    x.lower() in home.lower()
-                    for x in big_teams
-                ):
-
-                    pick = "1"
-                    odd = "1.65"
-                    score += 5
-
-                elif any(
-                    x.lower() in away.lower()
-                    for x in big_teams
-                ):
-
-                    pick = "2"
-                    odd = "1.75"
-                    score += 5
+                pick, odd, score = generate_pick(
+                    country,
+                    league,
+                    home,
+                    away
+                )
 
                 valid_matches.append({
                     "country": country,
@@ -270,9 +303,6 @@ def today(update: Update, context: CallbackContext):
             )
             return
 
-        # =====================================================
-        # НАЙ-ДОБРИТЕ МАЧОВЕ
-        # =====================================================
         valid_matches = sorted(
             valid_matches,
             key=lambda x: x["score"],
@@ -314,9 +344,113 @@ def today(update: Update, context: CallbackContext):
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
-    update.message.reply_text(
-        "🌙 NIGHT command active."
-    )
+    try:
+
+        r = requests.get(
+            "https://v3.football.api-sports.io/fixtures?next=80",
+            headers=HEADERS,
+            timeout=20
+        ).json()
+
+        matches = r.get("response", [])
+
+        valid_matches = []
+
+        for m in matches:
+
+            try:
+
+                league = m["league"]["name"]
+                country = m["league"]["country"]
+
+                if blocked(country, league):
+                    continue
+
+                if not any(
+                    x.lower() in country.lower()
+                    for x in NIGHT_COUNTRIES
+                ):
+                    continue
+
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                date = datetime.fromisoformat(
+                    m["fixture"]["date"].replace("Z", "+00:00")
+                ).astimezone(TZ)
+
+                hour = date.hour
+
+                # нощни часове
+                if 8 <= hour <= 23:
+                    continue
+
+                pick, odd, score = generate_pick(
+                    country,
+                    league,
+                    home,
+                    away
+                )
+
+                # Южна Америка = по-висок scoring
+                score += 2
+
+                valid_matches.append({
+                    "country": country,
+                    "league": league,
+                    "home": home,
+                    "away": away,
+                    "time": date.strftime("%H:%M"),
+                    "pick": pick,
+                    "odd": odd,
+                    "score": score
+                })
+
+            except:
+                pass
+
+        if not valid_matches:
+
+            update.message.reply_text(
+                "❌ Няма нощни мачове."
+            )
+            return
+
+        valid_matches = sorted(
+            valid_matches,
+            key=lambda x: x["score"],
+            reverse=True
+        )
+
+        picks_count = random.randint(1, 3)
+
+        selected = valid_matches[:picks_count]
+
+        msg = "🌙 NIGHT BEST PICKS\n"
+
+        for g in selected:
+
+            msg += f"""
+
+🌍 {g['country']}
+🏆 {g['league']}
+
+🏟 {g['home']} vs {g['away']}
+⏰ {g['time']}
+
+🎯 {g['pick']}
+💰 Odd: {g['odd']}
+"""
+
+        update.message.reply_text(msg)
+
+    except Exception as e:
+
+        print("NIGHT ERROR:", e)
+
+        update.message.reply_text(
+            "❌ Грешка при night."
+        )
 
 # =========================================================
 # LIVE LOOP
