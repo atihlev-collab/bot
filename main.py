@@ -77,8 +77,6 @@ TOP_LEAGUES = [
 # STORAGE
 # =========================================================
 history = {}
-
-# пази изпратените сигнали
 sent_signals = set()
 
 # =========================================================
@@ -127,15 +125,13 @@ def get_stat(stats, name):
 # =========================================================
 def signal_exists(fixture_id, market):
 
-    key = f"{fixture_id}_{market}"
-
-    return key in sent_signals
+    return f"{fixture_id}_{market}" in sent_signals
 
 def save_signal(fixture_id, market):
 
-    key = f"{fixture_id}_{market}"
-
-    sent_signals.add(key)
+    sent_signals.add(
+        f"{fixture_id}_{market}"
+    )
 
 # =========================================================
 # TODAY COMMAND
@@ -193,7 +189,58 @@ def today(update: Update, context: CallbackContext):
                     []
                 )
 
+                # =====================================================
+                # FALLBACK IF NO ODDS
+                # =====================================================
                 if not odds_response:
+
+                    if (
+                        "Bundesliga" in league
+                        or "Eredivisie" in league
+                    ):
+
+                        results.append({
+                            "league": league,
+                            "country": country,
+                            "home": home,
+                            "away": away,
+                            "time": date.strftime("%H:%M"),
+                            "pick": "OVER 2.5 GOALS",
+                            "odd": "N/A",
+                            "score": 8
+                        })
+
+                    elif (
+                        "Serie A" in league
+                        or "Ligue 1" in league
+                    ):
+
+                        results.append({
+                            "league": league,
+                            "country": country,
+                            "home": home,
+                            "away": away,
+                            "time": date.strftime("%H:%M"),
+                            "pick": "UNDER 2.5 GOALS",
+                            "odd": "N/A",
+                            "score": 7
+                        })
+
+                    elif (
+                        "Premier League" in league
+                    ):
+
+                        results.append({
+                            "league": league,
+                            "country": country,
+                            "home": home,
+                            "away": away,
+                            "time": date.strftime("%H:%M"),
+                            "pick": "GOAL GOAL",
+                            "odd": "N/A",
+                            "score": 9
+                        })
+
                     continue
 
                 best_pick = None
@@ -202,12 +249,12 @@ def today(update: Update, context: CallbackContext):
 
                 for bookmaker in odds_response:
 
-                    bets = bookmaker.get(
+                    bookmakers = bookmaker.get(
                         "bookmakers",
                         []
                     )
 
-                    for b in bets:
+                    for b in bookmakers:
 
                         markets = b.get(
                             "bets",
@@ -247,7 +294,6 @@ def today(update: Update, context: CallbackContext):
                                         )
                                     )
 
-                                    # OVER 2.5
                                     if (
                                         value == "Over 2.5"
                                         and 1.70 <= odd <= 2.20
@@ -268,7 +314,6 @@ def today(update: Update, context: CallbackContext):
                                             best_pick = "OVER 2.5 GOALS"
                                             best_odd = odd
 
-                                    # UNDER 2.5
                                     if (
                                         value == "Under 2.5"
                                         and 1.60 <= odd <= 2.00
@@ -350,7 +395,6 @@ def today(update: Update, context: CallbackContext):
                                         )
                                     )
 
-                                    # HOME
                                     if (
                                         value == "Home"
                                         and 1.50 <= odd <= 2.20
@@ -372,7 +416,6 @@ def today(update: Update, context: CallbackContext):
                                             best_pick = "1"
                                             best_odd = odd
 
-                                    # AWAY
                                     if (
                                         value == "Away"
                                         and 1.50 <= odd <= 2.20
@@ -543,9 +586,6 @@ async def live_loop():
                         "Shots on Goal"
                     )
 
-                    # =================================================
-                    # HISTORY
-                    # =================================================
                     if fixture not in history:
 
                         history[fixture] = []
@@ -703,9 +743,7 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
-        await asyncio.sleep(
-            LIVE_INTERVAL
-        )
+        await asyncio.sleep(LIVE_INTERVAL)
 
 # =========================================================
 # THREAD
@@ -761,8 +799,5 @@ def main():
 
     updater.idle()
 
-# =========================================================
-# START
-# =========================================================
 if __name__ == "__main__":
     main()
