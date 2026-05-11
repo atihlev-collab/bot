@@ -154,8 +154,6 @@ def today(update: Update, context: CallbackContext):
 
             try:
 
-                fixture_id = m["fixture"]["id"]
-
                 league = m["league"]["name"]
                 country = m["league"]["country"]
 
@@ -175,269 +173,92 @@ def today(update: Update, context: CallbackContext):
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                # =====================================================
-                # ODDS
-                # =====================================================
-                orr = requests.get(
-                    f"https://v3.football.api-sports.io/odds?fixture={fixture_id}",
-                    headers=HEADERS,
-                    timeout=20
-                ).json()
+                score = 0
+                pick = None
 
-                odds_response = orr.get(
-                    "response",
-                    []
-                )
+                # =================================================
+                # OVER 2.5
+                # =================================================
+                if (
+                    "Bundesliga" in league
+                    or "Eredivisie" in league
+                    or "MLS" in league
+                ):
 
-                # =====================================================
-                # FALLBACK IF NO ODDS
-                # =====================================================
-                if not odds_response:
+                    pick = "OVER 2.5 GOALS"
+                    score += 10
 
-                    if (
-                        "Bundesliga" in league
-                        or "Eredivisie" in league
+                # =================================================
+                # GOAL GOAL
+                # =================================================
+                elif (
+                    "Premier League" in league
+                    or "Champions League" in league
+                ):
+
+                    pick = "GOAL GOAL"
+                    score += 9
+
+                # =================================================
+                # UNDER 2.5
+                # =================================================
+                elif (
+                    "Serie A" in league
+                    or "Ligue 1" in league
+                ):
+
+                    pick = "UNDER 2.5 GOALS"
+                    score += 8
+
+                # =================================================
+                # BIG TEAMS
+                # =================================================
+                big_teams = [
+                    "Manchester",
+                    "Liverpool",
+                    "Arsenal",
+                    "Chelsea",
+                    "Barcelona",
+                    "Real Madrid",
+                    "Bayern",
+                    "PSG",
+                    "Inter",
+                    "Milan",
+                    "Juventus"
+                ]
+
+                if any(
+                    x.lower() in home.lower()
+                    for x in big_teams
+                ):
+                    score += 3
+
+                if any(
+                    x.lower() in away.lower()
+                    for x in big_teams
+                ):
+                    score += 3
+
+                # =================================================
+                # 1 OR 2
+                # =================================================
+                if score >= 14:
+
+                    if any(
+                        x.lower() in home.lower()
+                        for x in big_teams
                     ):
 
-                        results.append({
-                            "league": league,
-                            "country": country,
-                            "home": home,
-                            "away": away,
-                            "time": date.strftime("%H:%M"),
-                            "pick": "OVER 2.5 GOALS",
-                            "odd": "N/A",
-                            "score": 8
-                        })
+                        pick = "1"
 
-                    elif (
-                        "Serie A" in league
-                        or "Ligue 1" in league
+                    elif any(
+                        x.lower() in away.lower()
+                        for x in big_teams
                     ):
 
-                        results.append({
-                            "league": league,
-                            "country": country,
-                            "home": home,
-                            "away": away,
-                            "time": date.strftime("%H:%M"),
-                            "pick": "UNDER 2.5 GOALS",
-                            "odd": "N/A",
-                            "score": 7
-                        })
+                        pick = "2"
 
-                    elif (
-                        "Premier League" in league
-                    ):
-
-                        results.append({
-                            "league": league,
-                            "country": country,
-                            "home": home,
-                            "away": away,
-                            "time": date.strftime("%H:%M"),
-                            "pick": "GOAL GOAL",
-                            "odd": "N/A",
-                            "score": 9
-                        })
-
-                    continue
-
-                best_pick = None
-                best_odd = None
-                best_score = 0
-
-                for bookmaker in odds_response:
-
-                    bookmakers = bookmaker.get(
-                        "bookmakers",
-                        []
-                    )
-
-                    for b in bookmakers:
-
-                        markets = b.get(
-                            "bets",
-                            []
-                        )
-
-                        for market in markets:
-
-                            market_name = market.get(
-                                "name",
-                                ""
-                            )
-
-                            values = market.get(
-                                "values",
-                                []
-                            )
-
-                            # =================================================
-                            # OVER/UNDER 2.5
-                            # =================================================
-                            if (
-                                "Goals Over/Under" in market_name
-                            ):
-
-                                for v in values:
-
-                                    value = v.get(
-                                        "value",
-                                        ""
-                                    )
-
-                                    odd = float(
-                                        v.get(
-                                            "odd",
-                                            0
-                                        )
-                                    )
-
-                                    if (
-                                        value == "Over 2.5"
-                                        and 1.70 <= odd <= 2.20
-                                    ):
-
-                                        score = 10
-
-                                        if (
-                                            "Premier League" in league
-                                            or "Bundesliga" in league
-                                            or "Champions League" in league
-                                        ):
-                                            score += 3
-
-                                        if score > best_score:
-
-                                            best_score = score
-                                            best_pick = "OVER 2.5 GOALS"
-                                            best_odd = odd
-
-                                    if (
-                                        value == "Under 2.5"
-                                        and 1.60 <= odd <= 2.00
-                                    ):
-
-                                        score = 8
-
-                                        if (
-                                            "Serie A" in league
-                                            or "Ligue 1" in league
-                                        ):
-                                            score += 3
-
-                                        if score > best_score:
-
-                                            best_score = score
-                                            best_pick = "UNDER 2.5 GOALS"
-                                            best_odd = odd
-
-                            # =================================================
-                            # GOAL GOAL
-                            # =================================================
-                            if (
-                                "Both Teams Score" in market_name
-                            ):
-
-                                for v in values:
-
-                                    value = v.get(
-                                        "value",
-                                        ""
-                                    )
-
-                                    odd = float(
-                                        v.get(
-                                            "odd",
-                                            0
-                                        )
-                                    )
-
-                                    if (
-                                        value == "Yes"
-                                        and 1.65 <= odd <= 2.10
-                                    ):
-
-                                        score = 9
-
-                                        if (
-                                            "Bundesliga" in league
-                                            or "Eredivisie" in league
-                                            or "MLS" in league
-                                        ):
-                                            score += 3
-
-                                        if score > best_score:
-
-                                            best_score = score
-                                            best_pick = "GOAL GOAL"
-                                            best_odd = odd
-
-                            # =================================================
-                            # MATCH WINNER
-                            # =================================================
-                            if (
-                                "Match Winner" in market_name
-                            ):
-
-                                for v in values:
-
-                                    value = v.get(
-                                        "value",
-                                        ""
-                                    )
-
-                                    odd = float(
-                                        v.get(
-                                            "odd",
-                                            0
-                                        )
-                                    )
-
-                                    if (
-                                        value == "Home"
-                                        and 1.50 <= odd <= 2.20
-                                    ):
-
-                                        score = 7
-
-                                        if (
-                                            "Manchester" in home
-                                            or "Real Madrid" in home
-                                            or "Bayern" in home
-                                            or "Arsenal" in home
-                                        ):
-                                            score += 4
-
-                                        if score > best_score:
-
-                                            best_score = score
-                                            best_pick = "1"
-                                            best_odd = odd
-
-                                    if (
-                                        value == "Away"
-                                        and 1.50 <= odd <= 2.20
-                                    ):
-
-                                        score = 7
-
-                                        if (
-                                            "Manchester" in away
-                                            or "Real Madrid" in away
-                                            or "Bayern" in away
-                                            or "Arsenal" in away
-                                        ):
-                                            score += 4
-
-                                        if score > best_score:
-
-                                            best_score = score
-                                            best_pick = "2"
-                                            best_odd = odd
-
-                if best_pick:
+                if pick:
 
                     results.append({
                         "league": league,
@@ -445,9 +266,8 @@ def today(update: Update, context: CallbackContext):
                         "home": home,
                         "away": away,
                         "time": date.strftime("%H:%M"),
-                        "pick": best_pick,
-                        "odd": best_odd,
-                        "score": best_score
+                        "pick": pick,
+                        "score": score
                     })
 
             except:
@@ -464,12 +284,12 @@ def today(update: Update, context: CallbackContext):
         if not results:
 
             update.message.reply_text(
-                "❌ Няма намерени value мачове."
+                "❌ Няма намерени мачове."
             )
 
             return
 
-        msg = "📈 TODAY BEST ODDS\n"
+        msg = "📈 TODAY BEST PICKS\n"
 
         for g in results:
 
@@ -482,7 +302,6 @@ def today(update: Update, context: CallbackContext):
 ⏰ {g['time']}
 
 🎯 {g['pick']}
-💰 Odd: {g['odd']}
 """
 
         update.message.reply_text(msg)
@@ -586,6 +405,9 @@ async def live_loop():
                         "Shots on Goal"
                     )
 
+                    # =================================================
+                    # HISTORY
+                    # =================================================
                     if fixture not in history:
 
                         history[fixture] = []
@@ -743,7 +565,9 @@ async def live_loop():
 
             print("LIVE ERROR:", e)
 
-        await asyncio.sleep(LIVE_INTERVAL)
+        await asyncio.sleep(
+            LIVE_INTERVAL
+        )
 
 # =========================================================
 # THREAD
