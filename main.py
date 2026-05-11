@@ -138,11 +138,9 @@ def save_signal(fixture_id, market):
     sent_signals.add(key)
 
 # =========================================================
-# GET MATCHES
+# TODAY COMMAND
 # =========================================================
-def get_matches(mode="today"):
-
-    result = []
+def today(update: Update, context: CallbackContext):
 
     try:
 
@@ -154,9 +152,13 @@ def get_matches(mode="today"):
 
         matches = r.get("response", [])
 
+        results = []
+
         for m in matches:
 
             try:
+
+                fixture_id = m["fixture"]["id"]
 
                 league = m["league"]["name"]
                 country = m["league"]["country"]
@@ -170,100 +172,294 @@ def get_matches(mode="today"):
                 ):
                     continue
 
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
                 date = datetime.fromisoformat(
                     m["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                hour = date.hour
+                # =====================================================
+                # ODDS
+                # =====================================================
+                orr = requests.get(
+                    f"https://v3.football.api-sports.io/odds?fixture={fixture_id}",
+                    headers=HEADERS,
+                    timeout=20
+                ).json()
 
-                if mode == "today":
+                odds_response = orr.get(
+                    "response",
+                    []
+                )
 
-                    if hour < 8 or hour > 23:
-                        continue
+                if not odds_response:
+                    continue
 
-                if mode == "night":
+                best_pick = None
+                best_odd = None
+                best_score = 0
 
-                    if 8 <= hour <= 23:
-                        continue
+                for bookmaker in odds_response:
 
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
+                    bets = bookmaker.get(
+                        "bookmakers",
+                        []
+                    )
 
-                result.append({
-                    "league": league,
-                    "country": country,
-                    "home": home,
-                    "away": away,
-                    "time": date.strftime("%H:%M")
-                })
+                    for b in bets:
+
+                        markets = b.get(
+                            "bets",
+                            []
+                        )
+
+                        for market in markets:
+
+                            market_name = market.get(
+                                "name",
+                                ""
+                            )
+
+                            values = market.get(
+                                "values",
+                                []
+                            )
+
+                            # =================================================
+                            # OVER/UNDER 2.5
+                            # =================================================
+                            if (
+                                "Goals Over/Under" in market_name
+                            ):
+
+                                for v in values:
+
+                                    value = v.get(
+                                        "value",
+                                        ""
+                                    )
+
+                                    odd = float(
+                                        v.get(
+                                            "odd",
+                                            0
+                                        )
+                                    )
+
+                                    # OVER 2.5
+                                    if (
+                                        value == "Over 2.5"
+                                        and 1.70 <= odd <= 2.20
+                                    ):
+
+                                        score = 10
+
+                                        if (
+                                            "Premier League" in league
+                                            or "Bundesliga" in league
+                                            or "Champions League" in league
+                                        ):
+                                            score += 3
+
+                                        if score > best_score:
+
+                                            best_score = score
+                                            best_pick = "OVER 2.5 GOALS"
+                                            best_odd = odd
+
+                                    # UNDER 2.5
+                                    if (
+                                        value == "Under 2.5"
+                                        and 1.60 <= odd <= 2.00
+                                    ):
+
+                                        score = 8
+
+                                        if (
+                                            "Serie A" in league
+                                            or "Ligue 1" in league
+                                        ):
+                                            score += 3
+
+                                        if score > best_score:
+
+                                            best_score = score
+                                            best_pick = "UNDER 2.5 GOALS"
+                                            best_odd = odd
+
+                            # =================================================
+                            # GOAL GOAL
+                            # =================================================
+                            if (
+                                "Both Teams Score" in market_name
+                            ):
+
+                                for v in values:
+
+                                    value = v.get(
+                                        "value",
+                                        ""
+                                    )
+
+                                    odd = float(
+                                        v.get(
+                                            "odd",
+                                            0
+                                        )
+                                    )
+
+                                    if (
+                                        value == "Yes"
+                                        and 1.65 <= odd <= 2.10
+                                    ):
+
+                                        score = 9
+
+                                        if (
+                                            "Bundesliga" in league
+                                            or "Eredivisie" in league
+                                            or "MLS" in league
+                                        ):
+                                            score += 3
+
+                                        if score > best_score:
+
+                                            best_score = score
+                                            best_pick = "GOAL GOAL"
+                                            best_odd = odd
+
+                            # =================================================
+                            # MATCH WINNER
+                            # =================================================
+                            if (
+                                "Match Winner" in market_name
+                            ):
+
+                                for v in values:
+
+                                    value = v.get(
+                                        "value",
+                                        ""
+                                    )
+
+                                    odd = float(
+                                        v.get(
+                                            "odd",
+                                            0
+                                        )
+                                    )
+
+                                    # HOME
+                                    if (
+                                        value == "Home"
+                                        and 1.50 <= odd <= 2.20
+                                    ):
+
+                                        score = 7
+
+                                        if (
+                                            "Manchester" in home
+                                            or "Real Madrid" in home
+                                            or "Bayern" in home
+                                            or "Arsenal" in home
+                                        ):
+                                            score += 4
+
+                                        if score > best_score:
+
+                                            best_score = score
+                                            best_pick = "1"
+                                            best_odd = odd
+
+                                    # AWAY
+                                    if (
+                                        value == "Away"
+                                        and 1.50 <= odd <= 2.20
+                                    ):
+
+                                        score = 7
+
+                                        if (
+                                            "Manchester" in away
+                                            or "Real Madrid" in away
+                                            or "Bayern" in away
+                                            or "Arsenal" in away
+                                        ):
+                                            score += 4
+
+                                        if score > best_score:
+
+                                            best_score = score
+                                            best_pick = "2"
+                                            best_odd = odd
+
+                if best_pick:
+
+                    results.append({
+                        "league": league,
+                        "country": country,
+                        "home": home,
+                        "away": away,
+                        "time": date.strftime("%H:%M"),
+                        "pick": best_pick,
+                        "odd": best_odd,
+                        "score": best_score
+                    })
 
             except:
                 pass
 
-        return result[:3]
-
-    except Exception as e:
-
-        print("MATCH ERROR:", e)
-        return []
-
-# =========================================================
-# TODAY COMMAND
-# =========================================================
-def today(update: Update, context: CallbackContext):
-
-    matches = get_matches("today")
-
-    if not matches:
-
-        update.message.reply_text(
-            "❌ Няма намерени мачове."
+        results = sorted(
+            results,
+            key=lambda x: x["score"],
+            reverse=True
         )
-        return
 
-    msg = "📈 TODAY TOP MATCHES\n"
+        results = results[:3]
 
-    for g in matches:
+        if not results:
 
-        msg += f"""
+            update.message.reply_text(
+                "❌ Няма намерени value мачове."
+            )
+
+            return
+
+        msg = "📈 TODAY BEST ODDS\n"
+
+        for g in results:
+
+            msg += f"""
 
 🌍 {g['country']}
 🏆 {g['league']}
 
 🏟 {g['home']} vs {g['away']}
 ⏰ {g['time']}
+
+🎯 {g['pick']}
+💰 Odd: {g['odd']}
 """
 
-    update.message.reply_text(msg)
+        update.message.reply_text(msg)
+
+    except Exception as e:
+
+        print("TODAY ERROR:", e)
+
+        update.message.reply_text(
+            "❌ Грешка при today."
+        )
 
 # =========================================================
 # NIGHT COMMAND
 # =========================================================
 def night(update: Update, context: CallbackContext):
 
-    matches = get_matches("night")
-
-    if not matches:
-
-        update.message.reply_text(
-            "❌ Няма намерени нощни мачове."
-        )
-        return
-
-    msg = "🌙 NIGHT TOP MATCHES\n"
-
-    for g in matches:
-
-        msg += f"""
-
-🌍 {g['country']}
-🏆 {g['league']}
-
-🏟 {g['home']} vs {g['away']}
-⏰ {g['time']}
-"""
-
-    update.message.reply_text(msg)
+    update.message.reply_text(
+        "🌙 NIGHT command active."
+    )
 
 # =========================================================
 # LIVE LOOP
@@ -292,9 +488,6 @@ async def live_loop():
 
                     status = m["fixture"]["status"]["short"]
 
-                    # =================================================
-                    # END MATCH
-                    # =================================================
                     if status in ["FT", "AET", "PEN"]:
 
                         history.pop(fixture, None)
@@ -337,9 +530,6 @@ async def live_loop():
                     hs = stats[0]["statistics"]
                     as_ = stats[1]["statistics"]
 
-                    # =================================================
-                    # STATS
-                    # =================================================
                     ha = get_stat(hs, "Attacks")
                     aa = get_stat(as_, "Attacks")
 
@@ -365,7 +555,6 @@ async def live_loop():
                     if len(history[fixture]) > 0:
                         last_minute = history[fixture][-1]["minute"]
 
-                    # не добавяй една и съща минута
                     if last_minute != minute:
 
                         history[fixture].append({
@@ -419,12 +608,6 @@ async def live_loop():
 ⚽ {gh}:{ga}
 
 🎯 OVER 2.5 GOALS
-
-📊 Home attacks: {ha}
-📊 Away attacks: {aa}
-
-📊 Home shots: {hsh}
-📊 Away shots: {ash}
 """
 
                             await bot.send_message(
@@ -465,12 +648,6 @@ async def live_loop():
 ⚽ {gh}:{ga}
 
 🎯 NEXT GOAL HOME
-
-📊 Home attacks: {ha}
-📊 Away attacks: {aa}
-
-📊 Home shots: {hsh}
-📊 Away shots: {ash}
 """
 
                             await bot.send_message(
@@ -511,12 +688,6 @@ async def live_loop():
 ⚽ {gh}:{ga}
 
 🎯 NEXT GOAL AWAY
-
-📊 Home attacks: {ha}
-📊 Away attacks: {aa}
-
-📊 Home shots: {hsh}
-📊 Away shots: {ash}
 """
 
                             await bot.send_message(
