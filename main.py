@@ -1,10 +1,10 @@
-import os
-os.system("pip install requests python-telegram-bot==13.15")
-
 # =========================================================
 # PRACTICAL LIVE AI + TODAY/NIGHT SYSTEM
-# FULL MAIN FILE
+# RELAXED WORKING VERSION
 # =========================================================
+
+import os
+os.system("pip install requests python-telegram-bot==13.15")
 
 import requests
 import time
@@ -252,11 +252,11 @@ def estimate_xg(
 
     xg = 0
 
-    xg += shots_on * 0.28
+    xg += shots_on * 0.25
 
-    xg += total_shots * 0.05
+    xg += total_shots * 0.04
 
-    xg += dangerous_attacks * 0.015
+    xg += dangerous_attacks * 0.012
 
     return round(xg, 2)
 
@@ -294,41 +294,41 @@ def calculate_pressure(team):
     )
 
     # =====================================================
-    # MOMENTUM
+    # RELAXED MOMENTUM
     # =====================================================
 
-    if possession >= 55:
-        pressure += 8
+    if possession >= 52:
+        pressure += 6
 
-    if possession >= 60:
-        pressure += 8
+    if possession >= 58:
+        pressure += 6
 
-    if shots_on >= 3:
-        pressure += 15
-
-    if shots_on >= 5:
+    if shots_on >= 2:
         pressure += 12
 
-    if total_shots >= 8:
+    if shots_on >= 4:
         pressure += 10
 
-    if total_shots >= 12:
-        pressure += 10
+    if total_shots >= 6:
+        pressure += 8
 
-    if corners >= 3:
-        pressure += 6
+    if total_shots >= 10:
+        pressure += 8
 
-    if corners >= 6:
-        pressure += 6
+    if corners >= 2:
+        pressure += 5
 
-    if attacks >= 18:
-        pressure += 18
+    if corners >= 5:
+        pressure += 5
 
-    if attacks >= 28:
-        pressure += 18
+    if attacks >= 14:
+        pressure += 14
+
+    if attacks >= 22:
+        pressure += 14
 
     # =====================================================
-    # xG
+    # xG BOOST
     # =====================================================
 
     xg = estimate_xg(
@@ -337,11 +337,11 @@ def calculate_pressure(team):
         attacks
     )
 
-    if xg >= 1.2:
-        pressure += 10
+    if xg >= 1.0:
+        pressure += 8
 
-    if xg >= 2:
-        pressure += 10
+    if xg >= 1.8:
+        pressure += 8
 
     return pressure, xg
 
@@ -722,13 +722,14 @@ def analyze_match(match):
     if minute is None:
         return
 
-    if minute < 35 or minute > 85:
+    # ПО-ШИРОК RANGE
+    if minute < 30 or minute > 88:
         return
 
     home_goals = match["goals"]["home"]
     away_goals = match["goals"]["away"]
 
-    if home_goals + away_goals >= 5:
+    if home_goals + away_goals >= 6:
         return
 
     stats = get_statistics(
@@ -763,24 +764,28 @@ def analyze_match(match):
         home_pressure - away_pressure
     )
 
-    minimum_pressure = 58
+    # =====================================================
+    # RELAXED FILTERS
+    # =====================================================
+
+    minimum_pressure = 48
 
     if minute >= 60:
-        minimum_pressure = 62
+        minimum_pressure = 52
 
     if minute >= 72:
-        minimum_pressure = 56
+        minimum_pressure = 46
 
     if best_pressure < minimum_pressure:
         return
 
-    if dominance < 6:
+    if dominance < 4:
         return
 
-    minimum_xg = 1.1
+    minimum_xg = 0.8
 
     if minute >= 70:
-        minimum_xg = 1.0
+        minimum_xg = 0.7
 
     if best_xg < minimum_xg:
         return
@@ -808,15 +813,19 @@ def analyze_match(match):
         estimated_odds
     )
 
-    if edge < 6:
+    if edge < 3:
         return
+
+    # =====================================================
+    # MARKET ENGINE
+    # =====================================================
 
     market = "Over 0.5 Goal LIVE"
 
-    if minute >= 60 and confidence >= 74:
+    if minute >= 55 and confidence >= 65:
         market = "Next Goal"
 
-    if minute >= 70 and confidence >= 80:
+    if minute >= 68 and confidence >= 72:
         market = "Over 1.5 LIVE"
 
     home_team = match["teams"]["home"]["name"]
