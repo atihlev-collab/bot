@@ -28,7 +28,8 @@ HEADERS = {
 
 TZ = ZoneInfo("Europe/Sofia")
 
-LIVE_INTERVAL = 60
+# ПО-БЪРЗ LIVE CHECK
+LIVE_INTERVAL = 30
 
 logging.basicConfig(level=logging.WARNING)
 
@@ -572,7 +573,7 @@ async def live_loop():
 
                         if (
                             goals <= 2
-                            and over_ticks >= 3
+                            and over_ticks >= 2
                         ):
 
                             save_signal(
@@ -613,7 +614,7 @@ async def live_loop():
                             ):
                                 home_ticks += 1
 
-                        if home_ticks >= 3:
+                        if home_ticks >= 2:
 
                             save_signal(
                                 fixture,
@@ -653,7 +654,7 @@ async def live_loop():
                             ):
                                 away_ticks += 1
 
-                        if away_ticks >= 3:
+                        if away_ticks >= 2:
 
                             save_signal(
                                 fixture,
