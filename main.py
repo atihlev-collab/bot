@@ -1,6 +1,6 @@
 # =========================================================
-# FIXED DUPLICATE VERSION
 # PRACTICAL LIVE AI SYSTEM
+# BALANCED VERSION
 # =========================================================
 
 import os
@@ -13,15 +13,10 @@ import threading
 import asyncio
 import logging
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from telegram import Bot, Update
-from telegram.ext import (
-    Updater,
-    CommandHandler,
-    CallbackContext
-)
+from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
@@ -48,7 +43,6 @@ logging.basicConfig(level=logging.WARNING)
 BLOCKED_WORDS = [
 
     "women",
-    "feminine",
     "female",
 
     "youth",
@@ -66,20 +60,15 @@ BLOCKED_WORDS = [
 ]
 
 # =========================================================
-# NIGHT COUNTRIES
+# BAD COUNTRIES
 # =========================================================
 
-NIGHT_COUNTRIES = [
+BAD_COUNTRIES = [
 
-    "Brazil",
-    "Argentina",
-    "USA",
-    "Mexico",
-    "Colombia",
-    "Chile",
-    "Uruguay",
-    "Paraguay",
-    "Peru"
+    "Bolivia",
+    "Venezuela",
+    "India",
+    "Indonesia"
 ]
 
 # =========================================================
@@ -139,7 +128,7 @@ def send_telegram(message):
 # DUPLICATE PROTECTION
 # =========================================================
 
-def can_send(fixture_id, cooldown=1800):
+def can_send(fixture_id, cooldown=5400):
 
     now = time.time()
 
@@ -184,7 +173,8 @@ def get_live_matches():
     response = requests.get(
         url,
         headers=HEADERS,
-        params=params
+        params=params,
+        timeout=20
     )
 
     data = response.json()
@@ -209,7 +199,8 @@ def get_statistics(fixture_id):
     response = requests.get(
         url,
         headers=HEADERS,
-        params=params
+        params=params,
+        timeout=20
     )
 
     return response.json().get(
@@ -259,9 +250,9 @@ def estimate_xg(
 
     xg = 0
 
-    xg += shots_on * 0.25
-    xg += total_shots * 0.04
-    xg += dangerous_attacks * 0.012
+    xg += shots_on * 0.28
+    xg += total_shots * 0.05
+    xg += dangerous_attacks * 0.015
 
     return round(xg, 2)
 
@@ -298,35 +289,59 @@ def calculate_pressure(team):
         "Dangerous Attacks"
     )
 
-    if possession >= 50:
-        pressure += 6
+    # =====================================================
+    # POSSESSION
+    # =====================================================
 
-    if possession >= 56:
-        pressure += 6
+    if possession >= 55:
+        pressure += 8
 
-    if shots_on >= 2:
+    if possession >= 62:
+        pressure += 8
+
+    # =====================================================
+    # SHOTS ON TARGET
+    # =====================================================
+
+    if shots_on >= 3:
+        pressure += 15
+
+    if shots_on >= 5:
         pressure += 12
 
-    if shots_on >= 4:
+    # =====================================================
+    # TOTAL SHOTS
+    # =====================================================
+
+    if total_shots >= 7:
         pressure += 10
 
-    if total_shots >= 5:
-        pressure += 8
+    if total_shots >= 11:
+        pressure += 10
 
-    if total_shots >= 9:
-        pressure += 8
+    # =====================================================
+    # CORNERS
+    # =====================================================
 
-    if corners >= 2:
-        pressure += 5
+    if corners >= 3:
+        pressure += 6
 
-    if corners >= 4:
-        pressure += 5
+    if corners >= 6:
+        pressure += 6
 
-    if attacks >= 12:
-        pressure += 12
+    # =====================================================
+    # DANGEROUS ATTACKS
+    # =====================================================
 
-    if attacks >= 20:
-        pressure += 12
+    if attacks >= 16:
+        pressure += 14
+
+    if attacks >= 26:
+        pressure += 14
+
+    # =====================================================
+    # xG BOOST
+    # =====================================================
 
     xg = estimate_xg(
         shots_on,
@@ -334,11 +349,11 @@ def calculate_pressure(team):
         attacks
     )
 
-    if xg >= 0.8:
-        pressure += 8
+    if xg >= 1.1:
+        pressure += 10
 
-    if xg >= 1.5:
-        pressure += 8
+    if xg >= 1.8:
+        pressure += 10
 
     return pressure, xg
 
@@ -410,10 +425,6 @@ def analyze_match(match):
 
     fixture_id = match["fixture"]["id"]
 
-    # =====================================================
-    # HARD DUPLICATE BLOCK
-    # =====================================================
-
     if not can_send(fixture_id):
         return
 
@@ -422,12 +433,21 @@ def analyze_match(match):
     if blocked_league(league):
         return
 
+    country = match["league"]["country"]
+
+    if country in BAD_COUNTRIES:
+        return
+
     minute = match["fixture"]["status"]["elapsed"]
 
     if minute is None:
         return
 
-    if minute < 25 or minute > 75:
+    # =====================================================
+    # MINUTES
+    # =====================================================
+
+    if minute < 30 or minute > 75:
         return
 
     home_goals = match["goals"]["home"]
@@ -435,8 +455,12 @@ def analyze_match(match):
 
     total_goals = home_goals + away_goals
 
-    if total_goals >= 6:
+    if total_goals >= 5:
         return
+
+    # =====================================================
+    # STATS
+    # =====================================================
 
     stats = get_statistics(
         fixture_id
@@ -470,24 +494,45 @@ def analyze_match(match):
         home_pressure - away_pressure
     )
 
-    minimum_pressure = 42
+    # =====================================================
+    # FILTERS
+    # =====================================================
+
+    minimum_pressure = 52
 
     if minute >= 60:
-        minimum_pressure = 46
+        minimum_pressure = 56
 
     if best_pressure < minimum_pressure:
         return
 
-    if dominance < 2:
+    if dominance < 8:
         return
 
-    minimum_xg = 0.7
+    minimum_xg = 1.0
 
     if best_xg < minimum_xg:
         return
 
     # =====================================================
-    # NEXT GOAL SIDE
+    # SHOTS FILTER
+    # =====================================================
+
+    home_shots = extract(
+        home,
+        "Shots on Goal"
+    )
+
+    away_shots = extract(
+        away,
+        "Shots on Goal"
+    )
+
+    if max(home_shots, away_shots) < 4:
+        return
+
+    # =====================================================
+    # MARKET
     # =====================================================
 
     if home_pressure > away_pressure:
@@ -504,12 +549,19 @@ def analyze_match(match):
             f"({match['teams']['away']['name']})"
         )
 
+    # =====================================================
+    # CONFIDENCE
+    # =====================================================
+
     confidence = min(
         best_pressure,
-        92
+        90
     )
 
-    if minute >= 65:
+    if minute >= 60:
+        confidence += 2
+
+    if minute >= 70:
         confidence += 2
 
     confidence = min(
@@ -517,37 +569,33 @@ def analyze_match(match):
         95
     )
 
-    estimated_odds = 1.75
+    estimated_odds = 1.80
 
     edge = value_edge(
         confidence,
         estimated_odds
     )
 
-    if edge < 2:
+    if edge < 6:
         return
 
     # =====================================================
-    # EARLY MARKET
+    # MATCH INFO
     # =====================================================
-
-    if minute < 50:
-        market = "Over 0.5 Goal LIVE"
-
-    if minute >= 65 and confidence >= 68:
-        market = "Over 1.5 LIVE"
 
     home_team = match["teams"]["home"]["name"]
 
     away_team = match["teams"]["away"]["name"]
-
-    country = match["league"]["country"]
 
     score = f"{home_goals}-{away_goals}"
 
     match_name = (
         f"{home_team} vs {away_team}"
     )
+
+    # =====================================================
+    # MESSAGE
+    # =====================================================
 
     message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
@@ -600,10 +648,6 @@ def analyze_match(match):
         edge
     )
 
-    # =====================================================
-    # SAVE DUPLICATE
-    # =====================================================
-
     save_sent(fixture_id)
 
 # =========================================================
@@ -643,7 +687,7 @@ async def live_loop():
                 e
             )
 
-        await asyncio.sleep(30)
+        await asyncio.sleep(45)
 
 # =========================================================
 # THREAD
@@ -669,15 +713,6 @@ def main():
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
-    updater = Updater(
-        token=BOT_TOKEN,
-        use_context=True
-    )
-
-    updater.start_polling(
-        drop_pending_updates=True
-    )
-
     live_thread = threading.Thread(
         target=start_live_loop,
         daemon=True
@@ -685,7 +720,8 @@ def main():
 
     live_thread.start()
 
-    updater.idle()
+    while True:
+        time.sleep(60)
 
 # =========================================================
 # START
