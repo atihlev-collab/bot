@@ -1,6 +1,6 @@
 # =========================================================
 # PRACTICAL LIVE AI SYSTEM
-# BALANCED VERSION
+# SMART RESET VERSION
 # =========================================================
 
 import os
@@ -78,6 +78,12 @@ BAD_COUNTRIES = [
 sent = {}
 
 # =========================================================
+# SCORE CACHE
+# =========================================================
+
+last_scores = {}
+
+# =========================================================
 # DATABASE
 # =========================================================
 
@@ -128,7 +134,7 @@ def send_telegram(message):
 # DUPLICATE PROTECTION
 # =========================================================
 
-def can_send(fixture_id, cooldown=5400):
+def can_send(fixture_id, cooldown=2400):
 
     now = time.time()
 
@@ -425,9 +431,6 @@ def analyze_match(match):
 
     fixture_id = match["fixture"]["id"]
 
-    if not can_send(fixture_id):
-        return
-
     league = match["league"]["name"]
 
     if blocked_league(league):
@@ -455,7 +458,37 @@ def analyze_match(match):
 
     total_goals = home_goals + away_goals
 
-    if total_goals >= 5:
+    if total_goals >= 6:
+        return
+
+    # =====================================================
+    # SCORE
+    # =====================================================
+
+    score = f"{home_goals}-{away_goals}"
+
+    # =====================================================
+    # RESET AFTER GOAL
+    # =====================================================
+
+    if fixture_id not in last_scores:
+
+        last_scores[fixture_id] = score
+
+    else:
+
+        if last_scores[fixture_id] != score:
+
+            if fixture_id in sent:
+                del sent[fixture_id]
+
+            last_scores[fixture_id] = score
+
+    # =====================================================
+    # DUPLICATE CHECK
+    # =====================================================
+
+    if not can_send(fixture_id):
         return
 
     # =====================================================
@@ -586,8 +619,6 @@ def analyze_match(match):
     home_team = match["teams"]["home"]["name"]
 
     away_team = match["teams"]["away"]["name"]
-
-    score = f"{home_goals}-{away_goals}"
 
     match_name = (
         f"{home_team} vs {away_team}"
