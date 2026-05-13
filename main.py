@@ -1,6 +1,6 @@
 # =========================================================
-# PRACTICAL LIVE AI + TODAY/NIGHT SYSTEM
-# FIXED VERSION
+# PRACTICAL LIVE AI + WORKING TODAY/NIGHT
+# FINAL FIXED VERSION
 # =========================================================
 
 import os
@@ -13,7 +13,7 @@ import threading
 import asyncio
 import logging
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from telegram import Bot, Update
@@ -384,21 +384,16 @@ def save_signal(
     conn.close()
 
 # =========================================================
-# TODAY/NIGHT PICK ENGINE
+# TODAY/NIGHT SCORE ENGINE
 # =========================================================
 
-def calculate_match_score(league, country, home, away):
+def calculate_match_score(country, league, home, away):
 
     score = 0
     market = "OVER 2.5 GOALS"
     odd = "1.80"
 
-    # =====================================================
-    # GOOD OVER LEAGUES
-    # =====================================================
-
-    OVER_LEAGUES = [
-
+    OVER_COUNTRIES = [
         "Netherlands",
         "Norway",
         "Sweden",
@@ -409,13 +404,11 @@ def calculate_match_score(league, country, home, away):
         "USA"
     ]
 
-    UNDER_LEAGUES = [
-
+    UNDER_COUNTRIES = [
         "Italy",
         "Romania",
         "Bulgaria",
-        "Croatia",
-        "Slovenia"
+        "Croatia"
     ]
 
     BIG_TEAMS = [
@@ -435,7 +428,7 @@ def calculate_match_score(league, country, home, away):
 
     if any(
         x.lower() in country.lower()
-        for x in OVER_LEAGUES
+        for x in OVER_COUNTRIES
     ):
 
         score += 10
@@ -444,10 +437,10 @@ def calculate_match_score(league, country, home, away):
 
     if any(
         x.lower() in country.lower()
-        for x in UNDER_LEAGUES
+        for x in UNDER_COUNTRIES
     ):
 
-        score += 8
+        score += 7
         market = "UNDER 2.5 GOALS"
         odd = "1.70"
 
@@ -456,7 +449,7 @@ def calculate_match_score(league, country, home, away):
         for x in BIG_TEAMS
     ):
 
-        score += 7
+        score += 8
         market = "1"
         odd = "1.65"
 
@@ -465,11 +458,44 @@ def calculate_match_score(league, country, home, away):
         for x in BIG_TEAMS
     ):
 
-        score += 7
+        score += 8
         market = "2"
         odd = "1.75"
 
     return score, market, odd
+
+# =========================================================
+# GET FIXTURES
+# =========================================================
+
+def get_upcoming_matches(hours_ahead=24):
+
+    matches = []
+
+    now = datetime.now(TZ)
+
+    for i in range(3):
+
+        date = (
+            now + timedelta(days=i)
+        ).strftime("%Y-%m-%d")
+
+        try:
+
+            r = requests.get(
+                f"{BASE_URL}/fixtures?date={date}",
+                headers=HEADERS,
+                timeout=20
+            ).json()
+
+            matches.extend(
+                r.get("response", [])
+            )
+
+        except:
+            pass
+
+    return matches
 
 # =========================================================
 # TODAY COMMAND
@@ -479,13 +505,7 @@ def today(update: Update, context: CallbackContext):
 
     try:
 
-        r = requests.get(
-            f"{BASE_URL}/fixtures?next=150",
-            headers=HEADERS,
-            timeout=20
-        ).json()
-
-        matches = r.get("response", [])
+        matches = get_upcoming_matches()
 
         picks = []
 
@@ -509,21 +529,18 @@ def today(update: Update, context: CallbackContext):
 
                 hour = date.hour
 
-                # DAY MATCHES
                 if hour < 8 or hour > 23:
                     continue
 
                 score, market, odd = (
                     calculate_match_score(
-                        league,
                         country,
+                        league,
                         home,
                         away
                     )
                 )
 
-                # IMPORTANT:
-                # sort by score NOT by start time
                 picks.append({
 
                     "score": score,
@@ -531,7 +548,7 @@ def today(update: Update, context: CallbackContext):
                     "league": league,
                     "home": home,
                     "away": away,
-                    "time": date.strftime("%H:%M"),
+                    "time": date.strftime("%d.%m %H:%M"),
                     "market": market,
                     "odd": odd
                 })
@@ -584,13 +601,7 @@ def night(update: Update, context: CallbackContext):
 
     try:
 
-        r = requests.get(
-            f"{BASE_URL}/fixtures?next=250",
-            headers=HEADERS,
-            timeout=20
-        ).json()
-
-        matches = r.get("response", [])
+        matches = get_upcoming_matches()
 
         picks = []
 
@@ -620,8 +631,8 @@ def night(update: Update, context: CallbackContext):
 
                 score, market, odd = (
                     calculate_match_score(
-                        league,
                         country,
+                        league,
                         home,
                         away
                     )
@@ -636,7 +647,7 @@ def night(update: Update, context: CallbackContext):
                     "league": league,
                     "home": home,
                     "away": away,
-                    "time": date.strftime("%H:%M"),
+                    "time": date.strftime("%d.%m %H:%M"),
                     "market": market,
                     "odd": odd
                 })
@@ -698,10 +709,6 @@ def analyze_match(match):
 
     if minute is None:
         return
-
-    # =====================================================
-    # STOP AFTER 75
-    # =====================================================
 
     if minute < 25 or minute > 75:
         return
