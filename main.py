@@ -815,8 +815,11 @@ def analyze_match(match):
         f"{home_team} vs {away_team}"
     )
 
-    message = f"""
+  message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
+
+🌍 Country:
+{match["league"]["country"]}
 
 ⚽ Match:
 {match_name}
