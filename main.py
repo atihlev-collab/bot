@@ -1,6 +1,6 @@
 # =========================================================
-# PRACTICAL LIVE AI + WORKING TODAY/NIGHT
-# FINAL WORKING VERSION
+# FIXED DUPLICATE VERSION
+# PRACTICAL LIVE AI SYSTEM
 # =========================================================
 
 import os
@@ -86,7 +86,7 @@ NIGHT_COUNTRIES = [
 # SIGNAL CACHE
 # =========================================================
 
-sent = set()
+sent = {}
 
 # =========================================================
 # DATABASE
@@ -134,6 +134,25 @@ def send_telegram(message):
     except Exception as e:
 
         print("Telegram Error:", e)
+
+# =========================================================
+# DUPLICATE PROTECTION
+# =========================================================
+
+def can_send(fixture_id, cooldown=1800):
+
+    now = time.time()
+
+    if fixture_id in sent:
+
+        if now - sent[fixture_id] < cooldown:
+            return False
+
+    return True
+
+def save_sent(fixture_id):
+
+    sent[fixture_id] = time.time()
 
 # =========================================================
 # BLOCK CHECK
@@ -384,321 +403,19 @@ def save_signal(
     conn.close()
 
 # =========================================================
-# TODAY/NIGHT SCORE ENGINE
-# =========================================================
-
-def calculate_match_score(country, league, home, away):
-
-    score = 0
-    market = "OVER 2.5 GOALS"
-    odd = "1.80"
-
-    OVER_COUNTRIES = [
-        "Netherlands",
-        "Norway",
-        "Sweden",
-        "Germany",
-        "Denmark",
-        "Brazil",
-        "Argentina",
-        "USA"
-    ]
-
-    UNDER_COUNTRIES = [
-        "Italy",
-        "Romania",
-        "Bulgaria",
-        "Croatia"
-    ]
-
-    BIG_TEAMS = [
-
-        "Manchester",
-        "Liverpool",
-        "Arsenal",
-        "Chelsea",
-        "Barcelona",
-        "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Inter",
-        "Milan",
-        "Juventus"
-    ]
-
-    if any(
-        x.lower() in country.lower()
-        for x in OVER_COUNTRIES
-    ):
-
-        score += 10
-        market = "OVER 2.5 GOALS"
-        odd = "1.75"
-
-    if any(
-        x.lower() in country.lower()
-        for x in UNDER_COUNTRIES
-    ):
-
-        score += 7
-        market = "UNDER 2.5 GOALS"
-        odd = "1.70"
-
-    if any(
-        x.lower() in home.lower()
-        for x in BIG_TEAMS
-    ):
-
-        score += 8
-        market = "1"
-        odd = "1.65"
-
-    if any(
-        x.lower() in away.lower()
-        for x in BIG_TEAMS
-    ):
-
-        score += 8
-        market = "2"
-        odd = "1.75"
-
-    return score, market, odd
-
-# =========================================================
-# GET FIXTURES
-# =========================================================
-
-def get_upcoming_matches():
-
-    matches = []
-
-    now = datetime.now(TZ)
-
-    for i in range(3):
-
-        date = (
-            now + timedelta(days=i)
-        ).strftime("%Y-%m-%d")
-
-        try:
-
-            r = requests.get(
-                f"{BASE_URL}/fixtures?date={date}",
-                headers=HEADERS,
-                timeout=20
-            ).json()
-
-            matches.extend(
-                r.get("response", [])
-            )
-
-        except:
-            pass
-
-    return matches
-
-# =========================================================
-# TODAY COMMAND
-# =========================================================
-
-def today(update: Update, context: CallbackContext):
-
-    try:
-
-        matches = get_upcoming_matches()
-
-        picks = []
-
-        for m in matches:
-
-            try:
-
-                league = m["league"]["name"]
-
-                if blocked_league(league):
-                    continue
-
-                country = m["league"]["country"]
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-
-                hour = date.hour
-
-                if hour < 8 or hour > 23:
-                    continue
-
-                score, market, odd = (
-                    calculate_match_score(
-                        country,
-                        league,
-                        home,
-                        away
-                    )
-                )
-
-                picks.append({
-
-                    "score": score,
-                    "country": country,
-                    "league": league,
-                    "home": home,
-                    "away": away,
-                    "time": date.strftime("%d.%m %H:%M"),
-                    "market": market,
-                    "odd": odd
-                })
-
-            except:
-                pass
-
-        picks = sorted(
-            picks,
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
-        picks = picks[:3]
-
-        if not picks:
-
-            update.message.reply_text(
-                "❌ Няма today мачове."
-            )
-            return
-
-        msg = "📈 TODAY BEST PICKS\n"
-
-        for p in picks:
-
-            msg += f"""
-
-🌍 {p['country']}
-🏆 {p['league']}
-
-🏟 {p['home']} vs {p['away']}
-⏰ {p['time']}
-
-🎯 {p['market']}
-💰 Odd: {p['odd']}
-"""
-
-        update.message.reply_text(msg)
-
-    except Exception as e:
-
-        print("TODAY ERROR:", e)
-
-# =========================================================
-# NIGHT COMMAND
-# =========================================================
-
-def night(update: Update, context: CallbackContext):
-
-    try:
-
-        matches = get_upcoming_matches()
-
-        picks = []
-
-        for m in matches:
-
-            try:
-
-                league = m["league"]["name"]
-
-                if blocked_league(league):
-                    continue
-
-                country = m["league"]["country"]
-
-                if not any(
-                    x.lower() in country.lower()
-                    for x in NIGHT_COUNTRIES
-                ):
-                    continue
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-
-                score, market, odd = (
-                    calculate_match_score(
-                        country,
-                        league,
-                        home,
-                        away
-                    )
-                )
-
-                score += 2
-
-                picks.append({
-
-                    "score": score,
-                    "country": country,
-                    "league": league,
-                    "home": home,
-                    "away": away,
-                    "time": date.strftime("%d.%m %H:%M"),
-                    "market": market,
-                    "odd": odd
-                })
-
-            except:
-                pass
-
-        picks = sorted(
-            picks,
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
-        picks = picks[:3]
-
-        if not picks:
-
-            update.message.reply_text(
-                "❌ Няма night мачове."
-            )
-            return
-
-        msg = "🌙 NIGHT BEST PICKS\n"
-
-        for p in picks:
-
-            msg += f"""
-
-🌍 {p['country']}
-🏆 {p['league']}
-
-🏟 {p['home']} vs {p['away']}
-⏰ {p['time']}
-
-🎯 {p['market']}
-💰 Odd: {p['odd']}
-"""
-
-        update.message.reply_text(msg)
-
-    except Exception as e:
-
-        print("NIGHT ERROR:", e)
-
-# =========================================================
 # LIVE ANALYSIS
 # =========================================================
 
 def analyze_match(match):
 
     fixture_id = match["fixture"]["id"]
+
+    # =====================================================
+    # HARD DUPLICATE BLOCK
+    # =====================================================
+
+    if not can_send(fixture_id):
+        return
 
     league = match["league"]["name"]
 
@@ -775,11 +492,17 @@ def analyze_match(match):
 
     if home_pressure > away_pressure:
 
-        next_goal_side = f"NEXT GOAL HOME ({match['teams']['home']['name']})"
+        market = (
+            f"NEXT GOAL HOME "
+            f"({match['teams']['home']['name']})"
+        )
 
     else:
 
-        next_goal_side = f"NEXT GOAL AWAY ({match['teams']['away']['name']})"
+        market = (
+            f"NEXT GOAL AWAY "
+            f"({match['teams']['away']['name']})"
+        )
 
     confidence = min(
         best_pressure,
@@ -804,18 +527,15 @@ def analyze_match(match):
     if edge < 2:
         return
 
-    market = "Over 0.5 Goal LIVE"
+    # =====================================================
+    # EARLY MARKET
+    # =====================================================
 
-    if minute >= 50 and confidence >= 60:
-        market = next_goal_side
+    if minute < 50:
+        market = "Over 0.5 Goal LIVE"
 
     if minute >= 65 and confidence >= 68:
         market = "Over 1.5 LIVE"
-
-    market_key = f"{fixture_id}_{market}"
-
-    if market_key in sent:
-        return
 
     home_team = match["teams"]["home"]["name"]
 
@@ -880,7 +600,11 @@ def analyze_match(match):
         edge
     )
 
-    sent.add(market_key)
+    # =====================================================
+    # SAVE DUPLICATE
+    # =====================================================
+
+    save_sent(fixture_id)
 
 # =========================================================
 # LIVE LOOP
@@ -948,16 +672,6 @@ def main():
     updater = Updater(
         token=BOT_TOKEN,
         use_context=True
-    )
-
-    dp = updater.dispatcher
-
-    dp.add_handler(
-        CommandHandler("today", today)
-    )
-
-    dp.add_handler(
-        CommandHandler("night", night)
     )
 
     updater.start_polling(
