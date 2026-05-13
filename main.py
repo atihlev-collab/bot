@@ -1,6 +1,6 @@
 # =========================================================
 # PRACTICAL LIVE AI + TODAY/NIGHT SYSTEM
-# RELAXED WORKING VERSION
+# WORKING RELAXED VERSION
 # =========================================================
 
 import os
@@ -9,7 +9,6 @@ os.system("pip install requests python-telegram-bot==13.15")
 import requests
 import time
 import sqlite3
-import random
 import threading
 import asyncio
 import logging
@@ -64,34 +63,6 @@ BLOCKED_WORDS = [
     "reserves",
 
     "friendly"
-]
-
-# =========================================================
-# LOW SCORING COUNTRIES
-# =========================================================
-
-LOW_SCORING_COUNTRIES = [
-    "Poland",
-    "Romania",
-    "Bulgaria",
-    "Croatia",
-    "Slovenia"
-]
-
-# =========================================================
-# NIGHT COUNTRIES
-# =========================================================
-
-NIGHT_COUNTRIES = [
-    "Brazil",
-    "Argentina",
-    "USA",
-    "Mexico",
-    "Colombia",
-    "Chile",
-    "Uruguay",
-    "Paraguay",
-    "Peru"
 ]
 
 # =========================================================
@@ -253,9 +224,7 @@ def estimate_xg(
     xg = 0
 
     xg += shots_on * 0.25
-
     xg += total_shots * 0.04
-
     xg += dangerous_attacks * 0.012
 
     return round(xg, 2)
@@ -297,10 +266,10 @@ def calculate_pressure(team):
     # RELAXED MOMENTUM
     # =====================================================
 
-    if possession >= 52:
+    if possession >= 50:
         pressure += 6
 
-    if possession >= 58:
+    if possession >= 56:
         pressure += 6
 
     if shots_on >= 2:
@@ -309,23 +278,23 @@ def calculate_pressure(team):
     if shots_on >= 4:
         pressure += 10
 
-    if total_shots >= 6:
+    if total_shots >= 5:
         pressure += 8
 
-    if total_shots >= 10:
+    if total_shots >= 9:
         pressure += 8
 
     if corners >= 2:
         pressure += 5
 
-    if corners >= 5:
+    if corners >= 4:
         pressure += 5
 
-    if attacks >= 14:
-        pressure += 14
+    if attacks >= 12:
+        pressure += 12
 
-    if attacks >= 22:
-        pressure += 14
+    if attacks >= 20:
+        pressure += 12
 
     # =====================================================
     # xG BOOST
@@ -337,10 +306,10 @@ def calculate_pressure(team):
         attacks
     )
 
-    if xg >= 1.0:
+    if xg >= 0.8:
         pressure += 8
 
-    if xg >= 1.8:
+    if xg >= 1.5:
         pressure += 8
 
     return pressure, xg
@@ -406,311 +375,12 @@ def save_signal(
     conn.close()
 
 # =========================================================
-# PICK LOGIC
-# =========================================================
-
-def generate_pick(country, league, home, away):
-
-    pick = "OVER 2.5 GOALS"
-    odd = "1.85"
-    score = 5
-
-    if any(
-        x.lower() in country.lower()
-        for x in LOW_SCORING_COUNTRIES
-    ):
-
-        pick = "UNDER 2.5 GOALS"
-        odd = "1.70"
-        score += 7
-
-    elif (
-        "Premier League" in league
-        or "Champions League" in league
-    ):
-
-        pick = "GOAL GOAL"
-        odd = "1.80"
-        score += 10
-
-    elif (
-        "Bundesliga" in league
-        or "Eredivisie" in league
-        or "MLS" in league
-        or "Brasileirao" in league
-    ):
-
-        pick = "OVER 2.5 GOALS"
-        odd = "1.75"
-        score += 9
-
-    elif (
-        "Serie A" in league
-        or "Ligue 1" in league
-    ):
-
-        pick = "UNDER 2.5 GOALS"
-        odd = "1.65"
-        score += 8
-
-    big_teams = [
-
-        "Manchester",
-        "Liverpool",
-        "Arsenal",
-        "Chelsea",
-        "Barcelona",
-        "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Inter",
-        "Milan",
-        "Juventus",
-
-        "Flamengo",
-        "Palmeiras",
-        "River Plate",
-        "Boca Juniors"
-    ]
-
-    if any(
-        x.lower() in home.lower()
-        for x in big_teams
-    ):
-
-        pick = "1"
-        odd = "1.65"
-        score += 5
-
-    elif any(
-        x.lower() in away.lower()
-        for x in big_teams
-    ):
-
-        pick = "2"
-        odd = "1.75"
-        score += 5
-
-    return pick, odd, score
-
-# =========================================================
-# TODAY COMMAND
-# =========================================================
-
-def today(update: Update, context: CallbackContext):
-
-    try:
-
-        r = requests.get(
-            f"{BASE_URL}/fixtures?next=60",
-            headers=HEADERS,
-            timeout=20
-        ).json()
-
-        matches = r.get("response", [])
-
-        valid_matches = []
-
-        for m in matches:
-
-            try:
-
-                league = m["league"]["name"]
-
-                if blocked_league(league):
-                    continue
-
-                country = m["league"]["country"]
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-
-                hour = date.hour
-
-                if hour < 8 or hour > 23:
-                    continue
-
-                pick, odd, score = generate_pick(
-                    country,
-                    league,
-                    home,
-                    away
-                )
-
-                valid_matches.append({
-
-                    "country": country,
-                    "league": league,
-                    "home": home,
-                    "away": away,
-                    "time": date.strftime("%H:%M"),
-                    "pick": pick,
-                    "odd": odd,
-                    "score": score
-                })
-
-            except:
-                pass
-
-        valid_matches = sorted(
-            valid_matches,
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
-        selected = valid_matches[:3]
-
-        if not selected:
-
-            update.message.reply_text(
-                "❌ Няма мачове."
-            )
-            return
-
-        msg = "📈 TODAY BEST PICKS\n"
-
-        for g in selected:
-
-            msg += f"""
-
-🌍 {g['country']}
-🏆 {g['league']}
-
-🏟 {g['home']} vs {g['away']}
-⏰ {g['time']}
-
-🎯 {g['pick']}
-💰 Odd: {g['odd']}
-"""
-
-        update.message.reply_text(msg)
-
-    except Exception as e:
-
-        print("TODAY ERROR:", e)
-
-# =========================================================
-# NIGHT COMMAND
-# =========================================================
-
-def night(update: Update, context: CallbackContext):
-
-    try:
-
-        r = requests.get(
-            f"{BASE_URL}/fixtures?next=100",
-            headers=HEADERS,
-            timeout=20
-        ).json()
-
-        matches = r.get("response", [])
-
-        valid_matches = []
-
-        for m in matches:
-
-            try:
-
-                league = m["league"]["name"]
-
-                if blocked_league(league):
-                    continue
-
-                country = m["league"]["country"]
-
-                if not any(
-                    x.lower() in country.lower()
-                    for x in NIGHT_COUNTRIES
-                ):
-                    continue
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-
-                hour = date.hour
-
-                if 8 <= hour <= 23:
-                    continue
-
-                pick, odd, score = generate_pick(
-                    country,
-                    league,
-                    home,
-                    away
-                )
-
-                score += 2
-
-                valid_matches.append({
-
-                    "country": country,
-                    "league": league,
-                    "home": home,
-                    "away": away,
-                    "time": date.strftime("%H:%M"),
-                    "pick": pick,
-                    "odd": odd,
-                    "score": score
-                })
-
-            except:
-                pass
-
-        valid_matches = sorted(
-            valid_matches,
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
-        selected = valid_matches[:3]
-
-        if not selected:
-
-            update.message.reply_text(
-                "❌ Няма night мачове."
-            )
-            return
-
-        msg = "🌙 NIGHT BEST PICKS\n"
-
-        for g in selected:
-
-            msg += f"""
-
-🌍 {g['country']}
-🏆 {g['league']}
-
-🏟 {g['home']} vs {g['away']}
-⏰ {g['time']}
-
-🎯 {g['pick']}
-💰 Odd: {g['odd']}
-"""
-
-        update.message.reply_text(msg)
-
-    except Exception as e:
-
-        print("NIGHT ERROR:", e)
-
-# =========================================================
 # LIVE ANALYSIS
 # =========================================================
 
 def analyze_match(match):
 
     fixture_id = match["fixture"]["id"]
-
-    if fixture_id in sent:
-        return
 
     league = match["league"]["name"]
 
@@ -722,14 +392,19 @@ def analyze_match(match):
     if minute is None:
         return
 
-    # ПО-ШИРОК RANGE
-    if minute < 30 or minute > 75:
+    # =====================================================
+    # LIVE RANGE
+    # =====================================================
+
+    if minute < 25 or minute > 89:
         return
 
     home_goals = match["goals"]["home"]
     away_goals = match["goals"]["away"]
 
-    if home_goals + away_goals >= 6:
+    total_goals = home_goals + away_goals
+
+    if total_goals >= 6:
         return
 
     stats = get_statistics(
@@ -768,27 +443,31 @@ def analyze_match(match):
     # RELAXED FILTERS
     # =====================================================
 
-    minimum_pressure = 48
+    minimum_pressure = 42
 
     if minute >= 60:
-        minimum_pressure = 52
-
-    if minute >= 72:
         minimum_pressure = 46
+
+    if minute >= 75:
+        minimum_pressure = 40
 
     if best_pressure < minimum_pressure:
         return
 
-    if dominance < 4:
+    if dominance < 2:
         return
 
-    minimum_xg = 0.8
+    minimum_xg = 0.7
 
     if minute >= 70:
-        minimum_xg = 0.7
+        minimum_xg = 0.6
 
     if best_xg < minimum_xg:
         return
+
+    # =====================================================
+    # CONFIDENCE
+    # =====================================================
 
     confidence = min(
         best_pressure,
@@ -798,7 +477,7 @@ def analyze_match(match):
     if minute >= 70:
         confidence += 2
 
-    if minute >= 75:
+    if minute >= 80:
         confidence += 2
 
     confidence = min(
@@ -813,7 +492,7 @@ def analyze_match(match):
         estimated_odds
     )
 
-    if edge < 3:
+    if edge < 2:
         return
 
     # =====================================================
@@ -822,11 +501,24 @@ def analyze_match(match):
 
     market = "Over 0.5 Goal LIVE"
 
-    if minute >= 55 and confidence >= 65:
+    if minute >= 55 and confidence >= 62:
         market = "Next Goal"
 
-    if minute >= 68 and confidence >= 72:
+    if minute >= 68 and confidence >= 70:
         market = "Over 1.5 LIVE"
+
+    # =====================================================
+    # DUPLICATE PROTECTION
+    # =====================================================
+
+    market_key = f"{fixture_id}_{market}"
+
+    if market_key in sent:
+        return
+
+    # =====================================================
+    # MATCH INFO
+    # =====================================================
 
     home_team = match["teams"]["home"]["name"]
 
@@ -837,6 +529,10 @@ def analyze_match(match):
     match_name = (
         f"{home_team} vs {away_team}"
     )
+
+    # =====================================================
+    # SIGNAL
+    # =====================================================
 
     message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
@@ -886,7 +582,7 @@ def analyze_match(match):
         edge
     )
 
-    sent.add(fixture_id)
+    sent.add(market_key)
 
 # =========================================================
 # LIVE LOOP
@@ -900,6 +596,11 @@ async def live_loop():
 
             matches = get_live_matches()
 
+            print(
+                f"[{datetime.now()}] "
+                f"Live matches: {len(matches)}"
+            )
+
             for match in matches:
 
                 try:
@@ -908,11 +609,17 @@ async def live_loop():
 
                 except Exception as e:
 
-                    print("Match Error:", e)
+                    print(
+                        "Match Error:",
+                        e
+                    )
 
         except Exception as e:
 
-            print("LIVE ERROR:", e)
+            print(
+                "LIVE ERROR:",
+                e
+            )
 
         await asyncio.sleep(30)
 
@@ -943,16 +650,6 @@ def main():
     updater = Updater(
         token=BOT_TOKEN,
         use_context=True
-    )
-
-    dp = updater.dispatcher
-
-    dp.add_handler(
-        CommandHandler("today", today)
-    )
-
-    dp.add_handler(
-        CommandHandler("night", night)
     )
 
     updater.start_polling(
