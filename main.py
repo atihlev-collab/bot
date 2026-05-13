@@ -769,6 +769,18 @@ def analyze_match(match):
     if best_xg < minimum_xg:
         return
 
+    # =====================================================
+    # NEXT GOAL SIDE
+    # =====================================================
+
+    if home_pressure > away_pressure:
+
+        next_goal_side = f"NEXT GOAL HOME ({match['teams']['home']['name']})"
+
+    else:
+
+        next_goal_side = f"NEXT GOAL AWAY ({match['teams']['away']['name']})"
+
     confidence = min(
         best_pressure,
         92
@@ -795,7 +807,7 @@ def analyze_match(match):
     market = "Over 0.5 Goal LIVE"
 
     if minute >= 50 and confidence >= 60:
-        market = "Next Goal"
+        market = next_goal_side
 
     if minute >= 65 and confidence >= 68:
         market = "Over 1.5 LIVE"
