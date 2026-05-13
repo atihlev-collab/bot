@@ -1,6 +1,6 @@
 # =========================================================
 # PRACTICAL LIVE AI + WORKING TODAY/NIGHT
-# FINAL FIXED VERSION
+# FINAL WORKING VERSION
 # =========================================================
 
 import os
@@ -468,7 +468,7 @@ def calculate_match_score(country, league, home, away):
 # GET FIXTURES
 # =========================================================
 
-def get_upcoming_matches(hours_ahead=24):
+def get_upcoming_matches():
 
     matches = []
 
@@ -809,17 +809,19 @@ def analyze_match(match):
 
     away_team = match["teams"]["away"]["name"]
 
+    country = match["league"]["country"]
+
     score = f"{home_goals}-{away_goals}"
 
     match_name = (
         f"{home_team} vs {away_team}"
     )
 
-  message = f"""
+    message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
 
 🌍 Country:
-{match["league"]["country"]}
+{country}
 
 ⚽ Match:
 {match_name}
