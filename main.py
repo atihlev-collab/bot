@@ -1,6 +1,6 @@
 # =========================================================
 # PRACTICAL LIVE AI SYSTEM
-# SMART RESET + PREMATCH AI VERSION
+# SMART RESET + PREMATCH + BEST VERSION
 # =========================================================
 
 import os
@@ -17,6 +17,10 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from telegram import Bot
+from telegram.ext import (
+    Updater,
+    CommandHandler
+)
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
@@ -630,19 +634,12 @@ def analyze_match(match):
         home_pressure - away_pressure
     )
 
-    # =====================================================
-    # FILTERS
-    # =====================================================
-
     minimum_pressure = 52
 
     if minute >= 60:
         minimum_pressure = 56
 
     if best_pressure < minimum_pressure:
-        return
-
-    if dominance < 8:
         return
 
     minimum_xg = 1.0
@@ -664,26 +661,67 @@ def analyze_match(match):
         return
 
     # =====================================================
+    # OPEN GAME MODE
+    # =====================================================
+
+    total_shots_on = (
+        home_shots + away_shots
+    )
+
+    home_attacks = extract(
+        home,
+        "Dangerous Attacks"
+    )
+
+    away_attacks = extract(
+        away,
+        "Dangerous Attacks"
+    )
+
+    total_attacks = (
+        home_attacks + away_attacks
+    )
+
+    # =====================================================
     # MARKET
     # =====================================================
 
-    if home_pressure > away_pressure:
+    if (
 
-        market = (
-            f"NEXT GOAL HOME "
-            f"({match['teams']['home']['name']})"
-        )
+        total_goals <= 2
+
+        and total_shots_on >= 8
+
+        and total_attacks >= 38
+
+        and best_xg >= 1.8
+
+        and minute >= 35
+
+        and dominance < 8
+
+    ):
+
+        market = "OVER 1.5 LIVE"
 
     else:
 
-        market = (
-            f"NEXT GOAL AWAY "
-            f"({match['teams']['away']['name']})"
-        )
+        if dominance < 8:
+            return
 
-    # =====================================================
-    # CONFIDENCE
-    # =====================================================
+        if home_pressure > away_pressure:
+
+            market = (
+                f"NEXT GOAL HOME "
+                f"({match['teams']['home']['name']})"
+            )
+
+        else:
+
+            market = (
+                f"NEXT GOAL AWAY "
+                f"({match['teams']['away']['name']})"
+            )
 
     confidence = min(
         best_pressure,
@@ -711,10 +749,6 @@ def analyze_match(match):
     if edge < 6:
         return
 
-    # =====================================================
-    # MATCH INFO
-    # =====================================================
-
     home_team = match["teams"]["home"]["name"]
 
     away_team = match["teams"]["away"]["name"]
@@ -722,10 +756,6 @@ def analyze_match(match):
     match_name = (
         f"{home_team} vs {away_team}"
     )
-
-    # =====================================================
-    # MESSAGE
-    # =====================================================
 
     message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
@@ -815,7 +845,6 @@ async def prematch_loop():
                         )
                     ).astimezone(TZ)
 
-                    # само бъдещи мачове до 8 часа
                     diff = (
                         date - datetime.now(TZ)
                     ).total_seconds()
@@ -884,6 +913,114 @@ async def prematch_loop():
         await asyncio.sleep(1200)
 
 # =========================================================
+# BEST COMMAND
+# =========================================================
+
+def best(update, context):
+
+    try:
+
+        matches = get_upcoming_matches()
+
+        picks = []
+
+        for m in matches:
+
+            try:
+
+                league = m["league"]["name"]
+
+                if blocked_league(league):
+                    continue
+
+                country = m["league"]["country"]
+
+                if country in BAD_COUNTRIES:
+                    continue
+
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                score, market, odd = (
+                    calculate_match_score(
+                        country,
+                        league,
+                        home,
+                        away
+                    )
+                )
+
+                picks.append({
+
+                    "score": score,
+                    "home": home,
+                    "away": away,
+                    "league": league,
+                    "market": market,
+                    "odd": float(odd)
+
+                })
+
+            except:
+                pass
+
+        picks = sorted(
+            picks,
+            key=lambda x: x["score"],
+            reverse=True
+        )
+
+        selected = []
+
+        total = 1
+
+        for p in picks:
+
+            if len(selected) >= 4:
+                break
+
+            if total < 5:
+
+                total *= p["odd"]
+
+                selected.append(p)
+
+        if not selected:
+
+            update.message.reply_text(
+                "❌ Няма best selections."
+            )
+
+            return
+
+        msg = "🔥 BEST AI TICKET\n"
+
+        for i,p in enumerate(selected,1):
+
+            msg += f"""
+
+{i})
+
+🏟 {p['home']} vs {p['away']}
+🏆 {p['league']}
+
+🎯 {p['market']}
+💰 {p['odd']}
+"""
+
+        msg += f"""
+
+💎 TOTAL:
+{round(total,2)}
+"""
+
+        update.message.reply_text(msg)
+
+    except Exception as e:
+
+        print("BEST ERROR:", e)
+
+# =========================================================
 # LIVE LOOP
 # =========================================================
 
@@ -935,125 +1072,7 @@ def start_live_loop():
     loop.run_until_complete(
         live_loop()
     )
-# =========================================================
-# BEST COMMAND
-# =========================================================
 
-def best(update, context):
-
-    try:
-
-        matches = get_upcoming_matches()
-
-        picks = []
-
-        for m in matches:
-
-            try:
-
-                league = m["league"]["name"]
-
-                if blocked_league(league):
-                    continue
-
-                country = m["league"]["country"]
-
-                if country in BAD_COUNTRIES:
-                    continue
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-
-                date = datetime.fromisoformat(
-                    m["fixture"]["date"].replace(
-                        "Z","+00:00"
-                    )
-                ).astimezone(TZ)
-
-                diff = (
-                    date - datetime.now(TZ)
-                ).total_seconds()
-
-                if diff < 0 or diff > 86400:
-                    continue
-
-                score, market, odd = (
-                    calculate_match_score(
-                        country,
-                        league,
-                        home,
-                        away
-                    )
-                )
-
-                picks.append({
-
-                    "score": score,
-                    "home": home,
-                    "away": away,
-                    "league": league,
-                    "market": market,
-                    "odd": float(odd)
-                })
-
-            except:
-                pass
-
-        picks = sorted(
-            picks,
-            key=lambda x: x["score"],
-            reverse=True
-        )
-
-        selected = []
-
-        total = 1
-
-        for p in picks:
-
-            if len(selected) >= 4:
-                break
-
-            if total < 4.8:
-
-                total *= p["odd"]
-
-                selected.append(p)
-
-        if not selected:
-
-            update.message.reply_text(
-                "❌ Няма best селекции."
-            )
-
-            return
-
-        msg = "🔥 BEST AI TICKET\n"
-
-        for i,p in enumerate(selected,1):
-
-            msg += f"""
-
-{i})
-
-🏟 {p['home']} vs {p['away']}
-🏆 {p['league']}
-
-🎯 {p['market']}
-💰 {p['odd']}
-"""
-
-        msg += f"""
-
-💎 TOTAL:
-{round(total,2)}
-"""
-
-        update.message.reply_text(msg)
-
-    except Exception as e:
-
-        print("BEST ERROR:", e)
 # =========================================================
 # MAIN
 # =========================================================
@@ -1064,7 +1083,25 @@ def main():
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
-    # LIVE
+    updater = Updater(
+        token=BOT_TOKEN,
+        use_context=True
+    )
+
+    dp = updater.dispatcher
+
+    dp.add_handler(
+        CommandHandler(
+            "best",
+            best
+        )
+    )
+
+    updater.start_polling(
+        drop_pending_updates=True
+    )
+
+    # LIVE THREAD
     live_thread = threading.Thread(
         target=start_live_loop,
         daemon=True
@@ -1072,7 +1109,7 @@ def main():
 
     live_thread.start()
 
-    # PREMATCH
+    # PREMATCH THREAD
     prematch_thread = threading.Thread(
         target=lambda:
         asyncio.run(prematch_loop()),
@@ -1081,8 +1118,7 @@ def main():
 
     prematch_thread.start()
 
-    while True:
-        time.sleep(60)
+    updater.idle()
 
 # =========================================================
 # START
