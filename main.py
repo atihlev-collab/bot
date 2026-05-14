@@ -1,6 +1,6 @@
 # =========================================================
 # PRACTICAL LIVE AI SYSTEM
-# SMART RESET VERSION
+# SMART RESET + PREMATCH AI VERSION
 # =========================================================
 
 import os
@@ -13,7 +13,7 @@ import threading
 import asyncio
 import logging
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from telegram import Bot
@@ -84,6 +84,12 @@ sent = {}
 last_scores = {}
 
 # =========================================================
+# PREMATCH CACHE
+# =========================================================
+
+prematch_sent = {}
+
+# =========================================================
 # DATABASE
 # =========================================================
 
@@ -150,6 +156,25 @@ def save_sent(fixture_id):
     sent[fixture_id] = time.time()
 
 # =========================================================
+# PREMATCH DUPLICATE
+# =========================================================
+
+def can_send_prematch(key, cooldown=21600):
+
+    now = time.time()
+
+    if key in prematch_sent:
+
+        if now - prematch_sent[key] < cooldown:
+            return False
+
+    return True
+
+def save_prematch(key):
+
+    prematch_sent[key] = time.time()
+
+# =========================================================
 # BLOCK CHECK
 # =========================================================
 
@@ -189,6 +214,39 @@ def get_live_matches():
         "response",
         []
     )
+
+# =========================================================
+# UPCOMING MATCHES
+# =========================================================
+
+def get_upcoming_matches():
+
+    matches = []
+
+    now = datetime.now(TZ)
+
+    for i in range(2):
+
+        date = (
+            now + timedelta(days=i)
+        ).strftime("%Y-%m-%d")
+
+        try:
+
+            r = requests.get(
+                f"{BASE_URL}/fixtures?date={date}",
+                headers=HEADERS,
+                timeout=20
+            ).json()
+
+            matches.extend(
+                r.get("response", [])
+            )
+
+        except:
+            pass
+
+    return matches
 
 # =========================================================
 # MATCH STATS
@@ -295,19 +353,11 @@ def calculate_pressure(team):
         "Dangerous Attacks"
     )
 
-    # =====================================================
-    # POSSESSION
-    # =====================================================
-
     if possession >= 55:
         pressure += 8
 
     if possession >= 62:
         pressure += 8
-
-    # =====================================================
-    # SHOTS ON TARGET
-    # =====================================================
 
     if shots_on >= 3:
         pressure += 15
@@ -315,19 +365,11 @@ def calculate_pressure(team):
     if shots_on >= 5:
         pressure += 12
 
-    # =====================================================
-    # TOTAL SHOTS
-    # =====================================================
-
     if total_shots >= 7:
         pressure += 10
 
     if total_shots >= 11:
         pressure += 10
-
-    # =====================================================
-    # CORNERS
-    # =====================================================
 
     if corners >= 3:
         pressure += 6
@@ -335,19 +377,11 @@ def calculate_pressure(team):
     if corners >= 6:
         pressure += 6
 
-    # =====================================================
-    # DANGEROUS ATTACKS
-    # =====================================================
-
     if attacks >= 16:
         pressure += 14
 
     if attacks >= 26:
         pressure += 14
-
-    # =====================================================
-    # xG BOOST
-    # =====================================================
 
     xg = estimate_xg(
         shots_on,
@@ -374,6 +408,87 @@ def value_edge(confidence, odds):
     edge = confidence - probability
 
     return round(edge, 2)
+
+# =========================================================
+# PREMATCH SCORE ENGINE
+# =========================================================
+
+def calculate_match_score(country, league, home, away):
+
+    score = 0
+    market = "OVER 2.5 GOALS"
+    odd = "1.80"
+
+    OVER_COUNTRIES = [
+        "Netherlands",
+        "Norway",
+        "Sweden",
+        "Germany",
+        "Denmark",
+        "Brazil",
+        "Argentina",
+        "USA"
+    ]
+
+    UNDER_COUNTRIES = [
+        "Italy",
+        "Romania",
+        "Bulgaria",
+        "Croatia"
+    ]
+
+    BIG_TEAMS = [
+
+        "Manchester",
+        "Liverpool",
+        "Arsenal",
+        "Chelsea",
+        "Barcelona",
+        "Real Madrid",
+        "Bayern",
+        "PSG",
+        "Inter",
+        "Milan",
+        "Juventus"
+    ]
+
+    if any(
+        x.lower() in country.lower()
+        for x in OVER_COUNTRIES
+    ):
+
+        score += 10
+        market = "OVER 2.5 GOALS"
+        odd = "1.75"
+
+    if any(
+        x.lower() in country.lower()
+        for x in UNDER_COUNTRIES
+    ):
+
+        score += 8
+        market = "UNDER 2.5 GOALS"
+        odd = "1.70"
+
+    if any(
+        x.lower() in home.lower()
+        for x in BIG_TEAMS
+    ):
+
+        score += 10
+        market = "1"
+        odd = "1.60"
+
+    if any(
+        x.lower() in away.lower()
+        for x in BIG_TEAMS
+    ):
+
+        score += 8
+        market = "2"
+        odd = "1.75"
+
+    return score, market, odd
 
 # =========================================================
 # SAVE SIGNAL
@@ -446,10 +561,6 @@ def analyze_match(match):
     if minute is None:
         return
 
-    # =====================================================
-    # MINUTES
-    # =====================================================
-
     if minute < 30 or minute > 75:
         return
 
@@ -460,10 +571,6 @@ def analyze_match(match):
 
     if total_goals >= 6:
         return
-
-    # =====================================================
-    # SCORE
-    # =====================================================
 
     score = f"{home_goals}-{away_goals}"
 
@@ -490,10 +597,6 @@ def analyze_match(match):
 
     if not can_send(fixture_id):
         return
-
-    # =====================================================
-    # STATS
-    # =====================================================
 
     stats = get_statistics(
         fixture_id
@@ -546,10 +649,6 @@ def analyze_match(match):
 
     if best_xg < minimum_xg:
         return
-
-    # =====================================================
-    # SHOTS FILTER
-    # =====================================================
 
     home_shots = extract(
         home,
@@ -682,6 +781,109 @@ def analyze_match(match):
     save_sent(fixture_id)
 
 # =========================================================
+# PREMATCH AI
+# =========================================================
+
+async def prematch_loop():
+
+    while True:
+
+        try:
+
+            matches = get_upcoming_matches()
+
+            for m in matches:
+
+                try:
+
+                    league = m["league"]["name"]
+
+                    if blocked_league(league):
+                        continue
+
+                    country = m["league"]["country"]
+
+                    if country in BAD_COUNTRIES:
+                        continue
+
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace(
+                            "Z","+00:00"
+                        )
+                    ).astimezone(TZ)
+
+                    # само бъдещи мачове до 8 часа
+                    diff = (
+                        date - datetime.now(TZ)
+                    ).total_seconds()
+
+                    if diff < 0 or diff > 28800:
+                        continue
+
+                    score, market, odd = (
+                        calculate_match_score(
+                            country,
+                            league,
+                            home,
+                            away
+                        )
+                    )
+
+                    confidence = 65 + score
+
+                    if confidence < 78:
+                        continue
+
+                    key = f"{home}_{away}"
+
+                    if not can_send_prematch(key):
+                        continue
+
+                    msg = f"""
+🔥 PRE-MATCH AI SIGNAL
+
+🌍 {country}
+🏆 {league}
+
+⚽ {home} vs {away}
+
+⏰ {date.strftime("%d.%m %H:%M")}
+
+🎯 {market}
+
+💰 Odd:
+{odd}
+
+✅ Confidence:
+{min(confidence,92)}%
+"""
+
+                    print(msg)
+
+                    send_telegram(msg)
+
+                    save_prematch(key)
+
+                except Exception as e:
+
+                    print(
+                        "PREMATCH MATCH ERROR:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "PREMATCH ERROR:",
+                e
+            )
+
+        await asyncio.sleep(1200)
+
+# =========================================================
 # LIVE LOOP
 # =========================================================
 
@@ -733,7 +935,125 @@ def start_live_loop():
     loop.run_until_complete(
         live_loop()
     )
+# =========================================================
+# BEST COMMAND
+# =========================================================
 
+def best(update, context):
+
+    try:
+
+        matches = get_upcoming_matches()
+
+        picks = []
+
+        for m in matches:
+
+            try:
+
+                league = m["league"]["name"]
+
+                if blocked_league(league):
+                    continue
+
+                country = m["league"]["country"]
+
+                if country in BAD_COUNTRIES:
+                    continue
+
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                date = datetime.fromisoformat(
+                    m["fixture"]["date"].replace(
+                        "Z","+00:00"
+                    )
+                ).astimezone(TZ)
+
+                diff = (
+                    date - datetime.now(TZ)
+                ).total_seconds()
+
+                if diff < 0 or diff > 86400:
+                    continue
+
+                score, market, odd = (
+                    calculate_match_score(
+                        country,
+                        league,
+                        home,
+                        away
+                    )
+                )
+
+                picks.append({
+
+                    "score": score,
+                    "home": home,
+                    "away": away,
+                    "league": league,
+                    "market": market,
+                    "odd": float(odd)
+                })
+
+            except:
+                pass
+
+        picks = sorted(
+            picks,
+            key=lambda x: x["score"],
+            reverse=True
+        )
+
+        selected = []
+
+        total = 1
+
+        for p in picks:
+
+            if len(selected) >= 4:
+                break
+
+            if total < 4.8:
+
+                total *= p["odd"]
+
+                selected.append(p)
+
+        if not selected:
+
+            update.message.reply_text(
+                "❌ Няма best селекции."
+            )
+
+            return
+
+        msg = "🔥 BEST AI TICKET\n"
+
+        for i,p in enumerate(selected,1):
+
+            msg += f"""
+
+{i})
+
+🏟 {p['home']} vs {p['away']}
+🏆 {p['league']}
+
+🎯 {p['market']}
+💰 {p['odd']}
+"""
+
+        msg += f"""
+
+💎 TOTAL:
+{round(total,2)}
+"""
+
+        update.message.reply_text(msg)
+
+    except Exception as e:
+
+        print("BEST ERROR:", e)
 # =========================================================
 # MAIN
 # =========================================================
@@ -744,12 +1064,22 @@ def main():
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
+    # LIVE
     live_thread = threading.Thread(
         target=start_live_loop,
         daemon=True
     )
 
     live_thread.start()
+
+    # PREMATCH
+    prematch_thread = threading.Thread(
+        target=lambda:
+        asyncio.run(prematch_loop()),
+        daemon=True
+    )
+
+    prematch_thread.start()
 
     while True:
         time.sleep(60)
