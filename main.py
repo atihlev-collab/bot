@@ -438,7 +438,7 @@ def calculate_match_score(country, league, home, away):
         "USA"
     ]
 
-     UNDER_COUNTRIES = [
+    UNDER_COUNTRIES = [
         "Italy",
         "Romania",
         "Bulgaria",
