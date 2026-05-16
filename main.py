@@ -46,8 +46,6 @@ logging.basicConfig(level=logging.WARNING)
 
 BLOCKED_WORDS = [
 
-   BLOCKED_WORDS = [
-
     "women",
     "female",
 
@@ -67,7 +65,6 @@ BLOCKED_WORDS = [
     "reserves",
 
     "friendly"
-]
 ]
 
 # =========================================================
@@ -448,7 +445,7 @@ def calculate_match_score(country, league, home, away):
         "Croatia"
     ]
 
-   BIG_TEAMS = [
+BIG_TEAMS = [
 
     "Manchester City",
     "Manchester United",
@@ -840,14 +837,31 @@ async def prematch_loop():
                     if blocked_league(league):
                         continue
 
-                    country = m["league"]["country"]
+               country = m["league"]["country"]
 
-                    if country in BAD_COUNTRIES:
-                        continue
+if country in BAD_COUNTRIES:
+    continue
 
-                 home = m["teams"]["home"]["name"]
+home = m["teams"]["home"]["name"]
 away = m["teams"]["away"]["name"]
 
+# ==========================================
+# WOMEN FILTER
+# ==========================================
+
+teams_text = f"{home} {away}".lower()
+
+if (
+    " w" in teams_text
+    or "(w)" in teams_text
+):
+    continue
+
+date = datetime.fromisoformat(
+    m["fixture"]["date"].replace(
+        "Z","+00:00"
+    )
+).astimezone(TZ)
 # ==========================================
 # WOMEN FILTER
 # ==========================================
