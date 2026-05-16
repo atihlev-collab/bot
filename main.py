@@ -438,29 +438,29 @@ def calculate_match_score(country, league, home, away):
         "USA"
     ]
 
-    UNDER_COUNTRIES = [
+     UNDER_COUNTRIES = [
         "Italy",
         "Romania",
         "Bulgaria",
         "Croatia"
     ]
 
-BIG_TEAMS = [
+    BIG_TEAMS = [
 
-    "Manchester City",
-    "Manchester United",
+        "Manchester City",
+        "Manchester United",
 
-    "Liverpool",
-    "Arsenal",
-    "Chelsea",
-    "Barcelona",
-    "Real Madrid",
-    "Bayern",
-    "PSG",
-    "Inter",
-    "Milan",
-    "Juventus"
-]
+        "Liverpool",
+        "Arsenal",
+        "Chelsea",
+        "Barcelona",
+        "Real Madrid",
+        "Bayern",
+        "PSG",
+        "Inter",
+        "Milan",
+        "Juventus"
+    ]
 
     if any(
         x.lower() in country.lower()
