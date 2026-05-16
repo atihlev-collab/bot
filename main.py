@@ -725,7 +725,6 @@ else:
             f"NEXT GOAL AWAY "
             f"({match['teams']['away']['name']})"
         )
-
     confidence = min(
         best_pressure,
         90
