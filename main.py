@@ -49,10 +49,6 @@ BLOCKED_WORDS = [
     "women",
     "female",
 
-    " w ",
-    " w",
-    "(w)",
-
     "youth",
     "u17",
     "u18",
@@ -446,8 +442,8 @@ def calculate_match_score(country, league, home, away):
     ]
 
     BIG_TEAMS = [
-        "Manchester City",
-        "Manchester United",
+
+        "Manchester",
         "Liverpool",
         "Arsenal",
         "Chelsea",
@@ -460,16 +456,11 @@ def calculate_match_score(country, league, home, away):
         "Juventus"
     ]
 
-    teams_text = f"{home} {away}".lower()
-
-    # women filter
-    if " w" in teams_text or "(w)" in teams_text:
-        return -999, "", ""
-
     if any(
         x.lower() in country.lower()
         for x in OVER_COUNTRIES
     ):
+
         score += 10
         market = "OVER 2.5 GOALS"
         odd = "1.75"
@@ -478,6 +469,7 @@ def calculate_match_score(country, league, home, away):
         x.lower() in country.lower()
         for x in UNDER_COUNTRIES
     ):
+
         score += 8
         market = "UNDER 2.5 GOALS"
         odd = "1.70"
@@ -486,6 +478,7 @@ def calculate_match_score(country, league, home, away):
         x.lower() in home.lower()
         for x in BIG_TEAMS
     ):
+
         score += 10
         market = "1"
         odd = "1.60"
@@ -494,6 +487,7 @@ def calculate_match_score(country, league, home, away):
         x.lower() in away.lower()
         for x in BIG_TEAMS
     ):
+
         score += 8
         market = "2"
         odd = "1.75"
@@ -688,43 +682,47 @@ def analyze_match(match):
         home_attacks + away_attacks
     )
 
-  # =====================================================
-# MARKET
-# =====================================================
+    # =====================================================
+    # MARKET
+    # =====================================================
 
-open_game = (
+    if (
 
-    total_goals <= 2
-    and total_shots_on >= 8
-    and total_attacks >= 38
-    and best_xg >= 1.8
-    and minute >= 35
-    and dominance < 8
+        total_goals <= 2
 
-)
+        and total_shots_on >= 8
 
-if open_game:
+        and total_attacks >= 38
 
-    market = "OVER 1.5 LIVE"
+        and best_xg >= 1.8
 
-else:
+        and minute >= 35
 
-    if dominance < 8:
-        return
+        and dominance < 8
 
-    if home_pressure > away_pressure:
+    ):
 
-        market = (
-            f"NEXT GOAL HOME "
-            f"({match['teams']['home']['name']})"
-        )
+        market = "OVER 1.5 LIVE"
 
     else:
 
-        market = (
-            f"NEXT GOAL AWAY "
-            f"({match['teams']['away']['name']})"
-        )
+        if dominance < 8:
+            return
+
+        if home_pressure > away_pressure:
+
+            market = (
+                f"NEXT GOAL HOME "
+                f"({match['teams']['home']['name']})"
+            )
+
+        else:
+
+            market = (
+                f"NEXT GOAL AWAY "
+                f"({match['teams']['away']['name']})"
+            )
+
     confidence = min(
         best_pressure,
         90
@@ -841,18 +839,6 @@ async def prematch_loop():
                     home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
-                    # WOMEN FILTER
-
-                    teams_text = (
-                        f"{home} {away}"
-                    ).lower()
-
-                    if (
-                        " w" in teams_text
-                        or "(w)" in teams_text
-                    ):
-                        continue
-
                     date = datetime.fromisoformat(
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
@@ -863,10 +849,7 @@ async def prematch_loop():
                         date - datetime.now(TZ)
                     ).total_seconds()
 
-                    if diff < 0:
-                        continue
-
-                    if diff > 28800:
+                    if diff < 0 or diff > 28800:
                         continue
 
                     score, market, odd = (
