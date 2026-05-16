@@ -688,46 +688,43 @@ def analyze_match(match):
         home_attacks + away_attacks
     )
 
-    # =====================================================
-    # MARKET
-    # =====================================================
+  # =====================================================
+# MARKET
+# =====================================================
 
-    if (
+open_game = (
 
-        total_goals <= 2
+    total_goals <= 2
+    and total_shots_on >= 8
+    and total_attacks >= 38
+    and best_xg >= 1.8
+    and minute >= 35
+    and dominance < 8
 
-        and total_shots_on >= 8
+)
 
-        and total_attacks >= 38
+if open_game:
 
-        and best_xg >= 1.8
+    market = "OVER 1.5 LIVE"
 
-        and minute >= 35
+else:
 
-        and dominance < 8
+    if dominance < 8:
+        return
 
-    ):
+    if home_pressure > away_pressure:
 
-        market = "OVER 1.5 LIVE"
+        market = (
+            f"NEXT GOAL HOME "
+            f"({match['teams']['home']['name']})"
+        )
 
     else:
 
-        if dominance < 8:
-            return
-
-        if home_pressure > away_pressure:
-
-            market = (
-                f"NEXT GOAL HOME "
-                f"({match['teams']['home']['name']})"
-            )
-
-        else:
-
-            market = (
-                f"NEXT GOAL AWAY "
-                f"({match['teams']['away']['name']})"
-            )
+        market = (
+            f"NEXT GOAL AWAY "
+            f"({match['teams']['away']['name']})"
+        )
 
     confidence = min(
         best_pressure,
