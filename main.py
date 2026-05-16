@@ -446,10 +446,8 @@ def calculate_match_score(country, league, home, away):
     ]
 
     BIG_TEAMS = [
-
         "Manchester City",
         "Manchester United",
-
         "Liverpool",
         "Arsenal",
         "Chelsea",
@@ -462,11 +460,16 @@ def calculate_match_score(country, league, home, away):
         "Juventus"
     ]
 
+    teams_text = f"{home} {away}".lower()
+
+    # women filter
+    if " w" in teams_text or "(w)" in teams_text:
+        return -999, "", ""
+
     if any(
         x.lower() in country.lower()
         for x in OVER_COUNTRIES
     ):
-
         score += 10
         market = "OVER 2.5 GOALS"
         odd = "1.75"
@@ -475,7 +478,6 @@ def calculate_match_score(country, league, home, away):
         x.lower() in country.lower()
         for x in UNDER_COUNTRIES
     ):
-
         score += 8
         market = "UNDER 2.5 GOALS"
         odd = "1.70"
@@ -484,7 +486,6 @@ def calculate_match_score(country, league, home, away):
         x.lower() in home.lower()
         for x in BIG_TEAMS
     ):
-
         score += 10
         market = "1"
         odd = "1.60"
@@ -493,7 +494,6 @@ def calculate_match_score(country, league, home, away):
         x.lower() in away.lower()
         for x in BIG_TEAMS
     ):
-
         score += 8
         market = "2"
         odd = "1.75"
