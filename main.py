@@ -837,54 +837,40 @@ async def prematch_loop():
                     if blocked_league(league):
                         continue
 
-               country = m["league"]["country"]
+                    country = m["league"]["country"]
 
-if country in BAD_COUNTRIES:
-    continue
+                    if country in BAD_COUNTRIES:
+                        continue
 
-home = m["teams"]["home"]["name"]
-away = m["teams"]["away"]["name"]
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
 
-# ==========================================
-# WOMEN FILTER
-# ==========================================
+                    # WOMEN FILTER
 
-teams_text = f"{home} {away}".lower()
+                    teams_text = (
+                        f"{home} {away}"
+                    ).lower()
 
-if (
-    " w" in teams_text
-    or "(w)" in teams_text
-):
-    continue
+                    if (
+                        " w" in teams_text
+                        or "(w)" in teams_text
+                    ):
+                        continue
 
-date = datetime.fromisoformat(
-    m["fixture"]["date"].replace(
-        "Z","+00:00"
-    )
-).astimezone(TZ)
-# ==========================================
-# WOMEN FILTER
-# ==========================================
-
-teams_text = f"{home} {away}".lower()
-
-if (
-    " w" in teams_text
-    or "(w)" in teams_text
-):
-    continue
-
-date = datetime.fromisoformat(
-    m["fixture"]["date"].replace(
-        "Z","+00:00"
-    )
-).astimezone(TZ)
+                    date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace(
+                            "Z","+00:00"
+                        )
+                    ).astimezone(TZ)
 
                     diff = (
                         date - datetime.now(TZ)
                     ).total_seconds()
 
-                    if diff < 0 or diff > 28800:
+                    if diff < 0:
+                        continue
+
+                    if diff > 28800:
                         continue
 
                     score, market, odd = (
