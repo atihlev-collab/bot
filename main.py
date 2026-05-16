@@ -46,8 +46,14 @@ logging.basicConfig(level=logging.WARNING)
 
 BLOCKED_WORDS = [
 
+   BLOCKED_WORDS = [
+
     "women",
     "female",
+
+    " w ",
+    " w",
+    "(w)",
 
     "youth",
     "u17",
@@ -61,6 +67,7 @@ BLOCKED_WORDS = [
     "reserves",
 
     "friendly"
+]
 ]
 
 # =========================================================
@@ -441,20 +448,22 @@ def calculate_match_score(country, league, home, away):
         "Croatia"
     ]
 
-    BIG_TEAMS = [
+   BIG_TEAMS = [
 
-        "Manchester",
-        "Liverpool",
-        "Arsenal",
-        "Chelsea",
-        "Barcelona",
-        "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Inter",
-        "Milan",
-        "Juventus"
-    ]
+    "Manchester City",
+    "Manchester United",
+
+    "Liverpool",
+    "Arsenal",
+    "Chelsea",
+    "Barcelona",
+    "Real Madrid",
+    "Bayern",
+    "PSG",
+    "Inter",
+    "Milan",
+    "Juventus"
+]
 
     if any(
         x.lower() in country.lower()
@@ -836,14 +845,26 @@ async def prematch_loop():
                     if country in BAD_COUNTRIES:
                         continue
 
-                    home = m["teams"]["home"]["name"]
-                    away = m["teams"]["away"]["name"]
+                 home = m["teams"]["home"]["name"]
+away = m["teams"]["away"]["name"]
 
-                    date = datetime.fromisoformat(
-                        m["fixture"]["date"].replace(
-                            "Z","+00:00"
-                        )
-                    ).astimezone(TZ)
+# ==========================================
+# WOMEN FILTER
+# ==========================================
+
+teams_text = f"{home} {away}".lower()
+
+if (
+    " w" in teams_text
+    or "(w)" in teams_text
+):
+    continue
+
+date = datetime.fromisoformat(
+    m["fixture"]["date"].replace(
+        "Z","+00:00"
+    )
+).astimezone(TZ)
 
                     diff = (
                         date - datetime.now(TZ)
