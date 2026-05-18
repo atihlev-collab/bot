@@ -701,8 +701,8 @@ if (
 
 else:
 
-    if dominance < 8:
-        return
+           if dominance < 8:
+            return
 
     if home_pressure > away_pressure:
 
