@@ -941,6 +941,21 @@ def best(update, context):
                 home = m["teams"]["home"]["name"]
                 away = m["teams"]["away"]["name"]
 
+                date = datetime.fromisoformat(
+                    m["fixture"]["date"].replace(
+                        "Z","+00:00"
+                    )
+                ).astimezone(TZ)
+
+                diff = (
+                    date - datetime.now(TZ)
+                ).total_seconds()
+
+                # само мачове от следващите 8 часа
+
+                if diff < 0 or diff > 28800:
+                    continue
+
                 score, market, odd = (
                     calculate_match_score(
                         country,
@@ -995,7 +1010,7 @@ def best(update, context):
 
         msg = "🔥 BEST AI TICKET\n"
 
-        for i, p in enumerate(selected, 1):
+        for i, p in enumerate(selected,1):
 
             msg += f"""
 
@@ -1022,7 +1037,6 @@ def best(update, context):
             "BEST ERROR:",
             e
         )
-
 # =========================================================
 # LIVE LOOP
 # =========================================================
