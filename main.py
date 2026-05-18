@@ -441,20 +441,28 @@ def calculate_match_score(country, league, home, away):
         "Croatia"
     ]
 
-    BIG_TEAMS = [
+   BIG_TEAMS = [
 
-        "Manchester",
-        "Liverpool",
-        "Arsenal",
-        "Chelsea",
-        "Barcelona",
-        "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Inter",
-        "Milan",
-        "Juventus"
-    ]
+    "Manchester City",
+    "Manchester United",
+
+    "Liverpool",
+    "Arsenal",
+    "Chelsea",
+
+    "Barcelona",
+    "Real Madrid",
+
+    "Bayern Munich",
+
+    "Paris Saint Germain",
+    "PSG",
+
+    "Inter Milan",
+    "AC Milan",
+
+    "Juventus"
+]
 
     if any(
         x.lower() in country.lower()
@@ -474,19 +482,19 @@ def calculate_match_score(country, league, home, away):
         market = "UNDER 2.5 GOALS"
         odd = "1.70"
 
-    if any(
-        x.lower() in home.lower()
-        for x in BIG_TEAMS
-    ):
+ if any(
+    x.lower() == home.lower()
+    for x in BIG_TEAMS
+):
 
         score += 10
         market = "1"
         odd = "1.60"
 
-    if any(
-        x.lower() in away.lower()
-        for x in BIG_TEAMS
-    ):
+  if any(
+    x.lower() == away.lower()
+    for x in BIG_TEAMS
+):
 
         score += 8
         market = "2"
