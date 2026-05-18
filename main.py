@@ -482,23 +482,26 @@ def calculate_match_score(country, league, home, away):
         market = "UNDER 2.5 GOALS"
         odd = "1.70"
 
- if any(
-    x.lower() == home.lower()
+home_clean = home.lower().strip()
+away_clean = away.lower().strip()
+
+if any(
+    x.lower() == home_clean
     for x in BIG_TEAMS
 ):
 
-        score += 10
-        market = "1"
-        odd = "1.60"
+    score += 10
+    market = "1"
+    odd = "1.60"
 
-  if any(
-    x.lower() == away.lower()
+if any(
+    x.lower() == away_clean
     for x in BIG_TEAMS
 ):
 
-        score += 8
-        market = "2"
-        odd = "1.75"
+    score += 8
+    market = "2"
+    odd = "1.75"
 
     return score, market, odd
 
