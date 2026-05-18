@@ -683,37 +683,25 @@ def analyze_match(match):
     )
 
     # =====================================================
-    # MARKET
+    # NEXT GOAL LOGIC
     # =====================================================
 
-    if (
+    if dominance < 8:
+        return
 
-        total_goals <= 2
-        and total_shots_on >= 6
-        and total_attacks >= 28
-        and best_xg >= 1.3
-        and minute >= 35
-        and dominance < 12
+    if home_pressure > away_pressure:
 
-    ):
-
-        market = "OVER 1.5 LIVE"
+        market = (
+            f"NEXT GOAL HOME "
+            f"({match['teams']['home']['name']})"
+        )
 
     else:
 
-        if home_pressure > away_pressure:
-
-            market = (
-                f"NEXT GOAL HOME "
-                f"({match['teams']['home']['name']})"
-            )
-
-        else:
-
-            market = (
-                f"NEXT GOAL AWAY "
-                f"({match['teams']['away']['name']})"
-            )
+        market = (
+            f"NEXT GOAL AWAY "
+            f"({match['teams']['away']['name']})"
+        )
 
     # =====================================================
     # CONFIDENCE
