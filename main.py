@@ -336,6 +336,15 @@ def analyze_match(match):
 
     fixture_id=match["fixture"]["id"]
 
+    country=match["league"]["country"]
+    league=match["league"]["name"]
+
+    if blocked_league(league):
+        return
+
+    if country in BAD_COUNTRIES:
+        return
+
     minute=match["fixture"]["status"]["elapsed"]
 
     if minute is None:
@@ -343,6 +352,37 @@ def analyze_match(match):
 
     if minute<30 or minute>75:
         return
+
+    home_goals=match["goals"]["home"]
+    away_goals=match["goals"]["away"]
+
+    total_goals=home_goals+away_goals
+
+    if total_goals>=6:
+        return
+
+    score=f"{home_goals}-{away_goals}"
+
+    # ===================================
+    # SMART RESET AFTER GOAL
+    # ===================================
+
+    if fixture_id not in last_scores:
+
+        last_scores[fixture_id]=score
+
+    else:
+
+        if last_scores[fixture_id]!=score:
+
+            if fixture_id in sent:
+                del sent[fixture_id]
+
+            last_scores[fixture_id]=score
+
+    # ===================================
+    # DUPLICATE PROTECTION
+    # ===================================
 
     if not can_send(fixture_id):
         return
@@ -362,9 +402,18 @@ def analyze_match(match):
 
     best=max(hp,ap)
 
+    best_xg=max(
+        hxg,
+        axg
+    )
+
     dominance=abs(
         hp-ap
     )
+
+    # ===================================
+    # FILTERS
+    # ===================================
 
     minimum_pressure=50
 
@@ -405,43 +454,112 @@ def analyze_match(match):
 
         return
 
+    estimated_odds=1.80
+
+    confidence=55
+
+    confidence += min(
+        dominance,
+        15
+    )
+
+    confidence += min(
+        home_shots+away_shots,
+        10
+    )
+
+    confidence += min(
+        best_xg*5,
+        10
+    )
+
     confidence=min(
-        best,
-        92
+        int(confidence),
+        88
     )
 
     edge=value_edge(
         confidence,
-        1.80
+        estimated_odds
     )
 
     if edge<6:
         return
 
-    market=(
-        "NEXT GOAL HOME"
-        if hp>ap
-        else
-        "NEXT GOAL AWAY"
+    # ===================================
+    # MARKET
+    # ===================================
+
+    if hp>ap:
+
+        market=(
+            f"NEXT GOAL HOME "
+            f"({match['teams']['home']['name']})"
+        )
+
+    else:
+
+        market=(
+            f"NEXT GOAL AWAY "
+            f"({match['teams']['away']['name']})"
+        )
+
+    home_team=match[
+        "teams"
+    ]["home"]["name"]
+
+    away_team=match[
+        "teams"
+    ]["away"]["name"]
+
+    match_name=(
+        f"{home_team}"
+        f" vs "
+        f"{away_team}"
     )
 
-    msg=f"""
+    # ===================================
+    # MESSAGE
+    # ===================================
 
+    msg=f"""
 🔥 LIVE SIGNAL
 
-⏱ {minute}'
+🌍 Country:
+{country}
 
-🔥 Pressure: {best}
+🏆 League:
+{league}
 
-⚔ Dominance:{dominance}
+⚽ Match:
+{match_name}
 
-📈 Edge:+{edge}%
+⏱ Minute:
+{minute}
 
-🎯 {market}
+📊 Score:
+{score}
 
-✅ {confidence}%
+🔥 Pressure:
+{best}/100
 
+⚔ Dominance:
+{dominance}
+
+📈 Estimated xG:
+{best_xg}
+
+💎 Value Edge:
++{edge}%
+
+🎯 Market:
+{market}
+
+✅ Confidence:
+{confidence}%
 """
+
+    print(msg)
 
     send_telegram(msg)
 
