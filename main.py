@@ -723,40 +723,7 @@ def analyze_match(match):
                 f"({match['teams']['away']['name']})"
             )
 
-# =====================================================
-# CONFIDENCE
-# =====================================================
-
-confidence = min(
-    best_pressure,
-    90
-)
-
-if minute >= 60:
-    confidence += 2
-
-if minute >= 70:
-    confidence += 2
-
-confidence = min(
-    confidence,
-    95
-)
-
-# MIN CONFIDENCE
-
-if confidence < 70:
-    return
-
-estimated_odds = 1.80
-
-edge = value_edge(
-    confidence,
-    estimated_odds
-)
-
-if edge < 6:
-    return
+Cancel changes
 
     home_team = match["teams"]["home"]["name"]
 
