@@ -3,9 +3,6 @@
 # SMART RESET + PREMATCH + BEST VERSION
 # =========================================================
 
-import os
-os.system("pip install requests python-telegram-bot==13.15")
-
 import requests
 import time
 import sqlite3
@@ -23,7 +20,6 @@ from telegram.ext import (
 )
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-
 # =========================================================
 # CONFIG
 # =========================================================
