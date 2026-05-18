@@ -723,38 +723,38 @@ def analyze_match(match):
                 f"({match['teams']['away']['name']})"
             )
 
-# =====================================================
-# CONFIDENCE
-# =====================================================
+    # =====================================================
+    # CONFIDENCE
+    # =====================================================
 
-confidence = min(
-    best_pressure,
-    90
-)
+    confidence = min(
+        best_pressure,
+        90
+    )
 
-if minute >= 60:
-    confidence += 2
+    if minute >= 60:
+        confidence += 2
 
-if minute >= 70:
-    confidence += 2
+    if minute >= 70:
+        confidence += 2
 
-confidence = min(
-    confidence,
-    95
-)
+    confidence = min(
+        confidence,
+        95
+    )
 
-if confidence < 70:
-    return
+    if confidence < 70:
+        return
 
-estimated_odds = 1.80
+    estimated_odds = 1.80
 
-edge = value_edge(
-    confidence,
-    estimated_odds
-)
+    edge = value_edge(
+        confidence,
+        estimated_odds
+    )
 
-if edge < 6:
-    return
+    if edge < 6:
+        return
 
     home_team = match["teams"]["home"]["name"]
 
@@ -763,7 +763,6 @@ if edge < 6:
     match_name = (
         f"{home_team} vs {away_team}"
     )
-
     message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
 
