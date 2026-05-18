@@ -960,7 +960,7 @@ def best(update, context):
 
                 })
 
-            except:
+            except Exception:
                 pass
 
         picks = sorted(
@@ -994,7 +994,7 @@ def best(update, context):
 
         msg = "🔥 BEST AI TICKET\n"
 
-        for i,p in enumerate(selected,1):
+        for i, p in enumerate(selected, 1):
 
             msg += f"""
 
@@ -1017,7 +1017,10 @@ def best(update, context):
 
     except Exception as e:
 
-        print("BEST ERROR:", e)
+        print(
+            "BEST ERROR:",
+            e
+        )
 
 # =========================================================
 # LIVE LOOP
