@@ -689,22 +689,17 @@ def analyze_match(match):
         home_attacks + away_attacks
     )
 
-    # =====================================================
+     # =====================================================
     # MARKET
     # =====================================================
 
     if (
 
         total_goals <= 2
-
         and total_shots_on >= 8
-
         and total_attacks >= 38
-
         and best_xg >= 1.8
-
         and minute >= 35
-
         and dominance < 8
 
     ):
@@ -764,7 +759,6 @@ def analyze_match(match):
         return
 
     home_team = match["teams"]["home"]["name"]
-
     away_team = match["teams"]["away"]["name"]
 
     match_name = (
