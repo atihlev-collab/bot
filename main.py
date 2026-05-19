@@ -1,9 +1,11 @@
 # =========================================================
 # PRACTICAL LIVE AI SYSTEM
-# IMPROVED + SMART RESET + PREMATCH AI
+# SMART RESET + PREMATCH AI VERSION
 # =========================================================
 
 import os
+os.system("pip install requests python-telegram-bot==13.15")
+
 import requests
 import time
 import sqlite3
@@ -13,6 +15,7 @@ import logging
 
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
@@ -34,27 +37,57 @@ bot = Bot(token=BOT_TOKEN)
 logging.basicConfig(level=logging.WARNING)
 
 # =========================================================
-# FILTERS
+# BLOCKED LEAGUES
 # =========================================================
 
 BLOCKED_WORDS = [
-    "women","female",
-    "youth","u17","u18","u19",
-    "u20","u21","u23",
-    "reserve","reserves",
+
+    "women",
+    "female",
+
+    "youth",
+    "u17",
+    "u18",
+    "u19",
+    "u20",
+    "u21",
+    "u23",
+
+    "reserve",
+    "reserves",
+
     "friendly"
 ]
 
+# =========================================================
+# BAD COUNTRIES
+# =========================================================
+
 BAD_COUNTRIES = [
+
     "Bolivia",
     "Venezuela",
     "India",
     "Indonesia"
 ]
 
-sent={}
-last_scores={}
-prematch_sent={}
+# =========================================================
+# SIGNAL CACHE
+# =========================================================
+
+sent = {}
+
+# =========================================================
+# SCORE CACHE
+# =========================================================
+
+last_scores = {}
+
+# =========================================================
+# PREMATCH CACHE
+# =========================================================
+
+prematch_sent = {}
 
 # =========================================================
 # DATABASE
@@ -62,26 +95,23 @@ prematch_sent={}
 
 def init_database():
 
-    conn=sqlite3.connect(
+    conn = sqlite3.connect(
         "practical_live_ai.db"
     )
 
-    c=conn.cursor()
+    cursor = conn.cursor()
 
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS signals(
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS signals (
 
-        id INTEGER PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
 
         fixture_id INTEGER,
         match_name TEXT,
         market TEXT,
-
         pressure INTEGER,
         confidence INTEGER,
-
         edge_value REAL,
-
         created_at TEXT
     )
     """)
@@ -93,115 +123,176 @@ def init_database():
 # TELEGRAM
 # =========================================================
 
-def send_telegram(msg):
+def send_telegram(message):
 
     try:
 
         bot.send_message(
             chat_id=CHAT_ID,
-            text=msg
+            text=message
         )
 
     except Exception as e:
 
-        print(e)
+        print("Telegram Error:", e)
 
 # =========================================================
-# COOLDOWN
+# DUPLICATE PROTECTION
 # =========================================================
 
-def can_send(
-    fixture_id,
-    cooldown=1200
-):
+def can_send(fixture_id, cooldown=2400):
 
-    now=time.time()
+    now = time.time()
 
     if fixture_id in sent:
 
-        if now-sent[fixture_id]<cooldown:
+        if now - sent[fixture_id] < cooldown:
             return False
 
     return True
 
-
 def save_sent(fixture_id):
 
-    sent[fixture_id]=time.time()
+    sent[fixture_id] = time.time()
 
 # =========================================================
-# API
+# PREMATCH DUPLICATE
 # =========================================================
 
-def safe_get(url,params=None):
+def can_send_prematch(key, cooldown=21600):
 
-    try:
+    now = time.time()
 
-        r=requests.get(
-            url,
-            headers=HEADERS,
-            params=params,
-            timeout=20
-        )
+    if key in prematch_sent:
 
-        r.raise_for_status()
+        if now - prematch_sent[key] < cooldown:
+            return False
 
-        return r.json()
+    return True
 
-    except:
+def save_prematch(key):
 
-        return {}
+    prematch_sent[key] = time.time()
 
 # =========================================================
-# LIVE
+# BLOCK CHECK
+# =========================================================
+
+def blocked_league(league_name):
+
+    text = league_name.lower()
+
+    for word in BLOCKED_WORDS:
+
+        if word in text:
+            return True
+
+    return False
+
+# =========================================================
+# LIVE MATCHES
 # =========================================================
 
 def get_live_matches():
 
-    data=safe_get(
-        f"{BASE_URL}/fixtures",
-        {"live":"all"}
+    url = f"{BASE_URL}/fixtures"
+
+    params = {
+        "live": "all"
+    }
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        params=params,
+        timeout=20
     )
+
+    data = response.json()
 
     return data.get(
         "response",
         []
     )
 
+# =========================================================
+# UPCOMING MATCHES
+# =========================================================
+
+def get_upcoming_matches():
+
+    matches = []
+
+    now = datetime.now(TZ)
+
+    for i in range(2):
+
+        date = (
+            now + timedelta(days=i)
+        ).strftime("%Y-%m-%d")
+
+        try:
+
+            r = requests.get(
+                f"{BASE_URL}/fixtures?date={date}",
+                headers=HEADERS,
+                timeout=20
+            ).json()
+
+            matches.extend(
+                r.get("response", [])
+            )
+
+        except:
+            pass
+
+    return matches
+
+# =========================================================
+# MATCH STATS
 # =========================================================
 
 def get_statistics(fixture_id):
 
-    data=safe_get(
-        f"{BASE_URL}/fixtures/statistics",
-        {"fixture":fixture_id}
+    url = f"{BASE_URL}/fixtures/statistics"
+
+    params = {
+        "fixture": fixture_id
+    }
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        params=params,
+        timeout=20
     )
 
-    return data.get(
+    return response.json().get(
         "response",
         []
     )
 
 # =========================================================
+# EXTRACT STATS
+# =========================================================
 
-def extract(team,name):
+def extract(team, stat_name):
 
-    for s in team["statistics"]:
+    for stat in team["statistics"]:
 
-        if s["type"]==name:
+        if stat["type"] == stat_name:
 
-            value=s["value"]
+            value = stat["value"]
 
             if value is None:
                 return 0
 
-            if isinstance(value,str):
+            if isinstance(value, str):
 
-                value=value.replace("%","")
+                value = value.replace("%", "")
 
                 try:
-                    return int(value)
-
+                    value = int(value)
                 except:
                     return 0
 
@@ -210,329 +301,443 @@ def extract(team,name):
     return 0
 
 # =========================================================
-# xG
+# ESTIMATED xG
 # =========================================================
 
 def estimate_xg(
+
     shots_on,
     total_shots,
-    dangerous_attacks,
-    corners
+    dangerous_attacks
+
 ):
 
-    xg=0
+    xg = 0
 
-    xg += shots_on*0.33
-    xg += total_shots*0.08
-    xg += corners*0.03
+    xg += shots_on * 0.28
+    xg += total_shots * 0.05
+    xg += dangerous_attacks * 0.015
 
-    if dangerous_attacks>=20:
-        xg+=0.15
-
-    if dangerous_attacks>=35:
-        xg+=0.20
-
-    return round(xg,2)
+    return round(xg, 2)
 
 # =========================================================
-# PRESSURE
+# PRESSURE ENGINE
 # =========================================================
 
 def calculate_pressure(team):
 
-    pressure=0
+    pressure = 0
 
-    possession=extract(
+    possession = extract(
         team,
         "Ball Possession"
     )
 
-    shots_on=extract(
+    shots_on = extract(
         team,
         "Shots on Goal"
     )
 
-    total_shots=extract(
+    total_shots = extract(
         team,
         "Total Shots"
     )
 
-    corners=extract(
+    corners = extract(
         team,
         "Corner Kicks"
     )
 
-    attacks=extract(
+    attacks = extract(
         team,
         "Dangerous Attacks"
     )
 
-    if possession>=55:
-        pressure+=6
+    if possession >= 55:
+        pressure += 8
 
-    if possession>=62:
-        pressure+=6
+    if possession >= 62:
+        pressure += 8
 
-    if shots_on>=2:
-        pressure+=12
+    if shots_on >= 3:
+        pressure += 15
 
-    if shots_on>=4:
-        pressure+=10
+    if shots_on >= 5:
+        pressure += 12
 
-    if shots_on>=6:
-        pressure+=8
+    if total_shots >= 7:
+        pressure += 10
 
-    if total_shots>=6:
-        pressure+=8
+    if total_shots >= 11:
+        pressure += 10
 
-    if total_shots>=10:
-        pressure+=8
+    if corners >= 3:
+        pressure += 6
 
-    if corners>=3:
-        pressure+=5
+    if corners >= 6:
+        pressure += 6
 
-    if corners>=6:
-        pressure+=5
+    if attacks >= 16:
+        pressure += 14
 
-    if attacks>=15:
-        pressure+=10
+    if attacks >= 26:
+        pressure += 14
 
-    if attacks>=25:
-        pressure+=10
-
-    xg=estimate_xg(
+    xg = estimate_xg(
         shots_on,
         total_shots,
-        attacks,
-        corners
+        attacks
     )
 
-    if xg>=1.1:
-        pressure+=8
+    if xg >= 1.1:
+        pressure += 10
 
-    if xg>=1.8:
-        pressure+=8
+    if xg >= 1.8:
+        pressure += 10
 
-    return pressure,xg
+    return pressure, xg
 
 # =========================================================
-# EDGE
+# VALUE ENGINE
 # =========================================================
 
-def value_edge(confidence,odds):
+def value_edge(confidence, odds):
 
-    probability=100/odds
+    probability = 100 / odds
 
-    return round(
-        confidence-probability,
-        2
+    edge = confidence - probability
+
+    return round(edge, 2)
+
+# =========================================================
+# PREMATCH SCORE ENGINE
+# =========================================================
+
+def calculate_match_score(country, league, home, away):
+
+    score = 0
+    market = "OVER 2.5 GOALS"
+    odd = "1.80"
+
+    OVER_COUNTRIES = [
+        "Netherlands",
+        "Norway",
+        "Sweden",
+        "Germany",
+        "Denmark",
+        "Brazil",
+        "Argentina",
+        "USA"
+    ]
+
+    UNDER_COUNTRIES = [
+        "Italy",
+        "Romania",
+        "Bulgaria",
+        "Croatia"
+    ]
+
+    BIG_TEAMS = [
+
+        "Manchester",
+        "Liverpool",
+        "Arsenal",
+        "Chelsea",
+        "Barcelona",
+        "Real Madrid",
+        "Bayern",
+        "PSG",
+        "Inter",
+        "Milan",
+        "Juventus"
+    ]
+
+    if any(
+        x.lower() in country.lower()
+        for x in OVER_COUNTRIES
+    ):
+
+        score += 10
+        market = "OVER 2.5 GOALS"
+        odd = "1.75"
+
+    if any(
+        x.lower() in country.lower()
+        for x in UNDER_COUNTRIES
+    ):
+
+        score += 8
+        market = "UNDER 2.5 GOALS"
+        odd = "1.70"
+
+    if any(
+        x.lower() in home.lower()
+        for x in BIG_TEAMS
+    ):
+
+        score += 10
+        market = "1"
+        odd = "1.60"
+
+    if any(
+        x.lower() in away.lower()
+        for x in BIG_TEAMS
+    ):
+
+        score += 8
+        market = "2"
+        odd = "1.75"
+
+    return score, market, odd
+
+# =========================================================
+# SAVE SIGNAL
+# =========================================================
+
+def save_signal(
+
+    fixture_id,
+    match_name,
+    market,
+    pressure,
+    confidence,
+    edge
+
+):
+
+    conn = sqlite3.connect(
+        "practical_live_ai.db"
     )
 
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO signals (
+
+        fixture_id,
+        match_name,
+        market,
+        pressure,
+        confidence,
+        edge_value,
+        created_at
+
+    ) VALUES (?,?,?,?,?,?,?)
+    """, (
+
+        fixture_id,
+        match_name,
+        market,
+        pressure,
+        confidence,
+        edge,
+        str(datetime.now())
+
+    ))
+
+    conn.commit()
+    conn.close()
+
 # =========================================================
-# ANALYZE
+# LIVE ANALYSIS
 # =========================================================
 
 def analyze_match(match):
 
-    fixture_id=match["fixture"]["id"]
+    fixture_id = match["fixture"]["id"]
 
-    country=match["league"]["country"]
-    league=match["league"]["name"]
+    league = match["league"]["name"]
 
     if blocked_league(league):
         return
 
+    country = match["league"]["country"]
+
     if country in BAD_COUNTRIES:
         return
 
-    minute=match["fixture"]["status"]["elapsed"]
+    minute = match["fixture"]["status"]["elapsed"]
 
     if minute is None:
         return
 
-    if minute<30 or minute>75:
+    if minute < 30 or minute > 75:
         return
 
-    home_goals=match["goals"]["home"]
-    away_goals=match["goals"]["away"]
+    home_goals = match["goals"]["home"]
+    away_goals = match["goals"]["away"]
 
-    total_goals=home_goals+away_goals
+    total_goals = home_goals + away_goals
 
-    if total_goals>=6:
+    if total_goals >= 6:
         return
 
-    score=f"{home_goals}-{away_goals}"
+    score = f"{home_goals}-{away_goals}"
 
-    # ===================================
-    # SMART RESET AFTER GOAL
-    # ===================================
+    # =====================================================
+    # RESET AFTER GOAL
+    # =====================================================
 
     if fixture_id not in last_scores:
 
-        last_scores[fixture_id]=score
+        last_scores[fixture_id] = score
 
     else:
 
-        if last_scores[fixture_id]!=score:
+        if last_scores[fixture_id] != score:
 
             if fixture_id in sent:
                 del sent[fixture_id]
 
-            last_scores[fixture_id]=score
+            last_scores[fixture_id] = score
 
-    # ===================================
-    # DUPLICATE PROTECTION
-    # ===================================
+    # =====================================================
+    # DUPLICATE CHECK
+    # =====================================================
 
     if not can_send(fixture_id):
         return
 
-    stats=get_statistics(
+    stats = get_statistics(
         fixture_id
     )
 
-    if len(stats)<2:
+    if len(stats) < 2:
         return
 
-    home=stats[0]
-    away=stats[1]
+    home = stats[0]
+    away = stats[1]
 
-    hp,hxg=calculate_pressure(home)
-    ap,axg=calculate_pressure(away)
-
-    best=max(hp,ap)
-
-    best_xg=max(
-        hxg,
-        axg
+    home_pressure, home_xg = (
+        calculate_pressure(home)
     )
 
-    dominance=abs(
-        hp-ap
+    away_pressure, away_xg = (
+        calculate_pressure(away)
     )
 
-    # ===================================
+    best_pressure = max(
+        home_pressure,
+        away_pressure
+    )
+
+    best_xg = max(
+        home_xg,
+        away_xg
+    )
+
+    dominance = abs(
+        home_pressure - away_pressure
+    )
+
+    # =====================================================
     # FILTERS
-    # ===================================
+    # =====================================================
 
-    minimum_pressure=50
+    minimum_pressure = 52
 
-    if minute>=60:
-        minimum_pressure=54
+    if minute >= 60:
+        minimum_pressure = 56
 
-    if minute>=70:
-        minimum_pressure=57
-
-    if best<minimum_pressure:
+    if best_pressure < minimum_pressure:
         return
 
-    if dominance<7:
+    if dominance < 8:
         return
 
-    home_shots=extract(
+    minimum_xg = 1.0
+
+    if best_xg < minimum_xg:
+        return
+
+    home_shots = extract(
         home,
         "Shots on Goal"
     )
 
-    away_shots=extract(
+    away_shots = extract(
         away,
         "Shots on Goal"
     )
 
-    min_shots=4
-
-    if minute>=60:
-        min_shots=5
-
-    if minute>=70:
-        min_shots=6
-
-    if max(
-        home_shots,
-        away_shots
-    )<min_shots:
-
+    if max(home_shots, away_shots) < 4:
         return
 
-    estimated_odds=1.80
-
-    confidence=55
-
-    confidence += min(
-        dominance,
-        15
-    )
-
-    confidence += min(
-        home_shots+away_shots,
-        10
-    )
-
-    confidence += min(
-        best_xg*5,
-        10
-    )
-
-    confidence=min(
-        int(confidence),
-        88
-    )
-
-    edge=value_edge(
-        confidence,
-        estimated_odds
-    )
-
-    if edge<6:
-        return
-
-    # ===================================
+    # =====================================================
     # MARKET
-    # ===================================
+    # =====================================================
 
-    if hp>ap:
+    if home_pressure > away_pressure:
 
-        market=(
+        market = (
             f"NEXT GOAL HOME "
             f"({match['teams']['home']['name']})"
         )
 
     else:
 
-        market=(
+        market = (
             f"NEXT GOAL AWAY "
             f"({match['teams']['away']['name']})"
         )
 
-    home_team=match[
-        "teams"
-    ]["home"]["name"]
+    # =====================================================
+    # CONFIDENCE
+    # =====================================================
 
-    away_team=match[
-        "teams"
-    ]["away"]["name"]
-
-    match_name=(
-        f"{home_team}"
-        f" vs "
-        f"{away_team}"
+    confidence = min(
+        best_pressure,
+        90
     )
 
-    # ===================================
-    # MESSAGE
-    # ===================================
+    if minute >= 60:
+        confidence += 2
 
-    msg=f"""
-🔥 LIVE SIGNAL
+    if minute >= 70:
+        confidence += 2
+
+    confidence = min(
+        confidence,
+        95
+    )
+
+    estimated_odds = 1.80
+
+    edge = value_edge(
+        confidence,
+        estimated_odds
+    )
+
+    if edge < 6:
+        return
+
+    # =====================================================
+    # MATCH INFO
+    # =====================================================
+
+    home_team = match["teams"]["home"]["name"]
+
+    away_team = match["teams"]["away"]["name"]
+
+    match_name = (
+        f"{home_team} vs {away_team}"
+    )
+
+    # =====================================================
+    # MESSAGE
+    # =====================================================
+
+    message = f"""
+🔥 PRACTICAL LIVE AI SIGNAL
 
 🌍 Country:
 {country}
 
-🏆 League:
-{league}
-
 ⚽ Match:
 {match_name}
+
+🏆 League:
+{league}
 
 ⏱ Minute:
 {minute}
@@ -541,7 +746,7 @@ def analyze_match(match):
 {score}
 
 🔥 Pressure:
-{best}/100
+{best_pressure}/100
 
 ⚔ Dominance:
 {dominance}
@@ -552,23 +757,134 @@ def analyze_match(match):
 💎 Value Edge:
 +{edge}%
 
-🎯 Market:
+📈 Market:
 {market}
 
 ✅ Confidence:
 {confidence}%
 """
 
-    print(msg)
+    print(message)
 
-    send_telegram(msg)
+    send_telegram(message)
 
-    save_sent(
-        fixture_id
+    save_signal(
+
+        fixture_id,
+        match_name,
+        market,
+        best_pressure,
+        confidence,
+        edge
     )
 
+    save_sent(fixture_id)
+
 # =========================================================
-# LOOP
+# PREMATCH AI
+# =========================================================
+
+async def prematch_loop():
+
+    while True:
+
+        try:
+
+            matches = get_upcoming_matches()
+
+            for m in matches:
+
+                try:
+
+                    league = m["league"]["name"]
+
+                    if blocked_league(league):
+                        continue
+
+                    country = m["league"]["country"]
+
+                    if country in BAD_COUNTRIES:
+                        continue
+
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace(
+                            "Z","+00:00"
+                        )
+                    ).astimezone(TZ)
+
+                    # само бъдещи мачове до 8 часа
+                    diff = (
+                        date - datetime.now(TZ)
+                    ).total_seconds()
+
+                    if diff < 0 or diff > 28800:
+                        continue
+
+                    score, market, odd = (
+                        calculate_match_score(
+                            country,
+                            league,
+                            home,
+                            away
+                        )
+                    )
+
+                    confidence = 65 + score
+
+                    if confidence < 78:
+                        continue
+
+                    key = f"{home}_{away}"
+
+                    if not can_send_prematch(key):
+                        continue
+
+                    msg = f"""
+🔥 PRE-MATCH AI SIGNAL
+
+🌍 {country}
+🏆 {league}
+
+⚽ {home} vs {away}
+
+⏰ {date.strftime("%d.%m %H:%M")}
+
+🎯 {market}
+
+💰 Odd:
+{odd}
+
+✅ Confidence:
+{min(confidence,92)}%
+"""
+
+                    print(msg)
+
+                    send_telegram(msg)
+
+                    save_prematch(key)
+
+                except Exception as e:
+
+                    print(
+                        "PREMATCH MATCH ERROR:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "PREMATCH ERROR:",
+                e
+            )
+
+        await asyncio.sleep(1200)
+
+# =========================================================
+# LIVE LOOP
 # =========================================================
 
 async def live_loop():
@@ -577,27 +893,42 @@ async def live_loop():
 
         try:
 
-            matches=get_live_matches()
+            matches = get_live_matches()
 
-            for m in matches:
+            print(
+                f"[{datetime.now()}] "
+                f"Live matches: {len(matches)}"
+            )
+
+            for match in matches:
 
                 try:
 
-                    analyze_match(m)
+                    analyze_match(match)
 
-                except:
-                    pass
+                except Exception as e:
 
-        except:
-            pass
+                    print(
+                        "Match Error:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "LIVE ERROR:",
+                e
+            )
 
         await asyncio.sleep(45)
 
 # =========================================================
+# THREAD
+# =========================================================
 
-def start():
+def start_live_loop():
 
-    loop=asyncio.new_event_loop()
+    loop = asyncio.new_event_loop()
 
     asyncio.set_event_loop(loop)
 
@@ -606,22 +937,39 @@ def start():
     )
 
 # =========================================================
+# MAIN
+# =========================================================
 
 def main():
 
     init_database()
 
-    t=threading.Thread(
-        target=start,
+    print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
+
+    # LIVE
+    live_thread = threading.Thread(
+        target=start_live_loop,
         daemon=True
     )
 
-    t.start()
+    live_thread.start()
+
+    # PREMATCH
+    prematch_thread = threading.Thread(
+        target=lambda:
+        asyncio.run(prematch_loop()),
+        daemon=True
+    )
+
+    prematch_thread.start()
 
     while True:
         time.sleep(60)
 
 # =========================================================
+# START
+# =========================================================
 
-if __name__=="__main__":
+if __name__ == "__main__":
+
     main()
