@@ -316,7 +316,7 @@ def estimate_xg(
 
     xg += shots_on * 0.28
     xg += total_shots * 0.05
-    xg += dangerous_attacks * 0.015
+    xg += dangerous_attacks * 0.020
 
     return round(xg, 2)
 
