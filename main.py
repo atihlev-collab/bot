@@ -1,7 +1,6 @@
 # =========================================================
-# ULTIMATE SELF-LEARNING TIPSTER AI SYSTEM (THE MASTERPIECE)
-# AUTOMATIC MACHINE LEARNING TRAINING (EVERY NIGHT AT 04:00)
-# LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: OVER/UNDER/BTTS/1X2 DROPS
+# ULTIMATE SELF-LEARNING AI SYSTEM - PRO ULTRA EDITION
+# LIVE MULTI-MARKETS & PREMATCH DROPS ENGINE (main.py)
 # =========================================================
 
 import time
@@ -9,6 +8,7 @@ import sqlite3
 import threading
 import requests
 import asyncio
+import json
 import os
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -20,7 +20,6 @@ from config import BOT_TOKEN, API_KEY, CHAT_ID
 # Импортиране на твоите ML функции от ml_model.py
 try:
     from ml_model import predict_btts, predict_over, train_model, load_model
-    import ml_model
 except ImportError:
     print("❌ Критична грешка: Файлът ml_model.py липсва в същата папка!")
     exit(1)
@@ -49,7 +48,7 @@ last_scores = {}
 odds_tracker = {}
 
 # =========================================================
-# DATABASE & DATASET GENERATOR FOR ML
+# DATABASE MANAGER
 # =========================================================
 
 def init_database():
@@ -150,7 +149,6 @@ def calculate_pressure(team):
     if attacks >= 16: pressure += 14
     if attacks >= 26: pressure += 14
 
-    # Твоята оригинална xG формула
     xg = round((shots_on * 0.28) + (total_shots * 0.05) + (attacks * 0.020), 2)
     if xg >= 1.1: pressure += 10
     if xg >= 1.8: pressure += 10
@@ -162,7 +160,7 @@ def calculate_pressure(team):
 # =========================================================
 
 def live_analysis_runner():
-    print("⚡ LIVE Мулти-пазарен скенер с Машинно Обучение е активен...")
+    print("⚡ LIVE Мулти-пазарен скенер работи на 100% интензивност...")
     while True:
         try:
             live_matches = safe_api_get("fixtures", {"live": "all"})
@@ -182,12 +180,12 @@ def live_analysis_runner():
                 if total_goals >= 6: continue 
                 score = f"{home_goals}-{away_goals}"
 
-                # SMART RESET AFTER GOAL
+                # SMART RESET AFTER GOAL LOGIC
                 if fixture_id not in last_scores:
                     last_scores[fixture_id] = score
                 else:
                     if last_scores[fixture_id] != score:
-                        if fixture_id in sent: del sent[fixture_id]
+                        if f"{fixture_id}_live" in sent: del sent[f"{fixture_id}_live"]
                         last_scores[fixture_id] = score
 
                 if f"{fixture_id}_live" in sent: continue
@@ -196,9 +194,8 @@ def live_analysis_runner():
                 if len(stats) < 2: continue
 
                 home_id = match["teams"]["home"]["id"]
-                home_stats, away_stats = (stats, stats) if stats.get("team", {}).get("id") == home_id else (stats, stats)
+                home_stats, away_stats = (stats[0], stats[1]) if stats[0].get("team", {}).get("id") == home_id else (stats[1], stats[0])
 
-                # ИЗВЛИЧАНЕ НА ПАРАМЕТРИ ЗА ТВОЯ AI ENGINE
                 sh = extract(home_stats, "Shots on Goal")
                 sa = extract(away_stats, "Shots on Goal")
                 ah = extract(home_stats, "Dangerous Attacks")
@@ -212,15 +209,13 @@ def live_analysis_runner():
                 best_pressure = max(home_pressure, away_pressure)
                 dominance = abs(home_pressure - away_pressure)
 
-                # Твоите оригинални математически метрики за темпо
                 tempo = (ah + aa) / 50
                 activity = (sh + sa) / 10
 
-                # Викане на твоята Random Forest Невронна мрежа
+                # Викане на Random Forest ИИ вероятностите
                 btts_prob = predict_btts(sh, sa, ah, aa, total_goals)
                 over_prob = predict_over(sh, sa, ah, aa, total_goals)
 
-                # Хибридно изчисляване на финалния AI резултат по твоите коефициенти
                 score_btts = (btts_prob * 0.5 + tempo * 0.3 + activity * 0.2) if btts_prob is not None else 0.0
                 score_over = (over_prob * 0.6 + tempo * 0.3 + activity * 0.1) if over_prob is not None else 0.0
 
@@ -229,22 +224,22 @@ def live_analysis_runner():
                 home_name = match["teams"]["home"]["name"]
                 away_name = match["teams"]["away"]["name"]
 
-                # 📐 ПАЗАР 1: VIP ЛАЙВ КОРНЕРИ В КРАЯ (След 74' минута)
+                # 📐 ПАЗАР 1: VIP ЛАЙВ КОРНЕРИ В КРАЯ (След 74')
                 if minute >= 74 and (ah + aa >= 48) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 14):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 85
                     
-                # ⚽ ПАЗАР 2: ML ЗАКЛЮЧЕНИЕ ЗА ГОЛ-ГОЛ (BTTS)
+                # ⚽ ПАЗАР 2: ML ОЦЕНКА ЗА ГОЛ-ГОЛ (BTTS)
                 elif score_btts > 0.60 and total_goals <= 2:
                     market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
                     confidence = round(score_btts * 100)
 
-                # ⚽ ПАЗАР 3: ML ЗАКЛЮЧЕНИЕ ЗА НАД 2.5 ГОЛА
+                # ⚽ ПАЗАР 3: ML ОЦЕНКА ЗА НАД ГОЛОВЕ
                 elif score_over > 0.58:
                     market = f"🔮 НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = round(score_over * 100)
 
-                # ⚽ ПАЗАР 4: И ДВАТА ОТБОРА ИГРАЯТ ОТКРИТО (НАД 1.5 ГОЛА БАЗОВО)
+                # ⚽ ПАЗАР 4: И ДВАТА ОТБОРА АТАКУВАТ (НАД 1.5 ГОЛА БАЗОВО)
                 elif 35 <= minute <= 74 and total_goals <= 1 and home_pressure >= 52 and away_pressure >= 52 and ah >= 12 and aa >= 12:
                     market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = min(best_pressure + 2, 95)
@@ -257,24 +252,50 @@ def live_analysis_runner():
                         market = f"🎯 СЛЕДВАЩ ГОЛ: ГОСТ ({away_name})"
                     confidence = min(best_pressure + 4, 95)
 
-                # ИЗПРАЩАНЕ НА СИГНАЛА ПРИ ОТГОВАРЯЩИ КРИТЕРИИ
                 if market and confidence >= 70:
                     stake_info = calculate_dynamic_stake(confidence)
-                    msg = f"""👑 <b>[VIP LIVE AI SIGNAL - RANDOM FOREST v1000]</b>
+                    msg = f"""👑 <b>[VIP LIVE AI SIGNAL - PRO ULTRA]</b>
 ────────────────────
 ⚽ <b>Мач:</b> <code>{home_name} vs {away_name}</code>
 🏆 <b>Лига:</b> {league} ({country})
 ⏱ <b>Минута:</b> {minute}'  |  📊 <b>Резултат:</b> {score}
 ────────────────────
-🤖 <b>ML Прогнози:</b> BTTS: {round(score_btts,2) if btts_prob else 'N/A'} | Over: {round(score_over,2) if over_prob else 'N/A'}
-🔥 <b>Натиск на живо:</b> Дом: {home_pressure} | Гост: {away_pressure} (Доминантност: {dominance})
-📐 <b>Корнери дотук:</b> {total_corners}  |  📈 <b>Темпо на атаки:</b> {round(tempo, 2)}
+🤖 <b>ML Модел:</b> BTTS: {round(score_btts,2) if btts_prob else 'N/A'} | Over: {round(score_over,2) if over_prob else 'N/A'}
+🔥 <b>Натиск:</b> Дом: {home_pressure} | Гост: {away_pressure} (Разлика: {dominance})
+📐 <b>Корнери:</b> {total_corners}  |  📈 <b>Темпо:</b> {round(tempo, 2)}
 
 🎯 <b>ПРОГНОЗА: {market}</b>
 💼 <b>{stake_info}</b>
 ✅ <b>Сигурност на изкуствения интелект:</b> {confidence}%"""
+                    
                     send_telegram(msg)
                     save_signal(fixture_id, f"{home_name}-{away_name}", market, best_pressure, confidence, 0.0, stake_info)
+                    
+                    # 🚀 "СНИМКА" НА СТАТИСТИКАТА И ЗАПИС В PICKS.JSON ЗА ПОДХРАНВАНЕ НА AI
+                    try:
+                        picks_file = "picks.json"
+                        current_picks = []
+                        if os.path.exists(picks_file):
+                            with open(picks_file, "r", encoding="utf-8") as pf:
+                                current_picks = json.load(pf)
+                        
+                        current_picks.append({
+                            "fixture_id": fixture_id,
+                            "match_name": f"{home_name} vs {away_name}",
+                            "pick": market,
+                            "checked": False,
+                            "win": False,
+                            "sh": sh, "sa": sa, "ah": ah, "aa": aa,
+                            "trigger_total_goals": total_goals,
+                            "trigger_home_goals": home_goals,
+                            "trigger_away_goals": away_goals,
+                            "created_at": str(datetime.now(TZ))
+                        })
+                        with open(picks_file, "w", encoding="utf-8") as pf:
+                            json.dump(current_picks, pf, indent=2)
+                    except Exception as e:
+                        print("Error saving stats to picks.json:", e)
+
                     sent[f"{fixture_id}_live"] = time.time()
 
         except Exception as e:
@@ -282,7 +303,7 @@ def live_analysis_runner():
         time.sleep(60)
 
 # =========================================================
-# 📅 THREAD 2: PREMATCH EXPERT ENGINE + AUTO-TRAINING CYCLE
+# 📅 THREAD 2: PREMATCH EXPERT ENGINE + AUTO-LEARNING
 # =========================================================
 
 def prematch_expert_runner():
@@ -291,12 +312,12 @@ def prematch_expert_runner():
         try:
             now_sofia = datetime.now(TZ)
             
-            # 🔥 АВТОМАТИЧНО САМООБУЧЕНИЕ: Всеки ден в 04:05 сутринта моделът се тренира наново!
+            # 🔥 АВТОМАТИЧНО САМООБУЧЕНИЕ СЪС ЗАДЪРЖАНЕ (Всяка нощ в 04:05)
             if now_sofia.hour == 4 and 0 <= now_sofia.minute <= 15:
-                print("🧠 [AUTO-LEARNING] Стартиране на ежедневно претрениране на Невронната Мрежа...")
+                print("🧠 [AUTO-LEARNING] Претрениране на Random Forest модела...")
                 train_model()
                 load_model()
-                time.sleep(900) # Заспива за 15 минути, за да не завърти тренирането повторно
+                time.sleep(900)
 
             today = now_sofia.strftime("%Y-%m-%d")
             upcoming_matches = safe_api_get("fixtures", {"date": today})
@@ -317,23 +338,20 @@ def prematch_expert_runner():
 
                 date_obj = datetime.fromisoformat(m["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
                 time_diff = (date_obj - now_sofia).total_seconds()
-                if time_diff < 0 or time_diff > 28800: continue  # Само мачове в следващите 8 часа
+                if time_diff < 0 or time_diff > 28800: continue 
 
-                # Проверка за сривове в 1Х2 преди мача (Инсайд информация)
+                # Проверка за пазарни сривове в знак 1 или 2 преди мача (Инсайд информация)
                 odds_response = safe_api_get("odds", {"fixture": fixture_id, "bookmaker": 8, "bet": 1})
                 current_home_odd, current_away_odd = 0.0, 0.0
                 
                 if odds_response:
                     try:
-                        bookmaker_data = odds_response[0].get("bookmakers", [])
-                        if bookmaker_data:
-                            for b in bookmaker_data:
-                                if b["id"] == 8: # Bet365
-                                    for bet in b.get("bets", []):
-                                        if bet["id"] == 1:
-                                            for val in bet.get("values", []):
-                                                if val["value"] == "Home": current_home_odd = float(val["odd"])
-                                                if val["value"] == "Away": current_away_odd = float(val["odd"])
+                        bookmaker_data = odds_response[0]
+                        for bet in bookmaker_data.get("bets", []):
+                            if bet["id"] == 1:
+                                for val in bet.get("values", []):
+                                    if val["value"] == "Home": current_home_odd = float(val["odd"])
+                                    if val["value"] == "Away": current_away_odd = float(val["odd"])
                     except: pass
 
                 if current_home_odd > 1.15 and current_away_odd > 1.15:
@@ -347,7 +365,7 @@ def prematch_expert_runner():
 
                             if home_drop >= 15.0 and current_home_odd < historical["home"]:
                                 stake_info = "🔥 СИНДИКАТ ИНСАЙД: 4.0% от банката"
-                                msg = f"""🔥 <b>[PREMATCH СРИВ В ПАЗАРА - КРАЕН ИЗХОД 1]</b>
+                                msg = f"""🔥 <b>[PREMATCH СРИВ В ПАЗАРА - ЗНАК 1]</b>
 ────────────────────
 ⚽ <b>Среща:</b> <code>{home} vs {away}</code>
 🏆 <b>Турнир:</b> {league} ({country})
@@ -367,7 +385,7 @@ def prematch_expert_runner():
 
                             elif away_drop >= 15.0 and current_away_odd < historical["away"]:
                                 stake_info = "🔥 СИНДИКАТ ИНСАЙД: 4.0% от банката"
-                                msg = f"""🔥 <b>[PREMATCH СРИВ В ПАЗАРА - КРАЕН ИЗХОД 2]</b>
+                                msg = f"""🔥 <b>[PREMATCH СРИВ В ПАЗАРА - ЗНАК 2]</b>
 ────────────────────
 ⚽ <b>Среща:</b> <code>{home} vs {away}</code>
 🏆 <b>Турнир:</b> {league} ({country})
@@ -385,7 +403,7 @@ def prematch_expert_runner():
                                 prematch_sent[key] = time.time()
                                 continue
 
-                # Стандартни гол-пазари, ако няма засечен пазарен срив
+                # Класически гол пазари при липса на пазарен 1Х2 срив
                 UNDER_COUNTRIES = ["Italy", "Romania", "Bulgaria", "Croatia", "Greece", "Morocco"]
                 HIGH_BTTS_COUNTRIES = ["Netherlands", "Germany", "Norway", "Sweden", "Iceland", "Australia"]
 
@@ -416,14 +434,12 @@ def prematch_expert_runner():
         time.sleep(600)
 
 # =========================================================
-# SYSTEM ORCHESTRATOR
+# SYSTEM RUNNER
 # =========================================================
 
 if __name__ == "__main__":
     init_database()
-    
-    # ПЪРВОНАЧАЛНО ЗАРЕЖДАНЕ НА ТВОИТЕ AI МОДЕЛИ ПРИ СТАРТ
-    print("🧠 Зареждане на Random Forest моделите от ml_model.py...")
+    print("🧠 Зареждане на Random Forest моделите при старт...")
     load_model()
     
     t1 = threading.Thread(target=live_analysis_runner)
@@ -434,6 +450,7 @@ if __name__ == "__main__":
     
     t1.join()
     t2.join()
+
 
 
 
