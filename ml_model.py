@@ -1,6 +1,6 @@
 # =========================================================
 # AUTOMATED SELF-LEARNING MACHINE LEARNING MODEL (ml_model.py)
-# RANDOM FOREST CLASSIFIER - BUG-FIXED EDITION
+# RANDOM FOREST CLASSIFIER - PRO ULTRA EDITION
 # =========================================================
 
 import json
@@ -17,29 +17,25 @@ btts_model = None
 over_model = None
 
 def load_model():
-    """ Безопасно зареждане на тренираните изкуствени интелекти """
     global btts_model, over_model
 
     if os.path.exists(BTTS_MODEL):
         btts_model = joblib.load(BTTS_MODEL)
-        print("📊 BTTS Model Loaded Successfully.")
+        print("✅ AI Моделът за Гол/Гол е зареден успешно.")
     else:
-        print("⚠️ BTTS Model (.pkl) not found. Running on fallback baseline.")
+        print("⚠️ Липсва ml_btts.pkl. Използва се математическа базова линия.")
 
     if os.path.exists(OVER_MODEL):
         over_model = joblib.load(OVER_MODEL)
-        print("📊 OVER 2.5 Model Loaded Successfully.")
+        print("✅ AI Моделът за Над 2.5 е зареден успешно.")
     else:
-        print("⚠️ OVER Model (.pkl) not found. Running on fallback baseline.")
+        print("⚠️ Липсва ml_over.pkl. Използва се математическа базова линия.")
 
-    print("🔥 AI v1000 READY")
+    print("🔥 AI PRO v1000 READY")
 
 
 def make_features(shots_h, shots_a, att_h, att_a, goals):
-    """ 
-    Уеднаквена математическа матрица за превръщане на статистиката в числови вектори.
-    Премахва риска от грешно мапване на речници (Dictionaries).
-    """
+    """ Уеднаквена математическа матрица за премахване на риска от разминаване """
     total_shots = shots_h + shots_a
     total_attacks = att_h + att_a
     shots_diff = abs(shots_h - shots_a)
@@ -57,26 +53,24 @@ def make_features(shots_h, shots_a, att_h, att_a, goals):
 
 
 def train_model():
-    """ Автоматично претрениране на модела с новите данни от изминалия ден """
     if not os.path.exists(DATA_FILE):
-        print("❌ Критична грешка: dataset.json липсва. Няма данни за обучение!")
+        print("❌ no dataset.json found yet.")
         return
 
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
-        print(f"❌ Грешка при четене на dataset.json: {e}")
+        print(f"❌ Грешка при четене на базата: {e}")
         return
 
     if len(data) < 100:
-        print(f"⚠️ Базата данни съдържа само {len(data)} записа. Трябват минимум 100+ за обучение!")
+        print(f"⚠️ Малко данни ({len(data)} записа). Моделът ще се тренира след 100+ мача.")
         return
 
     X, y_btts, y_over = [], [], []
 
     for d in data:
-        # Извличане по твърди ключове от твоя оригинален JSON формат
         features = make_features(
             d.get("shots_h", 0), 
             d.get("shots_a", 0), 
@@ -90,40 +84,29 @@ def train_model():
 
     X = np.array(X)
 
-    # Обучение на модела за Гол/Гол (BTTS)
     btts = RandomForestClassifier(n_estimators=120, random_state=42)
     btts.fit(X, y_btts)
     joblib.dump(btts, BTTS_MODEL)
 
-    # Обучение на модела за Над 2.5 гола
     over = RandomForestClassifier(n_estimators=120, random_state=42)
     over.fit(X, y_over)
     joblib.dump(over, OVER_MODEL)
 
-    print(f"🔥 MODELS TRAINED SUCCESSFULLY ON {len(data)} SAMPLES!")
+    print(f"🔥 ИИ УСПЕШНО ПРЕТРЕНИРАН ВЪРХУ {len(data)} МАЧА!")
 
 
 def predict_btts(sh, sa, ah, aa, goals):
-    """ Изчислява вероятност за Гол/Гол на живо през Random Forest """
-    if btts_model is None:
-        return None
+    if btts_model is None: return None
     features = make_features(sh, sa, ah, aa, goals)
     try:
-        # Връщаме вероятността за клас '1' (мачът да завърши Гол/Гол)
         return btts_model.predict_proba([features])[0][1]
-    except Exception as e:
-        print("Error during predict_btts:", e)
-        return None
+    except: return None
 
 
 def predict_over(sh, sa, ah, aa, goals):
-    """ Изчислява вероятност за Над 2.5 гола на живо през Random Forest """
-    if over_model is None:
-        return None
+    if over_model is None: return None
     features = make_features(sh, sa, ah, aa, goals)
     try:
-        # Връщаме вероятността за клас '1' (мачът да завърши Над 2.5)
         return over_model.predict_proba([features])[0][1]
-    except Exception as e:
-        print("Error during predict_over:", e)
-        return None
+    except: return None
+
