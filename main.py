@@ -602,6 +602,7 @@ def analyze_match(match):
     )
 
     # =====================================================
+    # =====================================================
     # FILTERS
     # =====================================================
 
@@ -634,9 +635,11 @@ def analyze_match(match):
     if max(home_shots, away_shots) < 4:
         return
 
-     # =====================================================
-    # MARKET
-    # =====================================================
+    if (
+        minute >= 70
+        and total_goals == 0
+    ):
+        return
 
     total_shots_on = (
         home_shots + away_shots
@@ -656,11 +659,16 @@ def analyze_match(match):
         home_attacks + away_attacks
     )
 
+    # =====================================================
+    # MARKET
+    # =====================================================
+
     if (
 
         total_goals <= 2
         and total_shots_on >= 6
-        and total_attacks >= 28
+        and home_attacks >= 12
+        and away_attacks >= 12
         and best_xg >= 1.3
         and minute >= 35
         and dominance <= 10
@@ -689,6 +697,11 @@ def analyze_match(match):
     # CONFIDENCE
     # =====================================================
 
+    confidence_bonus = 0
+
+    if best_pressure >= 78:
+        confidence_bonus = 4
+
     confidence = min(
         best_pressure,
         90
@@ -701,11 +714,13 @@ def analyze_match(match):
         confidence += 2
 
     confidence = min(
-        confidence,
+        confidence + confidence_bonus,
         95
     )
+
     if confidence < 70:
         return
+
     estimated_odds = 1.80
 
     edge = value_edge(
