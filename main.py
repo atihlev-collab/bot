@@ -437,20 +437,7 @@ def calculate_match_score(country, league, home, away):
         "Croatia"
     ]
 
-    BIG_TEAMS = [
-
-        "Manchester",
-        "Liverpool",
-        "Arsenal",
-        "Chelsea",
-        "Barcelona",
-        "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Inter",
-        "Milan",
-        "Juventus"
-    ]
+    
 
     if any(
         x.lower() in country.lower()
@@ -700,7 +687,8 @@ def analyze_match(match):
         confidence,
         95
     )
-
+    if confidence < 70:
+        return
     estimated_odds = 1.80
 
     edge = value_edge(
