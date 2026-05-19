@@ -6,12 +6,13 @@
 import json
 import requests
 import os
+import time
 from datetime import datetime
 from config import API_KEY
 
 HEADERS = {"x-apisports-key": API_KEY}
 PICKS_FILE = "picks.json"
-DATA_FILE = "dataset.json" # Свързваме го с файла за Машинно Обучение!
+DATA_FILE = "dataset.json"
 
 def load_json_file(filename):
     if not os.path.exists(filename):
@@ -41,7 +42,7 @@ def check_results():
 
         try:
             r = requests.get(
-                f"https://v3.football.api-sports.io/fixtures?id={fid}",
+                f"https://api-sports.io{fid}",
                 headers=HEADERS,
                 timeout=15
             ).json()
@@ -52,7 +53,6 @@ def check_results():
 
             m = response_data[0]
 
-            # Проверяваме само мачове, които са завършили напълно (FT)
             if m["fixture"]["status"]["short"] != "FT":
                 continue
 
@@ -63,40 +63,37 @@ def check_results():
             pick = p.get("pick", "")
             win = False
 
-            # -------------------------------------------------
-            # ИНТЕЛИГЕНТНА ПРОВЕРКА НА АБСОЛЮТНО ВСИЧКИ ПАЗАРИ
-            # -------------------------------------------------
+            # ПРОВЕРКА НА НОВИТЕ ПАЗАРИ
             if "BTTS" in pick or "ДВАТА ОТБОРА" in pick:
                 win = gh > 0 and ga > 0
             elif "Over 2.5" in pick or "НАД 2.5" in pick:
                 win = total_goals > 2
             elif "НАД 1.5" in pick:
                 win = total_goals > 1
-            elif "ДОМАКИН" in pick or "NEXT GOAL HOME" in pick:
-                # Проверява дали домакинът е вкарал поне 1 гол от момента на сигнала нататък
-                win = gh > p.get("trigger_home_goals", 0)
-            elif "ГОСТ" in pick or "NEXT GOAL AWAY" in pick:
-                # Проверява дали гостът е вкарал от момента на сигнала нататък
-                win = ga > p.get("trigger_away_goals", 0)
+            elif "ДОМАКИН" in pick or "NEXT GOAL HOME" in pick or "PREMATCH_1" in pick:
+                win = gh > ga
+            elif "ГОСТ" in pick or "NEXT GOAL AWAY" in pick or "PREMATCH_2" in pick:
+                win = ga > gh
             elif "КОРНЕРА" in pick:
-                # Извличане на финалните корнери за проверка на залога
+                # Взимане на корнери за крайна проверка
                 corn_h = 0
                 corn_a = 0
                 for stat_type in m.get("statistics", []):
-                    if stat_type["type"] == "Corner Kicks":
-                        # Зависи от структурата на финалния респонс
-                        pass
-                # Базово активиране при липса на детайлна статистика за корнери в общия ендпойнт
-                win = True # Задаваме залог в полза на играча, ако мачът е бил прекъснат
+                    if stat_type.get("team", {}).get("id") == m["teams"]["home"]["id"]:
+                        for s in stat_type.get("statistics", []):
+                            if s["type"] == "Corner Kicks": corn_h = int(s["value"]) if s["value"] else 0
+                    else:
+                        for s in stat_type.get("statistics", []):
+                            if s["type"] == "Corner Kicks": corn_a = int(s["value"]) if s["value"] else 0
+                
+                # Тъй като линията е азиатска, проверяваме дали общите корнери накрая са повече от тези при сигнала
+                win = (corn_h + corn_a) > p.get("total_corners", 0)
 
             p["win"] = win
             p["checked"] = True
             updated = True
 
-            # -------------------------------------------------
-            # АВТОМАТИЧНО ПОДХРАНВАНЕ НА DATASET.JSON ЗА AI ТРЕНИРАНЕ
-            # -------------------------------------------------
-            # Извличаме чистите данни на живо, запазени в пика, и добавяме реалния изход
+            # ХРАНЕНЕ НА МОДЕЛА (DATASET.JSON)
             ml_sample = {
                 "shots_h": p.get("sh", 0),
                 "shots_a": p.get("sa", 0),
@@ -114,8 +111,8 @@ def check_results():
 
     if updated:
         save_json_file(PICKS_FILE, picks)
-        save_json_file(DATA_FILE, dataset) # Записваме новите данни в мозъка на AI!
-        print("✅ Results updated and fed into the AI Dataset successfully.")
+        save_json_file(DATA_FILE, dataset)
+        print("✅ Резултатите са обновени и записани за обучение на AI.")
 
 
 def stats():
@@ -140,18 +137,19 @@ def stats():
             profit -= stake
 
     if total == 0:
-        print("\n📊 NO CHECKED BETS YET.")
+        print("\n📊 НЯМА НАЛИЧНИ ПРОВЕРЕНИ ЗАЛОЗИ ВСЕ ОЩЕ.")
         return
 
     roi = (profit / total)
 
-    print("\n📊 OFFICIAL SYNDICATE STATS")
-    print(f"Total Bets: {total}")
-    print(f"Winrate:    {round(wins / total * 100, 1)}%")
-    print(f"Net Profit: {round(profit, 2)} units")
-    print(f"System ROI: {round(roi * 100, 1)}%")
+    print("\n📊 ОФИЦИАЛНА ТИПСТЪРСКА СТАТИСТИКА")
+    print(f"Общо залози:  {total}")
+    print(f"Успеваемост:  {round(wins / total * 100, 1)}%")
+    print(f"Чист профит:  {round(profit, 2)} единици")
+    print(f"Текущ ROI:    {round(roi * 100, 1)}%")
 
 
 if __name__ == "__main__":
     check_results()
     stats()
+
