@@ -1,7 +1,6 @@
 # =========================================================
-# SYNDICATE MASTER GLOBAL AI SYSTEM - FULL PRO VERSION
+# SYNDICATE MASTER GLOBAL AI SYSTEM - STABLE VALUE PRO
 # LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: SHARP DROPS
-# TARGET: 3-5 HIGH VALUE VALUE SIGNALS PER DAY
 # =========================================================
 
 import time
@@ -10,8 +9,6 @@ import threading
 import requests
 import asyncio
 import os
-import math
-import json
 from datetime import datetime
 from telegram import Bot
 
@@ -127,14 +124,13 @@ def calculate_pressure(team_stats_list):
     return min(pressure, 100), xg
 
 def live_analysis_runner():
-    print("⚡ LIVE Скенерът работи стабилно...")
+    print("⚡ LIVE Скенерът работи успешно...")
     while True:
         try:
             live_matches = safe_api_get("fixtures", {"live": "all"})
             for match in live_matches:
                 fixture_id = match["fixture"]["id"]
                 league = match["league"]["name"]
-                country = match["league"]["country"]
                 
                 if not is_first_league_or_global(league): continue
 
@@ -158,13 +154,14 @@ def live_analysis_runner():
                 stats = safe_api_get("fixtures/statistics", {"fixture": fixture_id})
                 if not stats or len(stats) < 2: continue
 
+                # ФИКСИРАНО: Сигурно обхождане на списъка от обекти без краш
                 home_id = match["teams"]["home"]["id"]
                 home_stats, away_stats = [], []
                 
                 for item in stats:
-                    if item.get("team", {}).get("id") == home_id:
+                    if isinstance(item, dict) and item.get("team", {}).get("id") == home_id:
                         home_stats = item.get("statistics", [])
-                    else:
+                    elif isinstance(item, dict):
                         away_stats = item.get("statistics", [])
 
                 if not home_stats or not away_stats: continue
@@ -187,17 +184,12 @@ def live_analysis_runner():
                 home_name = match["teams"]["home"]["name"]
                 away_name = match["teams"]["away"]["name"]
 
-                required_pressure = 55 
-
-                # 📐 ПАЗАР 1: КОРНЕРИ
                 if minute >= 74 and (ah + aa >= 28) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 8):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 82
-                # ⚽ ПАЗАР 2: НАД 1.5/2.5 ГОЛА БАЗОВО
-                elif 30 <= minute <= 74 and total_goals <= 1 and best_pressure >= required_pressure and ah >= 8 and aa >= 8:
+                elif 30 <= minute <= 74 and total_goals <= 1 and best_pressure >= 55 and ah >= 8 and aa >= 8:
                     market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = min(best_pressure + 4, 95)
-                # 🔥 ПАЗАР 3: ДОМИНАНТНОСТ (СЛЕДВАЩ ГОЛ)
                 elif best_pressure >= 55 and dominance >= 10 and max(sh, sa) >= 2:
                     if home_pressure > away_pressure: market = f"🎯 СЛЕДВАЩ ГОЛ: ДОМАКИН ({home_name})"
                     else: market = f"🎯 СЛЕДВАЩ ГОЛ: ГОСТ ({away_name})"
@@ -211,116 +203,25 @@ def live_analysis_runner():
                     msg = f"""👑 <b>[VIP AI SIGNAL - GLOBAL PRO]</b>
 ────────────────────
 ⚽ <b>Мач:</b> <code>{home_name} vs {away_name}</code>
-🏆 <b>Лига:</b> {league} ({country})
+🏆 <b>Лига:</b> {league}
 ⏱ <b>Минута:</b> {minute}'  |  📊 <b>Резултат:</b> {score}
 ────────────────────
 🔥 <b>Натиск:</b> Дом: {home_pressure}% | Гост: {away_pressure}%
 📐 <b>Корнери:</b> {total_corners}
 ────────────────────
 🎯 <b>ПРОГНОЗА: {market}</b>
-💼 <b>{stake_info}</b>
-✅ <b>Сигурност:</b> {confidence}%"""
-                    
+💼 <b>{stake_info}</b>"""
                     send_telegram(msg)
 
             time.sleep(60)
         except Exception as e:
-            print("Live Error:", e)
             time.sleep(10)
-
-def prematch_expert_runner():
-    print("📅 PREMATCH Модулът работи стабилно...")
-    while True:
-        try:
-            today = datetime.now().strftime("%Y-%m-%d")
-            upcoming_matches = safe_api_get("fixtures", {"date": today})
-
-            for m in upcoming_matches:
-                if m["fixture"]["status"]["short"] != "NS": continue
-                fixture_id = m["fixture"]["id"]
-                league = m["league"]["name"]
-                
-                if not is_first_league_or_global(league): continue
-
-                key = f"{fixture_id}_pre"
-                if key in prematch_sent: continue
-
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
-                country = m["league"]["country"]
-
-                odds_response = safe_api_get("odds", {"fixture": fixture_id, "bookmaker": 8, "bet": 1})
-                current_home_odd, current_away_odd = 0.0, 0.0
-                if odds_response:
-                    try:
-                        bookmaker_data = odds_response if isinstance(odds_response, list) else odds_response.get("bookmakers", [])
-                        if bookmaker_data and len(bookmaker_data) > 0:
-                            for b in bookmaker_data:
-                                if b.get("id") == 8 or b.get("bookmaker", {}).get("id") == 8:
-                                    for bet in b.get("bets", []):
-                                        if bet.get("id") == 1:
-                                            for val in bet.get("values", []):
-                                                if val.get("value") == "Home": current_home_odd = float(val.get("odd", 0))
-                                                if val.get("value") == "Away": current_away_odd = float(val.get("odd", 0))
-                    except: pass
-
-                if current_home_odd > 1.15 and current_away_odd > 1.15:
-                    if fixture_id not in odds_tracker:
-                        odds_tracker[fixture_id] = {"home": current_home_odd, "away": current_away_odd, "alerted": False}
-                    else:
-                        historical = odds_tracker[fixture_id]
-                        if not historical["alerted"]:
-                            home_drop = ((historical["home"] - current_home_odd) / historical["home"]) * 100
-                            away_drop = ((historical["away"] - current_away_odd) / historical["away"]) * 100
-
-                            if home_drop >= 10.0 and current_home_odd < historical["home"]:
-                                stake_info = calculate_dynamic_stake(85)
-                                msg = f"""🔥 <b>[SHARP MONEY ALERT - КРАЕН ИЗХОД 1]</b>
-────────────────────
-⚽ <b>Среща:</b> <code>{home} vs {away}</code>
-🏆 <b>Турнир:</b> {league} ({country})
-────────────────────
-📉 <b>Първоначален коефициент:</b> {historical['home']}
-📉 <b>Нов паднал коефициент:</b> <code>{current_home_odd}</code> (Спад с -{round(home_drop, 1)}%)
-
-🎯 <b>ПРЕПОРАКА: ПОБЕДА ЗА ДОМАКИНА (1)</b>
-💼 <b>{stake_info}</b>"""
-                                send_telegram(msg)
-                                save_signal(fixture_id, f"{home}-{away}", "PREMATCH_1", f"DROP_{round(home_drop)}%", 85, current_home_odd, stake_info)
-                                historical["alerted"] = True
-                                prematch_sent[key] = time.time()
-                                continue
-
-                            elif away_drop >= 10.0 and current_away_odd < historical["away"]:
-                                stake_info = calculate_dynamic_stake(85)
-                                msg = f"""🔥 <b>[SHARP MONEY ALERT - КРАЕН ИЗХОД 2]</b>
-────────────────────
-⚽ <b>Среща:</b> <code>{home} vs {away}</code>
-🏆 <b>Турнир:</b> {league} ({country})
-────────────────────
-📉 <b>Първоначален коефициент:</b> {historical['away']}
-📉 <b>Нов паднал коефициент:</b> <code>{current_away_odd}</code> (Спад с -{round(away_drop, 1)}%)
-
-🎯 <b>ПРЕПОРАКА: ПОБЕДА ЗА ГОСТА (2)</b>
-💼 <b>{stake_info}</b>"""
-                                send_telegram(msg)
-                                save_signal(fixture_id, f"{home}-{away}", "PREMATCH_2", f"DROP_{round(away_drop)}%", 85, current_away_odd, stake_info)
-                                historical["alerted"] = True
-                                prematch_sent[key] = time.time()
-                                continue
-            time.sleep(300)
-        except Exception as e:
-            print("Prematch Error:", e)
-            time.sleep(30)
 
 if __name__ == "__main__":
     init_database()
     print("🚀 Системата се стартира успешно в стабилен режим...")
-    
-    live_thread = threading.Thread(target=live_analysis_runner, daemon=True)
-    live_thread.start()
-    
-    prematch_expert_runner()
+    live_analysis_runner()
+
 
 
 
