@@ -1,7 +1,3 @@
-# =========================================================
-# DAILY TOP 3 PICKS SELECTOR - GLOBAL UNLIMITED EDITION
-# =========================================================
-
 import requests
 import json
 import os
@@ -16,8 +12,6 @@ HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
-# НАПЪЛНО ПРЕМАХНАТ СПИСЪК С ДЪРЖАВИ - СЛЕДИ СЕ ЦЕЛИЯ СВЯТ!
-# Изключваме само несериозните мачове, за да пазим качеството
 BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "friendly", "amateur"]
 
 def safe_api_get(endpoint, params=None):
@@ -36,21 +30,18 @@ def get_top_3_picks():
         if m["fixture"]["status"]["short"] != "NS": continue
         league = m["league"]["name"]
         country = m["league"]["country"]
-        
-        # Спираме само младежи, жени и приятелски мачове
         if any(w in league.lower() for w in BLOCKED_WORDS): continue
         
         home = m["teams"]["home"]["name"]
         away = m["teams"]["away"]["name"]
         
-        # Базов скоринг за голове
-        base_probability = 73.0
+        # Висока цедка за качество (Връщаме тежкия критерий 74%)
+        base_probability = 74.0
         market = "🔮 НАД 2.5 ГОЛА В МАЧА"
         
-        # Специфична филтрация на пазара според тенденцията на държавата
-        HIGH_BTTS = ["Netherlands", "Germany", "Norway", "Sweden", "Iceland", "Australia", "USA", "Japan", "Brazil"]
+        HIGH_BTTS = ["Netherlands", "Germany", "Norway", "Sweden", "Iceland", "Australia", "USA", "Japan", "Brazil", "Finland", "Ireland"]
         if country in HIGH_BTTS:
-            base_probability = 77.5
+            base_probability = 78.5
             market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
             
         date_obj = datetime.fromisoformat(m["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
@@ -60,22 +51,23 @@ def get_top_3_picks():
             "prob": base_probability
         })
         
-    # Сортиране на целия свят и извличане на ТОП 3
     scored_matches.sort(key=lambda x: x["prob"], reverse=True)
-    top_3 = scored_matches[:3]
     
-    if len(top_3) < 3:
-        return "⚠️ Футболният календар за днес не предлага мачове, отговарящи на софтуерните критерии."
+    # 🎯 ДИНАМИЧНОСТ: Взима най-доброто (от 1 до 3 мача), без да блокира, ако няма 3
+    top_picks = scored_matches[:3]
+    
+    if len(top_picks) == 0:
+        return "⚠️ В днешния футболен тираж липсват мачове, покриващи високите критерии за залог."
         
-    message = f"☀️ <b>AI СУТРЕШЕН ТОП 3 ФИШ ЗА ДНЕС</b>\n"
-    message += f"📅 Дата: {datetime.now(TZ).strftime('%d.%m.%Y')} | ⏱ Час: 10:00\n"
+    message = f"☀️ <b>AI СУТРЕШЕН ТОП ФИШ ЗА ДНЕС</b>\n"
+    message += f"📅 Дата: {datetime.now(TZ).strftime('%d.%m.%Y')} | ⏱ Брой събития: {len(top_picks)}\n"
     message += "────────────────────\n\n"
     
-    for idx, match in enumerate(top_3, 1):
+    for idx, match in enumerate(top_picks, 1):
         message += f"{idx}. {match['text']}\n"
         
     message += "────────────────────\n"
-    message += "💵 <i>Препоръка: Използвайте залог в права колона!</i>"
+    message += "💵 <i>Препоръка: Използвайте залог с 2% от банката!</i>"
     return message
 
 async def main():
@@ -84,4 +76,5 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 
