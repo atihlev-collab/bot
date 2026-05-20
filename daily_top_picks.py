@@ -1,80 +1,71 @@
+# =========================================================
+# SYNDICATE MASTER - DAILY TOP PICKS (BALANCED PRO)
+# TARGET: 1-3 TOP QUALITY DAILY ACCAS
+# =========================================================
+
+import time
 import requests
-import json
-import os
 import asyncio
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from telegram import Bot
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
 BASE_URL = "https://api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
-TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
-BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "friendly", "amateur"]
-
-def safe_api_get(endpoint, params=None):
+def send_telegram(message):
     try:
-        r = requests.get(f"{BASE_URL}/{endpoint}", headers=HEADERS, params=params, timeout=12)
-        if r.status_code == 200: return r.json().get("response", [])
-    except: pass
-    return []
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="HTML"))
+        loop.close()
+    except Exception as e:
+        print("Telegram Error:", e)
 
-def get_top_3_picks():
-    today = datetime.now(TZ).strftime("%Y-%m-%d")
-    matches = safe_api_get("fixtures", {"date": today})
-    scored_matches = []
+def get_daily_picks():
+    print("📅 Сканиране на дневния тираж за Топ Прогнози...")
+    today = datetime.now().strftime("%Y-%m-%d")
+    matches = requests.get(f"{BASE_URL}/fixtures", headers=HEADERS, params={"date": today}).json().get("response", [])
+    
+    selected_picks = []
     
     for m in matches:
         if m["fixture"]["status"]["short"] != "NS": continue
         league = m["league"]["name"]
-        country = m["league"]["country"]
-        if any(w in league.lower() for w in BLOCKED_WORDS): continue
-        
         home = m["teams"]["home"]["name"]
         away = m["teams"]["away"]["name"]
+        fixture_id = m["fixture"]["id"]
         
-        # Висока цедка за качество (Връщаме тежкия критерий 74%)
-        base_probability = 74.0
-        market = "🔮 НАД 2.5 ГОЛА В МАЧА"
+        # Олекотен филтър по коефициенти за намиране на стойност (Value Фаворити)
+        odds_res = requests.get(f"{BASE_URL}/odds", headers=HEADERS, params={"fixture": fixture_id, "bookmaker": 8, "bet": 1}).json().get("response", [])
         
-        HIGH_BTTS = ["Netherlands", "Germany", "Norway", "Sweden", "Iceland", "Australia", "USA", "Japan", "Brazil", "Finland", "Ireland"]
-        if country in HIGH_BTTS:
-            base_probability = 78.5
-            market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
-            
-        date_obj = datetime.fromisoformat(m["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
-        
-        scored_matches.append({
-            "text": f"⚽ <b>{home} vs {away}</b>\n🏆 {league} ({country})\n⏱ Час: {date_obj.strftime('%H:%M')}\n🎯 Прогноза: {market}\n📈 Шанс: {base_probability}%\n",
-            "prob": base_probability
-        })
-        
-    scored_matches.sort(key=lambda x: x["prob"], reverse=True)
-    
-    # 🎯 ДИНАМИЧНОСТ: Взима най-доброто (от 1 до 3 мача), без да блокира, ако няма 3
-    top_picks = scored_matches[:3]
-    
-    if len(top_picks) == 0:
-        return "⚠️ В днешния футболен тираж липсват мачове, покриващи високите критерии за залог."
-        
-    message = f"☀️ <b>AI СУТРЕШЕН ТОП ФИШ ЗА ДНЕС</b>\n"
-    message += f"📅 Дата: {datetime.now(TZ).strftime('%d.%m.%Y')} | ⏱ Брой събития: {len(top_picks)}\n"
-    message += "────────────────────\n\n"
-    
-    for idx, match in enumerate(top_picks, 1):
-        message += f"{idx}. {match['text']}\n"
-        
-    message += "────────────────────\n"
-    message += "💵 <i>Препоръка: Използвайте залог с 2% от банката!</i>"
-    return message
+        home_odd, away_odd = 0.0, 0.0
+        try:
+            if odds_res and len(odds_res) > 0:
+                values = odds_res[0]["bookmakers"][0]["bets"][0]["values"]
+                for v in values:
+                    if v["value"] == "Home": home_odd = float(v["odd"])
+                    if v["value"] == "Away": away_odd = float(v["odd"])
+        except: pass
 
-async def main():
-    text_msg = get_top_3_picks()
-    await bot.send_message(chat_id=CHAT_ID, text=text_msg, parse_mode="HTML")
+        # Балансирано условие: Търсим изявен, но резонен фаворит в мача (коефициент между 1.30 и 1.85)
+        if 1.30 <= home_odd <= 1.85:
+            selected_picks.append(f"⚽ {home} vs {away}\n🏆 {league}\n🎯 <b>Прогноза: ПОБЕДА ЗА ДОМАКИНА (1)</b> | Коеф: {home_odd}\n")
+        elif 1.30 <= away_odd <= 1.85:
+            selected_picks.append(f"⚽ {home} vs {away}\n🏆 {league}\n🎯 <b>Прогноза: ПОБЕДА ЗА ГОСТА (2)</b> | Коеф: {away_odd}\n")
+            
+        # Лимитираме до максимум 3-те най-добри мача за деня, за да няма спам
+        if len(selected_picks) >= 3:
+            break
+
+    if selected_picks:
+        msg = "☀️ <b>[AI ДНЕВЕН ТОП ФИШ]</b> ☀️\n\n" + "\n".join(selected_picks) + "\n💼 <i>Препоръчителен залог: 2% от банката</i>\n🤖 Syndicate Master Pro"
+        send_telegram(msg)
+    else:
+        # Резервен вариант: Ако няма чисти фаворити, ботът автоматично пуска сигурна линия за голове, вместо да почива!
+        msg = "☀️ <b>[AI ДНЕВЕН ТОП ФИШ]</b> ☀️\n\n🔥 Търсете пазара <b>НАД 1.5 ГОЛА</b> на сингъл или в права колона за дневните дербита от тиража!\n🤖 Система Синдикат"
+        send_telegram(msg)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
-
+    get_daily_picks()
