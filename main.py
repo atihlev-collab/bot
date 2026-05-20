@@ -1,7 +1,7 @@
 # =========================================================
-# ULTIMATE MASTERPIECE TIPSTER AI SYSTEM - SELECTIVE PRO EDITION
-# LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: POISSON, SHARP 1X2 DROPS
-# BALANCED ACCURACY: 2-5 HIGH VALUE LIVE SIGNALS PER DAY
+# ULTIMATE MASTERPIECE TIPSTER AI SYSTEM - GLOBAL PRO EDITION
+# LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: SHARP 1X2 DROPS
+# TARGET ACCURACY: 3-5 HIGH VALUE GLOBAL SIGNALS PER DAY
 # =========================================================
 
 import time
@@ -29,13 +29,9 @@ HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
-BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "reserves", "friendly", "amateur"]
-BAD_COUNTRIES = ["Bolivia", "Venezuela", "India", "Indonesia", "Bangladesh", "Uganda"]
-
-GOLDEN_PREMATCH_COUNTRIES = [
-    "Netherlands", "Germany", "Norway", "Sweden", "Denmark", "Iceland", "Switzerland", "Australia",
-    "England", "Belgium", "Austria", "Japan", "South Korea", "Scotland", "USA", "Brazil", "Ireland"
-]
+# Филтри за сигурност - премахваме само нискокачествен футбол, аматьори и младежи
+BLOCKED_WORDS = ["youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "reserves", "friendly", "amateur", "women", "female"]
+BAD_COUNTRIES = [] # Празно, за да сканираме целия свят!
 
 sent = {}
 prematch_sent = {}
@@ -90,17 +86,23 @@ def safe_api_get(endpoint, params=None):
     except: pass
     return []
 
-def blocked_league(league_name):
+def is_first_league_or_global(league_name):
+    # Автоматичен филтър, който фаворизира първите лиги по света
     text = league_name.lower()
-    return any(word in text for word in BLOCKED_WORDS)
+    first_league_keywords = ["premier", "liga 1", "league 1", "serie a", "division 1", "primera", "super", "pro league", "eredivisie", "bndnesliga", "championship"]
+    if any(kw in text for kw in first_league_keywords):
+        return True
+    # Позволяваме и други основни лиги, стига да не са блокирани думи
+    return not any(word in text for word in BLOCKED_WORDS)
 
-def extract(team, stat_name):
-    for stat in team.get("statistics", []):
-        if stat["type"] == stat_name:
-            value = stat["value"]
+def extract(team_stats_list, stat_name):
+    if not team_stats_list: return 0
+    for stat in team_stats_list:
+        if stat.get("type") == stat_name:
+            value = stat.get("value")
             if value is None: return 0
             if isinstance(value, str):
-                value = value.replace("%", "")
+                value = value.replace("%", "").strip()
                 try: return int(value)
                 except: return 0
             return int(value)
@@ -112,6 +114,7 @@ def calculate_dynamic_stake(confidence):
     else: return "⚠️ КОНСЕРВАТИВЕН ЗАЛОГ: 1.0% от банката"
 
 def calculate_poisson_probability(k, lam):
+    if lam <= 0: return 0.0
     return (pow(lam, k) * math.exp(-lam)) / math.factorial(k)
 
 def analyze_poisson_over_under(fixture_id):
@@ -130,33 +133,33 @@ def analyze_poisson_over_under(fixture_id):
                 prob_under_2_5 += (p_x * p_y)
     return round((1.0 - prob_under_2_5) * 100, 1)
 
-def calculate_pressure(team):
+def calculate_pressure(team_stats_list):
     pressure = 0
-    possession = extract(team, "Ball Possession")
-    shots_on = extract(team, "Shots on Goal")
-    total_shots = extract(team, "Total Shots")
-    corners = extract(team, "Corner Kicks")
-    attacks = extract(team, "Dangerous Attacks")
+    possession = extract(team_stats_list, "Ball Possession")
+    shots_on = extract(team_stats_list, "Shots on Goal")
+    total_shots = extract(team_stats_list, "Total Shots")
+    corners = extract(team_stats_list, "Corner Kicks")
+    attacks = extract(team_stats_list, "Dangerous Attacks")
 
-    if possession >= 52: pressure += 8
-    if possession >= 60: pressure += 8
-    if shots_on >= 3: pressure += 15
-    if shots_on >= 5: pressure += 12
-    if total_shots >= 6: pressure += 10
-    if total_shots >= 10: pressure += 10
-    if corners >= 3: pressure += 6
-    if corners >= 5: pressure += 6
-    if attacks >= 15: pressure += 14
-    if attacks >= 24: pressure += 14
+    if possession >= 50: pressure += 8
+    if possession >= 58: pressure += 8
+    if shots_on >= 2: pressure += 15
+    if shots_on >= 4: pressure += 12
+    if total_shots >= 5: pressure += 10
+    if total_shots >= 8: pressure += 10
+    if corners >= 2: pressure += 6
+    if corners >= 4: pressure += 6
+    if attacks >= 12: pressure += 14
+    if attacks >= 20: pressure += 14
 
     xg = round((shots_on * 0.28) + (total_shots * 0.05) + (attacks * 0.022), 2)
-    if xg >= 1.0: pressure += 10
-    if xg >= 1.6: pressure += 10
+    if xg >= 0.8: pressure += 10
+    if xg >= 1.4: pressure += 10
 
     return min(pressure, 100), xg
 
 def live_analysis_runner():
-    print("⚡ LIVE Скенерът работи в балансиран Селективен Про режим...")
+    print("⚡ LIVE Скенерът работи в ГЛОБАЛЕН балансиран режим (Всички първи лиги)...")
     while True:
         try:
             live_matches = safe_api_get("fixtures", {"live": "all"})
@@ -164,7 +167,9 @@ def live_analysis_runner():
                 fixture_id = match["fixture"]["id"]
                 league = match["league"]["name"]
                 country = match["league"]["country"]
-                if blocked_league(league) or country in BAD_COUNTRIES: continue
+                
+                # Прилагане на глобалния филтър за първи лиги
+                if not is_first_league_or_global(league): continue
 
                 minute = match["fixture"]["status"]["elapsed"]
                 if minute is None or minute < 15 or minute > 85: continue
@@ -184,10 +189,18 @@ def live_analysis_runner():
                 if f"{fixture_id}_live" in sent: continue
 
                 stats = safe_api_get("fixtures/statistics", {"fixture": fixture_id})
-                if len(stats) < 2: continue
+                if not stats or len(stats) < 2: continue
 
                 home_id = match["teams"]["home"]["id"]
-                home_stats, away_stats = (stats, stats) if stats.get("team", {}).get("id") == home_id else (stats, stats)
+                home_stats, away_stats = [], []
+                
+                for item in stats:
+                    if item.get("team", {}).get("id") == home_id:
+                        home_stats = item.get("statistics", [])
+                    else:
+                        away_stats = item.get("statistics", [])
+
+                if not home_stats or not away_stats: continue
 
                 sh = extract(home_stats, "Shots on Goal")
                 sa = extract(away_stats, "Shots on Goal")
@@ -202,8 +215,8 @@ def live_analysis_runner():
                 best_pressure = max(home_pressure, away_pressure)
                 dominance = abs(home_pressure - away_pressure)
 
-                tempo = (ah + aa) / 50
-                activity = (sh + sa) / 10
+                tempo = (ah + aa) / 50 if (ah + aa) > 0 else 0
+                activity = (sh + sa) / 10 if (sh + sa) > 0 else 0
 
                 btts_prob = predict_btts(sh, sa, ah, aa, total_goals)
                 over_prob = predict_over(sh, sa, ah, aa, total_goals)
@@ -216,34 +229,34 @@ def live_analysis_runner():
                 home_name = match["teams"]["home"]["name"]
                 away_name = match["teams"]["away"]["name"]
 
-                # 🎯 ЗЛАТЕН ПРАГ ЗА БАЛАНСИРАН НАТИСК: 58 точки
-                required_pressure = 58
+                # ОПТИМИЗИРАНИ ПРАГОВЕ ЗА 3-5 ТОП СИГНАЛА НА ДЕН
+                required_pressure = 60
 
-                # 📐 ПАЗАР 1: КОРНЕРИ (След 74')
-                if minute >= 74 and (ah + aa >= 42) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 12):
+                # 📐 ПАЗАР 1: КОРНЕРИ
+                if minute >= 74 and (ah + aa >= 32) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 10):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 82
                 # ⚽ ПАЗАР 2: ML ГОЛ-ГОЛ (BTTS)
-                elif score_btts > 0.58 and total_goals <= 2 and max(sh, sa) >= 3:
+                elif score_btts > 0.60 and total_goals <= 2 and max(sh, sa) >= 3:
                     market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
                     confidence = round(score_btts * 100)
                 # ⚽ ПАЗАР 3: ML НАД 2.5 ГОЛА
-                elif score_over > 0.55 and max(sh, sa) >= 3:
+                elif score_over > 0.58 and max(sh, sa) >= 3:
                     market = f"🔮 НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = round(score_over * 100)
-                # ⚽ ПАЗАР 4: НАД 1.5 ГОЛА БАЗОВО
-                elif 30 <= minute <= 74 and total_goals <= 1 and best_pressure >= required_pressure and ah >= 12 and aa >= 12:
+                # ⚽ ПАЗАР 4: НАД 1.5/2.5 БАЗОВО ГОЛОВЕ (Перфектен баланс за улавяне на голове в реално време)
+                elif 30 <= minute <= 74 and total_goals <= 1 and best_pressure >= required_pressure and ah >= 10 and aa >= 10:
                     market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = min(best_pressure + 4, 95)
                 # 🔥 ПАЗАР 5: ДОМИНАНТНОСТ (СЛЕДВАЩ ГОЛ)
-                elif best_pressure >= 58 and dominance >= 12 and max(sh, sa) >= 3:
+                elif best_pressure >= 62 and dominance >= 15 and max(sh, sa) >= 3:
                     if home_pressure > away_pressure: market = f"🎯 СЛЕДВАЩ ГОЛ: ДОМАКИН ({home_name})"
                     else: market = f"🎯 СЛЕДВАЩ ГОЛ: ГОСТ ({away_name})"
                     confidence = min(best_pressure + 4, 95)
 
-                if market and confidence >= 70:
+                if market and confidence >= 72:
                     stake_info = calculate_dynamic_stake(confidence)
-                    msg = f"""👑 <b>[VIP LIVE AI SIGNAL - SELECTIVE PRO]</b>
+                    msg = f"""👑 <b>[VIP LIVE AI SIGNAL - GLOBAL PRO]</b>
 ────────────────────
 ⚽ <b>Мач:</b> <code>{home_name} vs {away_name}</code>
 🏆 <b>Лига:</b> {league} ({country})
@@ -274,11 +287,13 @@ def live_analysis_runner():
                     except: pass
 
                     sent[f"{fixture_id}_live"] = time.time()
-        except Exception as e: print("Live Error:", e)
-        time.sleep(60)
+            time.sleep(60)
+        except Exception as e:
+            print("Live Error:", e)
+            time.sleep(10)
 
 def prematch_expert_runner():
-    print("📅 PREMATCH Модулът работи...")
+    print("📅 PREMATCH Модулът работи на глобално ниво...")
     while True:
         try:
             now_sofia = datetime.now(TZ)
@@ -295,7 +310,8 @@ def prematch_expert_runner():
                 fixture_id = m["fixture"]["id"]
                 league = m["league"]["name"]
                 country = m["league"]["country"]
-                if blocked_league(league) or country in BAD_COUNTRIES: continue
+                
+                if not is_first_league_or_global(league): continue
 
                 key = f"{fixture_id}_pre"
                 if key in prematch_sent: continue
@@ -310,7 +326,7 @@ def prematch_expert_runner():
                 current_home_odd, current_away_odd = 0.0, 0.0
                 if odds_response:
                     try:
-                        bookmaker_data = odds_response.get("bookmakers", [])
+                        bookmaker_data = odds_response.get("bookmakers", []) if isinstance(odds_response, list) else odds_response.get("bookmakers", [])
                         if bookmaker_data:
                             for b in bookmaker_data:
                                 if b["id"] == 8:
@@ -330,7 +346,8 @@ def prematch_expert_runner():
                             home_drop = ((historical["home"] - current_home_odd) / historical["home"]) * 100
                             away_drop = ((historical["away"] - current_away_odd) / historical["away"]) * 100
 
-                            if home_drop >= 15.0 and current_home_odd < historical["home"]:
+                            # Свалихме прага на спад на 10.0% за реално улавяне на аномалии по света
+                            if home_drop >= 10.0 and current_home_odd < historical["home"]:
                                 stake_info = "🔥 СИНДИКАТ ИНСАЙД: 4.0% от банката"
                                 msg = f"""🔥 <b>[SHARP MONEY ALERT - КРАЕН ИЗХОД 1]</b>
 ────────────────────
@@ -349,7 +366,7 @@ def prematch_expert_runner():
                                 prematch_sent[key] = time.time()
                                 continue
 
-                            elif away_drop >= 15.0 and current_away_odd < historical["away"]:
+                            elif away_drop >= 10.0 and current_away_odd < historical["away"]:
                                 stake_info = "🔥 СИНДИКАТ ИНСАЙД: 4.0% от банката"
                                 msg = f"""🔥 <b>[SHARP MONEY ALERT - КРАЕН ИЗХОД 2]</b>
 ────────────────────
@@ -367,41 +384,20 @@ def prematch_expert_runner():
                                 historical["alerted"] = True
                                 prematch_sent[key] = time.time()
                                 continue
-
-                UNDER_COUNTRIES = ["Italy", "Romania", "Bulgaria", "Croatia", "Greece", "Morocco"]
-                HIGH_BTTS_COUNTRIES = ["Netherlands", "Germany", "Norway", "Sweden", "Iceland", "Australia"]
-
-                if country in UNDER_COUNTRIES: market, probability, details = "📉 ПОД 2.5 ГОЛА", "76%", "Ниско игрово темпо."
-                elif country in HIGH_BTTS_COUNTRIES:
-                    poisson_prob = analyze_poisson_over_under(fixture_id)
-                    if poisson_prob >= 72.0: market, probability, details = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%", f"Поасон гол-профил: {round(poisson_prob/30,2)}"
-                    else: market, probability, details = "💎 ГОЛ/ГОЛ - ДА", "79%", "Сблъсък на офанзивни стилове."
-                elif country in GOLDEN_PREMATCH_COUNTRIES: market, probability, details = "🔮 НАД 2.5 ГОЛА В МАЧА", "74%", "Високорезултатни шампионати."
-                else: continue 
-
-                msg = f"""🔮 <b>[POISSON MATHEMATICAL INSIDE]</b>
-────────────────────
-⚽ <b>Среща:</b> <code>{home} vs {away}</code>
-🏆 <b>Турнир:</b> {league} ({country})
-⏱ <b>Час на старт:</b> {date_obj.strftime('%H:%M')}
-────────────────────
-🎯 <b>ПРОГНОЗА ПРЕДИ МАЧА: {market}</b>
-✅ <b>Изчислена вероятност:</b> {probability}"""
-                send_telegram(msg)
-                prematch_sent[key] = time.time()
-                time.sleep(2)
-        except Exception as e: print("Prematch Error:", e)
-        time.sleep(600)
+            time.sleep(300)
+        except Exception as e:
+            print("Prematch Error:", e)
+            time.sleep(30)
 
 if __name__ == "__main__":
     init_database()
-    load_model()
-    t1 = threading.Thread(target=live_analysis_runner)
-    t2 = threading.Thread(target=prematch_expert_runner)
-    t1.start()
-    t2.start()
-    t1.join()
-    t2.join()
+    print("🚀 Системата Syndicate Master Глобален режим се стартира на живо...")
+    
+    live_thread = threading.Thread(target=live_analysis_runner, daemon=True)
+    live_thread.start()
+    
+    prematch_expert_runner()
+
 
 
 
