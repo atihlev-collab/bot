@@ -117,7 +117,6 @@ def fetch_live_odds(fixture_id, market_type="Goals"):
                     if market_type in bet.get("name", ""):
                         values = bet.get("values", [])
                         if isinstance(values, list) and len(values) > 0:
-                            # Извлича безопасно първия активен коефициент в масива
                             return float(values[0].get("odd", 1.85))
     except: pass
     return 1.85
@@ -127,11 +126,8 @@ def calculate_kelly_stake(probability_pct, current_odd):
     if current_odd <= 1.0: return "⚠️ Консервативен залог: 1.0%"
     prob = probability_pct / 100.0
     
-    # Регулиран Кели филтър, за да не изтрива сигнали при по-ниски коефициенти
     kelly_f = (prob * current_odd - (1 - prob)) / (current_odd - 1)
     if kelly_f <= 0: 
-        # Вместо да изтриваме сигнала, ако няма перфектно математическо предимство,
-        # налагаме твърд консервативен залог от 1%, за да не изпускаш мачове!
         return "⚠️ КОНСЕРВАТИВЕН ЗАЛОГ: 1.0% от банката"
         
     safe_stake = round(kelly_f * 0.25 * 100, 1)
@@ -202,18 +198,20 @@ def live_analysis_runner():
                 stats = safe_api_get("fixtures/statistics", {"fixture": fixture_id})
                 if not stats or len(stats) < 2: continue
 
-                # НАПЪЛНО КОРЕКТНО РАЗДЕЛЯНЕ НА СТАТИСТИКАТА
+                # НАПЪЛНО КОРИГИРАНО И СИГУРНО РАЗДЕЛЯНЕ НА СТАТИСТИКАТА С ИНДЕКСИ
                 home_id = match["teams"]["home"]["id"]
                 home_stats, away_stats = [], []
                 
                 try:
-                    if stats[0].get("team", {}).get("id") == home_id:
-                        home_stats = stats[0].get("statistics", [])
-                        away_stats = stats[1].get("statistics", [])
-                    else:
-                        home_stats = stats[1].get("statistics", [])
-                        away_stats = stats[0].get("statistics", [])
-                except:
+                    if isinstance(stats, list) and len(stats) >= 2:
+                        if stats[0].get("team", {}).get("id") == home_id:
+                            home_stats = stats[0].get("statistics", [])
+                            away_stats = stats[1].get("statistics", [])
+                        else:
+                            home_stats = stats[1].get("statistics", [])
+                            away_stats = stats[0].get("statistics", [])
+                except Exception as parse_err:
+                    print(f"Грешка при парсване на отбори: {parse_err}")
                     continue
 
                 if not home_stats or not away_stats: continue
@@ -246,7 +244,7 @@ def live_analysis_runner():
                 home_name = match["teams"]["home"]["name"]
                 away_name = match["teams"]["away"]["name"]
 
-                required_pressure = 55 # Намален на 55 за по-бързо задействане на головете
+                required_pressure = 55 
 
                 # 📐 ПАЗАР 1: КОРНЕРИ
                 if minute >= 74 and (ah + aa >= 28) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 8):
@@ -273,8 +271,6 @@ def live_analysis_runner():
 
                 if market and confidence >= 70:
                     live_odd = fetch_live_odds(fixture_id, market_type_odds)
-                    
-                    # Разхлабваме защитния лимит до 1.50, за да хващаме ранни голове
                     if live_odd < 1.50: continue
                     
                     stake_info = calculate_kelly_stake(confidence, live_odd)
@@ -422,6 +418,7 @@ if __name__ == "__main__":
     live_thread.start()
     
     prematch_expert_runner()
+
 
 
 
