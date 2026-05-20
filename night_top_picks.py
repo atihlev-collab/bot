@@ -1,85 +1,57 @@
+# =========================================================
+# SYNDICATE MASTER - NIGHT TOP PICKS (BALANCED PRO)
+# TARGET: 1-3 TOP QUALITY NIGHT PICKS (LATAM/USA)
+# =========================================================
+
+import time
 import requests
-import json
-import os
 import asyncio
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
+from datetime import datetime
 from telegram import Bot
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
 BASE_URL = "https://api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
-TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
-GOLDEN_NIGHT_COUNTRIES = ["USA", "Brazil", "Argentina", "Chile", "Colombia", "Mexico", "Canada", "Ecuador", "Peru", "Japan", "South Korea", "Australia"]
-BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "friendly"]
-
-def safe_api_get(endpoint, params=None):
+def send_telegram(message):
     try:
-        r = requests.get(f"{BASE_URL}/{endpoint}", headers=HEADERS, params=params, timeout=12)
-        if r.status_code == 200: return r.json().get("response", [])
-    except: pass
-    return []
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="HTML"))
+        loop.close()
+    except Exception as e:
+        print("Telegram Error:", e)
 
 def get_night_picks():
-    now_sofia = datetime.now(TZ)
-    today_str = now_sofia.strftime("%Y-%m-%d")
-    tomorrow_str = (now_sofia + timedelta(days=1)).strftime("%Y-%m-%d")
-    all_fixtures = safe_api_get("fixtures", {"date": today_str}) + safe_api_get("fixtures", {"date": tomorrow_str})
-    scored_matches = []
-    seen_ids = set()
+    print("🌙 Сканиране на нощния тираж за Латам/USA мачове...")
+    today = datetime.now().strftime("%Y-%m-%d")
+    matches = requests.get(f"{BASE_URL}/fixtures", headers=HEADERS, params={"date": today}).json().get("response", [])
     
-    for m in all_fixtures:
-        fixture_id = m["fixture"]["id"]
-        if fixture_id in seen_ids: continue
-        seen_ids.add(fixture_id)
+    selected_picks = []
+    
+    for m in matches:
         if m["fixture"]["status"]["short"] != "NS": continue
         league = m["league"]["name"]
-        country = m["league"]["country"]
-        if any(w in league.lower() for w in BLOCKED_WORDS): continue
-        if country not in GOLDEN_NIGHT_COUNTRIES: continue
-        date_obj = datetime.fromisoformat(m["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
-        if not (0 <= date_obj.hour < 8): continue
         home = m["teams"]["home"]["name"]
         away = m["teams"]["away"]["name"]
         
-        if country in ["USA", "Brazil", "Japan"]:
-            market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
-            prob = 77.5
-        elif country in ["Argentina", "Chile", "Colombia"]:
-            market = "📉 ПОД 2.5/3.5 ГОЛА В МАЧА"
-            prob = 75.0
-        else:
-            market = "🔮 НАД 2.5 ГОЛА В МАЧА"
-            prob = 74.5
+        # Проверяваме дали мачът е в нощните лиги (Бразилия, САЩ, Аржентина, Мексико, Колумбия)
+        latam_leagues = ["MLS", "Serie A", "Liga Profesional", "Liga MX", "Primera A", "Copa Libertadores", "Copa Sudamericana"]
+        if any(l in league for l in latam_leagues) or m["league"]["country"] in ["Brazil", "USA", "Argentina", "Mexico", "Colombia"]:
             
-        scored_matches.append({
-            "text": f"⚽ <b>{home} vs {away}</b>\n🏆 {league} ({country})\n⏱ Старт: <b>{date_obj.strftime('%H:%M')} ч.</b>\n🎯 Прогноза: {market}\n📈 AI Вероятност: {prob}%\n",
-            "prob": prob
-        })
-        
-    scored_matches.sort(key=lambda x: x["prob"], reverse=True)
-    
-    # 🎯 ДИНАМИЧНОСТ: Взима най-доброто (от 1 до 3 мача), без да блокира
-    top_night = scored_matches[:3]
-    
-    if len(top_night) == 0:
-        return "🌙 <b>AI НОЩЕН ФИШ:</b> Няма сигурни нощни мачове (00:00 - 08:00) за тази нощ."
-        
-    message = f"🌙 <b>AI VIP НОЩЕН ФИШ (00:00 - 08:00)</b>\n"
-    message += f"📅 Дата: {now_sofia.strftime('%d.%m.%Y')} | ⏱ Брой събития: {len(top_night)}\n"
-    message += "────────────────────\n\n"
-    for idx, match in enumerate(top_night, 1):
-        message += f"{idx}. {match['text']}\n"
-    message += "────────────────────\n"
-    message += "💵 <i>Препоръка: Използвайте залог с 2% от банката!</i>"
-    return message
+            # Тъй като нощните лиги са изключително резултатни, залагаме автоматично за голове
+            selected_picks.append(f"🌙 {home} vs {away}\n🏆 {league}\n🎯 <b>Прогноза: НАД 1.5 ГОЛА В МАЧА</b>\n")
+            
+        if len(selected_picks) >= 3:
+            break
 
-async def main():
-    text_msg = get_night_picks()
-    await bot.send_message(chat_id=CHAT_ID, text=text_msg, parse_mode="HTML")
+    if selected_picks:
+        msg = "🌙 <b>[AI НОЩЕН ТОП ФИШ]</b> 🌙\n\n" + "\n".join(selected_picks) + "\n💼 <i>Препоръчителен залог: 2.5% от банката</i>\n🤖 Syndicate Master Pro"
+        send_telegram(msg)
+    else:
+        msg = "🌙 <b>[AI НОЩЕН ТОП ФИШ]</b> 🌙\n\n🔥 Пазар: <b>НАД 0.5 ГОЛА ПЪРВО ПОЛУВРЕМЕ</b> на живо за нощните мачове от Южна Америка!\n🤖 Система Синдикат"
+        send_telegram(msg)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-
+    get_night_picks()
