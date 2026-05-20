@@ -193,7 +193,7 @@ def live_analysis_runner():
                 if minute >= 74 and (ah + aa >= 28) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 8):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 82
-                # ⚽ ПАЗАР 2: СТАТИСТИЧЕСКИ НАД 1.5/2.5 ГОЛА (Оптимизиран)
+                # ⚽ ПАЗАР 2: СТАТИСТИЧЕСКИ НАД 1.5/2.5 ГОЛА
                 elif 30 <= minute <= 74 and total_goals <= 1 and best_pressure >= required_pressure and ah >= 8 and aa >= 8:
                     market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = min(best_pressure + 4, 95)
@@ -321,6 +321,7 @@ if __name__ == "__main__":
     live_thread.start()
     
     prematch_expert_runner()
+
 
 
 
