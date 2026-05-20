@@ -1,6 +1,7 @@
 # =========================================================
-# SYNDICATE MASTER GLOBAL AI SYSTEM - STABLE VERSION
+# SYNDICATE MASTER GLOBAL AI SYSTEM - ULTRA LIGHT STABLE
 # LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: SHARP DROPS
+# TARGET: 3-5 HIGH VALUE VALUE SIGNALS PER DAY
 # =========================================================
 
 import time
@@ -12,14 +13,9 @@ import os
 import math
 import json
 from datetime import datetime
+from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-
-try:
-    from ml_model import predict_btts, predict_over, train_model, load_model
-except ImportError:
-    print("❌ Критична грешка: Файлът ml_model.py липсва!")
-    exit(1)
 
 BASE_URL = "https://api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
@@ -165,7 +161,6 @@ def live_analysis_runner():
                 home_id = match["teams"]["home"]["id"]
                 home_stats, away_stats = [], []
                 
-                # Изчистена и подсигурена логика без сложни проверки
                 for item in stats:
                     if item.get("team", {}).get("id") == home_id:
                         home_stats = item.get("statistics", [])
@@ -187,15 +182,6 @@ def live_analysis_runner():
                 best_pressure = max(home_pressure, away_pressure)
                 dominance = abs(home_pressure - away_pressure)
 
-                tempo = (ah + aa) / 50 if (ah + aa) > 0 else 0
-                activity = (sh + sa) / 10 if (sh + sa) > 0 else 0
-
-                btts_prob = predict_btts(sh, sa, ah, aa, total_goals)
-                over_prob = predict_over(sh, sa, ah, aa, total_goals)
-
-                score_btts = (btts_prob * 0.5 + tempo * 0.3 + activity * 0.2) if btts_prob is not None else 0.0
-                score_over = (over_prob * 0.6 + tempo * 0.3 + activity * 0.1) if over_prob is not None else 0.0
-
                 market = None
                 confidence = min(best_pressure, 95)
                 home_name = match["teams"]["home"]["name"]
@@ -203,18 +189,15 @@ def live_analysis_runner():
 
                 required_pressure = 55 
 
+                # 📐 ПАЗАР 1: КОРНЕРИ
                 if minute >= 74 and (ah + aa >= 28) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 8):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 82
-                elif score_btts > 0.55 and total_goals <= 2 and max(sh, sa) >= 2:
-                    market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
-                    confidence = round(score_btts * 100)
-                elif score_over > 0.52 and max(sh, sa) >= 2:
-                    market = f"🔮 НАД {total_goals + 1}.5 ГОЛА В МАЧА"
-                    confidence = round(score_over * 100)
+                # ⚽ ПАЗАР 2: СТАТИСТИЧЕСКИ НАД 1.5/2.5 ГОЛА (Оптимизиран)
                 elif 30 <= minute <= 74 and total_goals <= 1 and best_pressure >= required_pressure and ah >= 8 and aa >= 8:
                     market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = min(best_pressure + 4, 95)
+                # 🔥 ПАЗАР 3: ДОМИНАНТНОСТ (СЛЕДВАЩ ГОЛ)
                 elif best_pressure >= 55 and dominance >= 10 and max(sh, sa) >= 2:
                     if home_pressure > away_pressure: market = f"🎯 СЛЕДВАЩ ГОЛ: ДОМАКИН ({home_name})"
                     else: market = f"🎯 СЛЕДВАЩ ГОЛ: ГОСТ ({away_name})"
@@ -338,6 +321,7 @@ if __name__ == "__main__":
     live_thread.start()
     
     prematch_expert_runner()
+
 
 
 
