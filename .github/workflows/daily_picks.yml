@@ -2,9 +2,8 @@ name: Daily Top Picks Selector
 
 on:
   schedule:
-    # 07:12 UTC = 10:12 българско време (избягва натоварената 00-на минута)
     - cron: '12 7 * * *'
-  workflow_dispatch: # Вълшебният бутон за ръчно пускане
+  workflow_dispatch:
 
 jobs:
   run-daily:
@@ -22,3 +21,4 @@ jobs:
         pip install requests python-telegram-bot
     - name: Execute Daily Picks
       run: python daily_top_picks.py
+
