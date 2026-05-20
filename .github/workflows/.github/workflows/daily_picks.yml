@@ -1,29 +1,26 @@
-name: Daily & Night Picks Orchestrator
+name: Daily Top Picks Selector
 
 on:
   schedule:
-    # 07:00 UTC = 10:00 часа сутринта българско време
-    - cron: '0 7 * * *'
-    # 17:00 UTC = 20:00 часа вечерта българско време
-    - cron: '0 17 * * *'
-  workflow_dispatch: # Общият бутон за ръчно пускане по всяко време
+    # 07:12 UTC = 10:12 българско време (избягва натоварената 00-на минута)
+    - cron: '12 7 * * *'
+  workflow_dispatch: # Вълшебният бутон за ръчно пускане
 
 jobs:
-  run-picks:
+  run-daily:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository Code
+    - name: Checkout Code
       uses: actions/checkout@v4
-    - name: Set up Python Environment
+    - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-    - name: Install System Dependencies
+    - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
         pip install requests python-telegram-bot
-    - name: Execute Top 3 Daily Picks
+    - name: Execute Daily Picks
       run: python daily_top_picks.py
-    - name: Execute VIP Night Picks
-      run: python night_top_picks.py
+
 
