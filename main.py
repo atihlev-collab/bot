@@ -110,19 +110,16 @@ def calculate_radar_pressure(team_stats_list, goals_scored, elapsed_minute):
     corners = extract(team_stats_list, "Corner Kicks")
     attacks = extract(team_stats_list, "Dangerous Attacks")
 
-    # Формула за среден интензитет на опасните атаки в минута (Атакуващо темпо)
     attack_rate = (attacks / elapsed_minute) * 100
     
-    # Изчисляване на чисти точки по модела на Bet365 Радар
     radar_points = 0
-    radar_points += (shots_on * 10)    # Всеки точен удар вдига стрелката рязко (+10 точки)
-    radar_points += (corners * 5)      # Всеки спечелен корнер носи сериозен натиск (+5 точки)
-    radar_points += (total_shots * 3)  # Неточните удари също се зачитат за офанзива (+3 точки)
+    radar_points += (shots_on * 10)    
+    radar_points += (corners * 5)      
+    radar_points += (total_shots * 3)  
     
     if attack_rate >= 70: radar_points += 15
     if possession >= 55: radar_points += 5
 
-    # Бонус за отбелязани голове - головете затвърждават реалния натиск
     radar_points += (goals_scored * 15)
 
     return min(int(radar_points), 100)
@@ -177,7 +174,6 @@ def live_analysis_runner():
                 corn_away = extract(away_stats, "Corner Kicks")
                 total_corners = corn_home + corn_away
 
-                # АКТИВИРАНЕ НА РАДАРА: Изчисляване на реалния натиск за всяка минута
                 home_pressure = calculate_radar_pressure(home_stats, home_goals, minute)
                 away_pressure = calculate_radar_pressure(away_stats, away_goals, minute)
                 best_pressure = max(home_pressure, away_pressure)
@@ -188,17 +184,12 @@ def live_analysis_runner():
                 home_name = match["teams"]["home"]["name"]
                 away_name = match["teams"]["away"]["name"]
 
-                # 📐 ПАЗАР 1: КОРНЕРИ (Официален In-Play модел)
                 if minute >= 74 and (ah + aa >= 25) and (corn_home + corn_away >= 6):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 82
-                
-                # ⚽ ПАЗАР 2: ГОЛОВЕ НА ЖИВО (Без измислени лимити за общ брой голове!)
                 elif 30 <= minute <= 77 and best_pressure >= 45 and (ah >= 8 or aa >= 8):
                     market = f"⚽ НАД {total_goals + 0.5} ГОЛА В МАЧА"
                     confidence = min(best_pressure + 5, 95)
-                
-                # 🔥 ПАЗАР 3: СЛЕДВАЩ ГОЛ ЗА ДОМИНИРАЩИЯ ОТБОР (Модел Астон Вила)
                 elif best_pressure >= 48 and dominance >= 12 and (sh >= 2 or sa >= 2):
                     if home_pressure > away_pressure: market = f"🎯 СЛЕДВАЩ ГОЛ: ДОМАКИН ({home_name})"
                     else: market = f"🎯 СЛЕДВАЩ ГОЛ: ГОСТ ({away_name})"
@@ -209,11 +200,13 @@ def live_analysis_runner():
                     sent[f"{fixture_id}_live"] = time.time()
                     save_signal(fixture_id, f"{home_name}-{away_name}", market, best_pressure, confidence, 0.0, stake_info)
                     
+                    # ШАБЛОН НА ЖИВО С ДЪРЖАВА, ЛИГА И ТЕКУЩА МИНУТА
                     msg = f"""👑 <b>[VIP AI RADAR SIGNAL]</b>
 ────────────────────
 ⚽ <b>Мач:</b> <code>{home_name} vs {away_name}</code>
-🏆 <b>Лига:</b> {league} ({country})
-⏱ <b>Минута:</b> {minute}'  |  📊 <b>Резултат:</b> {score}
+🌍 <b>Държава:</b> {country}
+🏆 <b>Лига:</b> {league}
+⏱️ <b>Текуща минута:</b> {minute}'  |  📊 <b>Резултат:</b> {score}
 ────────────────────
 📈 <b>Радар Натиск:</b> Дом: {home_pressure}% | Гост: {away_pressure}%
 📐 <b>Корнери:</b> {total_corners}  |  🔥 Макс натиск: {best_pressure}%
@@ -249,6 +242,16 @@ def prematch_expert_runner():
                 home = m["teams"]["home"]["name"]
                 away = m["teams"]["away"]["name"]
                 country = m["league"]["country"]
+                
+                # Извличане и конвертиране на точния начален час
+                match_date_raw = m["fixture"]["date"]
+                try:
+                    # Изрязване и форматиране за Sofia време (HH:MM)
+                    match_time_obj = datetime.fromisoformat(match_date_raw.replace("Z", "+00:00"))
+                    # Локално форматиране на часа за България (+3 часа спрямо UTC през лятото)
+                    start_time = (match_time_obj + timedelta(hours=3)).strftime("%H:%M")
+                except:
+                    start_time = "Предстоящ"
 
                 odds_response = safe_api_get("odds", {"fixture": fixture_id, "bookmaker": 8, "bet": 1})
                 current_home_odd, current_away_odd = 0.0, 0.0
@@ -276,10 +279,14 @@ def prematch_expert_runner():
 
                             if home_drop >= 10.0 and current_home_odd < historical["home"]:
                                 stake_info = calculate_dynamic_stake(85)
+                                
+                                # ШАБЛОН ПРЕДИ МАЧ С ДЪРЖАВА, ЛИГА И ЧАС НА ЗАПОЧВАНЕ
                                 msg = f"""🔥 <b>[SHARP MONEY ALERT - КРАЕН ИЗХОД 1]</b>
 ────────────────────
 ⚽ <b>Среща:</b> <code>{home} vs {away}</code>
-🏆 <b>Турнир:</b> {league} ({country})
+🌍 <b>Държава:</b> {country}
+🏆 <b>Турнир:</b> {league}
+⏱️ <b>Час на започване:</b> {start_time} ч. (БГ Време)
 ────────────────────
 📉 <b>Първоначален коефициент:</b> {historical['home']}
 📉 <b>Нов паднал коефициент:</b> <code>{current_home_odd}</code> (Спад с -{round(home_drop, 1)}%)
@@ -294,10 +301,14 @@ def prematch_expert_runner():
 
                             elif away_drop >= 10.0 and current_away_odd < historical["away"]:
                                 stake_info = calculate_dynamic_stake(85)
+                                
+                                # ШАБЛОН ПРЕДИ МАЧ С ДЪРЖАВА, ЛИГА И ЧАС НА ЗАПОЧВАНЕ
                                 msg = f"""🔥 <b>[SHARP MONEY ALERT - КРАЕН ИЗХОД 2]</b>
 ────────────────────
 ⚽ <b>Среща:</b> <code>{home} vs {away}</code>
-🏆 <b>Турнир:</b> {league} ({country})
+🌍 <b>Държава:</b> {country}
+🏆 <b>Турнир:</b> {league}
+⏱️ <b>Час на започване:</b> {start_time} ч. (БГ Време)
 ────────────────────
 📉 <b>Първоначален коефициент:</b> {historical['away']}
 📉 <b>Нов паднал коефициент:</b> <code>{current_away_odd}</code> (Спад с -{round(away_drop, 1)}%)
@@ -322,6 +333,7 @@ if __name__ == "__main__":
     live_thread.start()
     
     prematch_expert_runner()
+
 
 
 
