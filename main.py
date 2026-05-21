@@ -1,6 +1,6 @@
 # =========================================================
 # ULTIMATE MASTERPIECE TIPSTER AI SYSTEM (main.py)
-# RAPIDAPI COMPATIBLE STANDARD EDITION
+# RAPIDAPI COMPATIBLE STANDARD EDITION - FINAL FIXED
 # LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: POISSON, SHARP 1X2 DROPS
 # AUTOMATIC NIGHTLY MACHINE LEARNING PRE-TRAINING AT 04:00
 # =========================================================
@@ -20,7 +20,7 @@ from telegram import Bot
 # Автоматично зареждане от твоя файл config.py
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
-# Импортиране на твоите ML функции от ml_model.py
+# ... (Импортиране на твоите ML функции от ml_model.py)
 try:
     from ml_model import predict_btts, predict_over, train_model, load_model
 except ImportError:
@@ -31,7 +31,6 @@ except ImportError:
 # CONFIG & SYSTEM SETUP (RAPIDAPI EXACT FORMAT)
 # =========================================================
 
-BASE_URL = "https://rapidapi.com"
 HEADERS = {
     "x-rapidapi-host": "://rapidapi.com",
     "x-rapidapi-key": API_KEY
@@ -108,9 +107,9 @@ def send_telegram(message):
 
 def safe_api_get(endpoint, params=None):
     try:
-        # ТОЧНО СГЛОБЯВАНЕ ЗА ДА НЯМА ДУБЛИРАНЕ НА НАКЛОНЕНИ ЧЕРТИ И ВЕРСИИ
         clean_endpoint = endpoint.lstrip('/')
-        url = f"{BASE_URL}/{clean_endpoint}"
+        # ФИКСИРАН ПРАВИЛЕН АДРЕС ПО СТАНДАРТА НА RAPIDAPI:
+        url = f"https://://rapidapi.com/v3/{clean_endpoint}"
         response = requests.get(url, headers=HEADERS, params=params, timeout=10)
         
         print(f"📡 [API CHECK] URL: {url} | Status Code: {response.status_code}")
@@ -234,9 +233,9 @@ def live_analysis_runner():
                 sa = extract(away_stats, "Shots on Goal")
                 ah = extract(home_stats, "Dangerous Attacks")
                 aa = extract(away_stats, "Dangerous Attacks")
-                corn_home = extract(home_stats, "Corner Kicks")
-                corn_away = extract(away_stats, "Corner Kicks")
-                total_corners = corn_home + corn_away
+                corners_home = extract(home_stats, "Corner Kicks")
+                corners_away = extract(away_stats, "Corner Kicks")
+                total_corners = corners_home + corners_away
 
                 home_pressure, home_xg = calculate_pressure(home_stats)
                 away_pressure, away_xg = calculate_pressure(away_stats)
@@ -278,7 +277,7 @@ def live_analysis_runner():
 
                 if market and confidence >= 70:
                     stake_info = calculate_dynamic_stake(confidence)
-                    msg = f"""👑 <b>[VIP LIVE AI SIGNAL]</b>\n⚽ <b>Мач:</b> {home_name} vs {away_name}\n🎯 <b>ПРОГНОЗА: {market}</b>"""
+                    msg = f"👑 <b>[VIP LIVE AI SIGNAL]</b>\n⚽ <b>Мач:</b> {home_name} vs {away_name}\n🎯 <b>ПРОГНОЗА: {market}</b>"
                     send_telegram(msg)
                     save_signal(fixture_id, f"{home_name}-{away_name}", market, best_pressure, confidence, 0.0, stake_info)
                     sent[f"{fixture_id}_live"] = time.time()
@@ -326,7 +325,7 @@ def prematch_expert_runner():
                 
                 if odds_response:
                     try:
-                        bookmaker_data = odds_response[0].get("bookmakers", [])
+                        bookmaker_data = odds_response.get("bookmakers", [])
                         for b in bookmaker_data:
                             if b["id"] == 8:
                                 for bet in b.get("bets", []):
@@ -398,6 +397,7 @@ if __name__ == "__main__":
     
     t1.join()
     t2.join()
+
 
 
 
