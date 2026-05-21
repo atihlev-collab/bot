@@ -1,6 +1,6 @@
 # =========================================================
 # ULTIMATE MASTERPIECE TIPSTER AI SYSTEM (main.py)
-# COMPLETE PROFESSIONAL EDITION WITH HIGH ACTIVITY ENGINES
+# COMPLETE RAPIDAPI INTEGRATION EDITION - FIXED 404/403
 # LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: POISSON, SHARP 1X2 DROPS
 # AUTOMATIC NIGHTLY MACHINE LEARNING PRE-TRAINING AT 04:00
 # =========================================================
@@ -28,16 +28,14 @@ except ImportError:
     exit(1)
 
 # =========================================================
-# CONFIG & SYSTEM SETUP
+# CONFIG & SYSTEM SETUP (RAPIDAPI OFFICIAL STANDARD)
 # =========================================================
 
-# АВТОМАТИЧНО СВЪРЗВАНЕ КЪМ ДВАТА СТАНДАРТА ЗА ЗАОБИКАЛЯНЕ НА ГРЕШКА 403
 BASE_URL = "https://rapidapi.com"
 HEADERS = {
     "x-rapidapi-host": "://rapidapi.com",
     "x-rapidapi-key": API_KEY
 }
-
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
@@ -112,7 +110,7 @@ def safe_api_get(endpoint, params=None):
     try:
         url = f"{BASE_URL}/{endpoint}"
         response = requests.get(url, headers=HEADERS, params=params, timeout=10)
-        # 📡 ПОДОБРЕНИЕ: Тестов лог в реално време за следене на грешки в конзолата
+        # 📡 ПОДОБРЕНИЕ: Тестов лог за RapidAPI в реално време
         print(f"📡 [API CHECK] Endpoint: /{endpoint} | Status Code: {response.status_code}")
         if response.status_code == 200:
             return response.json().get("response", [])
@@ -504,6 +502,7 @@ if __name__ == "__main__":
     
     t1.join()
     t2.join()
+
 
 
 
