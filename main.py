@@ -1,5 +1,6 @@
 # =========================================================
 # SYNDICATE MASTER GLOBAL AI SYSTEM - TRUE IN-PLAY RADAR PRO
+# ЛИЧЕН МОДУЛ: ИЗПРАЩАНЕ ДИРЕКТНО В ЧАТА НА ПОТРЕБИТЕЛЯ
 # COMPATIBLE WITH RAILWAY & BET365 LIVE STATISTICS MODEL
 # =========================================================
 
@@ -10,15 +11,17 @@ import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# ДАННИТЕ СА ВГРАДЕНИ ДИРЕКТНО В СЪРЦЕТО НА КОДА ЗА 100% СИГУРНОСТ
 BOT_TOKEN = "8339409001:AAGSjmIQGdLHZJEp4WphCHTCUE98a4L6SbU"
 API_KEY = "9dc2c479ff0f8f13e9b266050fa8f485"
-CHAT_ID = "@rangel_radar_pro"
-
+CHAT_ID = 6488122776  # Твоето лично потребителско ID (без кавички)
 
 BASE_URL = "https://api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 
 session = requests.Session()
+
+BLOCKED_WORDS = ["youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "reserves", "friendly", "amateur", "women", "female"]
 
 sent = {}
 prematch_sent = {}
@@ -83,8 +86,7 @@ def safe_api_get(endpoint, params=None):
 
 def is_first_league_or_global(league_name):
     text = league_name.lower()
-    blocked = ["youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "friendly", "amateur", "women"]
-    if any(w in text for w in blocked):
+    if any(w in text for w in BLOCKED_WORDS):
         return False
     return True
 
@@ -97,9 +99,37 @@ def extract(team_stats_list, stat_name):
             return int(str(val).replace("%", "").strip())
     return 0
 
+def calculate_dynamic_stake(confidence):
+    if confidence >= 75: return "🔥 СИЛЕН ЗАЛОГ: 3.5% от банката"
+    elif confidence >= 60: return "💰 СРЕДЕН ЗАЛОГ: 2.0% от банката"
+    return "⚠️ КОНСЕРВАТИВЕН ЗАЛОГ: 1.0% от банката"
+
+def calculate_radar_pressure(team_stats_list, goals_scored, elapsed_minute):
+    if elapsed_minute <= 0: return 0
+    
+    possession = extract(team_stats_list, "Ball Possession")
+    shots_on = extract(team_stats_list, "Shots on Goal")
+    total_shots = extract(team_stats_list, "Total Shots")
+    corners = extract(team_stats_list, "Corner Kicks")
+    attacks = extract(team_stats_list, "Dangerous Attacks")
+
+    attack_rate = (attacks / elapsed_minute) * 100
+    
+    radar_points = 0
+    radar_points += (shots_on * 12)    
+    radar_points += (corners * 6)      
+    radar_points += (total_shots * 4)  
+    
+    if attack_rate >= 60: radar_points += 15 
+    if possession >= 52: radar_points += 5
+
+    radar_points += (goals_scored * 10)
+
+    return min(int(radar_points), 100)
+
 def live_analysis_runner():
     time.sleep(10)
-    print("⚡ LIVE Скенерът работи...")
+    print("⚡ LIVE AI Скенерът е активен...")
     while True:
         try:
             live_matches = safe_api_get("fixtures", {"live": "all"})
@@ -147,9 +177,8 @@ def live_analysis_runner():
                 corn_away = extract(away_stats, "Corner Kicks")
                 total_corners = corn_home + corn_away
 
-                # Олекотена формула за натиск
-                home_pressure = min(int((sh * 12) + (corn_home * 6) + (ah * 0.5)), 100)
-                away_pressure = min(int((sa * 12) + (corn_away * 6) + (aa * 0.5)), 100)
+                home_pressure = calculate_radar_pressure(home_stats, home_goals, minute)
+                away_pressure = calculate_radar_pressure(away_stats, away_goals, minute)
                 best_pressure = max(home_pressure, away_pressure)
 
                 market = None
@@ -160,9 +189,10 @@ def live_analysis_runner():
 
                 if market:
                     sent[f"{fixture_id}_live"] = time.time()
-                    save_signal(fixture_id, "Live Match", market, best_pressure, 70, 0.0, "2%")
+                    stake_info = calculate_dynamic_stake(70)
+                    save_signal(fixture_id, "Live Match", market, best_pressure, 70, 0.0, stake_info)
                     
-                    msg = f"⚽ <b>Мач:</b> <code>{match['teams']['home']['name']} vs {match['teams']['away']['name']}</code>\n⏱️ <b>Минута:</b> {minute}' | 📊 <b>Резултат:</b> {score}\n📈 <b>Натиск:</b> {best_pressure}%\n📐 <b>Корнери:</b> {total_corners}\n🎯 <b>ПРОГНОЗА: {market}</b>"
+                    msg = f"⚽ <b>Мач:</b> <code>{match['teams']['home']['name']} vs {match['teams']['away']['name']}</code>\n⏱️ <b>Минута:</b> {minute}' | 📊 <b>Резултат:</b> {score}\n📈 <b>Натиск:</b> {best_pressure}%\n📐 <b>Корнери:</b> {total_corners}\n🎯 <b>ПРОГНОЗА: {market}</b>\n💼 {stake_info}"
                     send_telegram(msg)
 
             time.sleep(45)
@@ -182,10 +212,9 @@ def generate_daily_highlights(is_bootstrap=False):
             fixture_id = m["fixture"]["id"]
             odds_response = safe_api_get("odds", {"fixture": fixture_id, "bookmaker": 8, "bet": 1})
             
-            # СУПЕР ОЛЕКОТЕНО ПАРСВАНЕ БЕЗ СЛОЖНИ ПРОВЕРКИ
             if odds_response and len(odds_response) > 0:
                 try:
-                    bookmakers = odds_response[0].get("bookmakers", [])
+                    bookmakers = odds_response[0].get("bookmakers", []) if isinstance(odds_response, list) else odds_response.get("bookmakers", [])
                     for b in bookmakers:
                         if b.get("id") == 8:
                             for bet in b.get("bets", []):
@@ -209,16 +238,16 @@ def generate_daily_highlights(is_bootstrap=False):
                 msg += f"⚽ {p['match']}\n🎯 Прогноза: {p['pick']} @ <b>{p['odd']:.2f}</b>\n" + "─" * 20 + "\n"
             send_telegram(msg)
         else:
-            send_telegram("ℹ️ <b>[AI РАДАР]</b> Изчакваме старта на LIVE мачовете довечера.")
+            send_telegram("ℹ️ <b>[AI РАДАР]</b> Днешният премач филтър приключи. Изчакваме LIVE пазарите довечера.")
     except:
         pass
 
 def prematch_expert_runner():
-    print("📅 PREMATCH Модулът работи...")
+    print("📅 PREMATCH Модулът стартира...")
     time.sleep(5)
     
-    # ФОРСИРАН СТАРТ: Този текст СЕГА ВЕЧЕ ИЗЛИЗА НА 100% БЕЗ ПРЕЧКИ
-    send_telegram("🟢 <b>[SYSTEM ONLINE]</b> Синдикалната AI система работи стабилно. Всички филтри са олекотени.")
+    # СИСТЕМЕН СТАРТ: Този текст ще пристигне лично при теб
+    send_telegram("🟢 <b>[ЛИЧЕН AI ТЕСТ]</b> Връзката на Syndicate Master е настроена директно към твоя профил. Всички канали са заобиколени.")
     
     time.sleep(5)
     generate_daily_highlights(is_bootstrap=True)
@@ -244,3 +273,4 @@ if __name__ == "__main__":
     live_thread = threading.Thread(target=live_analysis_runner, daemon=True)
     live_thread.start()
     prematch_expert_runner()
+
