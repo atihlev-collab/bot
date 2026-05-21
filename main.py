@@ -1,8 +1,8 @@
-======================================================
+#==========================================================#
 # SYNDICATE MASTER GLOBAL AI SYSTEM - TRUE IN-PLAY RADAR PRO
 # LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: SHARP DROPS
 # COMPATIBLE WITH RAILWAY & BET365 LIVE STATISTICS MODEL
-# =========================================================
+# =========================================================#
 
 import time
 import sqlite3
