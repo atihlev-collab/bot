@@ -31,8 +31,13 @@ except ImportError:
 # CONFIG & SYSTEM SETUP
 # =========================================================
 
-BASE_URL = "https://api-football.com"
-HEADERS = {"x-apisports-key": API_KEY}
+# АВТОМАТИЧНО СВЪРЗВАНЕ КЪМ ДВАТА СТАНДАРТА ЗА ЗАОБИКАЛЯНЕ НА ГРЕШКА 403
+BASE_URL = "https://api-sports.io"
+HEADERS = {
+    "x-apisports-key": API_KEY,
+    "x-rapidapi-key": API_KEY
+}
+
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
