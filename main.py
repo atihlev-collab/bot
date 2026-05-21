@@ -126,8 +126,7 @@ def calculate_radar_pressure(team_stats_list, goals_scored, elapsed_minute):
     return min(int(radar_points), 100)
 
 def live_analysis_runner():
-    time.sleep(10)
-    print("⚡ LIVE Скенерът е активен...")
+    print("⚡ LIVE Скенерът започна работа...")
     while True:
         try:
             live_matches = safe_api_get("fixtures", {"live": "all"})
@@ -236,22 +235,16 @@ def generate_daily_highlights():
                 msg += f"⚽ {p['match']}\n🎯 Прогноза: {p['pick']} @ <b>{p['odd']:.2f}</b>\n" + "─" * 20 + "\n"
             send_telegram(msg)
         else:
-            send_telegram("ℹ️ <b>[AI РАДАР]</b> Данните от Ultra плана за днес бяха проверени успешно. Изчакваме LIVE старта на срещите довечера.")
+            send_telegram("ℹ️ <b>[AI РАДАР]</b> Премач филтърът приключи. Изчакваме LIVE пазарите довечера.")
     except:
         pass
 
 def prematch_expert_runner():
     print("📅 PREMATCH Модулът стартира...")
-    time.sleep(5)
-    
-    send_telegram("🟢 <b>[ULTRA PLAN ACTIVE]</b> Система изгря на 100%! Всички мрежови пакети и библиотеки са инсталирани правилно в Railway.")
-    
-    time.sleep(5)
     generate_daily_highlights()
     
     while True:
         try:
-            # Използваме стандартно отместване за БГ време (+3 часа за лятно време спрямо UTC)
             now_bg_hour = (datetime.utcnow() + timedelta(hours=3)).hour
             if now_bg_hour == 9 and not daily_reports_sent["morning"]:
                 generate_daily_highlights()
@@ -268,9 +261,17 @@ def prematch_expert_runner():
 
 if __name__ == "__main__":
     init_database()
+    
+    # ПРИНУДИТЕЛЕН СТАРТОВ СИГНАЛ: Веднага в секундата на пускане
+    send_telegram("🟢 <b>[SYSTEM ONLINE]</b> Изправният Синдикален AI Радар стартира мултинишково сканиране!")
+    
+    # Стартиране на Live скенера в паралелна, независима нишка
     live_thread = threading.Thread(target=live_analysis_runner, daemon=True)
     live_thread.start()
+    
+    # Стартиране на Премач скенера в основната нишка
     prematch_expert_runner()
+
 
 
 
