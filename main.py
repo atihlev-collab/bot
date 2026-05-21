@@ -13,9 +13,9 @@ from zoneinfo import ZoneInfo
 
 BOT_TOKEN = "8339409001:AAGSjmIQGdLHZJEp4WphCHTCUE98a4L6SbU"
 API_KEY = "9dc2c479ff0f8f13e9b266050fa8f485"
-CHAT_ID = 6488122776  # Твоето личен чат ID
+CHAT_ID = 6488122776  # Твоят личен чат
 
-# ПОПРАВЕНО: Точният платен адрес от твоя личен профил в API-Sports
+# ПОПРАВЕНО: Точният платен адрес от твоя Ultra профил в API-Sports
 BASE_URL = "https://api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 
@@ -246,7 +246,6 @@ def prematch_expert_runner():
     print("📅 PREMATCH Модулът стартира...")
     time.sleep(5)
     
-    # СЪОБЩЕНИЕ ЗА СТАРТ: Сега вече ще излезе веднага в личния ти чат
     send_telegram("🟢 <b>[ULTRA PLAN ACTIVE]</b> Системата се свърза успешно с футболния сървър на API-Sports! Сканирането започна на чисто.")
     
     time.sleep(5)
@@ -273,5 +272,6 @@ if __name__ == "__main__":
     live_thread = threading.Thread(target=live_analysis_runner, daemon=True)
     live_thread.start()
     prematch_expert_runner()
+
 
 
