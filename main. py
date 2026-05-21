@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 # ИСТИНСКИ ХАРДКОДНАТИ ДАННИ ДИРЕКТНО В ЯДРОТО ЗА СИГУРНОСТ
 BOT_TOKEN = "8339409001:AAGSjmIQGdLHZJEp4WphCHTCUE98a4L6SbU"
 API_KEY = "9dc2c479ff0f8f13e9b266050fa8f485"
-CHAT_ID = "@rangel_signals2"
+CHAT_ID = "@rangel_radar_pro"
   
 
 BASE_URL = "https://api-sports.io"
