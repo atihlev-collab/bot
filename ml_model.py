@@ -1,112 +1,53 @@
-# =========================================================
-# AUTOMATED SELF-LEARNING MACHINE LEARNING MODEL (ml_model.py)
-# RANDOM FOREST CLASSIFIER - PRO ULTRA EDITION
-# =========================================================
-
-import json
 import os
+import json
 import joblib
-import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-BTTS_MODEL = "ml_btts.pkl"
-OVER_MODEL = "ml_over.pkl"
-DATA_FILE = "dataset.json"
+def make_features(sh, sa, ah, aa, total_goals):
+    return [[sh, sa, ah, aa, total_goals]]
 
-btts_model = None
-over_model = None
+def predict_btts(sh, sa, ah, aa, total_goals):
+    try:
+        model = load_model("ml_btts.pkl")
+        if model:
+            features = make_features(sh, sa, ah, aa, total_goals)
+            return float(model.predict_proba(features)[0][1])
+    except: pass
+    return 0.54
 
-def load_model():
-    global btts_model, over_model
+def predict_over(sh, sa, ah, aa, total_goals):
+    try:
+        model = load_model("ml_over.pkl")
+        if model:
+            features = make_features(sh, sa, ah, aa, total_goals)
+            return float(model.predict_proba(features)[0][1])
+    except: pass
+    return 0.51
 
-    if os.path.exists(BTTS_MODEL):
-        btts_model = joblib.load(BTTS_MODEL)
-        print("✅ AI Моделът за Гол/Гол е зареден успешно.")
-    else:
-        print("⚠️ Липсва ml_btts.pkl. Използва се математическа базова линия.")
-
-    if os.path.exists(OVER_MODEL):
-        over_model = joblib.load(OVER_MODEL)
-        print("✅ AI Моделът за Над 2.5 е зареден успешно.")
-    else:
-        print("⚠️ Липсва ml_over.pkl. Използва се математическа базова линия.")
-
-    print("🔥 AI PRO v1000 READY")
-
-
-def make_features(shots_h, shots_a, att_h, att_a, goals):
-    """ Уеднаквена математическа матрица за премахване на риска от разминаване """
-    total_shots = shots_h + shots_a
-    total_attacks = att_h + att_a
-    shots_diff = abs(shots_h - shots_a)
-    
-    return [
-        shots_h,
-        shots_a,
-        att_h,
-        att_a,
-        goals,
-        total_shots,
-        total_attacks,
-        shots_diff
-    ]
-
+def load_model(filename):
+    if os.path.exists(filename):
+        try: return joblib.load(filename)
+        except: return None
+    return None
 
 def train_model():
-    if not os.path.exists(DATA_FILE):
-        print("❌ no dataset.json found yet.")
-        return
-
+    dataset_file = "dataset.json"
+    if not os.path.exists(dataset_file): return
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except Exception as e:
-        print(f"❌ Грешка при четене на базата: {e}")
-        return
-
-    if len(data) < 100:
-        print(f"⚠️ Малко данни ({len(data)} записа). Моделът ще се тренира след 100+ мача.")
-        return
-
-    X, y_btts, y_over = [], [], []
-
-    for d in data:
-        features = make_features(
-            d.get("shots_h", 0), 
-            d.get("shots_a", 0), 
-            d.get("att_h", 0), 
-            d.get("att_a", 0), 
-            d.get("goals", 0)
-        )
-        X.append(features)
-        y_btts.append(d.get("btts", 0))
-        y_over.append(d.get("over25", 0))
-
-    X = np.array(X)
-
-    btts = RandomForestClassifier(n_estimators=120, random_state=42)
-    btts.fit(X, y_btts)
-    joblib.dump(btts, BTTS_MODEL)
-
-    over = RandomForestClassifier(n_estimators=120, random_state=42)
-    over.fit(X, y_over)
-    joblib.dump(over, OVER_MODEL)
-
-    print(f"🔥 ИИ УСПЕШНО ПРЕТРЕНИРАН ВЪРХУ {len(data)} МАЧА!")
-
-
-def predict_btts(sh, sa, ah, aa, goals):
-    if btts_model is None: return None
-    features = make_features(sh, sa, ah, aa, goals)
-    try:
-        return btts_model.predict_proba([features])[0][1]
-    except: return None
-
-
-def predict_over(sh, sa, ah, aa, goals):
-    if over_model is None: return None
-    features = make_features(sh, sa, ah, aa, goals)
-    try:
-        return over_model.predict_proba([features])[0][1]
-    except: return None
-
+        with open(dataset_file, "r") as f: data = json.load(f)
+        if len(data) < 10: return
+        X, y_btts, y_over = [], [], []
+        for item in data:
+            X.append([item["sh"], item["sa"], item["ah"], item["aa"], item.get("trigger_total_goals", 0)])
+            y_btts.append(1 if item.get("final_home_goals", 0) > 0 and item.get("final_away_goals", 0) > 0 else 0)
+            y_over.append(1 if (item.get("final_home_goals", 0) + item.get("final_away_goals", 0)) > 2.5 else 0)
+        
+        clf_btts = RandomForestClassifier(n_estimators=100, random_state=42)
+        clf_btts.fit(X, y_btts)
+        joblib.dump(clf_btts, "ml_btts.pkl")
+        
+        clf_over = RandomForestClassifier(n_estimators=100, random_state=42)
+        clf_over.fit(X, y_over)
+        joblib.dump(clf_over, "ml_over.pkl")
+        print("🧠 [ML ENGINE] Моделите бяха обучени успешно!")
+    except: pass
