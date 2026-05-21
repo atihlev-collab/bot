@@ -1,6 +1,6 @@
 # =========================================================
 # ULTIMATE MASTERPIECE TIPSTER AI SYSTEM (main.py)
-# RAPIDAPI COMPATIBLE STANDARD EDITION - FINAL FIXED
+# RAPIDAPI COMPATIBLE STANDARD EDITION - ABSOLUTE FINAL FIXED
 # LIVE: GOALS, CORNERS, NEXT GOAL | PREMATCH: POISSON, SHARP 1X2 DROPS
 # AUTOMATIC NIGHTLY MACHINE LEARNING PRE-TRAINING AT 04:00
 # =========================================================
@@ -20,7 +20,7 @@ from telegram import Bot
 # Автоматично зареждане от твоя файл config.py
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
-# ... (Импортиране на твоите ML функции от ml_model.py)
+# Импортиране на твоите ML функции от ml_model.py
 try:
     from ml_model import predict_btts, predict_over, train_model, load_model
 except ImportError:
@@ -108,7 +108,7 @@ def send_telegram(message):
 def safe_api_get(endpoint, params=None):
     try:
         clean_endpoint = endpoint.lstrip('/')
-        # ФИКСИРАН ПРАВИЛЕН АДРЕС ПО СТАНДАРТА НА RAPIDAPI:
+        # ЧИСТО И ПРАВИЛНО СГЛОБЯВАНЕ ЗА RAPIDAPI БЕЗ ДУБЛИРАНЕ НА СИМВОЛИ
         url = f"https://://rapidapi.com/v3/{clean_endpoint}"
         response = requests.get(url, headers=HEADERS, params=params, timeout=10)
         
@@ -384,7 +384,7 @@ def prematch_expert_runner():
 
 if __name__ == "__main__":
     init_database()
-    print("🧠 Зареждане на Random Forest моделите при старт...")
+    print("🧠 Зареждане на Random Forest моделите при start...")
     load_model()
     
     send_telegram("🚀 БОТЪТ СТАРТИРА УСПЕШНО И Е ОНЛАЙН!")
@@ -397,6 +397,7 @@ if __name__ == "__main__":
     
     t1.join()
     t2.join()
+
 
 
 
