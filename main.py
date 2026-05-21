@@ -484,6 +484,9 @@ if __name__ == "__main__":
     print("🧠 Зареждане на Random Forest моделите при старт...")
     load_model()
     
+    # 🚀 НОВ ТЕСТОВ РЕД: Праща съобщение в секундата на пускане!
+    send_telegram("🚀 БОТЪТ СТАРТИРА УСПЕШНО И Е ОНЛАЙН!")
+    
     # Стартиране на паралелните нишки (Threads)
     t1 = threading.Thread(target=live_analysis_runner)
     t2 = threading.Thread(target=prematch_expert_runner)
@@ -493,6 +496,7 @@ if __name__ == "__main__":
     
     t1.join()
     t2.join()
+
 
 
 
