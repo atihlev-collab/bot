@@ -8,14 +8,12 @@ import time
 import sqlite3
 import threading
 import requests
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta
 
 BOT_TOKEN = "8339409001:AAGSjmIQGdLHZJEp4WphCHTCUE98a4L6SbU"
 API_KEY = "9dc2c479ff0f8f13e9b266050fa8f485"
-CHAT_ID = 6488122776  # Твоят личен чат
+CHAT_ID = 6488122776
 
-# ПОПРАВЕНО: Точният платен адрес от твоя Ultra профил в API-Sports
 BASE_URL = "https://api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 
@@ -199,7 +197,7 @@ def live_analysis_runner():
         except:
             time.sleep(10)
 
-def generate_daily_highlights(is_bootstrap=False):
+def generate_daily_highlights():
     try:
         today = datetime.now().strftime("%Y-%m-%d")
         fixtures = safe_api_get("fixtures", {"date": today})
@@ -214,7 +212,7 @@ def generate_daily_highlights(is_bootstrap=False):
             
             if odds_response and len(odds_response) > 0:
                 try:
-                    bookmakers = odds_response.get("bookmakers", []) if isinstance(odds_response, list) else odds_response.get("bookmakers", [])
+                    bookmakers = odds_response if isinstance(odds_response, list) else odds_response.get("bookmakers", [])
                     for b in bookmakers:
                         if b.get("id") == 8:
                             for bet in b.get("bets", []):
@@ -246,21 +244,22 @@ def prematch_expert_runner():
     print("📅 PREMATCH Модулът стартира...")
     time.sleep(5)
     
-    send_telegram("🟢 <b>[ULTRA PLAN ACTIVE]</b> Системата се свърза успешно с футболния сървър на API-Sports! Сканирането започна на чисто.")
+    send_telegram("🟢 <b>[ULTRA PLAN ACTIVE]</b> Система изгря на 100%! Всички мрежови пакети и библиотеки са инсталирани правилно в Railway.")
     
     time.sleep(5)
-    generate_daily_highlights(is_bootstrap=True)
+    generate_daily_highlights()
     
     while True:
         try:
-            now_bg = datetime.now(ZoneInfo("Europe/Sofia"))
-            if now_bg.hour == 9 and not daily_reports_sent["morning"]:
-                generate_daily_highlights(is_bootstrap=False)
+            # Използваме стандартно отместване за БГ време (+3 часа за лятно време спрямо UTC)
+            now_bg_hour = (datetime.utcnow() + timedelta(hours=3)).hour
+            if now_bg_hour == 9 and not daily_reports_sent["morning"]:
+                generate_daily_highlights()
                 daily_reports_sent["morning"] = True
-            if now_bg.hour == 21 and not daily_reports_sent["evening"]:
-                generate_daily_highlights(is_bootstrap=False)
+            if now_bg_hour == 21 and not daily_reports_sent["evening"]:
+                generate_daily_highlights()
                 daily_reports_sent["evening"] = True
-            if now_bg.hour == 0:
+            if now_bg_hour == 0:
                 daily_reports_sent["morning"] = False
                 daily_reports_sent["evening"] = False
             time.sleep(60)
@@ -272,6 +271,7 @@ if __name__ == "__main__":
     live_thread = threading.Thread(target=live_analysis_runner, daemon=True)
     live_thread.start()
     prematch_expert_runner()
+
 
 
 
