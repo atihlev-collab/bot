@@ -31,7 +31,7 @@ except ImportError:
 # CONFIG & SYSTEM SETUP
 # =========================================================
 
-BASE_URL = "https://api-sports.io"
+BASE_URL = "https://api-football.com"
 HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
