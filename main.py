@@ -32,9 +32,9 @@ except ImportError:
 # =========================================================
 
 # АВТОМАТИЧНО СВЪРЗВАНЕ КЪМ ДВАТА СТАНДАРТА ЗА ЗАОБИКАЛЯНЕ НА ГРЕШКА 403
-BASE_URL = "https://api-sports.io"
+BASE_URL = "https://rapidapi.com"
 HEADERS = {
-    "x-apisports-key": API_KEY,
+    "x-rapidapi-host": "://rapidapi.com",
     "x-rapidapi-key": API_KEY
 }
 
