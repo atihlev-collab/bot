@@ -105,11 +105,14 @@ def send_telegram(message):
 
 def safe_api_get(endpoint, params=None):
     try:
-        response = requests.get(f"{BASE_URL}/{endpoint}", headers=HEADERS, params=params, timeout=10)
+        url = f"{BASE_URL}/{endpoint}"
+        response = requests.get(url, headers=HEADERS, params=params, timeout=10)
+        # 📡 ПОДОБРЕНИЕ: Тестов лог в реално време за следене на грешки в конзолата
+        print(f"📡 [API CHECK] Endpoint: /{endpoint} | Status Code: {response.status_code}")
         if response.status_code == 200:
             return response.json().get("response", [])
-    except:
-        pass
+    except Exception as e:
+        print(f"❌ Критична грешка при връзка с API: {e}")
     return []
 
 def blocked_league(league_name):
@@ -220,7 +223,7 @@ def live_analysis_runner():
                 if len(stats) < 2: continue
 
                 home_id = match["teams"]["home"]["id"]
-                home_stats, away_stats = (stats[0], stats[1]) if stats[0].get("team", {}).get("id") == home_id else (stats[1], stats[0])
+                home_stats, away_stats = (stats, stats) if stats.get("team", {}).get("id") == home_id else (stats, stats)
 
                 # ИЗВЛИЧАНЕ НА СТАТИСТИКА ЗА AI ENGINE
                 sh = extract(home_stats, "Shots on Goal")
@@ -251,22 +254,22 @@ def live_analysis_runner():
                 home_name = match["teams"]["home"]["name"]
                 away_name = match["teams"]["away"]["name"]
 
-                # 📐 ПАЗАР 1: VIP ЛАЙВ КОРНЕРИ В КРАЯ (След 74')
+                # 📐 ПАЗАР 1: VIP ЛАЙВ КОРНЕРИ В КРАЯ (Отпусната линия: 38+ опасни атаки)
                 if minute >= 74 and (ah + aa >= 38) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 10):
                     market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"
                     confidence = 85
                     
-                # ⚽ ПАЗАР 2: ML ЗАКЛЮЧЕНИЕ ЗА ГОЛ-ГОЛ (BTTS)
+                # ⚽ ПАЗАР 2: ML ЗАКЛЮЧЕНИЕ ЗА ГОЛ-ГОЛ (Отпуснат праг > 0.52)
                 elif score_btts > 0.52 and total_goals <= 2:
                     market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"
                     confidence = round(score_btts * 100)
 
-                # ⚽ ПАЗАР 3: ML ЗАКЛЮЧЕНИЕ ЗА НАД 2.5 ГОЛА
+                # ⚽ ПАЗАР 3: ML ЗАКЛЮЧЕНИЕ ЗА НАД 2.5 ГОЛА (Отпуснат праг > 0.50)
                 elif score_over > 0.50:
                     market = f"🔮 НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = round(score_over * 100)
 
-                # ⚽ ПАЗАР 4: И ДВАТА ОТБОРА ИГРАЯТ ОТКРИТО (НАД 1.5 ГОЛА)
+                # ⚽ ПАЗАР 4: И ДВАТА ОТБОРА ИГРАЯТ ОТКРИТО (Праг на натиск: 45)
                 elif 35 <= minute <= 74 and total_goals <= 1 and home_pressure >= 45 and away_pressure >= 45 and ah >= 10 and aa >= 10:
                     market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"
                     confidence = min(best_pressure + 5, 95)
@@ -484,7 +487,7 @@ if __name__ == "__main__":
     print("🧠 Зареждане на Random Forest моделите при старт...")
     load_model()
     
-    # 🚀 НОВ ТЕСТОВ РЕД: Праща съобщение в секундата на пускане!
+    # 🔥 КАРДИНАЛЕН СИГНАЛ ЗА СТАРТ: Потвърждава връзката с Телеграм на секундата!
     send_telegram("🚀 БОТЪТ СТАРТИРА УСПЕШНО И Е ОНЛАЙН!")
     
     # Стартиране на паралелните нишки (Threads)
@@ -496,6 +499,7 @@ if __name__ == "__main__":
     
     t1.join()
     t2.join()
+
 
 
 
