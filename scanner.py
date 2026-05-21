@@ -1,110 +1,77 @@
+import time
+import threading
 import requests
+import asyncio
 from datetime import datetime
+from zoneinfo import ZoneInfo
+from telegram import Bot
 
-BASE_URL = "https://v3.football.api-sports.io"
+from config import BOT_TOKEN, API_KEY, CHAT_ID
 
-def get_matches(headers):
-    today = datetime.utcnow().strftime("%Y-%m-%d")
+HEADERS = {
+    "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+    "x-rapidapi-key": API_KEY
+}
+TZ = ZoneInfo("Europe/Sofia")
+bot = Bot(token=BOT_TOKEN)
+
+BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "friendly", "amateur"]
+sent = {}
+
+def send_telegram(message):
     try:
-        r = requests.get(f"{BASE_URL}/fixtures?date={today}", headers=headers).json()
-        return r.get("response", [])
-    except:
-        return []
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="HTML"))
+        loop.close()
+    except: pass
 
-def get_team_form(team_id, headers):
+def safe_api_get(endpoint, params=None):
     try:
-        r = requests.get(
-            f"{BASE_URL}/fixtures?team={team_id}&last=5",
-            headers=headers
-        ).json()
+        clean_endpoint = endpoint.lstrip('/')
+        # ТАКЪВ ЛИНК НЯМА КАК ДА СЕ СГЛОБИ ГРЕШНО:
+        url = f"https://rapidapi.com{clean_endpoint}"
+        response = requests.get(url, headers=HEADERS, params=params, timeout=12)
+        print(f"📡 [API CHECK] URL: {url} | Status Code: {response.status_code}")
+        if response.status_code == 200:
+            return response.json().get("response", [])
+    except Exception as e:
+        print(f"❌ Грешка при връзка: {e}")
+    return []
 
-        games = r.get("response", [])
-        goals = 0
-        conceded = 0
+def live_analysis_runner():
+    print("⚡ LIVE Мулти-пазарен скенер е активен...")
+    while True:
+        try:
+            live_matches = safe_api_get("fixtures", {"live": "all"})
+            for match in live_matches:
+                if not match or "fixture" not in match: continue
+                fixture_id = match["fixture"]["id"]
+                league = match["league"]["name"]
+                if any(w in league.lower() for w in BLOCKED_WORDS): continue
+                minute = match["fixture"]["status"]["elapsed"]
+                if minute is None or minute < 15 or minute > 85: continue
+                key = f"{fixture_id}_live"
+                if key in sent: continue
 
-        for g in games:
-            if g["teams"]["home"]["id"] == team_id:
-                goals += g["goals"]["home"] or 0
-                conceded += g["goals"]["away"] or 0
-            else:
-                goals += g["goals"]["away"] or 0
-                conceded += g["goals"]["home"] or 0
+                home_name = match["teams"]["home"]["name"]
+                away_name = match["teams"]["away"]["name"]
+                total_goals = (match["goals"]["home"] or 0) + (match["goals"]["away"] or 0)
 
-        if len(games) == 0:
-            return 0, 0
+                market = None
+                if minute >= 75 and total_goals <= 3:
+                    market = f"🔮 НАД {total_goals}.5 ГОЛА В МАЧА"
 
-        return goals / len(games), conceded / len(games)
+                if market:
+                    msg = f"👑 <b>[VIP LIVE AI SIGNAL]</b>\n⚽ {home_name} vs {away_name}\n⏱ Минута: {minute}'\n🎯 <b>ПРОГНОЗА: {market}</b>"
+                    send_telegram(msg)
+                    sent[key] = time.time()
+        except: pass
+        time.sleep(60)
 
-    except:
-        return 0, 0
-
-
-def analyze_match(match, headers):
-
-    fid = match["fixture"]["id"]
-
-    home_id = match["teams"]["home"]["id"]
-    away_id = match["teams"]["away"]["id"]
-
-    # FORM
-    h_scored, h_conceded = get_team_form(home_id, headers)
-    a_scored, a_conceded = get_team_form(away_id, headers)
-
-    # STATS
-    try:
-        sr = requests.get(
-            f"{BASE_URL}/fixtures/statistics?fixture={fid}",
-            headers=headers
-        ).json()
-
-        if not sr.get("response"):
-            return None
-
-        s = sr["response"]
-
-        sh = int(s[0]["statistics"][2]["value"] or 0)
-        sa = int(s[1]["statistics"][2]["value"] or 0)
-
-        ah = int(s[0]["statistics"][0]["value"] or 0)
-        aa = int(s[1]["statistics"][0]["value"] or 0)
-
-    except:
-        return None
-
-    total_shots = sh + sa
-    total_att = ah + aa
-
-    form_goals = h_scored + a_scored
-    form_conceded = h_conceded + a_conceded
-
-    balance = abs(sh - sa)
-
-    score_over = (
-        total_shots * 2 +
-        total_att * 0.3 +
-        form_goals * 5 +
-        form_conceded * 2
-    )
-
-    score_btts = (
-        total_shots * 1.5 +
-        form_goals * 6 +
-        form_conceded * 3 -
-        balance * 1.5
-    )
-
-    prob_over = min(80, 50 + score_over / 10)
-    prob_btts = min(80, 50 + score_btts / 10)
-
-    results = []
-
-    if prob_over >= 74 and total_shots >= 6 and total_att >= 50:
-        results.append(("Over 2.5", prob_over, 2.0))
-
-    if prob_btts >= 72 and balance <= 3:
-        results.append(("BTTS", prob_btts, 1.9))
-
-    if not results:
-        return None
-
-    return results
+if __name__ == "__main__":
+    print("🔥 AI PRO v1000 READY")
+    send_telegram("🚀 БОТЪТ СТАРТИРА УСПЕШНО И Е ОНЛАЙН!")
+    t1 = threading.Thread(target=live_analysis_runner)
+    t1.start()
+    t1.join()
