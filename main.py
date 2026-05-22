@@ -171,11 +171,13 @@ def live_analysis_runner():
 
             today = datetime.now(TZ).strftime("%Y-%m-%d")
 
-            live_matches = safe_api_get(
-                "fixtures",
-                {
-                    "date": today
-                }
+         live_matches = safe_api_get(
+    "fixtures",
+    {
+        "date": today,
+        "timezone":"Europe/Sofia"
+    }
+)
             )
 
             for match in live_matches:
