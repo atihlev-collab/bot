@@ -24,8 +24,7 @@ except ImportError:
     exit(1)
 
 HEADERS = {
-    "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
-    "x-rapidapi-key": API_KEY
+    "x-apisports-key": API_KEY
 }
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
@@ -76,7 +75,7 @@ def safe_api_get(endpoint, params=None):
 
         clean_endpoint = endpoint.lstrip("/")
 
-        url = f"https://api-football-v1.p.rapidapi.com/v3/{clean_endpoint}"
+        url = f"https://v3.football.api-sports.io/{clean_endpoint}"
 
         response = requests.get(
             url,
