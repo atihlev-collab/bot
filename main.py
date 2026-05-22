@@ -227,7 +227,17 @@ def live_analysis_runner():
                     confidence = min(bp + 5, 95)
                 if market and confidence >= 70:
                     stk = calculate_dynamic_stake(confidence)
-                    send_telegram(f"👑 <b>[VIP LIVE AI SIGNAL]</b>\n⚽ <b>Мач:</b> {home_name} vs {away_name}\n🎯 <b>ПРОГНОЗА: {market}</b>\n💼 {stk}")
+                  send_telegram(
+f"🔥 <b>[LIVE AI]</b>\n\n"
+f"🌍 {country}\n"
+f"🏆 {league}\n\n"
+f"⚽ {home_name} vs {away_name}\n"
+f"⏱️ {minute}'\n"
+f"📊 Резултат: {home_goals}-{away_goals}\n\n"
+f"🎯 {market}\n"
+f"📈 Увереност: {confidence}%\n"
+f"💼 {stk}"
+))
                     save_signal(fixture_id, f"{home_name}-{away_name}", market, bp, confidence, 0.0, stk)
                     sent[f"{fixture_id}_live"] = time.time()
         except: pass
@@ -284,7 +294,16 @@ def prematch_expert_runner():
                     market, prob = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%"
                 elif country in GOLDEN_PREMATCH_COUNTRIES: market, prob = "🔮 НАД 2.5 ГОЛА", "74%"
                 else: continue
-                send_telegram(f"🔮 <b>[PREMATCH POISSON]</b>\n⚽ {home} vs {away}\n🎯 Прогноза: {market} ({prob})")
+                match_time = date_obj.strftime("%H:%M")
+
+send_telegram(
+f"🔮 <b>[PREMATCH AI]</b>\n\n"
+f"🌍 Държава: {country}\n"
+f"🏆 Лига: {league}\n\n"
+f"⚽ {home} vs {away}\n"
+f"🕒 Старт: {match_time} BG\n\n"
+f"🎯 Прогноза: {market} ({prob})"
+)
                 prematch_sent[f"{fixture_id}_pre"] = time.time()
                 time.sleep(2)
         except: pass
