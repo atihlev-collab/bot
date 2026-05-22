@@ -1,53 +1,82 @@
-import os
 import json
+import os
 import joblib
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 
-def make_features(sh, sa, ah, aa, total_goals):
-    return [[sh, sa, ah, aa, total_goals]]
+BTTS_MODEL = "ml_btts.pkl"
+OVER_MODEL = "ml_over.pkl"
+DATA_FILE = "dataset.json"
 
-def predict_btts(sh, sa, ah, aa, total_goals):
-    try:
-        model = load_model("ml_btts.pkl")
-        if model:
-            features = make_features(sh, sa, ah, aa, total_goals)
-            return float(model.predict_proba(features)[0][1])
-    except: pass
-    return 0.54
+btts_model = None
+over_model = None
 
-def predict_over(sh, sa, ah, aa, total_goals):
-    try:
-        model = load_model("ml_over.pkl")
-        if model:
-            features = make_features(sh, sa, ah, aa, total_goals)
-            return float(model.predict_proba(features)[0][1])
-    except: pass
-    return 0.51
+def load_model():
+    global btts_model, over_model
 
-def load_model(filename):
-    if os.path.exists(filename):
-        try: return joblib.load(filename)
-        except: return None
-    return None
+    if os.path.exists(BTTS_MODEL):
+        btts_model = joblib.load(BTTS_MODEL)
+
+    if os.path.exists(OVER_MODEL):
+        over_model = joblib.load(OVER_MODEL)
+
+    print("🔥 AI v1000 READY")
+
+
+def make_features(d):
+    return [
+        d["shots_h"],
+        d["shots_a"],
+        d["att_h"],
+        d["att_a"],
+        d["goals"],
+        d["shots_h"] + d["shots_a"],
+        d["att_h"] + d["att_a"],
+        abs(d["shots_h"] - d["shots_a"])
+    ]
+
 
 def train_model():
-    dataset_file = "dataset.json"
-    if not os.path.exists(dataset_file): return
-    try:
-        with open(dataset_file, "r") as f: data = json.load(f)
-        if len(data) < 10: return
-        X, y_btts, y_over = [], [], []
-        for item in data:
-            X.append([item["sh"], item["sa"], item["ah"], item["aa"], item.get("trigger_total_goals", 0)])
-            y_btts.append(1 if item.get("final_home_goals", 0) > 0 and item.get("final_away_goals", 0) > 0 else 0)
-            y_over.append(1 if (item.get("final_home_goals", 0) + item.get("final_away_goals", 0)) > 2.5 else 0)
-        
-        clf_btts = RandomForestClassifier(n_estimators=100, random_state=42)
-        clf_btts.fit(X, y_btts)
-        joblib.dump(clf_btts, "ml_btts.pkl")
-        
-        clf_over = RandomForestClassifier(n_estimators=100, random_state=42)
-        clf_over.fit(X, y_over)
-        joblib.dump(clf_over, "ml_over.pkl")
-        print("🧠 [ML ENGINE] Моделите бяха обучени успешно!")
-    except: pass
+
+    if not os.path.exists(DATA_FILE):
+        print("❌ no dataset")
+        return
+
+    data = json.load(open(DATA_FILE))
+
+    if len(data) < 100:
+        print("⚠️ need 100+ samples")
+        return
+
+    X, y_btts, y_over = [], [], []
+
+    for d in data:
+        X.append(make_features(d))
+        y_btts.append(d["btts"])
+        y_over.append(d["over25"])
+
+    X = np.array(X)
+
+    btts = RandomForestClassifier(n_estimators=120)
+    btts.fit(X, y_btts)
+    joblib.dump(btts, BTTS_MODEL)
+
+    over = RandomForestClassifier(n_estimators=120)
+    over.fit(X, y_over)
+    joblib.dump(over, OVER_MODEL)
+
+    print("🔥 MODELS TRAINED")
+
+
+def predict_btts(sh, sa, ah, aa, goals):
+    if btts_model is None:
+        return None
+    d = {"shots_h": sh, "shots_a": sa, "att_h": ah, "att_a": aa, "goals": goals}
+    return btts_model.predict_proba([make_features(d)])[0][1]
+
+
+def predict_over(sh, sa, ah, aa, goals):
+    if over_model is None:
+        return None
+    d = {"shots_h": sh, "shots_a": sa, "att_h": ah, "att_a": aa, "goals": goals}
+    return over_model.predict_proba([make_features(d)])[0][1]
