@@ -262,7 +262,7 @@ def prematch_expert_runner():
                 current_home_odd, current_away_odd = 0.0, 0.0
                 if odds_response:
                     try:
-                        for b in odds_response.get("bookmakers", []):
+                      for b in odds_response[0].get("bookmakers", []):
                             if b["id"] == 8:
                                 for bet in b.get("bets", []):
                                     if bet["id"] == 1:
