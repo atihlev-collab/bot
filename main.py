@@ -29,7 +29,25 @@ HEADERS = {
 TZ = ZoneInfo("Europe/Sofia")
 bot = Bot(token=BOT_TOKEN)
 
-BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "reserves", "friendly", "amateur"]
+BLOCKED_WORDS = [
+    "women",
+    "female",
+    "w ",
+    " w",
+    "youth",
+    "u17",
+    "u18",
+    "u19",
+    "u20",
+    "u21",
+    "u23",
+    "reserve",
+    "reserves",
+    "friendly",
+    "amateur",
+    "ii",
+    "iii"
+]]
 BAD_COUNTRIES = ["Bolivia", "Venezuela", "India", "Indonesia", "Bangladesh", "Uganda"]
 GOLDEN_PREMATCH_COUNTRIES = ["Netherlands", "Germany", "Norway", "Sweden", "Denmark", "Iceland", "Switzerland", "Australia", "England", "Belgium", "Austria", "Japan", "South Korea", "Scotland", "USA", "Brazil", "Ireland"]
 
@@ -282,7 +300,7 @@ def prematch_expert_runner():
                 elif country in ["Netherlands", "Germany", "Norway", "Sweden"]:
                     poisson_prob = analyze_poisson_over_under(fixture_id)
                     market, prob = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%"
-                elif country in GOLDEN_PREMATCH_COUNTRIES: market, prob = "🔮 НАД 2.5 ГОЛА", "74%"
+                elif country in GOLDEN_PREMATCH_COUNTRIES and league not in ["USL League Two","USL W League"]:
                 else: continue
                 send_telegram(f"🔮 <b>[PREMATCH POISSON]</b>\n⚽ {home} vs {away}\n🎯 Прогноза: {market} ({prob})")
                 prematch_sent[f"{fixture_id}_pre"] = time.time()
