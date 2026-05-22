@@ -282,23 +282,36 @@ def prematch_expert_runner():
                                 send_telegram(f"📉 <b>[SHARP MONEY]</b> {home} - Победител"); historical["alerted"] = True; prematch_sent[f"{fixture_id}_pre"] = time.time(); continue
                             elif ad >= 15.0 and current_away_odd < historical["away"]:
                                 send_telegram(f"📉 <b>[SHARP MONEY]</b> {away} - Победител"); historical["alerted"] = True; prematch_sent[f"{fixture_id}_pre"] = time.time(); continue
-                if country in ["Italy", "Romania", "Bulgaria"]: market, prob = "📉 ПОД 2.5 ГОЛА", "76%"
-                elif country in ["Netherlands", "Germany", "Norway", "Sweden"]:
-                    poisson_prob = analyze_poisson_over_under(fixture_id)
-                    market, prob = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%"
-               elif country in GOLDEN_PREMATCH_COUNTRIES:
+              if country in ["Italy","Romania","Bulgaria"]:
 
-    poisson_prob = analyze_poisson_over_under(
+    market="📉 ПОД 2.5 ГОЛА"
+    prob="76%"
+
+elif country in ["Netherlands","Germany","Norway","Sweden"]:
+
+    poisson_prob=analyze_poisson_over_under(
         fixture_id
     )
 
-    if poisson_prob < 72:
+    market="💎 ГОЛ/ГОЛ - ДА"
+
+    prob=f"{poisson_prob}%"
+
+elif country in GOLDEN_PREMATCH_COUNTRIES:
+
+    poisson_prob=analyze_poisson_over_under(
+        fixture_id
+    )
+
+    if poisson_prob < 82:
         continue
 
     market="🔮 НАД 2.5 ГОЛА"
 
     prob=f"{poisson_prob}%"
-                else: continue
+
+else:
+    continue
                 send_telegram(f"🔮 <b>[PREMATCH POISSON]</b>\n⚽ {home} vs {away}\n🎯 Прогноза: {market} ({prob})")
                 prematch_sent[f"{fixture_id}_pre"] = time.time()
                 time.sleep(2)
