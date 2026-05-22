@@ -71,8 +71,10 @@ def send_telegram(message):
 
 # 📡 ЕДИНСТВЕНАТА ЧИСТА ФУНКЦИЯ ЗА ВРЪЗКА
 def safe_api_get(endpoint, params=None):
+
     try:
-        clean_endpoint = endpoint.lstrip('/')
+
+        clean_endpoint = endpoint.lstrip("/")
 
         url = f"https://api-football-v1.p.rapidapi.com/v3/{clean_endpoint}"
 
@@ -80,16 +82,35 @@ def safe_api_get(endpoint, params=None):
             url,
             headers=HEADERS,
             params=params,
-            timeout=10
+            timeout=15
         )
 
         print(f"📡 {url} -> {response.status_code}")
 
+        if response.status_code == 429:
+
+            print("⏳ API LIMIT HIT")
+
+            time.sleep(120)
+
+            return []
+
+        if response.status_code == 403:
+
+            print("❌ API FORBIDDEN")
+
+            return []
+
         if response.status_code == 200:
-            return response.json().get("response",[])
+
+            return response.json().get(
+                "response",
+                []
+            )
 
     except Exception as e:
-        print(e)
+
+        print(f"❌ API ERROR: {e}")
 
     return []
 
