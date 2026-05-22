@@ -255,8 +255,7 @@ def prematch_expert_runner():
 if __name__ == "__main__":
     init_database()
     print("🧠 Зареждане на Random Forest моделите при start...")
-    load_model("ml_btts.pkl")
-    load_model("ml_over.pkl")
+    load_model()
     send_telegram("🚀 БОТЪТ СТАРТИРА УСПЕШНО И Е ОНЛАЙН!")
     t1 = threading.Thread(target=live_analysis_runner)
     t2 = threading.Thread(target=prematch_expert_runner)
