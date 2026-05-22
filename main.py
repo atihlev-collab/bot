@@ -254,13 +254,22 @@ def prematch_expert_runner():
 
 if __name__ == "__main__":
     init_database()
+
     print("🧠 Зареждане на Random Forest моделите при start...")
+
     load_model()
-    send_telegram("🚀 БОТЪТ СТАРТИРА УСПЕШНО И Е ОНЛАЙН!")
+
+    send_telegram("🔥 ТЕСТ ОТ CHATGPT - АКО ВИДИШ ТОВА, TELEGRAM РАБОТИ")
+    print("TEST SENT")
+
     t1 = threading.Thread(target=live_analysis_runner)
     t2 = threading.Thread(target=prematch_expert_runner)
-    t1.start(); t2.start()
-    t1.join(); t2.join()
+
+    t1.start()
+    t2.start()
+
+    t1.join()
+    t2.join()
 
 
 
