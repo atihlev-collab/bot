@@ -233,7 +233,7 @@ def live_analysis_runner():
                     save_signal(fixture_id, f"{home_name}-{away_name}", market, bp, confidence, 0.0, stk)
                     sent[f"{fixture_id}_live"] = time.time()
         except: pass
-        time.sleep(60)
+        time.sleep(180)
 
 def prematch_expert_runner():
     print("📅 PREMATCH Системата за пазарни сривове и Поасон е активна...")
