@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-
+print(API_KEY[:10])
 try:
     from ml_model import predict_btts, predict_over, train_model, load_model
 except ImportError:
