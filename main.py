@@ -82,35 +82,31 @@ def safe_api_get(endpoint, params=None):
             url,
             headers=HEADERS,
             params=params,
-            timeout=15
+            timeout=30
         )
 
-        print(f"📡 {url} -> {response.status_code}")
+        print(f"📡 {url}")
+        print(f"📦 {params}")
+        print(f"📡 {response.status_code}")
 
         if response.status_code == 429:
-
             print("⏳ API LIMIT HIT")
-
-            time.sleep(120)
-
+            time.sleep(180)
             return []
 
         if response.status_code == 403:
-
             print("❌ API FORBIDDEN")
-
+            print(response.text)
             return []
 
         if response.status_code == 200:
-
             return response.json().get(
                 "response",
                 []
             )
 
     except Exception as e:
-
-        print(f"❌ API ERROR: {e}")
+        print(e)
 
     return []
 
