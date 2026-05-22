@@ -291,19 +291,25 @@ if __name__ == "__main__":
 
     load_model()
 
-    send_telegram("🔥 ТЕСТ ОТ CHATGPT - АКО ВИДИШ ТОВА, TELEGRAM РАБОТИ")
+    send_telegram("🔥 AI v1000 READY")
     print("TEST SENT")
 
-    t1 = threading.Thread(target=live_analysis_runner)
-    t2 = threading.Thread(target=prematch_expert_runner)
+    t1 = threading.Thread(
+        target=live_analysis_runner
+    )
 
-   t1.start()
+    t2 = threading.Thread(
+        target=prematch_expert_runner
+    )
 
-# t2.start()
+    t1.start()
 
-t1.join()
+    time.sleep(10)
 
-# t2.join()
+    t2.start()
+
+    t1.join()
+    t2.join()
 
 
 
