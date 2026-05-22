@@ -170,7 +170,15 @@ def live_analysis_runner():
     print("⚡ LIVE Мулти-пазарен скенер с ИИ е активен...")
     while True:
         try:
-            live_matches = safe_api_get("fixtures", {"live": "all"})
+            today = datetime.now(TZ).strftime("%Y-%m-%d")
+
+    live_matches = safe_api_get(
+    "fixtures",
+    {
+        "date": today,
+        "status": "1H-HT-2H"
+    }
+    )
             for match in live_matches:
                 if not match: continue
                 fixture_id = match["fixture"]["id"]
