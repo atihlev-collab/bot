@@ -282,7 +282,38 @@ def prematch_expert_runner():
                 elif country in ["Netherlands", "Germany", "Norway", "Sweden"]:
                     poisson_prob = analyze_poisson_over_under(fixture_id)
                     market, prob = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%"
-                elif country in GOLDEN_PREMATCH_COUNTRIES: market, prob = "🔮 НАД 2.5 ГОЛА", "74%"
+              elif country in GOLDEN_PREMATCH_COUNTRIES:
+
+    poisson_prob = analyze_poisson_over_under(
+        fixture_id
+    )
+
+    odds_score = 0
+
+    if odds_response:
+        try:
+
+            b = odds_response[0]["bookmakers"][0]
+            bet = b["bets"][0]
+
+            odd = float(
+                bet["values"][0]["odd"]
+            )
+
+            if 1.70 <= odd <= 2.40:
+                odds_score += 10
+
+        except:
+            pass
+
+    final_score = poisson_prob + odds_score
+
+    if final_score < 82:
+        continue
+
+    market = "🔮 НАД 2.5 ГОЛА"
+
+    prob = f"{min(final_score,95)}%"
                 else: continue
                 send_telegram(f"🔮 <b>[PREMATCH POISSON]</b>\n⚽ {home} vs {away}\n🎯 Прогноза: {market} ({prob})")
                 prematch_sent[f"{fixture_id}_pre"] = time.time()
