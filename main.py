@@ -73,13 +73,24 @@ def send_telegram(message):
 def safe_api_get(endpoint, params=None):
     try:
         clean_endpoint = endpoint.lstrip('/')
-        url = f"https://rapidapi.com{clean_endpoint}"
-        response = requests.get(url, headers=HEADERS, params=params, timeout=10)
-        print(f"📡 [API CHECK] URL: {url} | Status Code: {response.status_code}")
+
+        url = f"https://api-football-v1.p.rapidapi.com/v3/{clean_endpoint}"
+
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            params=params,
+            timeout=10
+        )
+
+        print(f"📡 {url} -> {response.status_code}")
+
         if response.status_code == 200:
-            return response.json().get("response", [])
+            return response.json().get("response",[])
+
     except Exception as e:
-        print(f"❌ Критична грешка при връзка с API: {e}")
+        print(e)
+
     return []
 
 def blocked_league(league_name):
