@@ -166,18 +166,16 @@ def live_analysis_runner():
     print("⚡ LIVE Мулти-пазарен скенер с ИИ е активен...")
 
     while True:
-
         try:
 
             today = datetime.now(TZ).strftime("%Y-%m-%d")
 
-         live_matches = safe_api_get(
-    "fixtures",
-    {
-        "date": today,
-        "timezone":"Europe/Sofia"
-    }
-)
+            live_matches = safe_api_get(
+                "fixtures",
+                {
+                    "date": today,
+                    "timezone": "Europe/Sofia"
+                }
             )
 
             for match in live_matches:
