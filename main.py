@@ -287,6 +287,11 @@ def prematch_expert_runner():
     market = "📉 ПОД 2.5 ГОЛА"
     prob = "76%"
 
+if country in ["Italy","Romania","Bulgaria"]:
+
+    market = "📉 ПОД 2.5 ГОЛА"
+    prob = "76%"
+
 elif country in ["Netherlands","Germany","Norway","Sweden"]:
 
     poisson_prob = analyze_poisson_over_under(
