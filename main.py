@@ -717,12 +717,12 @@ def analyze_match(match):
 
 
     # CORNERS
-    elif (
-        minute >= 70
-        and total_corners >= 8
-        and dominance >= 12
-        and best_pressure >= 60
-    ):
+ elif (
+    minute >= 45
+    and total_corners >= 5
+    and dominance >= 10
+    and best_pressure >= 56
+):
 
         market = (
             f"📐 OVER {total_corners+1}.5 CORNERS"
