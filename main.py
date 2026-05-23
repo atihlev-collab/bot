@@ -680,42 +680,68 @@ def analyze_match(match):
         extract(away, "Corner Kicks")
     )
 
+    # OVER GOALS
     if (
-        minute >= 70
-        and total_corners >= 8
-        and dominance >= 10
-    ):
-
-        market = (
-            f"📐 OVER {total_corners+1}.5 CORNERS"
-        )
-
-    elif (
-        best_xg >= 2.2
-        and total_goals <= 2
-        and home_shots >= 3
-        and away_shots >= 3
-    ):
-
-        market = "💎 BTTS / GOAL-GOAL"
-
-    elif (
         total_goals <= 1
-        and best_pressure >= 62
+        and best_pressure >= 64
+        and best_xg >= 1.8
         and minute >= 35
+        and dominance >= 10
     ):
 
         market = (
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
+        confidence = 74
+
+
+    # BTTS
     elif (
-        minute >= 75
-        and best_pressure >= 65
+        best_xg >= 2.4
+        and home_shots >= 4
+        and away_shots >= 4
+        and total_goals <= 3
+        and dominance >= 8
     ):
 
-        market = "🔥 GOAL 75-90"
+        market = (
+            "💎 BTTS / GOAL-GOAL"
+        )
 
+        confidence = 76
+
+
+    # CORNERS
+    elif (
+        minute >= 70
+        and total_corners >= 8
+        and dominance >= 12
+        and best_pressure >= 60
+    ):
+
+        market = (
+            f"📐 OVER {total_corners+1}.5 CORNERS"
+        )
+
+        confidence = 75
+
+
+    # LATE GOAL
+    elif (
+        minute >= 75
+        and best_pressure >= 68
+        and best_xg >= 2
+    ):
+
+        market = (
+            "🔥 GOAL 75-90"
+        )
+
+        confidence = 78
+
+
+    # СТАРИЯТ NEXT GOAL
     elif dominance >= 15:
 
         if home_pressure > away_pressure:
