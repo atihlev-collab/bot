@@ -67,7 +67,11 @@ BAD_COUNTRIES = [
     "Bolivia",
     "Venezuela",
     "India",
-    "Indonesia"
+    "Indonesia",
+
+    "Russia",
+    "Belarus",
+    "Israel"
 ]
 
 # =========================================================
@@ -792,7 +796,7 @@ def analyze_match(match):
         return
 
     # LIVE само 70%+
-    if confidence < 70:
+    if confidence < 72:
         return
 
     # =====================================================
