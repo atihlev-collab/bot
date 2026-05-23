@@ -1,342 +1,1055 @@
 # =========================================================
-# ULTIMATE MASTERPIECE TIPSTER AI SYSTEM (main.py)
-# RAPIDAPI COMPATIBLE STANDARD EDITION - TOTAL ABSOLUTE FIXED
+# PRACTICAL LIVE AI SYSTEM
+# SMART RESET + PREMATCH AI VERSION
 # =========================================================
 
+
+import requests
 import time
 import sqlite3
 import threading
-import requests
 import asyncio
-import os
-import math
-import json
+import logging
+
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
 from telegram import Bot
+import asyncio
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-print(API_KEY[:10])
-try:
-    from ml_model import predict_btts, predict_over, train_model, load_model
-except ImportError:
-    print("❌ Критична грешка: Файлът ml_model.py липсва!")
-    exit(1)
+
+# =========================================================
+# CONFIG
+# =========================================================
+
+BASE_URL = "https://v3.football.api-sports.io"
 
 HEADERS = {
     "x-apisports-key": API_KEY
 }
+
 TZ = ZoneInfo("Europe/Sofia")
+
 bot = Bot(token=BOT_TOKEN)
 
-BLOCKED_WORDS = ["women", "female", "youth", "u17", "u18", "u19", "u20", "u21", "u23", "reserve", "reserves", "friendly", "amateur"]
-BAD_COUNTRIES = ["Bolivia", "Venezuela", "India", "Indonesia", "Bangladesh", "Uganda"]
-GOLDEN_PREMATCH_COUNTRIES = ["Netherlands", "Germany", "Norway", "Sweden", "Denmark", "Iceland", "Switzerland", "Australia", "England", "Belgium", "Austria", "Japan", "South Korea", "Scotland", "USA", "Brazil", "Ireland"]
+logging.basicConfig(level=logging.WARNING)
+
+# =========================================================
+# BLOCKED LEAGUES
+# =========================================================
+
+BLOCKED_WORDS = [
+
+    "women",
+    "female",
+
+    "youth",
+    "u17",
+    "u18",
+    "u19",
+    "u20",
+    "u21",
+    "u23",
+
+    "reserve",
+    "reserves",
+
+    "friendly"
+]
+
+# =========================================================
+# BAD COUNTRIES
+# =========================================================
+
+BAD_COUNTRIES = [
+
+    "Bolivia",
+    "Venezuela",
+    "India",
+    "Indonesia"
+]
+
+# =========================================================
+# SIGNAL CACHE
+# =========================================================
 
 sent = {}
-prematch_sent = {}
+
+# =========================================================
+# SCORE CACHE
+# =========================================================
+
 last_scores = {}
-odds_tracker = {}
+
+# =========================================================
+# PREMATCH CACHE
+# =========================================================
+
+prematch_sent = {}
+
+# =========================================================
+# DATABASE
+# =========================================================
 
 def init_database():
-    conn = sqlite3.connect("syndicate_master.db")
+
+    conn = sqlite3.connect(
+        "practical_live_ai.db"
+    )
+
     cursor = conn.cursor()
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS signals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, fixture_id INTEGER, match_name TEXT,
-        market TEXT, pressure INTEGER, confidence INTEGER, edge_value REAL, stake TEXT, created_at TEXT
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        fixture_id INTEGER,
+        match_name TEXT,
+        market TEXT,
+        pressure INTEGER,
+        confidence INTEGER,
+        edge_value REAL,
+        created_at TEXT
     )
     """)
+
     conn.commit()
     conn.close()
 
-def save_signal(fixture_id, match_name, market, pressure, confidence, edge, stake):
-    try:
-        conn = sqlite3.connect("syndicate_master.db")
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO signals (fixture_id, match_name, market, pressure, confidence, edge_value, stake, created_at) VALUES (?,?,?,?,?,?,?,?)", 
-                       (fixture_id, match_name, market, int(pressure), confidence, edge, stake, str(datetime.now(TZ))))
-        conn.commit()
-        conn.close()
-    except: pass
+# =========================================================
+# TELEGRAM
+# =========================================================
 
 def send_telegram(message):
-    try:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="HTML"))
-        loop.close()
-    except: pass
-
-# 📡 ЕДИНСТВЕНАТА ЧИСТА ФУНКЦИЯ ЗА ВРЪЗКА
-def safe_api_get(endpoint, params=None):
 
     try:
 
-        clean_endpoint = endpoint.lstrip("/")
-
-        url = f"https://v3.football.api-sports.io/{clean_endpoint}"
-
-        response = requests.get(
-            url,
-            headers=HEADERS,
-            params=params,
-            timeout=30
+        print(
+            "SENDING TO TELEGRAM..."
         )
 
-        print(f"📡 {url}")
-        print(f"📦 {params}")
-        print(f"📡 {response.status_code}")
-
-        if response.status_code == 429:
-            print("⏳ API LIMIT HIT")
-            time.sleep(180)
-            return []
-
-        if response.status_code == 403:
-            print("❌ API FORBIDDEN")
-            print(response.text)
-            return []
-
-        if response.status_code == 200:
-            return response.json().get(
-                "response",
-                []
+        asyncio.create_task(
+            bot.send_message(
+                chat_id=CHAT_ID,
+                text=message
             )
+        )
+
+        print(
+            "TELEGRAM SENT"
+        )
 
     except Exception as e:
-        print(e)
 
-    return []
+        print(
+            "TELEGRAM ERROR:"
+        )
+
+        print(
+            str(e)
+        )        
+
+#========================================================
+# DUPLICATE PROTECTION
+# =========================================================
+
+def can_send(fixture_id, cooldown=2400):
+
+    now = time.time()
+
+    if fixture_id in sent:
+
+        if now - sent[fixture_id] < cooldown:
+            return False
+
+    return True
+
+def save_sent(fixture_id):
+
+    sent[fixture_id] = time.time()
+
+# =========================================================
+# PREMATCH DUPLICATE
+# =========================================================
+
+def can_send_prematch(key, cooldown=21600):
+
+    now = time.time()
+
+    if key in prematch_sent:
+
+        if now - prematch_sent[key] < cooldown:
+            return False
+
+    return True
+
+def save_prematch(key):
+
+    prematch_sent[key] = time.time()
+
+# =========================================================
+# BLOCK CHECK
+# =========================================================
 
 def blocked_league(league_name):
-    return any(word in league_name.lower() for word in BLOCKED_WORDS)
 
-def extract(team, stat_name):
-    for stat in team.get("statistics", []):
-        if stat["type"] == stat_name:
-            value = stat["value"]
-            if value is None: return 0
-            if isinstance(value, str): value = value.replace("%", "")
-            try: return int(value)
-            except: return 0
-    return 0
+    text = league_name.lower()
 
-def calculate_dynamic_stake(confidence):
-    if confidence >= 85: return "🔥 СИЛЕН ЗАЛОГ: 3.5% от банката"
-    elif confidence >= 75: return "💰 СРЕДЕН ЗАЛОГ: 2.0% от банката"
-    return "⚠️ КОНСЕРВАТИВЕН ЗАЛОГ: 1.0% от банката"
+    for word in BLOCKED_WORDS:
 
-def calculate_poisson_probability(k, lam):
-    return (pow(lam, k) * math.exp(-lam)) / math.factorial(k)
+        if word in text:
+            return True
 
-def analyze_poisson_over_under(fixture_id):
-    lambda_home, lambda_away = 1.95, 1.45
-    prob_under_2_5 = 0.0
-    for x in range(3):
-        for y in range(3):
-            if (x + y) < 3:
-                prob_under_2_5 += (calculate_poisson_probability(x, lambda_home) * calculate_poisson_probability(y, lambda_away))
-    return round((1.0 - prob_under_2_5) * 100, 1)
+    return False
 
-def calculate_pressure(team):
-    pressure = 0
-    possession = extract(team, "Ball Possession")
-    sh_on = extract(team, "Shots on Goal")
-    sh_tot = extract(team, "Total Shots")
-    corners = extract(team, "Corner Kicks")
-    attacks = extract(team, "Dangerous Attacks")
-    if possession >= 55: pressure += 8
-    if possession >= 62: pressure += 8
-    if sh_on >= 3: pressure += 15
-    if sh_on >= 5: pressure += 12
-    if sh_tot >= 7: pressure += 10
-    if sh_tot >= 11: pressure += 10
-    if corners >= 3: pressure += 6
-    if corners >= 6: pressure += 6
-    if attacks >= 16: pressure += 14
-    if attacks >= 26: pressure += 14
-    xg = round((sh_on * 0.28) + (sh_tot * 0.05) + (attacks * 0.022), 2)
-    if xg >= 1.1: pressure += 10
-    if xg >= 1.8: pressure += 10
-    return min(pressure, 100), xg
+# =========================================================
+# LIVE MATCHES
+# =========================================================
 
-def live_analysis_runner():
-    print("⚡ LIVE Мулти-пазарен скенер с ИИ е активен...")
+def get_live_matches():
 
-    while True:
+    url = f"{BASE_URL}/fixtures"
+
+    params = {
+        "live": "all"
+    }
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        params=params,
+        timeout=20
+    )
+
+    data = response.json()
+
+    return data.get(
+        "response",
+        []
+    )
+
+# =========================================================
+# UPCOMING MATCHES
+# =========================================================
+
+def get_upcoming_matches():
+
+    matches = []
+
+    now = datetime.now(TZ)
+
+    for i in range(2):
+
+        date = (
+            now + timedelta(days=i)
+        ).strftime("%Y-%m-%d")
+
         try:
 
-            today = datetime.now(TZ).strftime("%Y-%m-%d")
+            r = requests.get(
+                f"{BASE_URL}/fixtures?date={date}",
+                headers=HEADERS,
+                timeout=20
+            ).json()
 
-            live_matches = safe_api_get(
-                "fixtures",
-                {
-                    "date": today,
-                    "timezone": "Europe/Sofia"
-                }
+            matches.extend(
+                r.get("response", [])
             )
 
-            for match in live_matches:
-                if not match: continue
-                fixture_id = match["fixture"]["id"]
-                league, country = match["league"]["name"], match["league"]["country"]
-                if blocked_league(league) or country in BAD_COUNTRIES: continue
-                minute = match["fixture"]["status"]["elapsed"]
-                if minute is None or minute < 15 or minute > 85: continue
-                home_goals = match["goals"]["home"] if match["goals"]["home"] is not None else 0
-                away_goals = match["goals"]["away"] if match["goals"]["away"] is not None else 0
-                total_goals = home_goals + away_goals
-                if total_goals >= 6: continue 
-                score = f"{home_goals}-{away_goals}"
-                if fixture_id not in last_scores: last_scores[fixture_id] = score
-                elif last_scores[fixture_id] != score:
-                    if f"{fixture_id}_live" in sent: del sent[f"{fixture_id}_live"]
-                    last_scores[fixture_id] = score
-                if f"{fixture_id}_live" in sent: continue
-                stats = safe_api_get("fixtures/statistics", {"fixture": fixture_id})
-                if len(stats) < 2: continue
-                home_id = match["teams"]["home"]["id"]
-                home_stats, away_stats = (stats, stats) if stats.get("team", {}).get("id") == home_id else (stats, stats)
-                sh = extract(home_stats, "Shots on Goal")
-                sa = extract(away_stats, "Shots on Goal")
-                ah = extract(home_stats, "Dangerous Attacks")
-                aa = extract(away_stats, "Dangerous Attacks")
-                total_corners = extract(home_stats, "Corner Kicks") + extract(away_stats, "Corner Kicks")
-                hp, h_xg = calculate_pressure(home_stats)
-                ap, a_xg = calculate_pressure(away_stats)
-                bp, dom = max(hp, ap), abs(hp - ap)
-                tempo, activity = (ah + aa) / 50, (sh + sa) / 10
-                btts_prob = predict_btts(sh, sa, ah, aa, total_goals)
-                over_prob = predict_over(sh, sa, ah, aa, total_goals)
-                score_btts = (btts_prob * 0.5 + tempo * 0.3 + activity * 0.2) if btts_prob is not None else 0.0
-                score_over = (over_prob * 0.6 + tempo * 0.3 + activity * 0.1) if over_prob is not None else 0.0
-                market = None
-                confidence = min(bp, 95)
-                home_name, away_name = match["teams"]["home"]["name"], match["teams"]["away"]["name"]
-                if minute >= 74 and (ah + aa >= 38) and (extract(home_stats, "Total Shots") + extract(away_stats, "Total Shots") >= 10):
-                    market = f"📐 НАД {total_corners}.5 КОРНЕРА (Азиатска линия)"; confidence = 85
-                elif score_btts > 0.52 and total_goals <= 2:
-                    market = "💎 ДВАТА ОТБОРА ДА ОТБЕЛЕЖАТ (ГОЛ/ГОЛ)"; confidence = round(score_btts * 100)
-                elif score_over > 0.50:
-                    market = f"🔮 НАД {total_goals + 1}.5 ГОЛА В МАЧА"; confidence = round(score_over * 100)
-                elif 35 <= minute <= 74 and total_goals <= 1 and hp >= 45 and ap >= 45 and ah >= 10 and aa >= 10:
-                    market = f"⚽ НАД {total_goals + 1}.5 ГОЛА В МАЧА"; confidence = min(bp + 5, 95)
-                elif bp >= 48 and dom >= 8:
-                    market = f"🎯 СЛЕДВАЩ ГОЛ: ДОМАКИН ({home_name})" if hp > ap else f"🎯 СЛЕДВАЩ ГОЛ: ГОСТ ({away_name})"
-                    confidence = min(bp + 5, 95)
-                if market and confidence >= 70:
-                    stk = calculate_dynamic_stake(confidence)
-                    send_telegram(f"👑 <b>[VIP LIVE AI SIGNAL]</b>\n⚽ <b>Мач:</b> {home_name} vs {away_name}\n🎯 <b>ПРОГНОЗА: {market}</b>\n💼 {stk}")
-                    save_signal(fixture_id, f"{home_name}-{away_name}", market, bp, confidence, 0.0, stk)
-                    sent[f"{fixture_id}_live"] = time.time()
-        except: pass
-        time.sleep(180)
+        except:
+            pass
 
-def prematch_expert_runner():
-    print("📅 PREMATCH Системата за пазарни сривове и Поасон е активна...")
+    return matches
+
+# =========================================================
+# MATCH STATS
+# =========================================================
+
+def get_statistics(fixture_id):
+
+    url = f"{BASE_URL}/fixtures/statistics"
+
+    params = {
+        "fixture": fixture_id
+    }
+
+    response = requests.get(
+        url,
+        headers=HEADERS,
+        params=params,
+        timeout=20
+    )
+
+    return response.json().get(
+        "response",
+        []
+    )
+
+# =========================================================
+# EXTRACT STATS
+# =========================================================
+
+def extract(team, stat_name):
+
+    for stat in team["statistics"]:
+
+        if stat["type"] == stat_name:
+
+            value = stat["value"]
+
+            if value is None:
+                return 0
+
+            if isinstance(value, str):
+
+                value = value.replace("%", "")
+
+                try:
+                    value = int(value)
+                except:
+                    return 0
+
+            return value
+
+    return 0
+
+# =========================================================
+# ESTIMATED xG
+# =========================================================
+
+def estimate_xg(
+
+    shots_on,
+    total_shots,
+    dangerous_attacks
+
+):
+
+    xg = 0
+
+    xg += shots_on * 0.28
+    xg += total_shots * 0.05
+    xg += dangerous_attacks * 0.015
+
+    return round(xg, 2)
+
+# =========================================================
+# PRESSURE ENGINE
+# =========================================================
+
+def calculate_pressure(team):
+
+    pressure = 0
+
+    possession = extract(
+        team,
+        "Ball Possession"
+    )
+
+    shots_on = extract(
+        team,
+        "Shots on Goal"
+    )
+
+    total_shots = extract(
+        team,
+        "Total Shots"
+    )
+
+    corners = extract(
+        team,
+        "Corner Kicks"
+    )
+
+    attacks = extract(
+        team,
+        "Dangerous Attacks"
+    )
+
+    if possession >= 55:
+        pressure += 8
+
+    if possession >= 62:
+        pressure += 8
+
+    if shots_on >= 3:
+        pressure += 15
+
+    if shots_on >= 5:
+        pressure += 12
+
+    if total_shots >= 7:
+        pressure += 10
+
+    if total_shots >= 11:
+        pressure += 10
+
+    if corners >= 3:
+        pressure += 6
+
+    if corners >= 6:
+        pressure += 6
+
+    if attacks >= 16:
+        pressure += 14
+
+    if attacks >= 26:
+        pressure += 14
+
+    xg = estimate_xg(
+        shots_on,
+        total_shots,
+        attacks
+    )
+
+    if xg >= 1.1:
+        pressure += 10
+
+    if xg >= 1.8:
+        pressure += 10
+
+    return pressure, xg
+
+# =========================================================
+# VALUE ENGINE
+# =========================================================
+
+def value_edge(confidence, odds):
+
+    probability = 100 / odds
+
+    edge = confidence - probability
+
+    return round(edge, 2)
+
+# =========================================================
+# PREMATCH SCORE ENGINE
+# =========================================================
+
+def calculate_match_score(country, league, home, away):
+
+    score = 0
+    market = "OVER 2.5 GOALS"
+    odd = "1.80"
+
+    OVER_COUNTRIES = [
+        "Netherlands",
+        "Norway",
+        "Sweden",
+        "Germany",
+        "Denmark",
+        "Brazil",
+        "Argentina",
+        "USA"
+    ]
+
+    UNDER_COUNTRIES = [
+        "Italy",
+        "Romania",
+        "Bulgaria",
+        "Croatia"
+    ]
+
+    BIG_TEAMS = [
+        "Manchester City",
+        "Manchester United",
+        "Liverpool England",
+        "Arsenal London",
+        "Chelsea London",
+        "Barcelona Spain",
+        "Real Madrid",
+        "Bayern Munich",
+        "PSG Paris",
+        "Inter Milan",
+        "AC Milan",
+        "Juventus Italy"
+    ]
+
+    if home.strip() in BIG_TEAMS:
+        score += 10
+        market = "1"
+        odd = "1.60"
+
+    if away.strip() in BIG_TEAMS:
+        score += 8
+        market = "2"
+        odd = "1.75"
+
+    if any(
+        x.lower() in home.lower()
+        for x in BIG_TEAMS
+    ):
+
+        score += 10
+        market = "1"
+        odd = "1.60"
+
+    if any(
+        x.lower() in away.lower()
+        for x in BIG_TEAMS
+    ):
+
+        score += 8
+        market = "2"
+        odd = "1.75"
+
+    return score, market, odd
+
+# =========================================================
+# SAVE SIGNAL
+# =========================================================
+
+def save_signal(
+
+    fixture_id,
+    match_name,
+    market,
+    pressure,
+    confidence,
+    edge
+
+):
+
+    conn = sqlite3.connect(
+        "practical_live_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT INTO signals (
+
+        fixture_id,
+        match_name,
+        market,
+        pressure,
+        confidence,
+        edge_value,
+        created_at
+
+    ) VALUES (?,?,?,?,?,?,?)
+    """, (
+
+        fixture_id,
+        match_name,
+        market,
+        pressure,
+        confidence,
+        edge,
+        str(datetime.now())
+
+    ))
+
+    conn.commit()
+    conn.close()
+
+# =========================================================
+# LIVE ANALYSIS
+# =========================================================
+
+def analyze_match(match):
+
+    fixture_id = match["fixture"]["id"]
+
+    league = match["league"]["name"]
+
+    if blocked_league(league):
+        return
+
+    country = match["league"]["country"]
+
+    if country in BAD_COUNTRIES:
+        return
+
+    minute = match["fixture"]["status"]["elapsed"]
+
+    if minute is None:
+        return
+
+    if minute < 30 or minute > 75:
+        return
+
+    home_goals = match["goals"]["home"]
+    away_goals = match["goals"]["away"]
+
+    total_goals = home_goals + away_goals
+
+    if total_goals >= 6:
+        return
+
+    score = f"{home_goals}-{away_goals}"
+
+    # =====================================================
+    # RESET AFTER GOAL
+    # =====================================================
+
+    if fixture_id not in last_scores:
+
+        last_scores[fixture_id] = score
+
+    else:
+
+        if last_scores[fixture_id] != score:
+
+            if fixture_id in sent:
+                del sent[fixture_id]
+
+            last_scores[fixture_id] = score
+
+    # =====================================================
+    # DUPLICATE CHECK
+    # =====================================================
+
+    if not can_send(fixture_id):
+        return
+
+    stats = get_statistics(
+        fixture_id
+    )
+
+    if len(stats) < 2:
+        return
+
+    home = stats[0]
+    away = stats[1]
+
+    home_pressure, home_xg = (
+        calculate_pressure(home)
+    )
+
+    away_pressure, away_xg = (
+        calculate_pressure(away)
+    )
+
+    best_pressure = max(
+        home_pressure,
+        away_pressure
+    )
+
+    best_xg = max(
+        home_xg,
+        away_xg
+    )
+
+    dominance = abs(
+        home_pressure - away_pressure
+    )
+
+    # =====================================================
+    # FILTERS
+    # =====================================================
+
+    minimum_pressure = 52
+
+    if minute >= 60:
+        minimum_pressure = 56
+
+    if best_pressure < minimum_pressure:
+        return
+
+    if dominance < 8:
+        return
+
+    minimum_xg = 1.0
+
+    if best_xg < minimum_xg:
+        return
+
+    home_shots = extract(
+        home,
+        "Shots on Goal"
+    )
+
+    away_shots = extract(
+        away,
+        "Shots on Goal"
+    )
+
+    if max(home_shots, away_shots) < 4:
+        return
+
+    # =====================================================
+    # MARKET
+    # =====================================================
+
+       total_corners = (
+        extract(home,"Corner Kicks")
+        +
+        extract(away,"Corner Kicks")
+    )
+
+    # =========================
+    # BET365 STYLE AI MARKETS
+    # =========================
+
+    if (
+
+        minute >= 70
+        and total_corners >= 8
+        and dominance >= 10
+
+    ):
+
+        market = (
+            f"📐 OVER {total_corners+1}.5 CORNERS"
+        )
+
+
+    elif (
+
+        best_xg >= 2.2
+        and total_goals <= 2
+        and home_shots >= 3
+        and away_shots >= 3
+
+    ):
+
+        market = (
+            "💎 BTTS / GOAL-GOAL"
+        )
+
+
+    elif (
+
+        total_goals <= 1
+        and best_pressure >= 62
+        and minute >= 35
+
+    ):
+
+        market = (
+            f"⚽ OVER {total_goals+1}.5 GOALS"
+        )
+
+
+    elif (
+
+        minute >= 75
+        and best_pressure >= 65
+
+    ):
+
+        market = (
+            "🔥 GOAL 75-90"
+        )
+
+
+    elif dominance >= 15:
+
+        if home_pressure > away_pressure:
+
+            market=(
+                f"🎯 NEXT GOAL HOME "
+                f"({match['teams']['home']['name']})"
+            )
+
+        else:
+
+            market=(
+                f"🎯 NEXT GOAL AWAY "
+                f"({match['teams']['away']['name']})"
+            )
+
+    else:
+
+        return
+
+       # =====================================================
+    # CONFIDENCE
+    # =====================================================
+
+    confidence = min(
+        best_pressure,
+        90
+    )
+
+    if minute >= 60:
+        confidence += 2
+
+    if minute >= 70:
+        confidence += 2
+
+    confidence = min(
+        confidence,
+        95
+    )
+
+    estimated_odds = 1.80
+
+    edge = value_edge(
+        confidence,
+        estimated_odds
+    )
+
+    if edge < 6:
+        return
+
+    # LIVE само 70%+
+    if confidence < 70:
+        return
+
+    # =====================================================
+    # MATCH INFO
+    # =====================================================
+
+    home_team = match["teams"]["home"]["name"]
+
+    away_team = match["teams"]["away"]["name"]
+
+    match_name = (
+        f"{home_team} vs {away_team}"
+    )
+
+    # =====================================================
+    # MESSAGE
+    # =====================================================
+
+    message = f"""
+🔥 PRACTICAL LIVE AI SIGNAL
+
+🌍 Country:
+{country}
+
+⚽ Match:
+{match_name}
+
+🏆 League:
+{league}
+
+⏱ Minute:
+{minute}
+
+📊 Score:
+{score}
+
+🔥 Pressure:
+{best_pressure}/100
+
+⚔ Dominance:
+{dominance}
+
+📈 Estimated xG:
+{best_xg}
+
+💎 Value Edge:
++{edge}%
+
+📈 Market:
+{market}
+
+✅ Confidence:
+{confidence}%
+"""
+
+    print(message)
+
+    send_telegram(message)
+
+    save_signal(
+
+        fixture_id,
+        match_name,
+        market,
+        best_pressure,
+        confidence,
+        edge
+    )
+
+    save_sent(fixture_id)
+
+# =========================================================
+# PREMATCH AI
+# =========================================================
+
+async def prematch_loop():
+
     while True:
+
         try:
-            now_sofia = datetime.now(TZ)
-            if now_sofia.hour == 4 and 0 <= now_sofia.minute <= 10:
-                train_model(); load_model(); time.sleep(650)
-            today = now_sofia.strftime("%Y-%m-%d")
-            upcoming_matches = safe_api_get("fixtures", {"date": today})
-            for m in upcoming_matches:
-                if not m or m["fixture"]["status"]["short"] != "NS": continue
-                fixture_id = m["fixture"]["id"]
-                league, country = m["league"]["name"], m["league"]["country"]
-                if blocked_league(league) or country in BAD_COUNTRIES: continue
-                if f"{fixture_id}_pre" in prematch_sent: continue
-                home, away = m["teams"]["home"]["name"], m["teams"]["away"]["name"]
-                date_obj = datetime.fromisoformat(m["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
-                time_diff = (date_obj - now_sofia).total_seconds()
-                if time_diff < 0 or time_diff > 28800: continue
-                
-                # ИЗЧИСТЕНА КОРЕКЦИЯ ТУК - ВИКА СЕ ПРЕЗ БЕЗГРЕШНАТА ФУНКЦИЯ БЕЗ ТВЪРДИ АДРЕСИ
-                odds_response = safe_api_get("odds", {"fixture": fixture_id, "bookmaker": 8, "bet": 1})
-                current_home_odd, current_away_odd = 0.0, 0.0
-                if odds_response:
-                    try:
-                        for b in odds_response.get("bookmakers", []):
-                            if b["id"] == 8:
-                                for bet in b.get("bets", []):
-                                    if bet["id"] == 1:
-                                        for val in bet.get("values", []):
-                                            if val["value"] == "Home": current_home_odd = float(val["odd"])
-                                            if val["value"] == "Away": current_away_odd = float(val["odd"])
-                    except: pass
-                if current_home_odd > 1.15 and current_away_odd > 1.15:
-                    if fixture_id not in odds_tracker:
-                        odds_tracker[fixture_id] = {"home": current_home_odd, "away": current_away_odd, "alerted": False}
-                    else:
-                        historical = odds_tracker[fixture_id]
-                        if not historical["alerted"]:
-                            hd = ((historical["home"] - current_home_odd) / historical["home"]) * 100
-                            ad = ((historical["away"] - current_away_odd) / historical["away"]) * 100
-                            if hd >= 15.0 and current_home_odd < historical["home"]:
-                                send_telegram(f"📉 <b>[SHARP MONEY]</b> {home} - Победител"); historical["alerted"] = True; prematch_sent[f"{fixture_id}_pre"] = time.time(); continue
-                            elif ad >= 15.0 and current_away_odd < historical["away"]:
-                                send_telegram(f"📉 <b>[SHARP MONEY]</b> {away} - Победител"); historical["alerted"] = True; prematch_sent[f"{fixture_id}_pre"] = time.time(); continue
-                            if country in ["Italy","Romania","Bulgaria"]:
 
-                    market = "📉 ПОД 2.5 ГОЛА"
-                    prob = "76%"
+            matches = get_upcoming_matches()
 
-                elif country in ["Netherlands","Germany","Norway","Sweden"]:
+            for m in matches:
 
-                    poisson_prob = analyze_poisson_over_under(fixture_id)
+                try:
 
-                    market = "💎 ГОЛ/ГОЛ - ДА"
-                    prob = f"{poisson_prob}%"
+                    league = m["league"]["name"]
 
-                elif country in GOLDEN_PREMATCH_COUNTRIES:
-
-                    poisson_prob = analyze_poisson_over_under(fixture_id)
-
-                    if poisson_prob < 82:
+                    if blocked_league(league):
                         continue
 
-                    market = "🔮 НАД 2.5 ГОЛА"
-                    prob = f"{poisson_prob}%"
+                    country = m["league"]["country"]
 
-                else:
-                    continue
-                elif country in ["Netherlands", "Germany", "Norway", "Sweden"]:
-                    poisson_prob = analyze_poisson_over_under(fixture_id)
-                    market, prob = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%"
-                elif country in GOLDEN_PREMATCH_COUNTRIES: market, prob = "🔮 НАД 2.5 ГОЛА", "74%"
-                else: continue
-                send_telegram(f"🔮 <b>[PREMATCH POISSON]</b>\n⚽ {home} vs {away}\n🎯 Прогноза: {market} ({prob})")
-                prematch_sent[f"{fixture_id}_pre"] = time.time()
-                time.sleep(2)
-        except: pass
-        time.sleep(600)
+                    if country in BAD_COUNTRIES:
+                        continue
 
-if __name__ == "__main__":
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace(
+                            "Z","+00:00"
+                        )
+                    ).astimezone(TZ)
+
+                    # само бъдещи мачове до 8 часа
+                    diff = (
+                        date - datetime.now(TZ)
+                    ).total_seconds()
+
+                    if diff < 0 or diff > 28800:
+                        continue
+
+                    score, market, odd = (
+                        calculate_match_score(
+                            country,
+                            league,
+                            home,
+                            away
+                        )
+                    )
+
+                    confidence = 65 + score
+
+                    if confidence < 74:
+                        continue
+
+                    key = f"{home}_{away}"
+
+                    if not can_send_prematch(key):
+                        continue
+
+                    msg = f"""
+🔥 PRE-MATCH AI SIGNAL
+
+🌍 {country}
+🏆 {league}
+
+⚽ {home} vs {away}
+
+⏰ {date.strftime("%d.%m %H:%M")}
+
+🎯 {market}
+
+💰 Odd:
+{odd}
+
+✅ Confidence:
+{min(confidence,92)}%
+"""
+
+                    print(msg)
+
+                    send_telegram(msg)
+
+                    save_prematch(key)
+
+                except Exception as e:
+
+                    print(
+                        "PREMATCH MATCH ERROR:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "PREMATCH ERROR:",
+                e
+            )
+
+        await asyncio.sleep(1200)
+
+# =========================================================
+# LIVE LOOP
+# =========================================================
+
+async def live_loop():
+
+    while True:
+
+        try:
+
+            matches = get_live_matches()
+
+            print(
+                f"[{datetime.now()}] "
+                f"Live matches: {len(matches)}"
+            )
+
+            for match in matches:
+
+                try:
+
+                    analyze_match(match)
+
+                except Exception as e:
+
+                    print(
+                        "Match Error:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "LIVE ERROR:",
+                e
+            )
+
+        await asyncio.sleep(45)
+
+# =========================================================
+# THREAD
+# =========================================================
+
+def start_live_loop():
+
+    loop = asyncio.new_event_loop()
+
+    asyncio.set_event_loop(loop)
+
+    loop.run_until_complete(
+        live_loop()
+    )
+
+# =========================================================
+# MAIN
+# =========================================================
+
+def main():
+
     init_database()
 
-    print("🧠 Зареждане на Random Forest моделите при start...")
+    print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
-    load_model()
-
-    send_telegram("🔥 AI v1000 READY")
-    print("TEST SENT")
-
-    t1 = threading.Thread(
-        target=live_analysis_runner
+    # LIVE
+    live_thread = threading.Thread(
+        target=start_live_loop,
+        daemon=True
     )
 
-    t2 = threading.Thread(
-        target=prematch_expert_runner
+    live_thread.start()
+
+    # PREMATCH
+    prematch_thread = threading.Thread(
+        target=lambda:
+        asyncio.run(prematch_loop()),
+        daemon=True
     )
 
-    t1.start()
+    prematch_thread.start()
 
-    time.sleep(10)
+    while True:
+        time.sleep(60)
 
-    t2.start()
+# =========================================================
+# START
+# =========================================================
 
-    t1.join()
-    t2.join()
+if __name__ == "__main__":
+
+    main()
 
