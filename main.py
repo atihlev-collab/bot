@@ -16,11 +16,7 @@ from zoneinfo import ZoneInfo
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-
 print(API_KEY[:10])
-
-print("AZ SUM NOVIQT FILE 123456")
-
 try:
     from ml_model import predict_btts, predict_over, train_model, load_model
 except ImportError:
@@ -262,7 +258,7 @@ def prematch_expert_runner():
                 current_home_odd, current_away_odd = 0.0, 0.0
                 if odds_response:
                     try:
-                      for b in odds_response[0].get("bookmakers", []):
+                        for b in odds_response.get("bookmakers", []):
                             if b["id"] == 8:
                                 for bet in b.get("bets", []):
                                     if bet["id"] == 1:
@@ -282,40 +278,12 @@ def prematch_expert_runner():
                                 send_telegram(f"📉 <b>[SHARP MONEY]</b> {home} - Победител"); historical["alerted"] = True; prematch_sent[f"{fixture_id}_pre"] = time.time(); continue
                             elif ad >= 15.0 and current_away_odd < historical["away"]:
                                 send_telegram(f"📉 <b>[SHARP MONEY]</b> {away} - Победител"); historical["alerted"] = True; prematch_sent[f"{fixture_id}_pre"] = time.time(); continue
-            if country in ["Italy","Romania","Bulgaria"]:
-
-    market = "📉 ПОД 2.5 ГОЛА"
-    prob = "76%"
-
-if country in ["Italy","Romania","Bulgaria"]:
-
-    market = "📉 ПОД 2.5 ГОЛА"
-    prob = "76%"
-
-                 if country in ["Italy","Romania","Bulgaria"]:
-
-                    market = "📉 ПОД 2.5 ГОЛА"
-                    prob = "76%"
-
-                elif country in ["Netherlands","Germany","Norway","Sweden"]:
-
+                if country in ["Italy", "Romania", "Bulgaria"]: market, prob = "📉 ПОД 2.5 ГОЛА", "76%"
+                elif country in ["Netherlands", "Germany", "Norway", "Sweden"]:
                     poisson_prob = analyze_poisson_over_under(fixture_id)
-
-                    market = "💎 ГОЛ/ГОЛ - ДА"
-                    prob = f"{poisson_prob}%"
-
-                elif country in GOLDEN_PREMATCH_COUNTRIES:
-
-                    poisson_prob = analyze_poisson_over_under(fixture_id)
-
-                    if poisson_prob < 82:
-                        continue
-
-                    market = "🔮 НАД 2.5 ГОЛА"
-                    prob = f"{poisson_prob}%"
-
-                else:
-                    continue
+                    market, prob = "💎 ГОЛ/ГОЛ - ДА", f"{poisson_prob}%"
+                elif country in GOLDEN_PREMATCH_COUNTRIES: market, prob = "🔮 НАД 2.5 ГОЛА", "74%"
+                else: continue
                 send_telegram(f"🔮 <b>[PREMATCH POISSON]</b>\n⚽ {home} vs {away}\n🎯 Прогноза: {market} ({prob})")
                 prematch_sent[f"{fixture_id}_pre"] = time.time()
                 time.sleep(2)
@@ -348,3 +316,4 @@ if __name__ == "__main__":
 
     t1.join()
     t2.join()
+
