@@ -674,7 +674,7 @@ def analyze_match(match):
     if max(home_shots, away_shots) < 4:
         return
 
-    # =====================================================
+       # =====================================================
     # MARKET
     # =====================================================
 
@@ -684,8 +684,31 @@ def analyze_match(match):
         extract(away, "Corner Kicks")
     )
 
-    # OVER GOALS
+    # EARLY CORNERS
     if (
+        minute >= 45
+        and total_corners >= 5
+        and dominance >= 10
+        and best_pressure >= 56
+    ):
+
+        market = (
+            f"📐 OVER {total_corners+1}.5 CORNERS"
+        )
+
+    # BTTS
+    elif (
+        best_xg >= 2.4
+        and home_shots >= 4
+        and away_shots >= 4
+        and total_goals <= 3
+        and dominance >= 8
+    ):
+
+        market = "💎 BTTS / GOAL-GOAL"
+
+    # OVER GOALS
+    elif (
         total_goals <= 1
         and best_pressure >= 64
         and best_xg >= 1.8
@@ -697,40 +720,6 @@ def analyze_match(match):
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
-        confidence = 74
-
-
-    # BTTS
-    elif (
-        best_xg >= 2.4
-        and home_shots >= 4
-        and away_shots >= 4
-        and total_goals <= 3
-        and dominance >= 8
-    ):
-
-        market = (
-            "💎 BTTS / GOAL-GOAL"
-        )
-
-        confidence = 76
-
-
-    # CORNERS
- elif (
-    minute >= 45
-    and total_corners >= 5
-    and dominance >= 10
-    and best_pressure >= 56
-):
-
-        market = (
-            f"📐 OVER {total_corners+1}.5 CORNERS"
-        )
-
-        confidence = 75
-
-
     # LATE GOAL
     elif (
         minute >= 75
@@ -738,14 +727,9 @@ def analyze_match(match):
         and best_xg >= 2
     ):
 
-        market = (
-            "🔥 GOAL 75-90"
-        )
+        market = "🔥 GOAL 75-90"
 
-        confidence = 78
-
-
-    # СТАРИЯТ NEXT GOAL
+    # OLD NEXT GOAL
     elif dominance >= 15:
 
         if home_pressure > away_pressure:
@@ -764,7 +748,6 @@ def analyze_match(match):
 
     else:
         return
-
        # =====================================================
     # CONFIDENCE
     # =====================================================
