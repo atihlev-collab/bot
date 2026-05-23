@@ -674,86 +674,65 @@ def analyze_match(match):
     # MARKET
     # =====================================================
 
-       total_corners = (
-        extract(home,"Corner Kicks")
+    total_corners = (
+        extract(home, "Corner Kicks")
         +
-        extract(away,"Corner Kicks")
+        extract(away, "Corner Kicks")
     )
 
-    # =========================
-    # BET365 STYLE AI MARKETS
-    # =========================
-
     if (
-
         minute >= 70
         and total_corners >= 8
         and dominance >= 10
-
     ):
 
         market = (
             f"📐 OVER {total_corners+1}.5 CORNERS"
         )
 
-
     elif (
-
         best_xg >= 2.2
         and total_goals <= 2
         and home_shots >= 3
         and away_shots >= 3
-
     ):
 
-        market = (
-            "💎 BTTS / GOAL-GOAL"
-        )
-
+        market = "💎 BTTS / GOAL-GOAL"
 
     elif (
-
         total_goals <= 1
         and best_pressure >= 62
         and minute >= 35
-
     ):
 
         market = (
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
-
     elif (
-
         minute >= 75
         and best_pressure >= 65
-
     ):
 
-        market = (
-            "🔥 GOAL 75-90"
-        )
-
+        market = "🔥 GOAL 75-90"
 
     elif dominance >= 15:
 
         if home_pressure > away_pressure:
 
-            market=(
+            market = (
                 f"🎯 NEXT GOAL HOME "
                 f"({match['teams']['home']['name']})"
             )
 
         else:
 
-            market=(
+            market = (
                 f"🎯 NEXT GOAL AWAY "
                 f"({match['teams']['away']['name']})"
             )
 
     else:
-
         return
 
        # =====================================================
