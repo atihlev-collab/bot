@@ -1035,7 +1035,7 @@ async def prematch_loop():
                         92
                     )
 
-                    if confidence < 70:
+                    if confidence < 75:
                         continue
 
                     key = f"{home}_{away}"
