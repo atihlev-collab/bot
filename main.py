@@ -840,9 +840,9 @@ def analyze_match(match):
         and best_pressure >= 65
     ):
 
-        market = (
-            f"📐 OVER {total_corners+4}.5 CORNERS"
-        )
+       market = (
+    f"📐 OVER {total_corners+6}.5 CORNERS"
+)
 
     # BTTS
     elif (
