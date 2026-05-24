@@ -721,7 +721,7 @@ def analyze_match(match):
     )
 
     # EARLY CORNERS (BET365 STYLE)
-    if (
+       if (
         minute >= 35
         and minute <= 55
         and total_corners >= 3
@@ -729,9 +729,9 @@ def analyze_match(match):
         and best_pressure >= 58
     ):
 
-       market = (
-           f"📐 OVER {total_corners+4}.5 CORNERS"
-    )   
+        market = (
+            f"📐 OVER {total_corners+4}.5 CORNERS"
+        )
 
     # BTTS
     elif (
