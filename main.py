@@ -710,7 +710,7 @@ def analyze_match(match):
     if max(home_shots, away_shots) < 4:
         return
 
-    # =====================================================
+      # =====================================================
     # MARKET
     # =====================================================
 
@@ -734,20 +734,21 @@ def analyze_match(match):
         )
 
     # BTTS
-elif (
-    best_xg >= 2.4
-    and home_shots >= 4
-    and away_shots >= 4
-    and total_goals <= 3
-    and dominance >= 8
-    and (
-        home_goals == 0
-        or away_goals == 0
-    )
-):
+    elif (
+        best_xg >= 2.4
+        and home_shots >= 4
+        and away_shots >= 4
+        and total_goals <= 3
+        and dominance >= 8
+        and (
+            home_goals == 0
+            or away_goals == 0
+        )
+    ):
 
-    market = "💎 BTTS / GOAL-GOAL"
+        market = "💎 BTTS / GOAL-GOAL"
 
+    # OVER GOALS
     elif (
         total_goals <= 1
         and best_pressure >= 64
@@ -760,6 +761,7 @@ elif (
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
+    # LATE GOAL
     elif (
         minute >= 75
         and best_pressure >= 68
@@ -769,6 +771,7 @@ elif (
 
         market = "🔥 GOAL 75-90"
 
+    # NEXT GOAL
     elif dominance >= 15:
 
         if home_pressure > away_pressure:
