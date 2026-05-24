@@ -896,58 +896,46 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-            score, market, odd = (
-                calculate_match_score(
-                    country,
-                    league,
-                    home,
-                    away
-                )
-            )
+                               score, market, odd = (
+                        calculate_match_score(
+                            country,
+                            league,
+                            home,
+                            away
+                        )
+                    )
 
-            confidence = 65 + score
+                    confidence = 65 + score
 
-            if "Premier" in league:
-                confidence += 4
+                    if "Premier" in league:
+                        confidence += 4
 
-            elif "La Liga" in league:
-                confidence += 3
+                    elif "La Liga" in league:
+                        confidence += 3
 
-            elif "Serie A" in league:
-                confidence += 2
+                    elif "Serie A" in league:
+                        confidence += 2
 
-            elif "Cup" in league:
-                confidence -= 6
+                    elif "Cup" in league:
+                        confidence -= 6
 
-            confidence += min(
-                len(home) % 5,
-                4
-            )
+                    confidence += min(
+                        len(home) % 5,
+                        4
+                    )
 
-            confidence = min(
-                confidence,
-                90
-            )
+                    confidence = min(
+                        confidence,
+                        92
+                    )
 
-            if confidence < 75:
-                continue
+                    if confidence < 70:
+                        continue
 
-            odd = float(odd)
+                    key = f"{home}_{away}"
 
-            if odd < 1.50:
-                continue
-
-            if odd > 2.10:
-                continue
-
-            picks.append(
-                (
-                    home,
-                    away,
-                    market,
-                    odd
-                )
-            )
+                    if not can_send_prematch(key):
+                        continue
 
             total_odds *= odd
 
