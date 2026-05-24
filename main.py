@@ -584,7 +584,98 @@ def save_signal(
 
     conn.commit()
     conn.close()
+# =========================================================
+# LIVE STATS
+# =========================================================
 
+stats = {
+
+    "total":0,
+
+    "72_79":0,
+    "80_84":0,
+    "85_95":0,
+
+    "corners":0,
+    "btts":0,
+    "next_goal":0,
+    "goals":0
+}
+
+def update_live_stats(
+
+    market,
+    confidence
+
+):
+
+    stats["total"] += 1
+
+    if confidence >=72 and confidence<=79:
+
+        stats["72_79"] +=1
+
+    elif confidence>=80 and confidence<=84:
+
+        stats["80_84"] +=1
+
+    elif confidence>=85:
+
+        stats["85_95"] +=1
+
+
+    if "CORNERS" in market:
+
+        stats["corners"] +=1
+
+    elif "BTTS" in market:
+
+        stats["btts"] +=1
+
+    elif "NEXT GOAL" in market:
+
+        stats["next_goal"] +=1
+
+    elif "GOAL" in market:
+
+        stats["goals"] +=1
+
+
+def show_stats():
+
+    if stats["total"]==0:
+
+        return
+
+    msg=f"""
+📊 LIVE AI STATS
+
+🔥 Total:
+{stats["total"]}
+
+72-79:
+{stats["72_79"]}
+
+80-84:
+{stats["80_84"]}
+
+85+:
+{stats["85_95"]}
+
+📐 Corners:
+{stats["corners"]}
+
+💎 BTTS:
+{stats["btts"]}
+
+🎯 Next Goal:
+{stats["next_goal"]}
+
+⚽ Goals:
+{stats["goals"]}
+"""
+
+    send_telegram(msg)
 # =========================================================
 # LIVE ANALYSIS
 # =========================================================
