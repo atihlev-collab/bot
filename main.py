@@ -853,7 +853,110 @@ def analyze_match(match):
     )
 
     save_sent(fixture_id)
+# =========================================================
+# DAILY BET SLIP
+# =========================================================
 
+daily_ticket_sent = False
+
+async def daily_ticket():
+
+    global daily_ticket_sent
+
+    now = datetime.now(TZ)
+
+    # само в 13:00
+    if now.hour != 13:
+
+        daily_ticket_sent = False
+        return
+
+    # само веднъж
+    if daily_ticket_sent:
+        return
+
+    matches = get_upcoming_matches()
+
+    picks = []
+
+    total_odds = 1.0
+
+    for m in matches:
+
+        try:
+
+            league = m["league"]["name"]
+
+            if blocked_league(league):
+                continue
+
+            country = m["league"]["country"]
+
+            if country in BAD_COUNTRIES:
+                continue
+
+            home = m["teams"]["home"]["name"]
+            away = m["teams"]["away"]["name"]
+
+            score, market, odd = (
+                calculate_match_score(
+                    country,
+                    league,
+                    home,
+                    away
+                )
+            )
+
+            confidence = 65 + score
+
+            if confidence < 75:
+                continue
+
+            odd = float(odd)
+
+            if odd < 1.50:
+                continue
+
+            if odd > 2.10:
+                continue
+
+            picks.append(
+                (
+                    home,
+                    away,
+                    market,
+                    odd
+                )
+            )
+
+            total_odds *= odd
+
+            if total_odds >= 5:
+                break
+
+        except:
+            pass
+
+    if len(picks) >= 3:
+
+        msg = "🔥 DAILY AI BET SLIP\n\n"
+
+        for p in picks:
+
+            msg += (
+                f"⚽ {p[0]} vs {p[1]}\n"
+                f"🎯 {p[2]}\n"
+                f"💰 {p[3]}\n\n"
+            )
+
+        msg += (
+            f"💎 TOTAL ODDS: "
+            f"{round(total_odds,2)}"
+        )
+
+        send_telegram(msg)
+
+        daily_ticket_sent = True
 # =========================================================
 # PREMATCH AI
 # =========================================================
