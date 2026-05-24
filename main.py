@@ -870,7 +870,7 @@ async def daily_ticket():
         daily_ticket_sent = False
         return
 
-    # само веднъж на ден
+    # само веднъж дневно
     if daily_ticket_sent:
         return
 
@@ -896,7 +896,7 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-                        score, market, odd = (
+            score, market, odd = (
                 calculate_match_score(
                     country,
                     league,
@@ -922,6 +922,11 @@ async def daily_ticket():
             confidence += min(
                 len(home) % 5,
                 4
+            )
+
+            confidence = min(
+                confidence,
+                90
             )
 
             if confidence < 75:
@@ -950,7 +955,7 @@ async def daily_ticket():
                 break
 
         except Exception:
-            pass
+            continue
 
     if len(picks) >= 3:
 
