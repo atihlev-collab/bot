@@ -820,7 +820,7 @@ def analyze_match(match):
 
         return
 
-        # =====================================================
+    # =====================================================
     # MARKET
     # =====================================================
 
@@ -876,7 +876,7 @@ def analyze_match(match):
         minute >= 75
         and best_pressure >= 72
         and best_xg >= 2.2
-        and abs(home_goals-away_goals) < 4
+        and abs(home_goals - away_goals) < 4
     ):
 
         market = "🔥 GOAL 75-90"
