@@ -710,7 +710,7 @@ def analyze_match(match):
     if max(home_shots, away_shots) < 4:
         return
 
-       # =====================================================
+      # =====================================================
     # MARKET
     # =====================================================
 
@@ -720,19 +720,17 @@ def analyze_match(match):
         extract(away, "Corner Kicks")
     )
 
-    # EARLY CORNERS
-    # EARLY CORNERS
-    # EARLY CORNERS
+    # EARLY CORNERS (BET365 STYLE)
     if (
-        minute >= 48
-        and minute <= 68
-        and total_corners >= 5
+        minute >= 35
+        and minute <= 55
+        and total_corners >= 3
         and dominance >= 10
-        and best_pressure >= 56
+        and best_pressure >= 58
     ):
 
         market = (
-            f"📐 OVER {total_corners+1}.5 CORNERS"
+            f"📐 OVER {total_corners+2}.5 CORNERS"
         )
 
     # BTTS
@@ -768,7 +766,7 @@ def analyze_match(match):
 
         market = "🔥 GOAL 75-90"
 
-    # OLD NEXT GOAL
+    # NEXT GOAL
     elif dominance >= 15:
 
         if home_pressure > away_pressure:
@@ -786,6 +784,7 @@ def analyze_match(match):
             )
 
     else:
+
         return
        # =====================================================
     # CONFIDENCE
