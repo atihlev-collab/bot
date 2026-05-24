@@ -882,7 +882,7 @@ def analyze_match(match):
         market = "🔥 GOAL 75-90"
 
     # NEXT GOAL
-    elif dominance >= 18:
+       elif dominance >= 18:
 
         if home_pressure > away_pressure:
 
@@ -899,6 +899,10 @@ def analyze_match(match):
             )
 
     else:
+
+        market = None
+
+    if market is None:
 
         return
        # =====================================================
