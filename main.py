@@ -893,21 +893,26 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-            score, market, odd = calculate_match_score(
-                country,
-                league,
-                home,
-                away
+                        score, market, odd = (
+                calculate_match_score(
+                    country,
+                    league,
+                    home,
+                    away
+                )
             )
 
             confidence = 65 + score
 
             if "Premier" in league:
                 confidence += 4
+
             elif "La Liga" in league:
                 confidence += 3
+
             elif "Serie A" in league:
                 confidence += 2
+
             elif "Cup" in league:
                 confidence -= 6
 
