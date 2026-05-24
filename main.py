@@ -896,53 +896,75 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-                               score, market, odd = (
-                        calculate_match_score(
-                            country,
-                            league,
-                            home,
-                            away
-                        )
-                    )
+            score, market, odd = (
+                calculate_match_score(
+                    country,
+                    league,
+                    home,
+                    away
+                )
+            )
 
-                    confidence = 65 + score
+            confidence = 65 + score
 
-                    if "Premier" in league:
-                        confidence += 4
+            if "Premier" in league:
+                confidence += 4
 
-                    elif "La Liga" in league:
-                        confidence += 3
+            elif "La Liga" in league:
+                confidence += 3
 
-                    elif "Serie A" in league:
-                        confidence += 2
+            elif "Serie A" in league:
+                confidence += 2
 
-                    elif "Cup" in league:
-                        confidence -= 6
+            elif "Cup" in league:
+                confidence -= 6
 
-                    confidence += min(
-                        len(home) % 5,
-                        4
-                    )
+            confidence += min(
+                len(home) % 5,
+                4
+            )
 
-                    confidence = min(
-                        confidence,
-                        92
-                    )
+            confidence = min(
+                confidence,
+                92
+            )
 
-                    if confidence < 70:
-                        continue
+            if confidence < 70:
+                continue
 
-                    key = f"{home}_{away}"
+            key = f"{home}_{away}"
 
-                    if not can_send_prematch(key):
-                        continue
+            if not can_send_prematch(key):
+                continue
+
+            odd = float(odd)
+
+            picks.append(
+                (
+                    home,
+                    away,
+                    market,
+                    odd
+                )
+            )
+
+            save_prematch(key)
 
             total_odds *= odd
+
+            if len(picks) >= 3:
+                break
 
             if total_odds >= 5:
                 break
 
-        except Exception:
+        except Exception as e:
+
+            print(
+                "DAILY SLIP ERROR:",
+                e
+            )
+
             continue
 
     if len(picks) >= 3:
