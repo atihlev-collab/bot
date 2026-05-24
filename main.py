@@ -710,7 +710,7 @@ def analyze_match(match):
     if max(home_shots, away_shots) < 4:
         return
 
-      # =====================================================
+    # =====================================================
     # MARKET
     # =====================================================
 
@@ -733,7 +733,6 @@ def analyze_match(match):
             f"📐 OVER {total_corners+4}.5 CORNERS"
         )
 
-    # BTTS
     elif (
         best_xg >= 2.4
         and home_shots >= 4
@@ -744,7 +743,6 @@ def analyze_match(match):
 
         market = "💎 BTTS / GOAL-GOAL"
 
-    # OVER GOALS
     elif (
         total_goals <= 1
         and best_pressure >= 64
@@ -757,7 +755,6 @@ def analyze_match(match):
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
-    # LATE GOAL
     elif (
         minute >= 75
         and best_pressure >= 68
@@ -767,7 +764,6 @@ def analyze_match(match):
 
         market = "🔥 GOAL 75-90"
 
-    # NEXT GOAL
     elif dominance >= 15:
 
         if home_pressure > away_pressure:
