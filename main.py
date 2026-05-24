@@ -720,7 +720,7 @@ def analyze_match(match):
         extract(away, "Corner Kicks")
     )
 
-      # EARLY CORNERS (BET365 STYLE)
+    # BET365 STYLE EARLY CORNERS
     if (
         minute >= 35
         and minute <= 55
@@ -728,10 +728,6 @@ def analyze_match(match):
         and dominance >= 10
         and best_pressure >= 58
     ):
-
-        market = (
-            f"📐 OVER {total_corners+4}.5 CORNERS"
-        )
 
         market = (
             f"📐 OVER {total_corners+4}.5 CORNERS"
@@ -766,6 +762,7 @@ def analyze_match(match):
         minute >= 75
         and best_pressure >= 68
         and best_xg >= 2
+        and abs(home_goals-away_goals) < 4
     ):
 
         market = "🔥 GOAL 75-90"
