@@ -820,7 +820,7 @@ def analyze_match(match):
 
         return
 
-      # =====================================================
+        # =====================================================
     # MARKET
     # =====================================================
 
@@ -832,11 +832,11 @@ def analyze_match(match):
 
     # BET365 STYLE EARLY CORNERS
     if (
-        minute >= 35
-        and minute <= 55
-        and total_corners >= 3
-        and dominance >= 10
-        and best_pressure >= 58
+        minute >= 40
+        and minute <= 52
+        and total_corners >= 4
+        and dominance >= 14
+        and best_pressure >= 65
     ):
 
         market = (
@@ -849,7 +849,7 @@ def analyze_match(match):
         and home_shots >= 4
         and away_shots >= 4
         and total_goals <= 3
-        and dominance >= 8
+        and dominance >= 14
         and (
             home_goals == 0
             or away_goals == 0
@@ -861,10 +861,10 @@ def analyze_match(match):
     # OVER GOALS
     elif (
         total_goals <= 1
-        and best_pressure >= 64
-        and best_xg >= 1.8
-        and minute >= 35
-        and dominance >= 10
+        and best_pressure >= 68
+        and best_xg >= 2.0
+        and minute >= 40
+        and dominance >= 14
     ):
 
         market = (
@@ -874,15 +874,15 @@ def analyze_match(match):
     # LATE GOAL
     elif (
         minute >= 75
-        and best_pressure >= 68
-        and best_xg >= 2
+        and best_pressure >= 72
+        and best_xg >= 2.2
         and abs(home_goals-away_goals) < 4
     ):
 
         market = "🔥 GOAL 75-90"
 
     # NEXT GOAL
-    elif dominance >= 15:
+    elif dominance >= 18:
 
         if home_pressure > away_pressure:
 
