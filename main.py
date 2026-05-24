@@ -439,51 +439,66 @@ def calculate_match_score(
     away
 ):
 
-    score=0
+    score = 0
 
-    market="⚽ OVER 2.5 GOALS"
-    odd="1.85"
+    market = "⚽ OVER 2.5 GOALS"
+    odd = "1.80"
 
-    OVER_COUNTRIES=[
+    # GOAL LEAGUES
+    if country in [
 
         "Netherlands",
         "Germany",
-        "Norway",
-        "Sweden",
-        "Denmark"
-    ]
+        "Norway"
 
-    UNDER_COUNTRIES=[
+    ]:
+
+        score += 12
+
+        market = "⚽ OVER 2.5 GOALS"
+
+        odd = "1.80"
+
+    # UNDER LEAGUES
+    elif country in [
 
         "Italy",
         "Romania",
         "Bulgaria"
-    ]
 
-    if country in OVER_COUNTRIES:
+    ]:
 
-        score+=12
+        score += 10
 
-        market="⚽ OVER 2.5 GOALS"
+        market = "📉 UNDER 2.5 GOALS"
 
-        odd="1.80"
+        odd = "1.75"
 
-    if country in UNDER_COUNTRIES:
+    # BTTS LEAGUES
+    elif country in [
 
-        score+=8
+        "Sweden",
+        "Denmark"
 
-        market="📉 UNDER 2.5 GOALS"
+    ]:
 
-        odd="1.75"
+        score += 11
 
+        market = "💎 BTTS"
+
+        odd = "1.85"
+
+    # DERBY BONUS
     if "derby" in league.lower():
 
-        score+=8
+        score += 5
 
+    # CUP PENALTY
     if "cup" in league.lower():
 
-        score-=5
+        score -= 5
 
+    # REMOVE BAD LEAGUES
     if any(
 
         x in league.lower()
@@ -492,14 +507,35 @@ def calculate_match_score(
 
             "u21",
             "women",
-            "reserve"
+            "reserve",
+            "friendly"
+
         ]
 
     ):
 
-        score-=100
+        score -= 100
 
-    return score,market,odd
+    # BIG TEAMS SMALL BOOST
+    big_teams = [
+
+        "Ajax",
+        "PSV",
+        "Liverpool",
+        "Arsenal",
+        "Barcelona",
+        "Real Madrid",
+        "Manchester City"
+
+    ]
+
+    if home in big_teams:
+        score += 3
+
+    if away in big_teams:
+        score += 3
+
+    return score, market, odd
 
 # =========================================================
 # SAVE SIGNAL
