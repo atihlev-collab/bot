@@ -733,15 +733,20 @@ def analyze_match(match):
             f"📐 OVER {total_corners+4}.5 CORNERS"
         )
 
-    elif (
-        best_xg >= 2.4
-        and home_shots >= 4
-        and away_shots >= 4
-        and total_goals <= 3
-        and dominance >= 8
-    ):
+    # BTTS
+elif (
+    best_xg >= 2.4
+    and home_shots >= 4
+    and away_shots >= 4
+    and total_goals <= 3
+    and dominance >= 8
+    and (
+        home_goals == 0
+        or away_goals == 0
+    )
+):
 
-        market = "💎 BTTS / GOAL-GOAL"
+    market = "💎 BTTS / GOAL-GOAL"
 
     elif (
         total_goals <= 1
