@@ -432,74 +432,74 @@ def value_edge(confidence, odds):
 # PREMATCH SCORE ENGINE
 # =========================================================
 
-def calculate_match_score(country, league, home, away):
+def calculate_match_score(
+    country,
+    league,
+    home,
+    away
+):
 
-    score = 0
-    market = "OVER 2.5 GOALS"
-    odd = "1.80"
+    score=0
 
-    OVER_COUNTRIES = [
+    market="⚽ OVER 2.5 GOALS"
+    odd="1.85"
+
+    OVER_COUNTRIES=[
+
         "Netherlands",
+        "Germany",
         "Norway",
         "Sweden",
-        "Germany",
-        "Denmark",
-        "Brazil",
-        "Argentina",
-        "USA"
+        "Denmark"
     ]
 
-    UNDER_COUNTRIES = [
+    UNDER_COUNTRIES=[
+
         "Italy",
         "Romania",
-        "Bulgaria",
-        "Croatia"
+        "Bulgaria"
     ]
 
-    BIG_TEAMS = [
-        "Manchester City",
-        "Manchester United",
-        "Liverpool England",
-        "Arsenal London",
-        "Chelsea London",
-        "Barcelona Spain",
-        "Real Madrid",
-        "Bayern Munich",
-        "PSG Paris",
-        "Inter Milan",
-        "AC Milan",
-        "Juventus Italy"
-    ]
+    if country in OVER_COUNTRIES:
 
-    if home.strip() in BIG_TEAMS:
-        score += 10
-        market = "1"
-        odd = "1.60"
+        score+=12
 
-    if away.strip() in BIG_TEAMS:
-        score += 8
-        market = "2"
-        odd = "1.75"
+        market="⚽ OVER 2.5 GOALS"
 
-    if any(
-        x.lower() in home.lower()
-        for x in BIG_TEAMS
-    ):
+        odd="1.80"
 
-        score += 10
-        market = "1"
-        odd = "1.60"
+    if country in UNDER_COUNTRIES:
+
+        score+=8
+
+        market="📉 UNDER 2.5 GOALS"
+
+        odd="1.75"
+
+    if "derby" in league.lower():
+
+        score+=8
+
+    if "cup" in league.lower():
+
+        score-=5
 
     if any(
-        x.lower() in away.lower()
-        for x in BIG_TEAMS
+
+        x in league.lower()
+
+        for x in [
+
+            "u21",
+            "women",
+            "reserve"
+        ]
+
     ):
 
-        score += 8
-        market = "2"
-        odd = "1.75"
+        score-=100
 
-    return score, market, odd
+    return score,market,odd
 
 # =========================================================
 # SAVE SIGNAL
