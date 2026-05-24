@@ -865,19 +865,16 @@ async def daily_ticket():
 
     now = datetime.now(TZ)
 
-    # само в 13:00
     if now.hour != 13:
         daily_ticket_sent = False
         return
 
-    # само веднъж дневно
     if daily_ticket_sent:
         return
 
     matches = get_upcoming_matches()
 
     picks = []
-
     total_odds = 1.0
 
     for m in matches:
@@ -896,38 +893,26 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-            score, market, odd = (
-                calculate_match_score(
-                    country,
-                    league,
-                    home,
-                    away
-                )
+            score, market, odd = calculate_match_score(
+                country,
+                league,
+                home,
+                away
             )
 
             confidence = 65 + score
 
             if "Premier" in league:
                 confidence += 4
-
             elif "La Liga" in league:
                 confidence += 3
-
             elif "Serie A" in league:
                 confidence += 2
-
             elif "Cup" in league:
                 confidence -= 6
 
-            confidence += min(
-                len(home) % 5,
-                4
-            )
-
-            confidence = min(
-                confidence,
-                92
-            )
+            confidence += min(len(home) % 5, 4)
+            confidence = min(confidence, 92)
 
             if confidence < 70:
                 continue
@@ -971,12 +956,12 @@ async def daily_ticket():
 
         msg = "🔥 DAILY AI BET SLIP\n\n"
 
-        for p in picks:
+        for home, away, market, odd in picks:
 
             msg += (
-                f"⚽ {p[0]} vs {p[1]}\n"
-                f"🎯 {p[2]}\n"
-                f"💰 Odd: {p[3]}\n\n"
+                f"⚽ {home} vs {away}\n"
+                f"🎯 {market}\n"
+                f"💰 Odd: {odd}\n\n"
             )
 
         msg += (
