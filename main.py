@@ -896,7 +896,7 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-            score, market, odd = (
+                        score, market, odd = (
                 calculate_match_score(
                     country,
                     league,
