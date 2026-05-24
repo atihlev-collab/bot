@@ -768,24 +768,29 @@ def analyze_match(match):
         home_pressure - away_pressure
     )
 
-    # =====================================================
+       # =====================================================
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 52
+    minimum_pressure = 60
 
     if minute >= 60:
-        minimum_pressure = 56
+
+        minimum_pressure = 65
 
     if best_pressure < minimum_pressure:
+
         return
 
-    if dominance < 8:
+    # по-голяма доминация
+    if dominance < 14:
+
         return
 
-    minimum_xg = 1.0
+    minimum_xg = 1.3
 
     if best_xg < minimum_xg:
+
         return
 
     home_shots = extract(
@@ -798,7 +803,21 @@ def analyze_match(match):
         "Shots on Goal"
     )
 
-    if max(home_shots, away_shots) < 4:
+    # минимум реални удари
+    if max(
+        home_shots,
+        away_shots
+    ) < 5:
+
+        return
+
+    # много ранни или умрели мачове
+    if minute < 35:
+
+        return
+
+    if total_goals >= 5:
+
         return
 
       # =====================================================
@@ -912,9 +931,9 @@ def analyze_match(match):
     if edge < 6:
         return
 
-    # LIVE само 70%+
-    if confidence < 72:
-        return
+   # LIVE само 78%+
+if confidence < 78:
+    return
 
     # =====================================================
     # MATCH INFO
@@ -1166,7 +1185,7 @@ async def prematch_loop():
                         92
                     )
 
-                    if confidence < 75:
+                    if confidence < 80:
                         continue
 
                     key = f"{home}_{away}"
