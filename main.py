@@ -902,7 +902,7 @@ def analyze_match(match):
     if market is None:
 
         return
-       # =====================================================
+      # =====================================================
     # CONFIDENCE
     # =====================================================
 
@@ -930,11 +930,13 @@ def analyze_match(match):
     )
 
     if edge < 6:
+
         return
 
-   # LIVE само 78%+
-if confidence < 78:
-    return
+    # LIVE само 78%+
+    if confidence < 78:
+
+        return
 
     # =====================================================
     # MATCH INFO
