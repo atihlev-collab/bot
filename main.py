@@ -967,6 +967,8 @@ async def prematch_loop():
 
         try:
 
+            await daily_ticket()
+
             matches = get_upcoming_matches()
 
             for m in matches:
@@ -1009,23 +1011,28 @@ async def prematch_loop():
                         )
                     )
 
-                                                           confidence = 65 + score
+                    confidence = 65 + score
 
                     if "Premier" in league:
                         confidence += 4
 
-                    if "La Liga" in league:
+                    elif "La Liga" in league:
                         confidence += 3
 
-                    if "Serie A" in league:
+                    elif "Serie A" in league:
                         confidence += 2
 
-                    if "Cup" in league:
+                    elif "Cup" in league:
                         confidence -= 6
 
                     confidence += min(
                         len(home) % 5,
                         4
+                    )
+
+                    confidence = min(
+                        confidence,
+                        92
                     )
 
                     if confidence < 70:
@@ -1052,7 +1059,7 @@ async def prematch_loop():
 {odd}
 
 ✅ Confidence:
-{min(confidence,92)}%
+{confidence}%
 """
 
                     print(msg)
