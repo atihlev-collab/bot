@@ -685,12 +685,14 @@ def analyze_match(match):
     )
 
     # EARLY CORNERS
-    if (
-        minute >= 45
-        and total_corners >= 5
-        and dominance >= 10
-        and best_pressure >= 56
-    ):
+    # EARLY CORNERS
+if (
+    minute >= 48
+    and minute <= 68
+    and total_corners >= 5
+    and dominance >= 10
+    and best_pressure >= 56
+):
 
         market = (
             f"📐 OVER {total_corners+1}.5 CORNERS"
