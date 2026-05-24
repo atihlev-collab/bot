@@ -867,11 +867,10 @@ async def daily_ticket():
 
     # само в 13:00
     if now.hour != 13:
-
         daily_ticket_sent = False
         return
 
-    # само веднъж
+    # само веднъж на ден
     if daily_ticket_sent:
         return
 
@@ -885,14 +884,13 @@ async def daily_ticket():
 
         try:
 
+            country = m["league"]["country"]
             league = m["league"]["name"]
 
-            if blocked_league(league):
+            if country in BAD_COUNTRIES:
                 continue
 
-            country = m["league"]["country"]
-
-            if country in BAD_COUNTRIES:
+            if blocked_league(league):
                 continue
 
             home = m["teams"]["home"]["name"]
@@ -907,24 +905,24 @@ async def daily_ticket():
                 )
             )
 
-           confidence = 65 + score
+            confidence = 65 + score
 
-if "Premier" in league:
-    confidence += 4
+            if "Premier" in league:
+                confidence += 4
 
-if "La Liga" in league:
-    confidence += 3
+            elif "La Liga" in league:
+                confidence += 3
 
-if "Serie A" in league:
-    confidence += 2
+            elif "Serie A" in league:
+                confidence += 2
 
-if "Cup" in league:
-    confidence -= 6
+            elif "Cup" in league:
+                confidence -= 6
 
-confidence += min(
-    len(home) % 5,
-    4
-)
+            confidence += min(
+                len(home) % 5,
+                4
+            )
 
             if confidence < 75:
                 continue
@@ -951,7 +949,7 @@ confidence += min(
             if total_odds >= 5:
                 break
 
-        except:
+        except Exception:
             pass
 
     if len(picks) >= 3:
@@ -963,7 +961,7 @@ confidence += min(
             msg += (
                 f"⚽ {p[0]} vs {p[1]}\n"
                 f"🎯 {p[2]}\n"
-                f"💰 {p[3]}\n\n"
+                f"💰 Odd: {p[3]}\n\n"
             )
 
         msg += (
