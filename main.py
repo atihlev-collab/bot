@@ -1026,7 +1026,7 @@ async def prematch_loop():
                         )
                     )
 
-                                       confidence = 65 + score
+                                                           confidence = 65 + score
 
                     if "Premier" in league:
                         confidence += 4
