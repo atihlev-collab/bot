@@ -93,6 +93,13 @@ last_scores = {}
 prematch_sent = {}
 
 # =========================================================
+# BET365 VALUE CACHE
+# =========================================================
+
+odds_cache = {}
+prematch_sent = {}
+
+# =========================================================
 # DATABASE
 # =========================================================
 
@@ -266,7 +273,44 @@ def get_upcoming_matches():
             pass
 
     return matches
+# =========================================================
+# BET365 VALUE ENGINE
+# =========================================================
 
+def odds_drop_signal(
+
+    home,
+    away,
+    odd
+
+):
+
+    key = f"{home}_{away}"
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return 0
+
+    if key not in odds_cache:
+
+        odds_cache[key] = odd
+
+        return 0
+
+    old_odd = odds_cache[key]
+
+    drop = old_odd - odd
+
+    odds_cache[key] = odd
+
+    return round(
+        drop,
+        2
+    )
 # =========================================================
 # MATCH STATS
 # =========================================================
@@ -1164,19 +1208,35 @@ async def prematch_loop():
                         )
                     )
 
-                    confidence = 65 + score
+                   confidence = 65 + score
 
-                    if "Premier" in league:
-                        confidence += 4
+drop = odds_drop_signal(
 
-                    elif "La Liga" in league:
-                        confidence += 3
+    home,
+    away,
+    odd
 
-                    elif "Serie A" in league:
-                        confidence += 2
+)
 
-                    elif "Cup" in league:
-                        confidence -= 6
+if drop >= 0.15:
+
+    confidence += 8
+
+    market = (
+        "🔥 BET365 VALUE DROP"
+    )
+
+if "Premier" in league:
+    confidence += 4
+
+elif "La Liga" in league:
+    confidence += 3
+
+elif "Serie A" in league:
+    confidence += 2
+
+elif "Cup" in league:
+    confidence -= 6
 
                     confidence += min(
                         len(home) % 5,
