@@ -877,7 +877,7 @@ def analyze_match(match):
     bonus_market = ""
 
     # NEXT GOAL ПЪРВО
-    if dominance >= 18:
+    if dominance >= 15:
 
         if home_pressure > away_pressure:
 
