@@ -1169,7 +1169,6 @@ async def prematch_loop():
             matches = get_upcoming_matches()
 
             for m in matches:
-
                 try:
 
                     league = m["league"]["name"]
