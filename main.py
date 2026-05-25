@@ -1006,7 +1006,7 @@ def analyze_match(match):
     # MESSAGE
     # =====================================================
 
-      message = f"""
+    message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
 
 🌍 Country:
@@ -1040,7 +1040,7 @@ def analyze_match(match):
 {market}
 """
 
-    if bonus_market:
+    if bonus_market != "":
 
         message += f"""
 
@@ -1054,9 +1054,9 @@ def analyze_match(match):
 {confidence}%
 """
 
-    print(message)
-
-    send_telegram(message)
+    send_telegram(
+        message
+    )
 
     save_signal(
 
