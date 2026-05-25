@@ -1207,7 +1207,7 @@ async def prematch_loop():
                         )
                     )
 
-                                      confidence = 65 + score
+                    confidence = 65 + score
 
                     drop = odds_drop_signal(
                         home,
