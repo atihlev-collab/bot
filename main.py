@@ -863,7 +863,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-     # =====================================================
+      # =====================================================
     # MARKET
     # =====================================================
 
@@ -927,6 +927,61 @@ def analyze_match(match):
     ):
 
         market = "🔥 GOAL 75-90"
+
+
+    # CARDS MARKET
+    elif (
+
+        minute >= 30
+        and minute <= 75
+
+    ):
+
+        home_fouls = extract(
+            home,
+            "Fouls"
+        )
+
+        away_fouls = extract(
+            away,
+            "Fouls"
+        )
+
+        home_yellow = extract(
+            home,
+            "Yellow Cards"
+        )
+
+        away_yellow = extract(
+            away,
+            "Yellow Cards"
+        )
+
+        total_fouls = (
+            home_fouls
+            +
+            away_fouls
+        )
+
+        total_cards = (
+            home_yellow
+            +
+            away_yellow
+        )
+
+        if (
+
+            total_fouls >= 22
+            and total_cards >= 3
+            and abs(
+                home_goals-away_goals
+            ) <= 1
+
+        ):
+
+            market = (
+                f"🟨 OVER {total_cards+1}.5 CARDS"
+            )
 
     # SMART CORNERS
     elif (
