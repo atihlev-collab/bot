@@ -1006,7 +1006,7 @@ def analyze_match(match):
     # MESSAGE
     # =====================================================
 
-   message = f"""
+      message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
 
 🌍 Country:
@@ -1040,15 +1040,15 @@ def analyze_match(match):
 {market}
 """
 
-if bonus_market:
+    if bonus_market:
 
-    message += f"""
+        message += f"""
 
 💎 Bonus:
 {bonus_market}
 """
 
-message += f"""
+    message += f"""
 
 ✅ Confidence:
 {confidence}%
