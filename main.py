@@ -863,7 +863,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-       # =====================================================
+     # =====================================================
     # MARKET
     # =====================================================
 
@@ -876,7 +876,7 @@ def analyze_match(match):
     market = None
     bonus_market = ""
 
-    # NEXT GOAL ПЪРВО
+    # NEXT GOAL
     if dominance >= 15:
 
         if home_pressure > away_pressure:
@@ -891,17 +891,6 @@ def analyze_match(match):
             market = (
                 f"🎯 NEXT GOAL AWAY "
                 f"({match['teams']['away']['name']})"
-            )
-
-        # бонус корнери
-        if (
-            minute >= 35
-            and total_corners >= 3
-            and best_pressure >= 65
-        ):
-
-            bonus_market = (
-                f"📐 OVER {total_corners+6}.5 CORNERS"
             )
 
     # BTTS
@@ -939,16 +928,17 @@ def analyze_match(match):
 
         market = "🔥 GOAL 75-90"
 
-    # само корнери
+    # SMART CORNERS
     elif (
-        minute >= 40
-        and minute <= 55
+        minute >= 30
+        and minute <= 50
         and total_corners >= 4
-        and best_pressure >= 65
+        and best_pressure >= 70
+        and abs(home_goals-away_goals) <= 1
     ):
 
         market = (
-            f"📐 OVER {total_corners+6}.5 CORNERS"
+            f"📐 OVER {total_corners+3}.5 CORNERS"
         )
 
     if market is None:
@@ -1264,7 +1254,7 @@ async def prematch_loop():
                         92
                     )
 
-                    if confidence < 80:
+                    if confidence < 84:
                         continue
 
                     key = f"{home}_{away}"
