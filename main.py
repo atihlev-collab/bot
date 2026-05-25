@@ -1208,35 +1208,33 @@ async def prematch_loop():
                         )
                     )
 
-                   confidence = 65 + score
+                                      confidence = 65 + score
 
-drop = odds_drop_signal(
+                    drop = odds_drop_signal(
+                        home,
+                        away,
+                        odd
+                    )
 
-    home,
-    away,
-    odd
+                    if drop >= 0.15:
 
-)
+                        confidence += 8
 
-if drop >= 0.15:
+                        market = (
+                            "🔥 BET365 VALUE DROP"
+                        )
 
-    confidence += 8
+                    if "Premier" in league:
+                        confidence += 4
 
-    market = (
-        "🔥 BET365 VALUE DROP"
-    )
+                    elif "La Liga" in league:
+                        confidence += 3
 
-if "Premier" in league:
-    confidence += 4
+                    elif "Serie A" in league:
+                        confidence += 2
 
-elif "La Liga" in league:
-    confidence += 3
-
-elif "Serie A" in league:
-    confidence += 2
-
-elif "Cup" in league:
-    confidence -= 6
+                    elif "Cup" in league:
+                        confidence -= 6
 
                     confidence += min(
                         len(home) % 5,
