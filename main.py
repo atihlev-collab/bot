@@ -863,7 +863,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-    # =====================================================
+       # =====================================================
     # MARKET
     # =====================================================
 
@@ -874,60 +874,10 @@ def analyze_match(match):
     )
 
     market = None
+    bonus_market = ""
 
-    # BET365 STYLE EARLY CORNERS
-    if (
-        minute >= 40
-        and minute <= 52
-        and total_corners >= 4
-        and dominance >= 14
-        and best_pressure >= 65
-    ):
-
-       market = (
-    f"📐 OVER {total_corners+6}.5 CORNERS"
-)
-
-    # BTTS
-    elif (
-        best_xg >= 2.4
-        and home_shots >= 4
-        and away_shots >= 4
-        and total_goals <= 3
-        and dominance >= 14
-        and (
-            home_goals == 0
-            or away_goals == 0
-        )
-    ):
-
-        market = "💎 BTTS / GOAL-GOAL"
-
-    # OVER GOALS
-    elif (
-        total_goals <= 1
-        and best_pressure >= 68
-        and best_xg >= 2.0
-        and minute >= 40
-        and dominance >= 14
-    ):
-
-        market = (
-            f"⚽ OVER {total_goals+1}.5 GOALS"
-        )
-
-    # LATE GOAL
-    elif (
-        minute >= 75
-        and best_pressure >= 72
-        and best_xg >= 2.2
-        and abs(home_goals-away_goals) < 4
-    ):
-
-        market = "🔥 GOAL 75-90"
-
-    # NEXT GOAL
-    elif dominance >= 18:
+    # NEXT GOAL ПЪРВО
+    if dominance >= 18:
 
         if home_pressure > away_pressure:
 
@@ -942,6 +892,64 @@ def analyze_match(match):
                 f"🎯 NEXT GOAL AWAY "
                 f"({match['teams']['away']['name']})"
             )
+
+        # бонус корнери
+        if (
+            minute >= 35
+            and total_corners >= 3
+            and best_pressure >= 65
+        ):
+
+            bonus_market = (
+                f"📐 OVER {total_corners+6}.5 CORNERS"
+            )
+
+    # BTTS
+    elif (
+        best_xg >= 2.4
+        and home_shots >= 4
+        and away_shots >= 4
+        and total_goals <= 3
+        and (
+            home_goals == 0
+            or away_goals == 0
+        )
+    ):
+
+        market = "💎 BTTS / GOAL-GOAL"
+
+    # OVER GOALS
+    elif (
+        total_goals <= 1
+        and best_pressure >= 68
+        and best_xg >= 2
+        and minute >= 40
+    ):
+
+        market = (
+            f"⚽ OVER {total_goals+1}.5 GOALS"
+        )
+
+    # LATE GOAL
+    elif (
+        minute >= 75
+        and best_pressure >= 72
+        and abs(home_goals-away_goals) < 4
+    ):
+
+        market = "🔥 GOAL 75-90"
+
+    # само корнери
+    elif (
+        minute >= 40
+        and minute <= 55
+        and total_corners >= 4
+        and best_pressure >= 65
+    ):
+
+        market = (
+            f"📐 OVER {total_corners+6}.5 CORNERS"
+        )
 
     if market is None:
 
@@ -998,14 +1006,14 @@ def analyze_match(match):
     # MESSAGE
     # =====================================================
 
-    message = f"""
+   message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
 
 🌍 Country:
 {country}
 
 ⚽ Match:
-{match_name}
+{home_name} vs {away_name}
 
 🏆 League:
 {league}
@@ -1014,7 +1022,7 @@ def analyze_match(match):
 {minute}
 
 📊 Score:
-{score}
+{home_goals}-{away_goals}
 
 🔥 Pressure:
 {best_pressure}/100
@@ -1023,13 +1031,24 @@ def analyze_match(match):
 {dominance}
 
 📈 Estimated xG:
-{best_xg}
+{round(best_xg,2)}
 
 💎 Value Edge:
-+{edge}%
++{round(edge,2)}%
 
 📈 Market:
 {market}
+"""
+
+if bonus_market:
+
+    message += f"""
+
+💎 Bonus:
+{bonus_market}
+"""
+
+message += f"""
 
 ✅ Confidence:
 {confidence}%
