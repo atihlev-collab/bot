@@ -826,8 +826,8 @@ def analyze_match(match):
 
         return
 
-    # по-голяма доминация
-    if dominance < 14:
+    # леко отпуснато
+    if dominance < 12:
 
         return
 
@@ -847,15 +847,15 @@ def analyze_match(match):
         "Shots on Goal"
     )
 
-    # минимум реални удари
+    # 5 беше прекалено
     if max(
         home_shots,
         away_shots
-    ) < 5:
+    ) < 4:
 
         return
 
-    # много ранни или умрели мачове
+    # ранни мачове
     if minute < 35:
 
         return
