@@ -1233,14 +1233,11 @@ async def prematch_loop():
                     if country in BAD_COUNTRIES:
                         continue
 
-                    home = m["teams"]["home"]["name"]
+                                      home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
-                    # блокира женски мачове
                     text = (
-                        home
-                        + " "
-                        + away
+                        home + " " + away
                     ).lower()
 
                     if any(
@@ -1262,10 +1259,6 @@ async def prematch_loop():
                         continue
 
                     date = datetime.fromisoformat(
-                        m["fixture"]["date"].replace(
-                            "Z","+00:00"
-                        )
-                    ).astimezone(TZ)
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
                         )
