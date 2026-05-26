@@ -1221,6 +1221,7 @@ async def prematch_loop():
             matches = get_upcoming_matches()
 
             for m in matches:
+
                 try:
 
                     league = m["league"]["name"]
@@ -1233,29 +1234,24 @@ async def prematch_loop():
                     if country in BAD_COUNTRIES:
                         continue
 
-                                      home = m["teams"]["home"]["name"]
+                    home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
+                    # блокира женски мачове
                     text = (
                         home + " " + away
                     ).lower()
 
                     if any(
-
                         x in text
-
                         for x in [
-
                             " kvinner",
                             " women",
                             " female",
                             " ladies",
                             " w"
-
                         ]
-
                     ):
-
                         continue
 
                     date = datetime.fromisoformat(
@@ -1264,7 +1260,6 @@ async def prematch_loop():
                         )
                     ).astimezone(TZ)
 
-                    # само бъдещи мачове до 8 часа
                     diff = (
                         date - datetime.now(TZ)
                     ).total_seconds()
@@ -1319,7 +1314,6 @@ async def prematch_loop():
                         92
                     )
 
-                    # по-малко от 84, но не прекалено
                     if confidence < 82:
                         continue
 
