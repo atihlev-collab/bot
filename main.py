@@ -1057,8 +1057,53 @@ def analyze_match(match):
 🌍 Country:
 {country}
 
+    message = f"""
+🔥 PRACTICAL LIVE AI SIGNAL
+
+🌍 Country:
+{country}
+
 ⚽ Match:
-{home_name} vs {away_name}
+{home_team} vs {away_team}
+
+🏆 League:
+{league}
+
+⏱ Minute:
+{minute}
+
+📊 Score:
+{home_goals}-{away_goals}
+
+🔥 Pressure:
+{best_pressure}/100
+
+⚔ Dominance:
+{dominance}
+
+📈 Estimated xG:
+{round(best_xg,2)}
+
+💎 Value Edge:
++{round(edge,2)}%
+
+📈 Market:
+{market}
+"""
+
+    if bonus_market != "":
+
+        message += f"""
+
+💎 Bonus:
+{bonus_market}
+"""
+
+    message += f"""
+
+✅ Confidence:
+{confidence}%
+"""
 
 🏆 League:
 {league}
