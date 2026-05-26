@@ -1287,7 +1287,7 @@ async def prematch_loop():
                             "🔥 BET365 VALUE DROP"
                         )
 
-                    if "Premier" in league:
+                                     if "Premier" in league:
                         confidence += 4
 
                     elif "La Liga" in league:
@@ -1309,7 +1309,7 @@ async def prematch_loop():
                         92
                     )
 
-                    if confidence < 84:
+                    if confidence < 80:
                         continue
 
                     key = f"{home}_{away}"
