@@ -1248,7 +1248,36 @@ async def prematch_loop():
                     home = m["teams"]["home"]["name"]
                     away = m["teams"]["away"]["name"]
 
+                    # блокира женски мачове
+                    text = (
+                        home
+                        + " "
+                        + away
+                    ).lower()
+
+                    if any(
+
+                        x in text
+
+                        for x in [
+
+                            " kvinner",
+                            " women",
+                            " female",
+                            " ladies",
+                            " w"
+
+                        ]
+
+                    ):
+
+                        continue
+
                     date = datetime.fromisoformat(
+                        m["fixture"]["date"].replace(
+                            "Z","+00:00"
+                        )
+                    ).astimezone(TZ)
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
                         )
