@@ -1047,15 +1047,9 @@ def analyze_match(match):
         f"{home_team} vs {away_team}"
     )
 
-    # =====================================================
+       # =====================================================
     # MESSAGE
     # =====================================================
-
-    message = f"""
-🔥 PRACTICAL LIVE AI SIGNAL
-
-🌍 Country:
-{country}
 
     message = f"""
 🔥 PRACTICAL LIVE AI SIGNAL
@@ -1105,60 +1099,9 @@ def analyze_match(match):
 {confidence}%
 """
 
-🏆 League:
-{league}
-
-⏱ Minute:
-{minute}
-
-📊 Score:
-{home_goals}-{away_goals}
-
-🔥 Pressure:
-{best_pressure}/100
-
-⚔ Dominance:
-{dominance}
-
-📈 Estimated xG:
-{round(best_xg,2)}
-
-💎 Value Edge:
-+{round(edge,2)}%
-
-📈 Market:
-{market}
-"""
-
-    if bonus_market != "":
-
-        message += f"""
-
-💎 Bonus:
-{bonus_market}
-"""
-
-    message += f"""
-
-✅ Confidence:
-{confidence}%
-"""
-
     send_telegram(
         message
     )
-
-    save_signal(
-
-        fixture_id,
-        match_name,
-        market,
-        best_pressure,
-        confidence,
-        edge
-    )
-
-    save_sent(fixture_id)
 # =========================================================
 # DAILY BET SLIP
 # =========================================================
