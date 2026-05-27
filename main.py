@@ -95,6 +95,9 @@ prematch_sent = {}
 # =========================================================
 
 odds_cache = {}
+
+opening_odds = {}
+
 prematch_sent = {}
 
 # =========================================================
@@ -309,6 +312,79 @@ def odds_drop_signal(
         drop,
         2
     )
+# =========================================================
+# REAL ODDS API
+# =========================================================
+
+def get_match_odds(fixture_id):
+
+    try:
+
+        url = f"{BASE_URL}/odds"
+
+        params = {
+            "fixture": fixture_id
+        }
+
+        response = requests.get(
+
+            url,
+            headers=HEADERS,
+            params=params,
+            timeout=20
+
+        ).json()
+
+        data = response.get(
+            "response",
+            []
+        )
+
+        if not data:
+            return None
+
+        for item in data:
+
+            for bookmaker in item.get(
+                "bookmakers",
+                []
+            ):
+
+                name = bookmaker.get(
+                    "name",
+                    ""
+                )
+
+                if name in [
+
+                    "Bet365",
+                    "Pinnacle"
+
+                ]:
+
+                    for bet in bookmaker.get(
+                        "bets",
+                        []
+                    ):
+
+                        if bet["name"] == "Match Winner":
+
+                            values = bet.get(
+                                "values",
+                                []
+                            )
+
+                            if values:
+
+                                return float(
+                                    values[0]["odd"]
+                                )
+
+        return None
+
+    except:
+
+        return None
 # =========================================================
 # MATCH STATS
 # =========================================================
