@@ -1611,8 +1611,18 @@ async def prematch_loop():
                     if country in BAD_COUNTRIES:
                         continue
 
-                    home = m["teams"]["home"]["name"]
-                    away = m["teams"]["away"]["name"]
+                home = m["teams"]["home"]["name"]
+                away = m["teams"]["away"]["name"]
+
+                fixture_id = m["fixture"]["id"]
+
+                real_odd = get_match_odds(
+                    fixture_id
+                )
+
+                if real_odd is None:
+
+                     continue
 
                     # блокира женски мачове
                     text = (
@@ -1653,8 +1663,8 @@ async def prematch_loop():
                         )
                     )
 
-                    confidence = 65 + score
-
+                    confidence = 58 + score
+                    odd = real_odd
                     drop = odds_drop_signal(
                         home,
                         away,
