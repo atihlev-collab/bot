@@ -54,8 +54,6 @@ BLOCKED_WORDS = [
 
     "reserve",
     "reserves",
-
-    "friendly"
 ]
 
 # =========================================================
@@ -551,7 +549,6 @@ def calculate_match_score(
 
             "u21",
             "women",
-            "reserve",
             "friendly"
 
         ]
