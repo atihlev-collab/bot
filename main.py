@@ -1611,18 +1611,17 @@ async def prematch_loop():
                     if country in BAD_COUNTRIES:
                         continue
 
-                home = m["teams"]["home"]["name"]
-                away = m["teams"]["away"]["name"]
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
 
-                fixture_id = m["fixture"]["id"]
+                    fixture_id = m["fixture"]["id"]
 
-                real_odd = get_match_odds(
-                    fixture_id
-                )
+                    real_odd = get_match_odds(
+                        fixture_id
+                    )
 
-                if real_odd is None:
-
-                     continue
+                    if real_odd is None:
+                        continue
 
                     # блокира женски мачове
                     text = (
@@ -1630,45 +1629,69 @@ async def prematch_loop():
                     ).lower()
 
                     if any(
+
                         x in text
+
                         for x in [
+
                             " kvinner",
                             " women",
                             " female",
                             " ladies",
                             " w"
+
                         ]
+
                     ):
+
                         continue
 
                     date = datetime.fromisoformat(
+
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
                         )
+
                     ).astimezone(TZ)
 
                     diff = (
+
                         date - datetime.now(TZ)
+
                     ).total_seconds()
 
                     if diff < 0 or diff > 28800:
                         continue
 
                     score, market, odd = (
+
                         calculate_match_score(
                             country,
                             league,
                             home,
                             away
                         )
+
                     )
 
-                    confidence = 58 + score
+                    # =================================================
+                    # REAL ODDS
+                    # =================================================
+
                     odd = real_odd
+
+                    confidence = 58 + score
+
+                    # =================================================
+                    # ODDS DROP
+                    # =================================================
+
                     drop = odds_drop_signal(
+
                         home,
                         away,
                         odd
+
                     )
 
                     if drop >= 0.15:
@@ -1679,16 +1702,24 @@ async def prematch_loop():
                             "🔥 BET365 VALUE DROP"
                         )
 
+                    # =================================================
+                    # LEAGUE BONUS
+                    # =================================================
+
                     if "Premier" in league:
+
                         confidence += 4
 
                     elif "La Liga" in league:
+
                         confidence += 3
 
                     elif "Serie A" in league:
+
                         confidence += 2
 
                     elif "Cup" in league:
+
                         confidence -= 6
 
                     confidence += min(
@@ -1723,6 +1754,9 @@ async def prematch_loop():
 
 💰 Odd:
 {odd}
+
+📉 Odds Drop:
+{drop}
 
 ✅ Confidence:
 {confidence}%
