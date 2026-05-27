@@ -474,6 +474,10 @@ def value_edge(confidence, odds):
 # PREMATCH SCORE ENGINE
 # =========================================================
 
+# =========================================================
+# PREMATCH VALUE ENGINE
+# =========================================================
+
 def calculate_match_score(
     country,
     league,
@@ -486,20 +490,108 @@ def calculate_match_score(
     market = "⚽ OVER 2.5 GOALS"
     odd = "1.80"
 
-    # GOAL LEAGUES
+    league_text = (
+        league.lower()
+    )
+
+    match_text = (
+        f"{home} {away}".lower()
+    )
+
+    # =====================================================
+    # LEAGUE QUALITY
+    # =====================================================
+
     if country in [
 
-        "Netherlands",
+        "England",
+        "Spain",
         "Germany",
-        "Norway"
+        "Italy",
+        "France",
+        "Netherlands",
+        "Portugal"
 
     ]:
 
         score += 12
 
+    elif country in [
+
+        "Brazil",
+        "Argentina",
+        "Norway",
+        "Sweden",
+        "Denmark",
+        "Japan",
+        "USA"
+
+    ]:
+
+        score += 10
+
+    # =====================================================
+    # INTERNATIONAL / BIG COMPETITIONS
+    # =====================================================
+
+    if any(
+
+        x in league_text
+
+        for x in [
+
+            "champions",
+            "europa",
+            "conference",
+            "libertadores",
+            "world cup",
+            "euro"
+
+        ]
+
+    ):
+
+        score += 12
+
+    # =====================================================
+    # BAD / RANDOM LEAGUES
+    # =====================================================
+
+    if any(
+
+        x in league_text
+
+        for x in [
+
+            "reserve",
+            "regional",
+            "amateur"
+
+        ]
+
+    ):
+
+        score -= 20
+
+    # =====================================================
+    # MARKET LOGIC
+    # =====================================================
+
+    # GOAL LEAGUES
+    if country in [
+
+        "Netherlands",
+        "Germany",
+        "Norway",
+        "Sweden"
+
+    ]:
+
         market = "⚽ OVER 2.5 GOALS"
 
         odd = "1.80"
+
+        score += 8
 
     # UNDER LEAGUES
     elif country in [
@@ -510,46 +602,86 @@ def calculate_match_score(
 
     ]:
 
-        score += 10
-
         market = "📉 UNDER 2.5 GOALS"
 
         odd = "1.75"
 
+        score += 7
+
     # BTTS LEAGUES
     elif country in [
 
-        "Sweden",
-        "Denmark"
+        "Denmark",
+        "Belgium"
 
     ]:
-
-        score += 11
 
         market = "💎 BTTS"
 
         odd = "1.85"
 
+        score += 8
+
+    # =====================================================
+    # BIG TEAMS
+    # =====================================================
+
+    big_teams = [
+
+        "Manchester City",
+        "Liverpool",
+        "Arsenal",
+        "Barcelona",
+        "Real Madrid",
+        "Bayern",
+        "PSG",
+        "Ajax",
+        "PSV",
+        "Benfica",
+        "Flamengo"
+
+    ]
+
+    if home in big_teams:
+
+        score += 4
+
+    if away in big_teams:
+
+        score += 4
+
+    # =====================================================
     # DERBY BONUS
-    if "derby" in league.lower():
+    # =====================================================
 
-        score += 5
+    if "derby" in league_text:
 
+        score += 4
+
+    # =====================================================
     # CUP PENALTY
-    if "cup" in league.lower():
+    # =====================================================
+
+    if "cup" in league_text:
 
         score -= 5
 
-    # REMOVE BAD LEAGUES
+    # =====================================================
+    # WOMEN / YOUTH BLOCK
+    # =====================================================
+
     if any(
 
-        x in league.lower()
+        x in match_text
 
         for x in [
 
-            "u21",
-            "women",
-            "friendly"
+            " women",
+            " kvinner",
+            " female",
+            " u19",
+            " u21",
+            " u23"
 
         ]
 
@@ -557,24 +689,26 @@ def calculate_match_score(
 
         score -= 100
 
-    # BIG TEAMS SMALL BOOST
-    big_teams = [
+    # =====================================================
+    # VALUE STYLE ODDS
+    # =====================================================
 
-        "Ajax",
-        "PSV",
-        "Liverpool",
-        "Arsenal",
-        "Barcelona",
-        "Real Madrid",
-        "Manchester City"
+    try:
 
-    ]
+        odd_value = float(odd)
 
-    if home in big_teams:
-        score += 3
+        # sweet spot
+        if 1.70 <= odd_value <= 2.05:
 
-    if away in big_teams:
-        score += 3
+            score += 6
+
+        elif odd_value > 2.40:
+
+            score -= 8
+
+    except:
+
+        pass
 
     return score, market, odd
 
