@@ -860,7 +860,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-      # =====================================================
+       # =====================================================
     # MARKET
     # =====================================================
 
@@ -873,24 +873,38 @@ def analyze_match(match):
     market = None
     bonus_market = ""
 
+    home_name = (
+        match["teams"]["home"]["name"]
+    )
+
+    away_name = (
+        match["teams"]["away"]["name"]
+    )
+
+    # =====================================================
     # NEXT GOAL
+    # =====================================================
+
     if dominance >= 15:
 
         if home_pressure > away_pressure:
 
             market = (
                 f"🎯 NEXT GOAL HOME "
-                f"({match['teams']['home']['name']})"
+                f"({home_name})"
             )
 
         else:
 
             market = (
                 f"🎯 NEXT GOAL AWAY "
-                f"({match['teams']['away']['name']})"
+                f"({away_name})"
             )
 
+    # =====================================================
     # BTTS
+    # =====================================================
+
     elif (
         best_xg >= 2.4
         and home_shots >= 4
@@ -904,7 +918,10 @@ def analyze_match(match):
 
         market = "💎 BTTS / GOAL-GOAL"
 
+    # =====================================================
     # OVER GOALS
+    # =====================================================
+
     elif (
         total_goals <= 1
         and best_pressure >= 68
@@ -916,7 +933,10 @@ def analyze_match(match):
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
+    # =====================================================
     # LATE GOAL
+    # =====================================================
+
     elif (
         minute >= 75
         and best_pressure >= 72
@@ -925,73 +945,100 @@ def analyze_match(match):
 
         market = "🔥 GOAL 75-90"
 
+    # =====================================================
+    # SMART LATE CARDS
+    # =====================================================
 
-    # CARDS MARKET
     elif (
 
-        minute >= 30
-        and minute <= 75
+        minute >= 68
+        and minute <= 82
+        and abs(
+            home_goals-away_goals
+        ) <= 1
 
     ):
 
-        home_fouls = extract(
-            home,
-            "Fouls"
-        )
-
-        away_fouls = extract(
-            away,
-            "Fouls"
-        )
-
-        home_yellow = extract(
-            home,
-            "Yellow Cards"
-        )
-
-        away_yellow = extract(
-            away,
-            "Yellow Cards"
-        )
-
         total_fouls = (
-            home_fouls
+
+            extract(home, "Fouls")
             +
-            away_fouls
+            extract(away, "Fouls")
+
         )
 
         total_cards = (
-            home_yellow
+
+            extract(home, "Yellow Cards")
             +
-            away_yellow
+            extract(away, "Yellow Cards")
+
         )
 
         if (
 
-            total_fouls >= 22
-            and total_cards >= 3
-            and abs(
-                home_goals-away_goals
-            ) <= 1
+            total_fouls >= 20
+            and total_cards >= 2
 
         ):
 
             market = (
-                f"🟨 OVER {total_cards+1}.5 CARDS"
+                "🟨 LIVE OVER CARDS"
             )
 
-    # SMART CORNERS
+    # =====================================================
+    # SMART CHASING CORNERS
+    # =====================================================
+
     elif (
-        minute >= 30
-        and minute <= 50
-        and total_corners >= 4
-        and best_pressure >= 70
-        and abs(home_goals-away_goals) <= 1
+
+        minute >= 60
+        and minute <= 85
+
     ):
 
-        market = (
-            f"📐 OVER {total_corners+3}.5 CORNERS"
-        )
+        big_teams = [
+
+            "Liverpool",
+            "Arsenal",
+            "Manchester City",
+            "Barcelona",
+            "Real Madrid",
+            "Bayern",
+            "PSV",
+            "Ajax",
+            "Benfica",
+            "Flamengo"
+
+        ]
+
+        # HOME chasing
+        if (
+
+            home_name in big_teams
+            and home_goals < away_goals
+            and home_pressure >= 65
+            and total_corners >= 6
+
+        ):
+
+            market = (
+                f"📐 OVER {total_corners+2}.5 CORNERS"
+            )
+
+        # AWAY chasing
+        elif (
+
+            away_name in big_teams
+            and away_goals < home_goals
+            and away_pressure >= 65
+            and total_corners >= 6
+
+        ):
+
+            market = (
+                f"📐 OVER {total_corners+2}.5 CORNERS"
+            )
 
     if market is None:
 
