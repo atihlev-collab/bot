@@ -1897,17 +1897,20 @@ async def prematch_loop():
 
                     fixture_id = m["fixture"]["id"]
 
-                    sharp_odd, soft_odd = (
-                        get_match_odds(
-                            fixture_id
-                        )
-                    )
+                 odds_data = get_match_odds(
+                 fixture_id
+                 )
 
-                    if sharp_odd is None:
-                        continue
+                if odds_data is None:
+                continue
 
-                    odd = sharp_odd
+                sharp_odd = odds_data["sharp_odd"]
 
+                soft_odd = odds_data["soft_odd"]
+
+                market = odds_data["market"]
+
+                odd = sharp_odd
                     # =================================================
                     # BLOCK WOMEN
                     # =================================================
