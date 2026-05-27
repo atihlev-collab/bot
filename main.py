@@ -294,24 +294,75 @@ def odds_drop_signal(
 
     except:
 
-        return 0
+        return 0, 0
+
+    now = time.time()
+
+    # =====================================================
+    # FIRST TIME
+    # =====================================================
 
     if key not in odds_cache:
 
-        odds_cache[key] = odd
+        odds_cache[key] = {
 
-        return 0
+            "odd": odd,
+            "time": now
 
-    old_odd = odds_cache[key]
+        }
 
-    drop = old_odd - odd
+        return 0, 0
 
-    odds_cache[key] = odd
+    old_odd = odds_cache[key]["odd"]
 
-    return round(
-        drop,
+    old_time = odds_cache[key]["time"]
+
+    # =====================================================
+    # DROP
+    # =====================================================
+
+    drop = round(
+
+        old_odd - odd,
+
         2
+
     )
+
+    # =====================================================
+    # VELOCITY
+    # =====================================================
+
+    minutes = max(
+
+        (now - old_time) / 60,
+
+        1
+
+    )
+
+    velocity = round(
+
+        drop / minutes,
+
+        3
+
+    )
+
+    # =====================================================
+    # UPDATE CACHE
+    # =====================================================
+
+    odds_cache[key] = {
+
+        "odd": odd,
+        "time": now
+
+    }
+
+    return drop, velocity
+
+
 # =========================================================
 # REAL ODDS API
 # =========================================================
@@ -323,7 +374,9 @@ def get_match_odds(fixture_id):
         url = f"{BASE_URL}/odds"
 
         params = {
+
             "fixture": fixture_id
+
         }
 
         response = requests.get(
@@ -341,7 +394,10 @@ def get_match_odds(fixture_id):
         )
 
         if not data:
-            return None
+            return None, None
+
+        sharp_odd = None
+        soft_odd = None
 
         for item in data:
 
@@ -355,36 +411,56 @@ def get_match_odds(fixture_id):
                     ""
                 )
 
-                if name in [
+                for bet in bookmaker.get(
+                    "bets",
+                    []
+                ):
 
-                    "Bet365",
-                    "Pinnacle"
+                    if bet["name"] != "Match Winner":
+                        continue
 
-                ]:
-
-                    for bet in bookmaker.get(
-                        "bets",
+                    values = bet.get(
+                        "values",
                         []
-                    ):
+                    )
 
-                        if bet["name"] == "Match Winner":
+                    if not values:
+                        continue
 
-                            values = bet.get(
-                                "values",
-                                []
-                            )
+                    try:
 
-                            if values:
+                        odd = float(
+                            values[0]["odd"]
+                        )
 
-                                return float(
-                                    values[0]["odd"]
-                                )
+                    except:
+                        continue
 
-        return None
+                    # sharp
+                    if name in [
+
+                        "Pinnacle",
+                        "Bet365"
+
+                    ]:
+
+                        sharp_odd = odd
+
+                    # soft
+                    elif name in [
+
+                        "Betano",
+                        "1xBet"
+
+                    ]:
+
+                        soft_odd = odd
+
+        return sharp_odd, soft_odd
 
     except:
 
-        return None
+        return None, None
 # =========================================================
 # MATCH STATS
 # =========================================================
