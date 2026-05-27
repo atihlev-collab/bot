@@ -1893,11 +1893,12 @@ async def prematch_loop():
                         continue
 
                     home = m["teams"]["home"]["name"]
+
                     away = m["teams"]["away"]["name"]
 
                     fixture_id = m["fixture"]["id"]
 
-                                   odds_data = get_match_odds(
+                    odds_data = get_match_odds(
                         fixture_id
                     )
 
@@ -1917,6 +1918,7 @@ async def prematch_loop():
                     )
 
                     odd = sharp_odd
+
                     # =================================================
                     # BLOCK WOMEN
                     # =================================================
@@ -1981,7 +1983,6 @@ async def prematch_loop():
 
                     )
 
-                    confidence = 58 + score
                     confidence = 58 + score
 
                     # =================================================
@@ -2056,6 +2057,7 @@ async def prematch_loop():
                     else:
 
                         fair_odd = odd
+
                     # =================================================
                     # IMPLIED PROBABILITY
                     # =================================================
@@ -2079,6 +2081,14 @@ async def prematch_loop():
                         2
 
                     )
+
+                    # =================================================
+                    # FAIR ODD VALUE
+                    # =================================================
+
+                    if odd > fair_odd:
+
+                        confidence += 5
 
                     # =================================================
                     # SHARP / SOFT VALUE
@@ -2132,10 +2142,6 @@ async def prematch_loop():
                     ):
 
                         confidence += 8
-
-                        market = (
-                            "🔥 BET365 VALUE DROP"
-                        )
 
                     # =================================================
                     # LEAGUE BONUS
@@ -2217,6 +2223,15 @@ async def prematch_loop():
 💎 True Edge:
 +{true_edge}%
 
+📊 Over 2.5 Prob:
+{over25_prob}%
+
+💎 BTTS Prob:
+{btts_prob}%
+
+⚖ Fair Odd:
+{fair_odd}
+
 ✅ Confidence:
 {confidence}%
 """
@@ -2242,7 +2257,6 @@ async def prematch_loop():
             )
 
         await asyncio.sleep(1200)
-
 # =========================================================
 # LIVE LOOP
 # =========================================================
