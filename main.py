@@ -1047,7 +1047,7 @@ def analyze_match(match):
         f"{home_team} vs {away_team}"
     )
 
-       # =====================================================
+      # =====================================================
     # MESSAGE
     # =====================================================
 
@@ -1101,6 +1101,25 @@ def analyze_match(match):
 
     send_telegram(
         message
+    )
+
+    update_live_stats(
+        market,
+        confidence
+    )
+
+    save_signal(
+
+        fixture_id,
+        match_name,
+        market,
+        best_pressure,
+        confidence,
+        edge
+    )
+
+    save_sent(
+        fixture_id
     )
 # =========================================================
 # DAILY BET SLIP
