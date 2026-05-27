@@ -510,13 +510,7 @@ def calculate_match_score(
         "Italy",
         "France",
         "Netherlands",
-        "Portugal"
-
-    ]:
-
-        score += 12
-
-    elif country in [
+        "Portugal",
 
         "Brazil",
         "Argentina",
@@ -528,10 +522,10 @@ def calculate_match_score(
 
     ]:
 
-        score += 10
+        score += 12
 
     # =====================================================
-    # INTERNATIONAL / BIG COMPETITIONS
+    # INTERNATIONAL TOURNAMENTS
     # =====================================================
 
     if any(
@@ -545,7 +539,9 @@ def calculate_match_score(
             "conference",
             "libertadores",
             "world cup",
-            "euro"
+            "euro",
+            "copa america",
+            "nations league"
 
         ]
 
@@ -554,27 +550,105 @@ def calculate_match_score(
         score += 12
 
     # =====================================================
-    # BAD / RANDOM LEAGUES
+    # SMART LEAGUE FILTER
     # =====================================================
+
+    bad_words = [
+
+        "women",
+        "u19",
+        "u21",
+        "u23",
+        "reserve",
+        "regional"
+
+    ]
 
     if any(
 
         x in league_text
 
-        for x in [
-
-            "reserve",
-            "regional",
-            "amateur"
-
-        ]
+        for x in bad_words
 
     ):
 
-        score -= 20
+        score -= 100
 
     # =====================================================
-    # MARKET LOGIC
+    # FRIENDLY FILTER
+    # =====================================================
+
+    national_teams = [
+
+        "Brazil",
+        "Argentina",
+        "Germany",
+        "France",
+        "Spain",
+        "Portugal",
+        "England",
+        "Italy",
+        "Netherlands",
+        "Belgium",
+        "Croatia",
+        "Uruguay",
+        "Mexico",
+        "USA",
+        "Japan"
+
+    ]
+
+    # block random club friendlies
+    if (
+
+        "friendly" in league_text
+
+        and not any(
+
+            x.lower() in match_text
+
+            for x in national_teams
+
+        )
+
+    ):
+
+        score -= 25
+
+    # =====================================================
+    # SUMMER / ACTIVE LEAGUES BONUS
+    # =====================================================
+
+    active_countries = [
+
+        "Norway",
+        "Sweden",
+        "Denmark",
+        "Finland",
+        "Iceland",
+
+        "Brazil",
+        "Argentina",
+        "Chile",
+        "Colombia",
+        "Uruguay",
+        "Paraguay",
+
+        "USA",
+        "Mexico",
+
+        "Japan",
+        "South Korea",
+        "Australia"
+
+    ]
+
+    if country in active_countries:
+
+        score += 8
+
+    # =====================================================
+    # MARKET FIT
     # =====================================================
 
     # GOAL LEAGUES
@@ -649,45 +723,6 @@ def calculate_match_score(
     if away in big_teams:
 
         score += 4
-
-    # =====================================================
-    # DERBY BONUS
-    # =====================================================
-
-    if "derby" in league_text:
-
-        score += 4
-
-    # =====================================================
-    # CUP PENALTY
-    # =====================================================
-
-    if "cup" in league_text:
-
-        score -= 5
-
-    # =====================================================
-    # WOMEN / YOUTH BLOCK
-    # =====================================================
-
-    if any(
-
-        x in match_text
-
-        for x in [
-
-            " women",
-            " kvinner",
-            " female",
-            " u19",
-            " u21",
-            " u23"
-
-        ]
-
-    ):
-
-        score -= 100
 
     # =====================================================
     # VALUE STYLE ODDS
