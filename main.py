@@ -397,7 +397,9 @@ def get_match_odds(fixture_id):
         )
 
         if not data:
-            return None, None
+            return None
+
+        best_market = None
 
         sharp_odd = None
         soft_odd = None
@@ -419,51 +421,153 @@ def get_match_odds(fixture_id):
                     []
                 ):
 
-                    if bet["name"] != "Match Winner":
-                        continue
+                    # =================================================
+                    # MATCH WINNER
+                    # =================================================
 
-                    values = bet.get(
-                        "values",
-                        []
-                    )
+                    if bet["name"] == "Match Winner":
 
-                    if not values:
-                        continue
-
-                    try:
-
-                        odd = float(
-                            values[0]["odd"]
+                        values = bet.get(
+                            "values",
+                            []
                         )
 
-                    except:
-                        continue
+                        for v in values:
 
-                    # sharp
-                    if name in [
+                            try:
 
-                        "Pinnacle",
-                        "Bet365"
+                                odd = float(
+                                    v["odd"]
+                                )
 
-                    ]:
+                            except:
+                                continue
 
-                        sharp_odd = odd
+                            value_name = v["value"]
 
-                    # soft
-                    elif name in [
+                            # HOME
+                            if value_name == "Home":
 
-                        "Betano",
-                        "1xBet"
+                                if name in [
 
-                    ]:
+                                    "Pinnacle",
+                                    "Bet365"
 
-                        soft_odd = odd
+                                ]:
 
-        return sharp_odd, soft_odd
+                                    sharp_odd = odd
+                                    best_market = (
+                                        "🏠 HOME WIN"
+                                    )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+                            # AWAY
+                            elif value_name == "Away":
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    if (
+                                        sharp_odd is None
+                                        or odd < sharp_odd
+                                    ):
+
+                                        sharp_odd = odd
+                                        best_market = (
+                                            "✈ AWAY WIN"
+                                        )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+                    # =================================================
+                    # OVER 2.5
+                    # =================================================
+
+                    elif bet["name"] == "Goals Over/Under":
+
+                        values = bet.get(
+                            "values",
+                            []
+                        )
+
+                        for v in values:
+
+                            if (
+
+                                v["value"]
+                                ==
+                                "Over 2.5"
+
+                            ):
+
+                                try:
+
+                                    odd = float(
+                                        v["odd"]
+                                    )
+
+                                except:
+                                    continue
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    if (
+                                        sharp_odd is None
+                                        or odd < sharp_odd
+                                    ):
+
+                                        sharp_odd = odd
+                                        best_market = (
+                                            "⚽ OVER 2.5 GOALS"
+                                        )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+        if sharp_odd is None:
+            return None
+
+        return {
+
+            "sharp_odd": sharp_odd,
+            "soft_odd": soft_odd,
+            "market": best_market
+
+        }
 
     except:
 
-        return None, None
+        return None
  # =========================================================
 # POISSON ENGINE
 # =========================================================
