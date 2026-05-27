@@ -11,6 +11,9 @@ import threading
 import asyncio
 import logging
 
+import numpy as np
+
+from scipy.stats import poisson
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -461,6 +464,104 @@ def get_match_odds(fixture_id):
     except:
 
         return None, None
+ # =========================================================
+# POISSON ENGINE
+# =========================================================
+
+def poisson_probability(
+
+    home_attack,
+    away_attack
+
+):
+
+    try:
+
+        home_lambda = round(
+            home_attack,
+            2
+        )
+
+        away_lambda = round(
+            away_attack,
+            2
+        )
+
+        max_goals = 6
+
+        home_probs = [
+
+            poisson.pmf(
+                i,
+                home_lambda
+            )
+
+            for i in range(
+                max_goals
+            )
+
+        ]
+
+        away_probs = [
+
+            poisson.pmf(
+                i,
+                away_lambda
+            )
+
+            for i in range(
+                max_goals
+            )
+
+        ]
+
+        matrix = np.outer(
+
+            home_probs,
+            away_probs
+
+        )
+
+        over25 = 0
+
+        for h in range(max_goals):
+
+            for a in range(max_goals):
+
+                if h + a >= 3:
+
+                    over25 += matrix[h][a]
+
+        btts = 0
+
+        for h in range(1, max_goals):
+
+            for a in range(1, max_goals):
+
+                btts += matrix[h][a]
+
+        return {
+
+            "over25": round(
+                over25 * 100,
+                2
+            ),
+
+            "btts": round(
+                btts * 100,
+                2
+            )
+
+        }
+
+    except:
+
+        return {
+
+            "over25": 0,
+            "btts": 0
+
+        }       
 # =========================================================
 # MATCH STATS
 # =========================================================
@@ -1768,7 +1869,78 @@ async def prematch_loop():
                     )
 
                     confidence = 58 + score
+# =================================================
+# SIMPLE ATTACK MODEL
+# =================================================
 
+home_attack = round(
+
+    (
+        len(home) % 5
+    ) + 1.2,
+
+    2
+
+)
+
+away_attack = round(
+
+    (
+        len(away) % 5
+    ) + 1.2,
+
+    2
+
+)
+
+# =================================================
+# POISSON
+# =================================================
+
+poisson_data = poisson_probability(
+
+    home_attack,
+    away_attack
+
+)
+
+over25_prob = poisson_data["over25"]
+
+btts_prob = poisson_data["btts"]
+
+# =================================================
+# FAIR ODDS
+# =================================================
+
+if market == "⚽ OVER 2.5 GOALS":
+
+    fair_odd = round(
+
+        100 / max(
+            over25_prob,
+            1
+        ),
+
+        2
+
+    )
+
+elif market == "💎 BTTS":
+
+    fair_odd = round(
+
+        100 / max(
+            btts_prob,
+            1
+        ),
+
+        2
+
+    )
+
+else:
+
+    fair_odd = odd
                     # =================================================
                     # IMPLIED PROBABILITY
                     # =================================================
