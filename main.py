@@ -1869,78 +1869,80 @@ async def prematch_loop():
                     )
 
                     confidence = 58 + score
-# =================================================
-# SIMPLE ATTACK MODEL
-# =================================================
+                    confidence = 58 + score
 
-home_attack = round(
+                    # =================================================
+                    # SIMPLE ATTACK MODEL
+                    # =================================================
 
-    (
-        len(home) % 5
-    ) + 1.2,
+                    home_attack = round(
 
-    2
+                        (
+                            len(home) % 5
+                        ) + 1.2,
 
-)
+                        2
 
-away_attack = round(
+                    )
 
-    (
-        len(away) % 5
-    ) + 1.2,
+                    away_attack = round(
 
-    2
+                        (
+                            len(away) % 5
+                        ) + 1.2,
 
-)
+                        2
 
-# =================================================
-# POISSON
-# =================================================
+                    )
 
-poisson_data = poisson_probability(
+                    # =================================================
+                    # POISSON
+                    # =================================================
 
-    home_attack,
-    away_attack
+                    poisson_data = poisson_probability(
 
-)
+                        home_attack,
+                        away_attack
 
-over25_prob = poisson_data["over25"]
+                    )
 
-btts_prob = poisson_data["btts"]
+                    over25_prob = poisson_data["over25"]
 
-# =================================================
-# FAIR ODDS
-# =================================================
+                    btts_prob = poisson_data["btts"]
 
-if market == "⚽ OVER 2.5 GOALS":
+                    # =================================================
+                    # FAIR ODDS
+                    # =================================================
 
-    fair_odd = round(
+                    if market == "⚽ OVER 2.5 GOALS":
 
-        100 / max(
-            over25_prob,
-            1
-        ),
+                        fair_odd = round(
 
-        2
+                            100 / max(
+                                over25_prob,
+                                1
+                            ),
 
-    )
+                            2
 
-elif market == "💎 BTTS":
+                        )
 
-    fair_odd = round(
+                    elif market == "💎 BTTS":
 
-        100 / max(
-            btts_prob,
-            1
-        ),
+                        fair_odd = round(
 
-        2
+                            100 / max(
+                                btts_prob,
+                                1
+                            ),
 
-    )
+                            2
 
-else:
+                        )
 
-    fair_odd = odd
+                    else:
+
+                        fair_odd = odd
                     # =================================================
                     # IMPLIED PROBABILITY
                     # =================================================
