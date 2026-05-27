@@ -906,7 +906,7 @@ def analyze_match(match):
     # =====================================================
 
     elif (
-        best_xg >= 2.4
+        best_xg >= 2.0
         and home_shots >= 4
         and away_shots >= 4
         and total_goals <= 3
@@ -924,8 +924,8 @@ def analyze_match(match):
 
     elif (
         total_goals <= 1
-        and best_pressure >= 68
-        and best_xg >= 2
+        and best_pressure >= 65
+        and best_xg >= 1.8
         and minute >= 40
     ):
 
@@ -939,7 +939,7 @@ def analyze_match(match):
 
     elif (
         minute >= 75
-        and best_pressure >= 72
+        and best_pressure >= 68
         and abs(home_goals-away_goals) < 4
     ):
 
