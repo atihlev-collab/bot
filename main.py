@@ -1692,14 +1692,21 @@ async def prematch_loop():
 
                     fixture_id = m["fixture"]["id"]
 
-                    real_odd = get_match_odds(
-                        fixture_id
+                    sharp_odd, soft_odd = (
+                        get_match_odds(
+                            fixture_id
+                        )
                     )
 
-                    if real_odd is None:
+                    if sharp_odd is None:
                         continue
 
-                    # блокира женски мачове
+                    odd = sharp_odd
+
+                    # =================================================
+                    # BLOCK WOMEN
+                    # =================================================
+
                     text = (
                         home + " " + away
                     ).lower()
@@ -1722,6 +1729,10 @@ async def prematch_loop():
 
                         continue
 
+                    # =================================================
+                    # DATE
+                    # =================================================
+
                     date = datetime.fromisoformat(
 
                         m["fixture"]["date"].replace(
@@ -1739,38 +1750,99 @@ async def prematch_loop():
                     if diff < 0 or diff > 28800:
                         continue
 
-                    score, market, odd = (
+                    # =================================================
+                    # SCORE ENGINE
+                    # =================================================
+
+                    score, market, fake_odd = (
 
                         calculate_match_score(
+
                             country,
                             league,
                             home,
                             away
+
                         )
 
                     )
 
-                    # =================================================
-                    # REAL ODDS
-                    # =================================================
-
-                    odd = real_odd
-
                     confidence = 58 + score
 
                     # =================================================
-                    # ODDS DROP
+                    # IMPLIED PROBABILITY
                     # =================================================
 
-                    drop = odds_drop_signal(
+                    market_probability = round(
 
-                        home,
-                        away,
-                        odd
+                        (1 / odd) * 100,
+
+                        2
 
                     )
 
-                    if drop >= 0.15:
+                    our_probability = confidence
+
+                    true_edge = round(
+
+                        our_probability
+                        -
+                        market_probability,
+
+                        2
+
+                    )
+
+                    # =================================================
+                    # SHARP / SOFT VALUE
+                    # =================================================
+
+                    if soft_odd:
+
+                        soft_edge = round(
+
+                            (
+                                soft_odd
+                                -
+                                sharp_odd
+                            )
+
+                            /
+                            sharp_odd * 100,
+
+                            2
+
+                        )
+
+                        if soft_edge >= 5:
+
+                            confidence += 6
+
+                    # =================================================
+                    # DROP + VELOCITY
+                    # =================================================
+
+                    drop, velocity = (
+
+                        odds_drop_signal(
+
+                            home,
+                            away,
+                            odd
+
+                        )
+
+                    )
+
+                    if (
+
+                        drop >= 0.15
+
+                        or
+
+                        velocity >= 0.02
+
+                    ):
 
                         confidence += 8
 
@@ -1799,8 +1871,11 @@ async def prematch_loop():
                         confidence -= 6
 
                     confidence += min(
+
                         len(home) % 5,
+
                         4
+
                     )
 
                     confidence = min(
@@ -1808,13 +1883,28 @@ async def prematch_loop():
                         92
                     )
 
+                    # =================================================
+                    # FILTERS
+                    # =================================================
+
                     if confidence < 82:
                         continue
+
+                    if true_edge < 5:
+                        continue
+
+                    # =================================================
+                    # DUPLICATE
+                    # =================================================
 
                     key = f"{home}_{away}"
 
                     if not can_send_prematch(key):
                         continue
+
+                    # =================================================
+                    # MESSAGE
+                    # =================================================
 
                     msg = f"""
 🔥 PRE-MATCH AI SIGNAL
@@ -1828,11 +1918,17 @@ async def prematch_loop():
 
 🎯 {market}
 
-💰 Odd:
-{odd}
+💰 Sharp Odd:
+{sharp_odd}
 
 📉 Odds Drop:
 {drop}
+
+⚡ Velocity:
+{velocity}
+
+💎 True Edge:
++{true_edge}%
 
 ✅ Confidence:
 {confidence}%
