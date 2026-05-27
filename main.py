@@ -1379,6 +1379,31 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
+            text = (
+                home + " " + away
+            ).lower()
+
+            # допълнителен боклук филтър
+            if any(
+
+                x in text
+
+                for x in [
+
+                    " women",
+                    " kvinn",
+                    " female",
+                    " ladies",
+                    " u19",
+                    " u21",
+                    " u23"
+
+                ]
+
+            ):
+
+                continue
+
             score, market, odd = (
                 calculate_match_score(
                     country,
@@ -1388,56 +1413,100 @@ async def daily_ticket():
                 )
             )
 
-            confidence = 65 + score
+            confidence = 58 + score
 
-            if confidence < 75:
+            # само силни фишове
+            if confidence < 84:
                 continue
 
             odd = float(odd)
 
-            if odd < 1.50:
+            # value sweet spot
+            if odd < 1.65:
                 continue
 
-            if odd > 2.10:
+            if odd > 2.05:
                 continue
+
+            # само реални пазари
+            if market not in [
+
+                "⚽ OVER 2.5 GOALS",
+                "📉 UNDER 2.5 GOALS",
+                "💎 BTTS"
+
+            ]:
+
+                continue
+
+            # топ летни лиги
+            preferred = [
+
+                "Norway",
+                "Sweden",
+                "Denmark",
+                "Brazil",
+                "Argentina",
+                "Japan",
+                "USA"
+
+            ]
+
+            if country in preferred:
+
+                confidence += 4
 
             picks.append(
+
                 (
+                    confidence,
                     home,
                     away,
                     market,
-                    odd
+                    odd,
+                    league
                 )
+
             )
-
-            total_odds *= odd
-
-            if total_odds >= 5:
-                break
 
         except:
             pass
 
-    if len(picks) >= 3:
+    # сортира най-силните
+    picks = sorted(
+        picks,
+        reverse=True
+    )
 
-        msg = "🔥 DAILY AI BET SLIP\n\n"
+    final_picks = picks[:3]
 
-        for p in picks:
+    if len(final_picks) < 3:
+        return
 
-            msg += (
-                f"⚽ {p[0]} vs {p[1]}\n"
-                f"🎯 {p[2]}\n"
-                f"💰 {p[3]}\n\n"
-            )
+    msg = "🔥 DAILY AI BET SLIP\n\n"
+
+    for p in final_picks:
 
         msg += (
-            f"💎 TOTAL ODDS: "
-            f"{round(total_odds,2)}"
+
+            f"🏆 {p[5]}\n"
+            f"⚽ {p[1]} vs {p[2]}\n"
+            f"🎯 {p[3]}\n"
+            f"💰 {p[4]}\n"
+            f"✅ {p[0]}%\n\n"
+
         )
 
-        send_telegram(msg)
+        total_odds *= p[4]
 
-        daily_ticket_sent = True
+    msg += (
+        f"💎 TOTAL ODDS: "
+        f"{round(total_odds,2)}"
+    )
+
+    send_telegram(msg)
+
+    daily_ticket_sent = True
 # =========================================================
 # PREMATCH AI
 # =========================================================
