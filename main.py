@@ -3864,6 +3864,8 @@ def start_live_loop():
 def main():
 
     init_database()
+    
+    init_learning_database()
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
