@@ -665,7 +665,225 @@ def poisson_probability(
             "over25": 0,
             "btts": 0
 
-        }       
+        }     
+   # =========================================================
+# ADVANCED SHARP MARKET ENGINE
+# CLEAN PROBABILITY + CLV + REGIME
+# =========================================================
+
+sharp_history = {}
+
+closing_history = {}
+
+# =========================================================
+# CLEAN SHARP PROBABILITY
+# =========================================================
+
+def clean_probability(odd):
+
+    try:
+
+        raw_probability = (
+
+            1 / float(odd)
+
+        ) * 100
+
+        # bookmaker margin removal
+        clean_prob = round(
+
+            raw_probability * 0.97,
+
+            2
+
+        )
+
+        return clean_prob
+
+    except:
+
+        return 0
+
+# =========================================================
+# OPENING ODDS HISTORY
+# =========================================================
+
+def track_opening_odds(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return
+
+    if match_key not in opening_odds:
+
+        opening_odds[match_key] = {
+
+            "opening": odd,
+            "time": time.time()
+
+        }
+
+# =========================================================
+# CLOSING LINE VALUE
+# =========================================================
+
+def calculate_clv(
+
+    match_key,
+    current_odd
+
+):
+
+    try:
+
+        current_odd = float(current_odd)
+
+    except:
+
+        return 0
+
+    if match_key not in opening_odds:
+
+        return 0
+
+    opening = opening_odds[match_key][
+        "opening"
+    ]
+
+    clv = round(
+
+        (
+            opening
+            -
+            current_odd
+        )
+
+        / opening * 100,
+
+        2
+
+    )
+
+    return clv
+
+# =========================================================
+# MARKET REGIME DETECTION
+# =========================================================
+
+def market_regime(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return "UNKNOWN"
+
+    if match_key not in sharp_history:
+
+        sharp_history[match_key] = []
+
+    sharp_history[match_key].append(
+        odd
+    )
+
+    # keep only last 6
+    sharp_history[match_key] = (
+
+        sharp_history[match_key][-6:]
+
+    )
+
+    history = sharp_history[match_key]
+
+    if len(history) < 4:
+
+        return "NORMAL"
+
+    drops = 0
+    rises = 0
+
+    for i in range(
+
+        1,
+        len(history)
+
+    ):
+
+        if history[i] < history[i-1]:
+
+            drops += 1
+
+        elif history[i] > history[i-1]:
+
+            rises += 1
+
+    # =====================================================
+    # STABLE SHARP
+    # =====================================================
+
+    if drops >= 4 and rises <= 1:
+
+        return "STABLE_SHARP"
+
+    # =====================================================
+    # CHAOTIC
+    # =====================================================
+
+    if rises >= 2 and drops >= 2:
+
+        return "CHAOTIC"
+
+    return "NORMAL"
+
+# =========================================================
+# AGGRESSIVE SHARP ALERT
+# =========================================================
+
+def aggressive_sharp_move(
+
+    drop,
+    velocity
+
+):
+
+    try:
+
+        drop = float(drop)
+        velocity = float(velocity)
+
+    except:
+
+        return False
+
+    if (
+
+        drop >= 0.25
+
+        and
+
+        velocity >= 0.03
+
+    ):
+
+        return True
+
+    return False     
 # =========================================================
 # MATCH STATS
 # =========================================================
