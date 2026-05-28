@@ -3248,7 +3248,7 @@ async def daily_ticket():
 
     global daily_ticket_sent
 
-    now = datetime.now(TZ)
+    now = datetime.now(TZ)м8
 
     # само в 13:00
     if now.hour != 13:
@@ -3390,14 +3390,235 @@ async def daily_ticket():
     msg = "🔥 DAILY AI BET SLIP\n\n"
 
     for p in final_picks:
+# =========================================================
+# DAILY BET SLIP
+# =========================================================
+
+daily_ticket_sent = False
+
+async def daily_ticket():
+
+    global daily_ticket_sent
+
+    now = datetime.now(TZ)
+
+    # само в 13:00
+    if now.hour != 13:
+
+        daily_ticket_sent = False
+        return
+
+    # само веднъж
+    if daily_ticket_sent:
+        return
+
+    matches = get_upcoming_matches()
+
+    picks = []
+
+    total_odds = 1.0
+
+    for m in matches:
+
+        try:
+
+            league = m["league"]["name"]
+
+            if blocked_league(league):
+                continue
+
+            country = m["league"]["country"]
+
+            if country in BAD_COUNTRIES:
+                continue
+
+            home = m["teams"]["home"]["name"]
+
+            away = m["teams"]["away"]["name"]
+
+            # =====================================================
+            # DATE / TIME
+            # =====================================================
+
+            date = datetime.fromisoformat(
+
+                m["fixture"]["date"].replace(
+                    "Z","+00:00"
+                )
+
+            ).astimezone(TZ)
+
+            # само днешни мачове
+            if date.date() != now.date():
+
+                continue
+
+            kickoff = date.strftime(
+                "%d.%m %H:%M"
+            )
+
+            text = (
+                home + " " + away
+            ).lower()
+
+            # =====================================================
+            # EXTRA TRASH FILTER
+            # =====================================================
+
+            if any(
+
+                x in text
+
+                for x in [
+
+                    " women",
+                    " kvinn",
+                    " female",
+                    " ladies",
+                    " u19",
+                    " u21",
+                    " u23"
+
+                ]
+
+            ):
+
+                continue
+
+            # =====================================================
+            # SCORE ENGINE
+            # =====================================================
+
+            score, market, odd = (
+
+                calculate_match_score(
+                    country,
+                    league,
+                    home,
+                    away
+                )
+            )
+
+            confidence = 58 + score
+
+            # =====================================================
+            # ONLY STRONG SIGNALS
+            # =====================================================
+
+            if confidence < 84:
+                continue
+
+            odd = float(odd)
+
+            # =====================================================
+            # VALUE ODDS RANGE
+            # =====================================================
+
+            if odd < 1.65:
+                continue
+
+            if odd > 2.05:
+                continue
+
+            # =====================================================
+            # ONLY REAL MARKETS
+            # =====================================================
+
+            if market not in [
+
+                "⚽ OVER 2.5 GOALS",
+                "📉 UNDER 2.5 GOALS",
+                "💎 BTTS"
+
+            ]:
+
+                continue
+
+            # =====================================================
+            # SUMMER ACTIVE LEAGUES
+            # =====================================================
+
+            preferred = [
+
+                "Norway",
+                "Sweden",
+                "Denmark",
+
+                "Brazil",
+                "Argentina",
+                "Chile",
+                "Uruguay",
+
+                "Japan",
+                "USA",
+                "Finland",
+                "Iceland"
+
+            ]
+
+            if country in preferred:
+
+                confidence += 4
+
+            # =====================================================
+            # SAVE PICK
+            # =====================================================
+
+            picks.append(
+
+                (
+                    confidence,
+                    home,
+                    away,
+                    market,
+                    odd,
+                    league,
+                    country,
+                    kickoff
+                )
+
+            )
+
+        except:
+            pass
+
+    # =========================================================
+    # SORT STRONGEST
+    # =========================================================
+
+    picks = sorted(
+        picks,
+        reverse=True
+    )
+
+    final_picks = picks[:3]
+
+    if len(final_picks) < 3:
+        return
+
+    # =========================================================
+    # MESSAGE
+    # =========================================================
+
+    msg = "🔥 DAILY AI BET SLIP\n\n"
+
+    for p in final_picks:
 
         msg += (
 
+            f"🌍 {p[6]}\n"
+
             f"🏆 {p[5]}\n"
+
             f"⚽ {p[1]} vs {p[2]}\n"
+
+            f"⏰ {p[7]}\n"
+
             f"🎯 {p[3]}\n"
-            f"💰 {p[4]}\n"
-            f"✅ {p[0]}%\n\n"
+
+            f"💰 Odd: {p[4]}\n"
+
+            f"✅ Confidence: {p[0]}%\n\n"
 
         )
 
