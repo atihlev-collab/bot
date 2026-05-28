@@ -1613,6 +1613,448 @@ def save_signal(
 
     conn.commit()
     conn.close()
+   # =========================================================
+# SELF LEARNING AI ENGINE
+# RESULT TRACKING + AUTO LEARNING
+# =========================================================
+
+learning_stats = {}
+
+# =========================================================
+# RESULT DATABASE
+# =========================================================
+
+def init_learning_database():
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS learning_results (
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        fixture_id INTEGER,
+        match_name TEXT,
+
+        market TEXT,
+
+        country TEXT,
+        league TEXT,
+
+        minute INTEGER,
+
+        confidence REAL,
+        pressure REAL,
+        xg REAL,
+
+        odd REAL,
+
+        edge REAL,
+
+        odds_drop REAL,
+        velocity REAL,
+
+        result TEXT,
+
+        created_at TEXT
+
+    )
+
+    """)
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# SAVE LEARNING SIGNAL
+# =========================================================
+
+def save_learning_signal(
+
+    fixture_id,
+    match_name,
+
+    market,
+
+    country,
+    league,
+
+    minute,
+
+    confidence,
+    pressure,
+    xg,
+
+    odd,
+
+    edge,
+
+    drop,
+    velocity
+
+):
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    INSERT INTO learning_results (
+
+        fixture_id,
+        match_name,
+
+        market,
+
+        country,
+        league,
+
+        minute,
+
+        confidence,
+        pressure,
+        xg,
+
+        odd,
+
+        edge,
+
+        odds_drop,
+        velocity,
+
+        result,
+
+        created_at
+
+    )
+
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+
+    """, (
+
+        fixture_id,
+        match_name,
+
+        market,
+
+        country,
+        league,
+
+        minute,
+
+        confidence,
+        pressure,
+        xg,
+
+        odd,
+
+        edge,
+
+        drop,
+        velocity,
+
+        "PENDING",
+
+        str(datetime.now())
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# UPDATE RESULT
+# =========================================================
+
+def update_signal_result(
+
+    fixture_id,
+    result
+
+):
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    UPDATE learning_results
+
+    SET result=?
+
+    WHERE fixture_id=?
+
+    """, (
+
+        result,
+        fixture_id
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# AUTO LEARNING ANALYSIS
+# =========================================================
+
+def learning_analysis():
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT
+
+        market,
+        confidence,
+        country,
+        result
+
+    FROM learning_results
+
+    WHERE result != 'PENDING'
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    if not rows:
+
+        return
+
+    market_stats = {}
+
+    country_stats = {}
+
+    confidence_stats = {}
+
+    # =====================================================
+    # ANALYZE
+    # =====================================================
+
+    for row in rows:
+
+        market = row[0]
+
+        confidence = int(row[1])
+
+        country = row[2]
+
+        result = row[3]
+
+        win = 1 if result == "WIN" else 0
+
+        # =================================================
+        # MARKET
+        # =================================================
+
+        if market not in market_stats:
+
+            market_stats[market] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        market_stats[market]["total"] += 1
+
+        market_stats[market]["wins"] += win
+
+        # =================================================
+        # COUNTRY
+        # =================================================
+
+        if country not in country_stats:
+
+            country_stats[country] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        country_stats[country]["total"] += 1
+
+        country_stats[country]["wins"] += win
+
+        # =================================================
+        # CONFIDENCE
+        # =================================================
+
+        bucket = (
+
+            confidence // 5
+
+        ) * 5
+
+        if bucket not in confidence_stats:
+
+            confidence_stats[bucket] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        confidence_stats[bucket]["total"] += 1
+
+        confidence_stats[bucket]["wins"] += win
+
+    # =====================================================
+    # SAVE LEARNING
+    # =====================================================
+
+    learning_stats["markets"] = market_stats
+
+    learning_stats["countries"] = country_stats
+
+    learning_stats["confidence"] = confidence_stats
+
+# =========================================================
+# SMART AUTO BONUS
+# =========================================================
+
+def get_learning_bonus(
+
+    market,
+    country,
+    confidence
+
+):
+
+    bonus = 0
+
+    # =====================================================
+    # MARKET BONUS
+    # =====================================================
+
+    if (
+
+        "markets" in learning_stats
+
+        and
+
+        market in learning_stats["markets"]
+
+    ):
+
+        data = learning_stats["markets"][market]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 65:
+
+                bonus += 4
+
+            elif hitrate <= 45:
+
+                bonus -= 4
+
+    # =====================================================
+    # COUNTRY BONUS
+    # =====================================================
+
+    if (
+
+        "countries" in learning_stats
+
+        and
+
+        country in learning_stats["countries"]
+
+    ):
+
+        data = learning_stats["countries"][country]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 62:
+
+                bonus += 3
+
+            elif hitrate <= 45:
+
+                bonus -= 3
+
+    # =====================================================
+    # CONFIDENCE BONUS
+    # =====================================================
+
+    bucket = (
+
+        int(confidence) // 5
+
+    ) * 5
+
+    if (
+
+        "confidence" in learning_stats
+
+        and
+
+        bucket in learning_stats["confidence"]
+
+    ):
+
+        data = learning_stats["confidence"][bucket]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 70:
+
+                bonus += 4
+
+            elif hitrate <= 50:
+
+                bonus -= 4
+
+    return bonus 
 # =========================================================
 # LIVE STATS
 # =========================================================
