@@ -2658,9 +2658,9 @@ async def daily_ticket():
             ).astimezone(TZ)
 
             # само днешни мачове
-            if date.date() != now.date():
+          if date < now:
 
-                continue
+              continue
 
             kickoff = date.strftime(
                 "%d.%m %H:%M"
@@ -2683,7 +2683,10 @@ async def daily_ticket():
                     " women",
                     " kvinn",
                     " female",
-                    " ladies",
+                   " ladies",
+
+                    " w ",
+
                     " u19",
                     " u21",
                     " u23"
@@ -2714,7 +2717,7 @@ async def daily_ticket():
             # ONLY STRONG SIGNALS
             # =====================================================
 
-            if confidence < 84:
+            if confidence < 90:
                 continue
 
             odd = float(odd)
