@@ -2658,9 +2658,9 @@ async def daily_ticket():
             ).astimezone(TZ)
 
             # само днешни мачове
-          if date < now:
+            if date < now:
 
-              continue
+                continue
 
             kickoff = date.strftime(
                 "%d.%m %H:%M"
@@ -2683,7 +2683,7 @@ async def daily_ticket():
                     " women",
                     " kvinn",
                     " female",
-                   " ladies",
+                    " ladies",
 
                     " w ",
 
