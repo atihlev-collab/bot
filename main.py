@@ -2048,7 +2048,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-          # =====================================================
+    # =====================================================
     # MARKET
     # =====================================================
 
@@ -2058,19 +2058,59 @@ def analyze_match(match):
         extract(away, "Corner Kicks")
     )
 
+    total_xg = home_xg + away_xg
+
     market = None
     bonus_market = ""
 
     home_name = match["teams"]["home"]["name"]
     away_name = match["teams"]["away"]["name"]
 
-    # NEXT GOAL
+    # =====================================================
+    # OVER GOALS
+    # двата отбора атакуват
+    # =====================================================
 
     if (
 
-        dominance >= 25
-        and max(home_xg, away_xg) >= 1.0
-        and abs(home_xg - away_xg) >= 0.5
+        total_goals <= 3
+        and total_xg >= 3.0
+        and home_shots >= 4
+        and away_shots >= 4
+
+    ):
+
+        market = f"⚽ OVER {total_goals+1}.5 GOALS"
+
+    # =====================================================
+    # BTTS
+    # =====================================================
+
+    elif (
+
+        total_xg >= 3.0
+        and home_shots >= 4
+        and away_shots >= 4
+        and (
+            home_goals == 0
+            or away_goals == 0
+        )
+
+    ):
+
+        market = "💎 BTTS / GOAL-GOAL"
+
+    # =====================================================
+    # NEXT GOAL
+    # само когато един отбор доминира
+    # =====================================================
+
+    elif (
+
+        dominance >= 30
+        and max(home_xg, away_xg) >= 1.5
+        and abs(home_xg - away_xg) >= 0.8
+        and total_xg < 3.0
 
     ):
 
@@ -2082,37 +2122,9 @@ def analyze_match(match):
 
             market = f"🎯 NEXT GOAL AWAY ({away_name})"
 
-    # BTTS
-
-    elif (
-
-        best_xg >= 2.0
-        and home_shots >= 4
-        and away_shots >= 4
-        and total_goals <= 3
-        and (
-            home_goals == 0
-            or away_goals == 0
-        )
-
-    ):
-
-        market = "💎 BTTS / GOAL-GOAL"
-
-    # OVER GOALS
-
-    elif (
-
-        total_goals <= 1
-        and best_pressure >= 65
-        and best_xg >= 1.8
-        and minute >= 40
-
-    ):
-
-        market = f"⚽ OVER {total_goals+1}.5 GOALS"
-
+    # =====================================================
     # LATE GOAL
+    # =====================================================
 
     elif (
 
@@ -2124,7 +2136,9 @@ def analyze_match(match):
 
         market = "🔥 GOAL 75-90"
 
+    # =====================================================
     # CARDS
+    # =====================================================
 
     elif (
 
@@ -2150,7 +2164,9 @@ def analyze_match(match):
 
             market = "🟨 LIVE OVER CARDS"
 
+    # =====================================================
     # CORNERS
+    # =====================================================
 
     elif (
 
