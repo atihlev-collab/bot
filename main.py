@@ -2231,12 +2231,10 @@ def analyze_match(match):
     )
 
     if edge < 6:
-
         return
 
     # LIVE само 80%+
     if confidence < 80:
-
         return
 
     # =====================================================
@@ -2660,28 +2658,28 @@ async def prematch_loop():
 
                    date = datetime.fromisoformat(
 
-                        m["fixture"]["date"].replace(
-                            "Z","+00:00"
-                        )
+                       m["fixture"]["date"].replace(
+                           "Z","+00:00"
+                       )
 
-                  ).astimezone(TZ)
+                   ).astimezone(TZ)
 
-                  diff = (
+                   diff = (
 
-                       date - datetime.now(TZ)
+                        date - datetime.now(TZ)
 
-                 ).total_seconds()
+                   ).total_seconds()
 
-                 # само следващите 3 часа
-                 if diff < 0:
-                     continue
+                   # само следващите 3 часа
+                   if diff < 0:
+                      continue
 
-                 if diff > 10800:
-                     continue
+                   if diff > 10800:
+                      continue
 
-                 # само днешни мачове
-                 if date.date() != datetime.now(TZ).date():
-                    continue
+                   # само днешни мачове
+                   if date.date() != datetime.now(TZ).date():
+                       continue
 
                     # =================================================
                     # SCORE ENGINE
@@ -2897,7 +2895,7 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 91:
+                    if confidence < 90:
                         continue
 
                     if true_edge < 8:
