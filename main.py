@@ -2134,15 +2134,15 @@ def analyze_match(match):
 
         market = "🔥 GOAL 35-85"
 
-    # =====================================================
+       # =====================================================
     # CARDS
     # =====================================================
 
     elif (
 
-        minute >= 68
-        and minute <= 82
-        and abs(home_goals-away_goals) <= 1
+        minute >= 60
+        and minute <= 85
+        and abs(home_goals-away_goals) <= 2
 
     ):
 
@@ -2158,40 +2158,29 @@ def analyze_match(match):
             extract(away, "Yellow Cards")
         )
 
-        if total_fouls >= 18 and total_cards >= 2:
+        if (
+
+            total_fouls >= 16
+            and total_cards >= 2
+
+        ):
 
             market = "🟨 LIVE OVER CARDS"
 
-    # =====================================================
+       # =====================================================
     # CORNERS
     # =====================================================
 
     elif (
 
-        minute >= 60
+        minute >= 55
         and minute <= 85
 
     ):
 
-        big_teams = [
-
-            "Liverpool",
-            "Arsenal",
-            "Manchester City",
-            "Barcelona",
-            "Real Madrid",
-            "Bayern",
-            "PSV",
-            "Ajax",
-            "Benfica",
-            "Flamengo"
-
-        ]
-
         if (
 
-            home_name in big_teams
-            and home_goals < away_goals
+            home_goals < away_goals
             and home_pressure >= 65
             and total_corners >= 6
 
@@ -2203,8 +2192,7 @@ def analyze_match(match):
 
         elif (
 
-            away_name in big_teams
-            and away_goals < home_goals
+            away_goals < home_goals
             and away_pressure >= 65
             and total_corners >= 6
 
@@ -2213,10 +2201,6 @@ def analyze_match(match):
             market = (
                 f"📐 OVER {total_corners+2}.5 CORNERS"
             )
-
-    if market is None:
-
-        return
       # =====================================================
     # CONFIDENCE
     # =====================================================
