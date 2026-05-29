@@ -2074,9 +2074,9 @@ def analyze_match(match):
     if (
 
         total_goals <= 3
-        and total_xg >= 3.0
-        and home_shots >= 4
-        and away_shots >= 4
+        and total_xg >= 2.2
+        and home_shots >= 3
+        and away_shots >= 3
 
     ):
 
@@ -2107,10 +2107,10 @@ def analyze_match(match):
 
     elif (
 
-        dominance >= 30
-        and max(home_xg, away_xg) >= 1.5
+        dominance >= 25
+        and max(home_xg, away_xg) >= 0.7
         and abs(home_xg - away_xg) >= 0.8
-        and total_xg < 3.0
+        and total_xg < 2.2
 
     ):
 
