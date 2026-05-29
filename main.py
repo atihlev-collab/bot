@@ -255,7 +255,7 @@ def get_upcoming_matches():
 
     now = datetime.now(TZ)
 
-    for i in range(2):
+    for i in range(1):
 
         date = (
             now + timedelta(days=i)
