@@ -1926,7 +1926,7 @@ def analyze_match(match):
     if minute is None:
         return
 
-    if minute < 30 or minute > 75:
+    if minute < 30 or minute > 85:
         return
 
     home_goals = match["goals"]["home"]
@@ -2087,7 +2087,7 @@ def analyze_match(match):
     elif (
 
         total_xg >= 2.4
-        and home_shots >= 
+        and home_shots >= 3
         and away_shots >= 3
         and (
             home_goals == 0
@@ -2666,34 +2666,34 @@ async def prematch_loop():
 
                         continue
 
-                   # =================================================
-                   # DATE
-                   # =================================================
+                    # =================================================
+                    # DATE
+                    # =================================================
 
-                   date = datetime.fromisoformat(
+                    date = datetime.fromisoformat(
 
                        m["fixture"]["date"].replace(
                            "Z","+00:00"
                        )
 
-                   ).astimezone(TZ)
+                    ).astimezone(TZ)
 
-                   diff = (
+                    diff = (
+ 
+                    date - datetime.now(TZ)
 
-                   date - datetime.now(TZ)
+                    ).total_seconds()
 
-                   ).total_seconds()
-
-                   # само следващите 3 часа
-                   if diff < 0:
-                      continue
-
-                   if diff > 10800:
-                      continue
-
-                   # само днешни мачове
-                   if date.date() != datetime.now(TZ).date():
+                    # само следващите 3 часа
+                    if diff < 0:
                        continue
+
+                    if diff > 10800:
+                       continue
+
+                    # само днешни мачове
+                    if date.date() != datetime.now(TZ).date():
+                        continue
 
                     # =================================================
                     # SCORE ENGINE
