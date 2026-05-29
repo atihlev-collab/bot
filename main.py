@@ -2291,7 +2291,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-       # =====================================================
+          # =====================================================
     # MARKET
     # =====================================================
 
@@ -2304,51 +2304,31 @@ def analyze_match(match):
     market = None
     bonus_market = ""
 
-    home_name = (
-        match["teams"]["home"]["name"]
-    )
+    home_name = match["teams"]["home"]["name"]
+    away_name = match["teams"]["away"]["name"]
 
-    away_name = (
-        match["teams"]["away"]["name"]
-    )
-
-   # =====================================================
-# NEXT GOAL
-# =====================================================
+    # NEXT GOAL
 
     if (
 
-    dominance >= 25
+        dominance >= 25
+        and max(home_xg, away_xg) >= 1.0
+        and abs(home_xg - away_xg) >= 0.5
 
-    and
+    ):
 
-    max(home_xg, away_xg) >= 1.0
+        if home_pressure > away_pressure:
 
-    and
+            market = f"🎯 NEXT GOAL HOME ({home_name})"
 
-    abs(home_xg - away_xg) >= 0.5
+        else:
 
-):
+            market = f"🎯 NEXT GOAL AWAY ({away_name})"
 
-    if home_pressure > away_pressure:
-
-        market = (
-            f"🎯 NEXT GOAL HOME "
-            f"({home_name})"
-        )
-
-    else:
-
-        market = (
-            f"🎯 NEXT GOAL AWAY "
-            f"({away_name})"
-        )
-
-    # =====================================================
     # BTTS
-    # =====================================================
 
     elif (
+
         best_xg >= 2.0
         and home_shots >= 4
         and away_shots >= 4
@@ -2357,81 +2337,63 @@ def analyze_match(match):
             home_goals == 0
             or away_goals == 0
         )
+
     ):
 
         market = "💎 BTTS / GOAL-GOAL"
 
-    # =====================================================
     # OVER GOALS
-    # =====================================================
 
     elif (
+
         total_goals <= 1
         and best_pressure >= 65
         and best_xg >= 1.8
         and minute >= 40
+
     ):
 
-        market = (
-            f"⚽ OVER {total_goals+1}.5 GOALS"
-        )
+        market = f"⚽ OVER {total_goals+1}.5 GOALS"
 
-    # =====================================================
     # LATE GOAL
-    # =====================================================
 
     elif (
+
         minute >= 75
         and best_pressure >= 68
         and abs(home_goals-away_goals) < 4
+
     ):
 
         market = "🔥 GOAL 75-90"
 
-    # =====================================================
-    # SMART LATE CARDS
-    # =====================================================
+    # CARDS
 
     elif (
 
         minute >= 68
         and minute <= 82
-        and abs(
-            home_goals-away_goals
-        ) <= 1
+        and abs(home_goals-away_goals) <= 1
 
     ):
 
         total_fouls = (
-
             extract(home, "Fouls")
             +
             extract(away, "Fouls")
-
         )
 
         total_cards = (
-
             extract(home, "Yellow Cards")
             +
             extract(away, "Yellow Cards")
-
         )
 
-        if (
+        if total_fouls >= 20 and total_cards >= 2:
 
-            total_fouls >= 20
-            and total_cards >= 2
+            market = "🟨 LIVE OVER CARDS"
 
-        ):
-
-            market = (
-                "🟨 LIVE OVER CARDS"
-            )
-
-    # =====================================================
-    # SMART CHASING CORNERS
-    # =====================================================
+    # CORNERS
 
     elif (
 
@@ -2455,7 +2417,6 @@ def analyze_match(match):
 
         ]
 
-        # HOME chasing
         if (
 
             home_name in big_teams
@@ -2469,7 +2430,6 @@ def analyze_match(match):
                 f"📐 OVER {total_corners+2}.5 CORNERS"
             )
 
-        # AWAY chasing
         elif (
 
             away_name in big_teams
