@@ -2666,7 +2666,7 @@ async def prematch_loop():
 
                    diff = (
 
-                        date - datetime.now(TZ)
+                   date - datetime.now(TZ)
 
                    ).total_seconds()
 
