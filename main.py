@@ -2383,12 +2383,17 @@ async def daily_ticket():
             ).astimezone(TZ)
 
             # само днешни мачове
+            if date.date() != now.date():
+
+                continue
+
+            # миналите ги прескачаме
             if date < now:
 
                 continue
 
             kickoff = date.strftime(
-                "%d.%m %H:%M"
+              "%d.%m %H:%M"
             )
 
             text = (
