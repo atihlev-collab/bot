@@ -2316,7 +2316,7 @@ def analyze_match(match):
 # NEXT GOAL
 # =====================================================
 
-if (
+    if (
 
     dominance >= 25
 
@@ -2517,8 +2517,8 @@ if (
 
         return
 
-    # LIVE само 78%+
-    if confidence < 78:
+    # LIVE само 80%+
+    if confidence < 80:
 
         return
 
@@ -3172,10 +3172,10 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 90:
+                    if confidence < 91:
                         continue
 
-                    if true_edge < 5:
+                    if true_edge < 8:
                         continue
 
                     # =================================================
