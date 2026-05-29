@@ -2654,26 +2654,34 @@ async def prematch_loop():
 
                         continue
 
-                    # =================================================
-                    # DATE
-                    # =================================================
+                   # =================================================
+                   # DATE
+                   # =================================================
 
-                    date = datetime.fromisoformat(
+                   date = datetime.fromisoformat(
 
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
                         )
 
-                    ).astimezone(TZ)
+                  ).astimezone(TZ)
 
-                    diff = (
+                  diff = (
 
-                        date - datetime.now(TZ)
+                       date - datetime.now(TZ)
 
-                    ).total_seconds()
+                 ).total_seconds()
 
-                    if diff < 0 or diff > 28800:
-                        continue
+                 # само следващите 3 часа
+                 if diff < 0:
+                     continue
+
+                 if diff > 10800:
+                     continue
+
+                 # само днешни мачове
+                 if date.date() != datetime.now(TZ).date():
+                    continue
 
                     # =================================================
                     # SCORE ENGINE
