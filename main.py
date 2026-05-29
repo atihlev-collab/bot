@@ -2086,9 +2086,9 @@ def analyze_match(match):
 
     elif (
 
-        total_xg >= 3.0
-        and home_shots >= 4
-        and away_shots >= 4
+        total_xg >= 2.4
+        and home_shots >= 
+        and away_shots >= 3
         and (
             home_goals == 0
             or away_goals == 0
@@ -2126,13 +2126,13 @@ def analyze_match(match):
 
     elif (
 
-        minute >= 75
+        minute >= 35
         and best_pressure >= 68
         and abs(home_goals-away_goals) < 4
 
     ):
 
-        market = "🔥 GOAL 75-90"
+        market = "🔥 GOAL 35-85"
 
     # =====================================================
     # CARDS
@@ -2158,7 +2158,7 @@ def analyze_match(match):
             extract(away, "Yellow Cards")
         )
 
-        if total_fouls >= 20 and total_cards >= 2:
+        if total_fouls >= 18 and total_cards >= 2:
 
             market = "🟨 LIVE OVER CARDS"
 
