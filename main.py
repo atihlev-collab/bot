@@ -101,8 +101,6 @@ odds_cache = {}
 
 opening_odds = {}
 
-prematch_sent = {}
-
 # =========================================================
 # DATABASE
 # =========================================================
@@ -2108,8 +2106,8 @@ def analyze_match(match):
     elif (
 
         dominance >= 25
-        and max(home_xg, away_xg) >= 0.7
-        and abs(home_xg - away_xg) >= 0.8
+        and max(home_xg, away_xg) >= 1.0
+        and abs(home_xg - away_xg) >= 1.0
         and total_xg < 2.2
 
     ):
