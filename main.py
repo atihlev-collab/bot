@@ -2312,25 +2312,37 @@ def analyze_match(match):
         match["teams"]["away"]["name"]
     )
 
-    # =====================================================
-    # NEXT GOAL
-    # =====================================================
+   # =====================================================
+# NEXT GOAL
+# =====================================================
 
-    if dominance >= 15:
+if (
 
-        if home_pressure > away_pressure:
+    dominance >= 25
 
-            market = (
-                f"🎯 NEXT GOAL HOME "
-                f"({home_name})"
-            )
+    and
 
-        else:
+    max(home_xg, away_xg) >= 1.0
 
-            market = (
-                f"🎯 NEXT GOAL AWAY "
-                f"({away_name})"
-            )
+    and
+
+    abs(home_xg - away_xg) >= 0.5
+
+):
+
+    if home_pressure > away_pressure:
+
+        market = (
+            f"🎯 NEXT GOAL HOME "
+            f"({home_name})"
+        )
+
+    else:
+
+        market = (
+            f"🎯 NEXT GOAL AWAY "
+            f"({away_name})"
+        )
 
     # =====================================================
     # BTTS
