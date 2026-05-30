@@ -1016,6 +1016,80 @@ def get_team_form(team_id):
     except:
 
         return 1.3
+        # =========================================================
+# H2H FORM
+# =========================================================
+
+def get_h2h_bonus(home_id, away_id):
+
+    try:
+
+        url = f"{BASE_URL}/fixtures/headtohead"
+
+        params = {
+
+            "h2h": f"{home_id}-{away_id}",
+            "last": 5
+
+        }
+
+        response = requests.get(
+
+            url,
+            headers=HEADERS,
+            params=params,
+            timeout=20
+
+        ).json()
+
+        matches = response.get(
+            "response",
+            []
+        )
+
+        if len(matches) < 3:
+
+            return 0
+
+        home_wins = 0
+        away_wins = 0
+
+        for m in matches:
+
+            hg = m["goals"]["home"]
+            ag = m["goals"]["away"]
+
+            if hg > ag:
+
+                if m["teams"]["home"]["id"] == home_id:
+                    home_wins += 1
+                else:
+                    away_wins += 1
+
+            elif ag > hg:
+
+                if m["teams"]["away"]["id"] == home_id:
+                    home_wins += 1
+                else:
+                    away_wins += 1
+
+        diff = abs(
+            home_wins - away_wins
+        )
+
+        if diff >= 3:
+
+            return 0.30
+
+        elif diff >= 2:
+
+            return 0.20
+
+        return 0
+
+    except:
+
+        return 0
 # =========================================================
 # HOME / AWAY FORM
 # =========================================================
@@ -2914,29 +2988,36 @@ async def prematch_loop():
                         away_team_id,
                         False
                     )
-
-                    home_attack = round(
-
-                        (
-                           last5_home * 0.60
-                           +
-                           home_form * 0.40
-                        ),
-
-                        2
-
-                   )
-
-                   away_attack = round(
+                    h2h_bonus = get_h2h_bonus(
+                    home_team_id,
+                    away_team_id
+                    )
+                   home_attack = round(
 
                        (
-                           last5_away * 0.60
+                           last5_home * 0.55
                            +
-                           away_form * 0.40
-                       ),
+                           home_form * 0.35
+                           +
+                           h2h_bonus
+                   ),
 
-                       2
+                  2
 
+                  )
+                  )
+
+                  away_attack = round(
+
+                     (
+                          last5_away * 0.55
+                          +
+                          away_form * 0.35
+                     ),
+    
+                     2
+
+                  )
                   )
 
                   
