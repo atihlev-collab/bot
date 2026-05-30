@@ -2602,18 +2602,51 @@ async def prematch_loop():
                     if country in BAD_COUNTRIES:
                         continue
 
-                    home = m["teams"]["home"]["name"]
+                  home = m["teams"]["home"]["name"]
 
-                    away = m["teams"]["away"]["name"]
+away = m["teams"]["away"]["name"]
 
-                    fixture_id = m["fixture"]["id"]
+# =================================================
+# DATE FIRST
+# =================================================
 
-                    odds_data = get_match_odds(
-                        fixture_id
-                    )
+date = datetime.fromisoformat(
 
-                    if odds_data is None:
-                        continue
+    m["fixture"]["date"].replace(
+        "Z","+00:00"
+    )
+
+).astimezone(TZ)
+
+diff = (
+
+    date - datetime.now(TZ)
+
+).total_seconds()
+
+# само следващите 3 часа
+if diff < 0:
+    continue
+
+if diff > 10800:
+    continue
+
+# само днешни мачове
+if date.date() != datetime.now(TZ).date():
+    continue
+
+# =================================================
+# ODDS AFTER FILTER
+# =================================================
+
+fixture_id = m["fixture"]["id"]
+
+odds_data = get_match_odds(
+    fixture_id
+)
+
+if odds_data is None:
+    continue
 
                     sharp_odd = (
                         odds_data["sharp_odd"]
@@ -2655,34 +2688,7 @@ async def prematch_loop():
 
                         continue
 
-                    # =================================================
-                    # DATE
-                    # =================================================
-
-                    date = datetime.fromisoformat(
-
-                       m["fixture"]["date"].replace(
-                           "Z","+00:00"
-                       )
-
-                    ).astimezone(TZ)
-
-                    diff = (
- 
-                    date - datetime.now(TZ)
-
-                    ).total_seconds()
-
-                    # само следващите 3 часа
-                    if diff < 0:
-                       continue
-
-                    if diff > 10800:
-                       continue
-
-                    # само днешни мачове
-                    if date.date() != datetime.now(TZ).date():
-                        continue
+                   
 
                     # =================================================
                     # SCORE ENGINE
