@@ -2080,13 +2080,7 @@ def analyze_match(match):
 
         market = f"⚽ OVER {total_goals+1}.5 GOALS"
 
-     # =====================================================
-     # BTTS REMOVED
-     # =====================================================
-
-     elif False:
-
-    pass
+   
 
     # =====================================================
     # NEXT GOAL
@@ -2587,13 +2581,12 @@ async def prematch_loop():
                         continue
 
                     country = m["league"]["country"]
-
                     if country in BAD_COUNTRIES:
                         continue
 
-                  home = m["teams"]["home"]["name"]
+                    home = m["teams"]["home"]["name"]
 
-away = m["teams"]["away"]["name"]
+                    away = m["teams"]["away"]["name"]
 
 # =================================================
 # DATE FIRST
