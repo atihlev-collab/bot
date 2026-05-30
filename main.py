@@ -2740,39 +2740,30 @@ async def prematch_loop():
 
                     )
 
-                    over25_prob = poisson_data["over25"]
+                    📊 Over 2.5 Prob:
+                    {over25_prob}%
 
-                    btts_prob = poisson_data["btts"]
+                    ⚖ Fair Odd:
+                    {fair_odd}
 
-                    # =================================================
-                    # FAIR ODDS
-                    # =================================================
+                
 
-                    if market == "⚽ OVER 2.5 GOALS":
+                   # =================================================
+                   # FAIR ODDS
+                   # =================================================
 
-                        fair_odd = round(
+                   if market == "⚽ OVER 2.5 GOALS":
 
-                            100 / max(
-                                over25_prob,
-                                1
-                            ),
+                       fair_odd = round(
 
-                            2
+                           100 / max(
+                               over25_prob,
+                               1
+                           ),
 
-                        )
+                           2
 
-                    elif market == "⚽ OVER 2.5 GOALS":
-
-                        fair_odd = round(
-
-                            100 / max(
-                                btts_prob,
-                                1
-                            ),
-
-                            2
-
-                        )
+                      )
 
                     else:
 
