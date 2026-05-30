@@ -1078,25 +1078,25 @@ def calculate_match_score(
 
     if country in [
 
-        "England",
-        "Spain",
-        "Germany",
-        "Italy",
-        "France",
-        "Netherlands",
-        "Portugal",
+       "England",
+       "Spain",
+       "Germany",
+       "Italy",
+       "France",
+       "Netherlands",
+       "Portugal",
 
-        "Brazil",
-        "Argentina",
-        "Norway",
-        "Sweden",
-        "Denmark",
-        "Japan",
-        "USA"
+       "Brazil",
+       "Argentina",
+       "Norway",
+       "Sweden",
+       "Denmark",
+       "Japan",
+       "USA"
 
-    ]:
+   ]:
 
-        score += 12
+        score += 8
 
     # =====================================================
     # INTERNATIONAL TOURNAMENTS
@@ -1121,7 +1121,7 @@ def calculate_match_score(
 
     ):
 
-        score += 12
+        score += 8
 
     # =====================================================
     # SMART LEAGUE FILTER
@@ -1219,9 +1219,9 @@ def calculate_match_score(
 
     if country in active_countries:
 
-        score += 8
+        score += 4
 
-    # =====================================================
+       # =====================================================
     # MARKET FIT
     # =====================================================
 
@@ -1239,7 +1239,7 @@ def calculate_match_score(
 
         odd = "1.80"
 
-        score += 8
+        score += 4
 
     # UNDER LEAGUES
     elif country in [
@@ -1254,22 +1254,21 @@ def calculate_match_score(
 
         odd = "1.75"
 
-        score += 7
+        score += 4
 
-  # BTTS LEAGUES
+    # DENMARK / BELGIUM
+    elif country in [
 
-  elif country in [
+        "Denmark",
+        "Belgium"
 
-    "Denmark",
-    "Belgium"
+    ]:
 
- ]:
+        market = "⚽ OVER 2.5 GOALS"
 
-    market = "⚽ OVER 2.5 GOALS"
+        odd = "1.80"
 
-    odd = "1.80"
-
-    score += 8
+        score += 4
 
     # =====================================================
     # BIG TEAMS
@@ -1293,11 +1292,11 @@ def calculate_match_score(
 
     if home in big_teams:
 
-        score += 4
+        score += 2
 
     if away in big_teams:
 
-        score += 4
+        score += 2
 
     # =====================================================
     # VALUE STYLE ODDS
