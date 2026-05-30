@@ -2814,10 +2814,13 @@ async def prematch_loop():
 
                         )
 
-                        if soft_edge >= 5:
+                        if soft_edge >= 8:
+
+                            confidence += 10
+                            
+                        elif soft_edge >= 5:
 
                             confidence += 6
-
                     # =================================================
                     # DROP + VELOCITY
                     # =================================================
@@ -2836,15 +2839,15 @@ async def prematch_loop():
 
                     if (
 
-                        drop >= 0.15
+                        drop >= 0.25
 
                         or
 
-                        velocity >= 0.02
+                        velocity >= 0.03
 
                     ):
 
-                        confidence += 8
+                        confidence += 12
 
                     # =================================================
                     # LEAGUE BONUS
