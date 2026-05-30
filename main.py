@@ -2588,48 +2588,47 @@ async def prematch_loop():
 
                     away = m["teams"]["away"]["name"]
 
-# =================================================
-# DATE FIRST
-# =================================================
+                    # =================================================
+                    # DATE FIRST
+                    # =================================================
 
-date = datetime.fromisoformat(
+                    date = datetime.fromisoformat(
 
-    m["fixture"]["date"].replace(
-        "Z","+00:00"
-    )
+                        m["fixture"]["date"].replace(
+                            "Z","+00:00"
+                        )
 
-).astimezone(TZ)
+                    ).astimezone(TZ)
 
-diff = (
+                    diff = (
 
-    date - datetime.now(TZ)
+                        date - datetime.now(TZ)
 
-).total_seconds()
+                    ).total_seconds()
 
-# само следващите 3 часа
-if diff < 0:
-    continue
+                    # само следващите 3 часа
+                    if diff < 0:
+                        continue
 
-if diff > 10800:
-    continue
+                    if diff > 10800:
+                        continue
 
-# само днешни мачове
-if date.date() != datetime.now(TZ).date():
-    continue
+                    # само днешни мачове
+                    if date.date() != datetime.now(TZ).date():
+                        continue
 
-# =================================================
-# ODDS AFTER FILTER
-# =================================================
+                    # =================================================
+                    # ODDS AFTER FILTER
+                    # =================================================
 
-fixture_id = m["fixture"]["id"]
+                    fixture_id = m["fixture"]["id"]
 
-odds_data = get_match_odds(
-    fixture_id
-)
+                    odds_data = get_match_odds(
+                        fixture_id
+                    )
 
-if odds_data is None:
-    continue
-
+                    if odds_data is None:
+                        continue
                     sharp_odd = (
                         odds_data["sharp_odd"]
                     )
