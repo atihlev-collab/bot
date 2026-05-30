@@ -2112,27 +2112,13 @@ def analyze_match(match):
 
     ):
 
-       if (
+     if home_xg > away_xg:
 
-          home_xg > away_xg
-          and home_pressure + 5 >= away_pressure
+        market = f"🎯 NEXT GOAL HOME ({home_name})"
 
-      ):
+    else:
 
-          market = f"🎯 NEXT GOAL HOME ({home_name})"
-
-     elif (
-
-          away_xg > home_xg
-          and away_pressure + 5 >= home_pressure
-
-     ):
-
-          market = f"🎯 NEXT GOAL AWAY ({away_name})"
-
-     else:
-
-         return
+        market = f"🎯 NEXT GOAL AWAY ({away_name})"
     # =====================================================
     # LATE GOAL
     # =====================================================
