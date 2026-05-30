@@ -2091,7 +2091,9 @@ def analyze_match(match):
         dominance >= 25
 
         and total_xg < 2.2
-
+        
+        and abs(home_goals - away_goals) <= 1
+        
         and (
 
             (
