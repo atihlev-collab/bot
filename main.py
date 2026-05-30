@@ -2761,7 +2761,7 @@ async def prematch_loop():
 
                         )
 
-                    elif market == "💎 BTTS":
+                    elif market == "⚽ OVER 2.5 GOALS":
 
                         fair_odd = round(
 
