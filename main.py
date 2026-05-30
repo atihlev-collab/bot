@@ -2784,10 +2784,6 @@ async def prematch_loop():
                     confidence = 58 + score
 
                     # =================================================
-                    # SIMPLE ATTACK MODEL
-                    # =================================================
-
-                    # =================================================
                     # REAL FORM MODEL
                     # =================================================
 
@@ -2798,19 +2794,11 @@ async def prematch_loop():
                         home_team_id
                     )
 
-                    away_attack = get_team_form(
-                       away_team_id
+                   away_attack = get_team_form(
+                        away_team_id
                     )
 
-                    away_attack = round(
-
-                        (
-                            len(away) % 5
-                        ) + 1.2,
-
-                        2
-
-                    )
+                  
 
                     # =================================================
                     # POISSON
