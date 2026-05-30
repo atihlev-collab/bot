@@ -2080,23 +2080,13 @@ def analyze_match(match):
 
         market = f"⚽ OVER {total_goals+1}.5 GOALS"
 
-    # =====================================================
-    # BTTS
-    # =====================================================
+     # =====================================================
+     # BTTS REMOVED
+     # =====================================================
 
-    elif (
+     elif False:
 
-        total_xg >= 2.4
-        and home_shots >= 3
-        and away_shots >= 3
-        and (
-            home_goals == 0
-            or away_goals == 0
-        )
-
-    ):
-
-        market = "💎 BTTS / GOAL-GOAL"
+    pass
 
     # =====================================================
     # NEXT GOAL
@@ -2140,7 +2130,7 @@ def analyze_match(match):
 
     elif (
 
-        minute >= 60
+        minute >= 55
         and minute <= 85
         and abs(home_goals-away_goals) <= 2
 
@@ -2160,20 +2150,19 @@ def analyze_match(match):
 
         if (
 
-            total_fouls >= 16
+            total_fouls >= 14
             and total_cards >= 2
 
         ):
 
             market = "🟨 LIVE OVER CARDS"
-
-       # =====================================================
+        # =====================================================
     # CORNERS
     # =====================================================
 
     elif (
 
-        minute >= 55
+        minute >= 50
         and minute <= 85
 
     ):
@@ -2181,8 +2170,8 @@ def analyze_match(match):
         if (
 
             home_goals < away_goals
-            and home_pressure >= 65
-            and total_corners >= 6
+            and home_pressure >= 60
+            and total_corners >= 5
 
         ):
 
@@ -2193,8 +2182,8 @@ def analyze_match(match):
         elif (
 
             away_goals < home_goals
-            and away_pressure >= 65
-            and total_corners >= 6
+            and away_pressure >= 60
+            and total_corners >= 5
 
         ):
 
