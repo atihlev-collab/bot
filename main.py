@@ -1256,19 +1256,20 @@ def calculate_match_score(
 
         score += 7
 
-    # BTTS LEAGUES
-    elif country in [
+  # BTTS LEAGUES
 
-        "Denmark",
-        "Belgium"
+  elif country in [
 
-    ]:
+    "Denmark",
+    "Belgium"
 
-        market = "💎 BTTS"
+ ]:
 
-        odd = "1.85"
+    market = "⚽ OVER 2.5 GOALS"
 
-        score += 8
+    odd = "1.80"
+
+    score += 8
 
     # =====================================================
     # BIG TEAMS
@@ -2467,8 +2468,7 @@ async def daily_ticket():
             if market not in [
 
                 "⚽ OVER 2.5 GOALS",
-                "📉 UNDER 2.5 GOALS",
-                "💎 BTTS"
+                "📉 UNDER 2.5 GOALS"
 
             ]:
 
