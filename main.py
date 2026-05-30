@@ -2886,10 +2886,10 @@ if odds_data is None:
                     # FILTERS
                     # =================================================
 
-                    if confidence < 90:
+                    if confidence < 92:
                         continue
 
-                    if true_edge < 8:
+                    if true_edge < 12:
                         continue
 
                     # =================================================
@@ -2962,7 +2962,7 @@ if odds_data is None:
                 e
             )
 
-        await asyncio.sleep(1200)
+        await asyncio.sleep(3600)
 # =========================================================
 # LIVE LOOP
 # =========================================================
