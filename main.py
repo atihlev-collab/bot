@@ -2891,19 +2891,53 @@ async def prematch_loop():
                     confidence = 58 + score
 
                     # =================================================
-                    # REAL FORM MODEL
+                    # FORM MODEL
                     # =================================================
 
                     home_team_id = m["teams"]["home"]["id"]
                     away_team_id = m["teams"]["away"]["id"]
 
-                    home_attack = get_team_form(
+                    last5_home = get_team_form(
                         home_team_id
                     )
 
-                   away_attack = get_team_form(
+                    last5_away = get_team_form(
                         away_team_id
                     )
+
+                    home_form = get_home_away_form(
+                        home_team_id,
+                        True
+                    )
+
+                    away_form = get_home_away_form(
+                        away_team_id,
+                        False
+                    )
+
+                    home_attack = round(
+
+                        (
+                           last5_home * 0.60
+                           +
+                           home_form * 0.40
+                        ),
+
+                        2
+
+                   )
+
+                   away_attack = round(
+
+                       (
+                           last5_away * 0.60
+                           +
+                           away_form * 0.40
+                       ),
+
+                       2
+
+                  )
 
                   
 
