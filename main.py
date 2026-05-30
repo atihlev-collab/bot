@@ -1017,6 +1017,83 @@ def get_team_form(team_id):
 
         return 1.3
 # =========================================================
+# HOME / AWAY FORM
+# =========================================================
+
+def get_home_away_form(team_id, home=True):
+
+    try:
+
+        url = f"{BASE_URL}/fixtures"
+
+        params = {
+            "team": team_id,
+            "last": 10
+        }
+
+        response = requests.get(
+            url,
+            headers=HEADERS,
+            params=params,
+            timeout=20
+        ).json()
+
+        matches = response.get(
+            "response",
+            []
+        )
+
+        goals = 0
+        games = 0
+
+        for m in matches:
+
+            is_home = (
+                m["teams"]["home"]["id"]
+                == team_id
+            )
+
+            if home and not is_home:
+                continue
+
+            if not home and is_home:
+                continue
+
+            if is_home:
+
+                goals += (
+                    m["goals"]["home"] or 0
+                )
+
+            else:
+
+                goals += (
+                    m["goals"]["away"] or 0
+                )
+
+            games += 1
+
+        if games == 0:
+            return 1.3
+
+        return round(
+
+            max(
+                0.8,
+                min(
+                    3.0,
+                    goals / games
+                )
+            ),
+
+            2
+
+        )
+
+    except:
+
+        return 1.3
+# =========================================================
 # EXTRACT STATS
 # =========================================================
 
