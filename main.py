@@ -364,19 +364,16 @@ def odds_drop_signal(
     return drop, velocity
 
 
-# =========================================================
-# REAL ODDS API
-# =========================================================
-
-def get_match_odds(fixture_id):
+def get_team_form(team_id):
 
     try:
 
-        url = f"{BASE_URL}/odds"
+        url = f"{BASE_URL}/fixtures"
 
         params = {
 
-            "fixture": fixture_id
+            "team": team_id,
+            "last": 5
 
         }
 
@@ -389,35 +386,68 @@ def get_match_odds(fixture_id):
 
         ).json()
 
-        data = response.get(
+        matches = response.get(
             "response",
             []
         )
 
-        if not data:
-            return None
+        if not matches:
 
-        best_market = None
+            return 1.3
 
-        sharp_odd = None
-        soft_odd = None
+        points = 0
+        goals_scored = 0
+        goals_conceded = 0
 
-        for item in data:
+        for m in matches:
 
-            for bookmaker in item.get(
-                "bookmakers",
-                []
-            ):
+            home_id = m["teams"]["home"]["id"]
 
-                name = bookmaker.get(
-                    "name",
-                    ""
-                )
+            if team_id == home_id:
 
-                for bet in bookmaker.get(
-                    "bets",
-                    []
-                ):
+                scored = m["goals"]["home"]
+                conceded = m["goals"]["away"]
+
+            else:
+
+                scored = m["goals"]["away"]
+                conceded = m["goals"]["home"]
+
+            goals_scored += scored
+            goals_conceded += conceded
+
+            if scored > conceded:
+                points += 3
+
+            elif scored == conceded:
+                points += 1
+
+        avg_scored = goals_scored / len(matches)
+        form_points = points / len(matches)
+
+        attack_rating = round(
+
+            min(
+
+                3.0,
+
+                0.7
+                +
+                avg_scored * 0.6
+                +
+                form_points * 0.3
+
+            ),
+
+            2
+
+        )
+
+        return attack_rating
+
+    except:
+
+        return 1.3
 
                     # =================================================
                     # MATCH WINNER
@@ -2961,7 +2991,7 @@ async def prematch_loop():
                     if confidence < 92:
                         continue
 
-                    if true_edge < 12:
+                    if true_edge < 15:
                         continue
 
                     # =================================================
