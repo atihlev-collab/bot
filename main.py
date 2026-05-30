@@ -2082,28 +2082,44 @@ def analyze_match(match):
 
    
 
-    # =====================================================
+      # =====================================================
     # NEXT GOAL
-    # само когато един отбор доминира
+    # само когато един отбор реално доминира
     # =====================================================
 
     elif (
 
         dominance >= 25
-        and max(home_xg, away_xg) >= 1.0
-        and abs(home_xg - away_xg) >= 1.0
+
         and total_xg < 2.2
+
+        and (
+
+    (
+        home_xg >= 1.0
+        and away_xg <= 0.8
+    )
+
+    or
+
+    (
+        away_xg >= 1.0
+        and home_xg <= 0.8
+    )
+
+
+
+        )
 
     ):
 
-        if home_pressure > away_pressure:
+     if home_xg > away_xg:
 
-            market = f"🎯 NEXT GOAL HOME ({home_name})"
+         market = f"🎯 NEXT GOAL HOME ({home_name})"
 
-        else:
+     else:
 
-            market = f"🎯 NEXT GOAL AWAY ({away_name})"
-
+         market = f"🎯 NEXT GOAL AWAY ({away_name})"
     # =====================================================
     # LATE GOAL
     # =====================================================
