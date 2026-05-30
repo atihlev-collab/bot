@@ -906,7 +906,86 @@ def get_statistics(fixture_id):
         "response",
         []
     )
+# =========================================================
+# TEAM FORM
+# LAST 5 MATCHES
+# =========================================================
 
+def get_team_form(team_id):
+
+    try:
+
+        url = f"{BASE_URL}/fixtures"
+
+        params = {
+
+            "team": team_id,
+            "last": 5
+
+        }
+
+        response = requests.get(
+
+            url,
+            headers=HEADERS,
+            params=params,
+            timeout=20
+
+        ).json()
+
+        matches = response.get(
+            "response",
+            []
+        )
+
+        if not matches:
+
+            return 1.3
+
+        goals_scored = 0
+        goals_conceded = 0
+
+        for m in matches:
+
+            home_id = m["teams"]["home"]["id"]
+
+            if team_id == home_id:
+
+                scored = m["goals"]["home"]
+                conceded = m["goals"]["away"]
+
+            else:
+
+                scored = m["goals"]["away"]
+                conceded = m["goals"]["home"]
+
+            goals_scored += scored
+            goals_conceded += conceded
+
+        avg_scored = goals_scored / len(matches)
+        avg_conceded = goals_conceded / len(matches)
+
+        attack_rating = round(
+
+            max(
+                0.8,
+                min(
+                    3.0,
+                    avg_scored * 0.75
+                    +
+                    avg_conceded * 0.25
+                )
+            ),
+
+            2
+
+        )
+
+        return attack_rating
+
+    except:
+
+        return 1.3
 # =========================================================
 # EXTRACT STATS
 # =========================================================
@@ -2708,14 +2787,19 @@ async def prematch_loop():
                     # SIMPLE ATTACK MODEL
                     # =================================================
 
-                    home_attack = round(
+                    # =================================================
+                    # REAL FORM MODEL
+                    # =================================================
 
-                        (
-                            len(home) % 5
-                        ) + 1.2,
+                    home_team_id = m["teams"]["home"]["id"]
+                    away_team_id = m["teams"]["away"]["id"]
 
-                        2
+                    home_attack = get_team_form(
+                        home_team_id
+                    )
 
+                    away_attack = get_team_form(
+                       away_team_id
                     )
 
                     away_attack = round(
