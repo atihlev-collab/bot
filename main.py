@@ -2328,84 +2328,53 @@ def analyze_match(match):
 # OVER 1.5 MORE GOALS
 # =====================================================
 
-total_dangerous = (
-
-    extract(home, "Dangerous Attacks")
-    +
-    extract(away, "Dangerous Attacks")
-
-)
-
-total_shots = (
-
-    home_shots
-    +
-    away_shots
-
-)
-
-goal_score = 0
-
-goal_score += total_xg * 20
-goal_score += total_shots * 2
-goal_score += total_dangerous * 0.5
-goal_score += best_pressure * 0.3
-
 if (
 
     minute >= 20
 
-    and
+    and total_xg >= 1.8
 
-    total_xg >= 1.8
+    and total_shots >= 8
 
-    and
+    and total_dangerous >= 35
 
-    total_shots >= 8
-
-    and
-
-    total_dangerous >= 35
-
-    and
-
-    goal_score >= 85
+    and goal_score >= 85
 
 ):
 
     market = "🔥 OVER 1.5 MORE GOALS"
 
-       # =====================================================
-    # NEXT GOAL
-    # =====================================================
+# =====================================================
+# NEXT GOAL
+# =====================================================
 
-    elif (
+elif (
 
-        dominance >= 25
+    dominance >= 25
 
-        and total_xg < 2.2
-        
-        and abs(home_goals - away_goals) <= 1
-        
-        and (
+    and total_xg < 2.2
 
-            (
-                home_xg >= 1.0
-                and away_xg <= 0.8
-            )
+    and abs(home_goals - away_goals) <= 1
 
-            or
+    and (
 
-           (
-                away_xg >= 1.0
-                and home_xg <= 0.8
-           )
+        (
+            home_xg >= 1.0
+            and away_xg <= 0.8
+        )
 
-       )
+        or
 
-    ):
+        (
+            away_xg >= 1.0
+            and home_xg <= 0.8
+        )
 
-     if home_xg > away_xg:
+    )
+
+):
+
+    if home_xg > away_xg:
 
         market = f"🎯 NEXT GOAL HOME ({home_name})"
 
@@ -3052,7 +3021,7 @@ async def prematch_loop():
                       2
                  )
                 
-                 away_attack = round(
+                   away_attack = round(
 
                      (
                           last5_away * 0.55
@@ -3063,21 +3032,21 @@ async def prematch_loop():
                      2
 
                 )
-                # FORM BONUS
+                  # FORM BONUS
 
-                form_edge = home_attack + away_attack
+                  form_edge = home_attack + away_attack
 
-                if form_edge >= 4.5:
+                  if form_edge >= 4.5:
 
-                   confidence += 6
+                     confidence += 6
 
-               elif form_edge >= 4.0:
+                 elif form_edge >= 4.0:
 
-                   confidence += 4
+                     confidence += 4
 
-               elif form_edge < 2.8:
+                 elif form_edge < 2.8:
 
-                  confidence -= 6
+                    confidence -= 6
 
                     # =================================================
                     # POISSON
@@ -3193,14 +3162,14 @@ async def prematch_loop():
                  
                     if market == "⚽ OVER 2.5 GOALS":
 
-                    if over25_prob < 68:
-                       continue
+                        if over25_prob < 68:
+                            continue
 
-                   elif market == "📉 UNDER 2.5 GOALS":
+                    elif market == "📉 UNDER 2.5 GOALS":
 
-                   if over25_prob > 42:
-                       continue
-                       
+                        if over25_prob > 42:
+                            continue
+                        
                     # =================================================
                     # DUPLICATE
                     # =================================================
