@@ -2259,11 +2259,11 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 60
+    minimum_pressure = 65
 
     if minute >= 60:
 
-        minimum_pressure = 65
+        minimum_pressure = 68
 
     if best_pressure < minimum_pressure:
 
@@ -2505,8 +2505,8 @@ elif (
     if edge < 6:
         return
 
-    # LIVE само 80%+
-    if confidence < 80:
+    # LIVE само 81%+
+    if confidence < 81:
         return
 
     # =====================================================
