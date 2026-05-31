@@ -3033,8 +3033,18 @@ async def prematch_loop():
 
                     )
 
-                    over25_prob = poisson_data["over25"]
+                 over25_prob = poisson_data["over25"]
+                 if over25_prob >= 62:
 
+                     market = "⚽ OVER 2.5 GOALS"
+
+                elif over25_prob <= 48:
+
+                     market = "📉 UNDER 2.5 GOALS"
+
+                else:
+
+                    continue
                     # =================================================
                     # FAIR ODDS
                     # =================================================
@@ -3087,61 +3097,7 @@ async def prematch_loop():
 
                         confidence += 5
 
-                    # =================================================
-                    # SHARP / SOFT VALUE
-                    # =================================================
-
-                    if soft_odd:
-
-                        soft_edge = round(
-
-                            (
-                                soft_odd
-                                -
-                                sharp_odd
-                            )
-
-                            /
-                            sharp_odd * 100,
-
-                            2
-
-                        )
-
-                        if soft_edge >= 8:
-
-                            confidence += 10
-                            
-                        elif soft_edge >= 5:
-
-                            confidence += 6
-                    # =================================================
-                    # DROP + VELOCITY
-                    # =================================================
-
-                    drop, velocity = (
-
-                        odds_drop_signal(
-
-                            home,
-                            away,
-                            odd
-
-                        )
-
-                    )
-
-                    if (
-
-                        drop >= 0.25
-
-                        or
-
-                        velocity >= 0.03
-
-                    ):
-
-                        confidence += 12
+                  
 
                     # =================================================
                     # LEAGUE BONUS
@@ -3163,13 +3119,7 @@ async def prematch_loop():
 
                         confidence -= 6
 
-                    confidence += min(
-
-                        len(home) % 5,
-
-                        4
-
-                    )
+                   
 
                     confidence = min(
                         confidence,
@@ -3183,7 +3133,7 @@ async def prematch_loop():
                     if confidence < 92:
                         continue
 
-                    if true_edge < 15:
+                    if true_edge < 18:
                         continue
 
                     # =================================================
@@ -3254,6 +3204,120 @@ async def prematch_loop():
             )
 
         await asyncio.sleep(3600)
+# =========================================================
+# VALUE ALERT LOOP
+# =========================================================
+
+async def value_alert_loop():
+
+    while True:
+
+        try:
+
+            matches = get_upcoming_matches()
+
+            for m in matches:
+
+                try:
+
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    fixture_id = m["fixture"]["id"]
+
+                    odds_data = get_match_odds(
+                        fixture_id
+                    )
+
+                    if odds_data is None:
+                        continue
+
+                    sharp_odd = odds_data["sharp_odd"]
+                    soft_odd = odds_data["soft_odd"]
+
+                    if (
+                        sharp_odd is None
+                        or
+                        soft_odd is None
+                    ):
+                        continue
+
+                    soft_edge = round(
+
+                        (
+                            soft_odd
+                            -
+                            sharp_odd
+                        )
+
+                        /
+
+                        sharp_odd
+
+                        * 100,
+
+                        2
+
+                    )
+
+                    drop, velocity = (
+
+                        odds_drop_signal(
+
+                            home,
+                            away,
+                            sharp_odd
+
+                        )
+
+                    )
+
+                    if (
+
+                        soft_edge < 8
+
+                        and
+
+                        drop < 0.25
+
+                        and
+
+                        velocity < 0.03
+
+                    ):
+
+                        continue
+
+                    msg = f"""
+💎 VALUE ALERT
+
+⚽ {home} vs {away}
+
+💰 Sharp Odd:
+{sharp_odd}
+
+🎯 Soft Odd:
+{soft_odd}
+
+📊 Soft Edge:
+{soft_edge}%
+
+📉 Drop:
+{drop}
+
+⚡ Velocity:
+{velocity}
+"""
+
+                    send_telegram(msg)
+
+                except:
+                    pass
+
+        except:
+            pass
+
+        await asyncio.sleep(1800)
 # =========================================================
 # LIVE LOOP
 # =========================================================
@@ -3329,6 +3393,18 @@ def main():
 
     # PREMATCH
     prematch_thread = threading.Thread(
+     value_thread = threading.Thread(
+
+    target=lambda:
+    asyncio.run(
+        value_alert_loop()
+    ),
+
+    daemon=True
+
+)
+
+value_thread.start()
         target=lambda:
         asyncio.run(prematch_loop()),
         daemon=True
