@@ -2888,8 +2888,15 @@ async def prematch_loop():
                             "Z","+00:00"
                         )
 
-                    ).astimezone(TZ)
+                   ).astimezone(TZ)
+                   # =================================================
+                   # TODAY ONLY
+                   # =================================================
 
+                   today = datetime.now(TZ).date()
+
+                   if date.date() != today:
+                       continue
                     diff = (
 
                         date - datetime.now(TZ)
