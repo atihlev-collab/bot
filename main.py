@@ -2324,21 +2324,36 @@ def analyze_match(match):
     home_name = match["teams"]["home"]["name"]
     away_name = match["teams"]["away"]["name"]
 
-    # =====================================================
-    # OVER GOALS
-    # двата отбора атакуват
-    # =====================================================
+# =====================================================
+# OVER 1.5 MORE GOALS
+# =====================================================
 
-    if (
+if (
 
-        total_goals <= 3
-        and total_xg >= 2.2
-        and home_shots >= 3
-        and away_shots >= 3
+    minute >= 50
+    and minute <= 75
 
-    ):
+    and
 
-        market = f"⚽ OVER {total_goals+1}.5 GOALS"
+    total_xg >= 2.5
+
+    and
+
+    (
+        home_shots + away_shots
+    ) >= 8
+
+    and
+
+    (
+        extract(home, "Dangerous Attacks")
+        +
+        extract(away, "Dangerous Attacks")
+    ) >= 40
+
+):
+
+    market = "🔥 OVER 1.5 MORE GOALS"
 
    
 
