@@ -3319,6 +3319,174 @@ async def value_alert_loop():
 
         await asyncio.sleep(1800)
 # =========================================================
+# VALUE ALERT LOOP
+# =========================================================
+
+value_sent = {}
+
+def can_send_value(key, cooldown=21600):
+
+    now = time.time()
+
+    if key in value_sent:
+
+        if now - value_sent[key] < cooldown:
+            return False
+
+    return True
+
+def save_value(key):
+
+    value_sent[key] = time.time()
+
+
+async def value_alert_loop():
+
+    while True:
+
+        try:
+
+            matches = get_upcoming_matches()
+
+            for m in matches:
+
+                try:
+
+                    league = m["league"]["name"]
+
+                    if blocked_league(league):
+                        continue
+
+                    country = m["league"]["country"]
+
+                    if country in BAD_COUNTRIES:
+                        continue
+
+                    fixture_id = m["fixture"]["id"]
+
+                    home = m["teams"]["home"]["name"]
+                    away = m["teams"]["away"]["name"]
+
+                    odds_data = get_match_odds(
+                        fixture_id
+                    )
+
+                    if odds_data is None:
+                        continue
+
+                    sharp_odd = odds_data["sharp_odd"]
+                    soft_odd = odds_data["soft_odd"]
+
+                    if (
+                        sharp_odd is None
+                        or
+                        soft_odd is None
+                    ):
+                        continue
+
+                    soft_edge = round(
+
+                        (
+                            soft_odd
+                            -
+                            sharp_odd
+                        )
+
+                        /
+
+                        sharp_odd
+
+                        * 100,
+
+                        2
+
+                    )
+
+                    drop, velocity = odds_drop_signal(
+
+                        home,
+                        away,
+                        sharp_odd
+
+                    )
+
+                    if (
+
+                        soft_edge < 8
+
+                        and
+
+                        drop < 0.25
+
+                        and
+
+                        velocity < 0.03
+
+                    ):
+
+                        continue
+
+                    key = f"{home}_{away}"
+
+                    if not can_send_value(key):
+                        continue
+
+                    reason = []
+
+                    if soft_edge >= 8:
+                        reason.append(
+                            "Sharp/Soft Value"
+                        )
+
+                    if drop >= 0.25:
+                        reason.append(
+                            "Odds Drop"
+                        )
+
+                    if velocity >= 0.03:
+                        reason.append(
+                            "Steam Move"
+                        )
+
+                    msg = f"""
+💎 VALUE ALERT
+
+🌍 {country}
+🏆 {league}
+
+⚽ {home} vs {away}
+
+💰 Sharp Odd:
+{sharp_odd}
+
+🎯 Soft Odd:
+{soft_odd}
+
+📊 Value Edge:
+{soft_edge}%
+
+📉 Drop:
+{drop}
+
+⚡ Velocity:
+{velocity}
+
+🔥 Reason:
+{", ".join(reason)}
+"""
+
+                    send_telegram(msg)
+
+                    save_value(key)
+
+                except:
+                    pass
+
+        except:
+            pass
+
+        await asyncio.sleep(1800)
+# =========================================================
 # LIVE LOOP
 # =========================================================
 
@@ -3411,7 +3579,18 @@ value_thread.start()
     )
 
     prematch_thread.start()
+value_thread = threading.Thread(
 
+    target=lambda:
+    asyncio.run(
+        value_alert_loop()
+    ),
+
+    daemon=True
+
+)
+
+value_thread.start()
     while True:
         time.sleep(60)
 
