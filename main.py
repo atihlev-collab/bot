@@ -2450,18 +2450,18 @@ if (
             extract(away, "Yellow Cards")
         )
 
-        if (
-
+     if (
+           (   
             total_fouls >= 18
             and total_cards >= 2
+           )
+     
+          or
 
-        ):
-        or
-
-        (
+          (
             total_fouls >= 24
             and total_cards >= 1
-        )
+          )
 
     ):
             market = "🟨 LIVE OVER CARDS"
