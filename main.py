@@ -3091,17 +3091,15 @@ async def prematch_loop():
 
                     over25_prob = poisson_data["over25"]
               
-                    if over25_prob >= 62:
+                    if market == "⚽ OVER 2.5 GOALS":
 
-                        market = "⚽ OVER 2.5 GOALS"
+                        if over25_prob < 68:
+                            continue
 
-                    elif over25_prob <= 48:
+                    elif market == "📉 UNDER 2.5 GOALS":
 
-                        market = "📉 UNDER 2.5 GOALS"
-
-                    else:
-
-                        continue
+                        if over25_prob > 42:
+                           continue
                     # =================================================
                     # FAIR ODDS
                     # =================================================
