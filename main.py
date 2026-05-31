@@ -2724,7 +2724,7 @@ async def daily_ticket():
             if confidence < 90:
                 continue
 
-            odd = float(odd)
+            odd = float(fake_odd)
 
             # =====================================================
             # VALUE ODDS RANGE
@@ -3258,8 +3258,8 @@ for _, msg, key in prematch_candidates:
     send_telegram(msg)
 
     save_prematch(key)
-        await asyncio.sleep(3600)
 
+await asyncio.sleep(3600)
 # =========================================================
 # VALUE ALERT LOOP
 # =========================================================
