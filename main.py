@@ -2328,34 +2328,52 @@ def analyze_match(match):
 # OVER 1.5 MORE GOALS
 # =====================================================
 
+total_dangerous = (
+
+    extract(home, "Dangerous Attacks")
+    +
+    extract(away, "Dangerous Attacks")
+
+)
+
+total_shots = (
+
+    home_shots
+    +
+    away_shots
+
+)
+
+goal_score = 0
+
+goal_score += total_xg * 20
+goal_score += total_shots * 2
+goal_score += total_dangerous * 0.5
+goal_score += best_pressure * 0.3
+
 if (
 
-    minute >= 50
-    and minute <= 75
+    minute >= 20
 
     and
 
-    total_xg >= 2.5
+    total_xg >= 1.8
 
     and
 
-    (
-        home_shots + away_shots
-    ) >= 8
+    total_shots >= 8
 
     and
 
-    (
-        extract(home, "Dangerous Attacks")
-        +
-        extract(away, "Dangerous Attacks")
-    ) >= 40
+    total_dangerous >= 35
+
+    and
+
+    goal_score >= 85
 
 ):
 
     market = "🔥 OVER 1.5 MORE GOALS"
-
-   
 
        # =====================================================
     # NEXT GOAL
