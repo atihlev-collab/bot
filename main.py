@@ -2970,7 +2970,7 @@ async def prematch_loop():
                     # SCORE ENGINE
                     # =================================================
 
-                    score, market, fake_odd = (
+                    score, score_market, fake_odd = (
 
                         calculate_match_score(
 
