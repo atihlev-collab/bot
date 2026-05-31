@@ -2907,7 +2907,7 @@ async def prematch_loop():
                     if diff < 0:
                         continue
 
-                    if diff > 10800:
+                    if diff > 3600:
                         continue
 
                   
@@ -3159,10 +3159,10 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 96:
+                    if confidence < 98:
                         continue
 
-                    if true_edge < 30:
+                    if true_edge < 35:
                         continue
                  
                     if market == "⚽ OVER 2.5 GOALS":
