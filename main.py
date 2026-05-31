@@ -2705,7 +2705,7 @@ async def daily_ticket():
             # SCORE ENGINE
             # =====================================================
 
-            score, market, odd = (
+            score, score_market, fake_odd = (
 
                 calculate_match_score(
                     country,
@@ -2910,9 +2910,7 @@ async def prematch_loop():
                     if diff > 10800:
                         continue
 
-                    # само днешни мачове
-                    if date.date() != datetime.now(TZ).date():
-                        continue
+                  
 
                     # =================================================
                     # ODDS AFTER FILTER
@@ -3169,12 +3167,12 @@ async def prematch_loop():
                  
                     if market == "⚽ OVER 2.5 GOALS":
 
-                        if over25_prob < 68:
+                        if over25_prob < 72:
                             continue
 
                     elif market == "📉 UNDER 2.5 GOALS":
 
-                        if over25_prob > 42:
+                        if over25_prob > 38:
                             continue
                         
                     # =================================================
