@@ -3004,8 +3004,6 @@ async def prematch_loop():
 
                   2
 
-                  )
-                  )
 
                   away_attack = round(
 
@@ -3017,8 +3015,6 @@ async def prematch_loop():
     
                      2
 
-                  )
-                  )
 
                   
 
@@ -3164,11 +3160,7 @@ async def prematch_loop():
 💰 Sharp Odd:
 {sharp_odd}
 
-📉 Odds Drop:
-{drop}
 
-⚡ Velocity:
-{velocity}
 
 💎 True Edge:
 +{true_edge}%
@@ -3204,120 +3196,7 @@ async def prematch_loop():
             )
 
         await asyncio.sleep(3600)
-# =========================================================
-# VALUE ALERT LOOP
-# =========================================================
 
-async def value_alert_loop():
-
-    while True:
-
-        try:
-
-            matches = get_upcoming_matches()
-
-            for m in matches:
-
-                try:
-
-                    home = m["teams"]["home"]["name"]
-                    away = m["teams"]["away"]["name"]
-
-                    fixture_id = m["fixture"]["id"]
-
-                    odds_data = get_match_odds(
-                        fixture_id
-                    )
-
-                    if odds_data is None:
-                        continue
-
-                    sharp_odd = odds_data["sharp_odd"]
-                    soft_odd = odds_data["soft_odd"]
-
-                    if (
-                        sharp_odd is None
-                        or
-                        soft_odd is None
-                    ):
-                        continue
-
-                    soft_edge = round(
-
-                        (
-                            soft_odd
-                            -
-                            sharp_odd
-                        )
-
-                        /
-
-                        sharp_odd
-
-                        * 100,
-
-                        2
-
-                    )
-
-                    drop, velocity = (
-
-                        odds_drop_signal(
-
-                            home,
-                            away,
-                            sharp_odd
-
-                        )
-
-                    )
-
-                    if (
-
-                        soft_edge < 8
-
-                        and
-
-                        drop < 0.25
-
-                        and
-
-                        velocity < 0.03
-
-                    ):
-
-                        continue
-
-                    msg = f"""
-💎 VALUE ALERT
-
-⚽ {home} vs {away}
-
-💰 Sharp Odd:
-{sharp_odd}
-
-🎯 Soft Odd:
-{soft_odd}
-
-📊 Soft Edge:
-{soft_edge}%
-
-📉 Drop:
-{drop}
-
-⚡ Velocity:
-{velocity}
-"""
-
-                    send_telegram(msg)
-
-                except:
-                    pass
-
-        except:
-            pass
-
-        await asyncio.sleep(1800)
 # =========================================================
 # VALUE ALERT LOOP
 # =========================================================
@@ -3551,48 +3430,38 @@ def main():
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
-    # LIVE
-    live_thread = threading.Thread(
-        target=start_live_loop,
-        daemon=True
-    )
-
-    live_thread.start()
-
-    # PREMATCH
-    prematch_thread = threading.Thread(
-     value_thread = threading.Thread(
-
-    target=lambda:
-    asyncio.run(
-        value_alert_loop()
-    ),
-
+# LIVE
+live_thread = threading.Thread(
+    target=start_live_loop,
     daemon=True
-
 )
 
-value_thread.start()
-        target=lambda:
-        asyncio.run(prematch_loop()),
-        daemon=True
-    )
+live_thread.start()
 
-    prematch_thread.start()
+# PREMATCH
+prematch_thread = threading.Thread(
+    target=lambda:
+    asyncio.run(
+        prematch_loop()
+    ),
+    daemon=True
+)
+
+prematch_thread.start()
+
+# VALUE
 value_thread = threading.Thread(
-
     target=lambda:
     asyncio.run(
         value_alert_loop()
     ),
-
     daemon=True
-
 )
 
 value_thread.start()
-    while True:
-        time.sleep(60)
+
+while True:
+    time.sleep(60)
 
 # =========================================================
 # START
