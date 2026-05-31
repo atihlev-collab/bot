@@ -3506,15 +3506,17 @@ def main():
 
     # PREMATCH
 
-    prematch_thread = threading.Thread(
-        target=lambda:
-        asyncio.run(
-            prematch_loop()
-        ),
-        daemon=True
-    )
+  # PREMATCH
 
-    prematch_thread.start()
+  # prematch_thread = threading.Thread(
+  #     target=lambda:
+  #     asyncio.run(
+  #         prematch_loop()
+  #     ),
+  #     daemon=True
+  # )
+
+# prematch_thread.start()
 
     # VALUE ALERTS
 
