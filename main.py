@@ -3039,7 +3039,7 @@ async def prematch_loop():
                         home_team_id,
                         away_team_id
                     )
-                   home_attack = round(
+                    home_attack = round(
 
                        (
                            last5_home * 0.55
@@ -3065,17 +3065,17 @@ async def prematch_loop():
                 )
                 # FORM BONUS
 
-               form_edge = home_attack + away_attack
+                form_edge = home_attack + away_attack
 
-               if form_edge >= 4.5:
+                if form_edge >= 4.5:
 
                    confidence += 6
 
-              elif form_edge >= 4.0:
+               elif form_edge >= 4.0:
 
                    confidence += 4
 
-              elif form_edge < 2.8:
+               elif form_edge < 2.8:
 
                   confidence -= 6
 
