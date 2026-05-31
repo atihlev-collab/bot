@@ -3022,24 +3022,24 @@ async def prematch_loop():
                     # =================================================
 
                     poisson_data = poisson_probability(
-
                         home_attack,
                         away_attack
 
                     )
 
-                 over25_prob = poisson_data["over25"]
-                 if over25_prob >= 62:
+                    over25_prob = poisson_data["over25"]
+              
+                    if over25_prob >= 62:
 
-                     market = "⚽ OVER 2.5 GOALS"
+                        market = "⚽ OVER 2.5 GOALS"
 
-                elif over25_prob <= 48:
+                    elif over25_prob <= 48:
 
-                     market = "📉 UNDER 2.5 GOALS"
+                        market = "📉 UNDER 2.5 GOALS"
 
-                else:
+                    else:
 
-                    continue
+                        continue
                     # =================================================
                     # FAIR ODDS
                     # =================================================
@@ -3424,43 +3424,49 @@ def start_live_loop():
 def main():
 
     init_database()
-    
+
     init_learning_database()
 
-    print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
+    print(
+        "🚀 PRACTICAL LIVE AI SYSTEM STARTED"
+    )
 
-# LIVE
-live_thread = threading.Thread(
-    target=start_live_loop,
-    daemon=True
-)
+    # LIVE
 
-live_thread.start()
+    live_thread = threading.Thread(
+        target=start_live_loop,
+        daemon=True
+    )
 
-# PREMATCH
-prematch_thread = threading.Thread(
-    target=lambda:
-    asyncio.run(
-        prematch_loop()
-    ),
-    daemon=True
-)
+    live_thread.start()
 
-prematch_thread.start()
+    # PREMATCH
 
-# VALUE
-value_thread = threading.Thread(
-    target=lambda:
-    asyncio.run(
-        value_alert_loop()
-    ),
-    daemon=True
-)
+    prematch_thread = threading.Thread(
+        target=lambda:
+        asyncio.run(
+            prematch_loop()
+        ),
+        daemon=True
+    )
 
-value_thread.start()
+    prematch_thread.start()
 
-while True:
-    time.sleep(60)
+    # VALUE ALERTS
+
+    value_thread = threading.Thread(
+        target=lambda:
+        asyncio.run(
+            value_alert_loop()
+        ),
+        daemon=True
+    )
+
+    value_thread.start()
+
+    while True:
+
+        time.sleep(60)
 
 # =========================================================
 # START
@@ -3469,4 +3475,3 @@ while True:
 if __name__ == "__main__":
 
     main()
-
