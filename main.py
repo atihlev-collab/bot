@@ -3036,8 +3036,8 @@ async def prematch_loop():
                         False
                     )
                     h2h_bonus = get_h2h_bonus(
-                    home_team_id,
-                    away_team_id
+                        home_team_id,
+                        away_team_id
                     )
                    home_attack = round(
 
@@ -3047,11 +3047,11 @@ async def prematch_loop():
                            home_form * 0.35
                            +
                            h2h_bonus
-                   ),          
-                   2
-                   )
+                     ),          
+                     2
+                 )
                 
-                  away_attack = round(
+                 away_attack = round(
 
                      (
                           last5_away * 0.55
@@ -3061,8 +3061,22 @@ async def prematch_loop():
     
                      2
 
-                     )
-                  
+                )
+                # FORM BONUS
+
+               form_edge = home_attack + away_attack
+
+               if form_edge >= 4.5:
+
+               confidence += 6
+
+              elif form_edge >= 4.0:
+
+              confidence += 4
+
+              elif form_edge < 2.8:
+
+              confidence -= 6
 
                     # =================================================
                     # POISSON
@@ -3165,19 +3179,29 @@ async def prematch_loop():
 
                     confidence = min(
                         confidence,
-                        92
+                        98
                     )
 
                     # =================================================
                     # FILTERS
                     # =================================================
 
-                    if confidence < 92:
+                    if confidence < 95:
                         continue
 
-                    if true_edge < 18:
+                    if true_edge < 25:
                         continue
+                 
+                    if market == "⚽ OVER 2.5 GOALS":
 
+                    if over25_prob < 68:
+                       continue
+
+                   elif market == "📉 UNDER 2.5 GOALS":
+
+                   if over25_prob > 42:
+                       continue
+                       
                     # =================================================
                     # DUPLICATE
                     # =================================================
