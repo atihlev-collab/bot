@@ -3047,8 +3047,9 @@ async def prematch_loop():
                            home_form * 0.35
                            +
                            h2h_bonus
-                     ),          
-                     2
+                      ),      
+                    
+                      2
                  )
                 
                  away_attack = round(
@@ -3068,15 +3069,15 @@ async def prematch_loop():
 
                if form_edge >= 4.5:
 
-               confidence += 6
+                   confidence += 6
 
               elif form_edge >= 4.0:
 
-              confidence += 4
+                   confidence += 4
 
               elif form_edge < 2.8:
 
-              confidence -= 6
+                  confidence -= 6
 
                     # =================================================
                     # POISSON
