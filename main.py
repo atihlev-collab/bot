@@ -3000,11 +3000,10 @@ async def prematch_loop():
                            home_form * 0.35
                            +
                            h2h_bonus
-                   ),
-
-                  2
-
-
+                   ),          
+                   2
+                   )
+                
                   away_attack = round(
 
                      (
@@ -3015,7 +3014,7 @@ async def prematch_loop():
     
                      2
 
-
+                     )
                   
 
                     # =================================================
