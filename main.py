@@ -2432,7 +2432,7 @@ if (
 
     elif (
 
-        minute >= 55
+        minute >= 45
         and minute <= 85
         and abs(home_goals-away_goals) <= 2
 
@@ -2452,46 +2452,60 @@ if (
 
         if (
 
-            total_fouls >= 14
+            total_fouls >= 18
             and total_cards >= 2
 
         ):
+        or
 
+        (
+            total_fouls >= 24
+            and total_cards >= 1
+        )
+
+    ):
             market = "🟨 LIVE OVER CARDS"
-        # =====================================================
-    # CORNERS
-    # =====================================================
+        
+# =====================================================
+# CORNERS
+# =====================================================
 
-    elif (
+elif (
 
-        minute >= 50
-        and minute <= 85
+    minute >= 40
+    and minute <= 85
+
+):
+
+    total_attacks = (
+
+        extract(home, "Dangerous Attacks")
+        +
+        extract(away, "Dangerous Attacks")
+
+    )
+
+    if (
+
+        total_corners >= 6
+
+        and
+
+        (
+            home_pressure >= 60
+            or
+            away_pressure >= 60
+        )
+
+        and
+
+        total_attacks >= 35
 
     ):
 
-        if (
-
-            home_goals < away_goals
-            and home_pressure >= 60
-            and total_corners >= 5
-
-        ):
-
-            market = (
-                f"📐 OVER {total_corners+2}.5 CORNERS"
-            )
-
-        elif (
-
-            away_goals < home_goals
-            and away_pressure >= 60
-            and total_corners >= 5
-
-        ):
-
-            market = (
-                f"📐 OVER {total_corners+2}.5 CORNERS"
-            )
+        market = (
+            f"📐 OVER {total_corners+2}.5 CORNERS"
+        )
       # =====================================================
     # CONFIDENCE
     # =====================================================
