@@ -2860,7 +2860,7 @@ async def prematch_loop():
             await daily_ticket()
 
             matches = get_upcoming_matches()
-
+            prematch_candidates = []
             for m in matches:
 
                 try:
@@ -3062,12 +3062,12 @@ async def prematch_loop():
               
                     if market == "⚽ OVER 2.5 GOALS":
 
-                        if over25_prob < 68:
+                        if over25_prob < 72:
                             continue
 
                     elif market == "📉 UNDER 2.5 GOALS":
 
-                        if over25_prob > 42:
+                        if over25_prob > 38:
                            continue
                     # =================================================
                     # FAIR ODDS
@@ -3154,10 +3154,10 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 95:
+                    if confidence < 96:
                         continue
 
-                    if true_edge < 25:
+                    if true_edge < 30:
                         continue
                  
                     if market == "⚽ OVER 2.5 GOALS":
@@ -3213,11 +3213,15 @@ async def prematch_loop():
 {confidence}%
 """
 
-                    print(msg)
+                   prematch_candidates.append(
 
-                    send_telegram(msg)
+    (
+        confidence,
+        msg,
+        key
+    )
 
-                    save_prematch(key)
+)
 
                 except Exception as e:
 
@@ -3232,7 +3236,23 @@ async def prematch_loop():
                 "PREMATCH ERROR:",
                 e
             )
+# =================================================
+# TOP 5 ONLY
+# =================================================
 
+prematch_candidates.sort(
+    reverse=True
+)
+
+prematch_candidates = (
+    prematch_candidates[:5]
+)
+
+for _, msg, key in prematch_candidates:
+
+    send_telegram(msg)
+
+    save_prematch(key)
         await asyncio.sleep(3600)
 
 # =========================================================
