@@ -3159,7 +3159,7 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 98:
+                    if confidence < 99:
                         continue
 
                     if true_edge < 35:
