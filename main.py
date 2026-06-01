@@ -2198,11 +2198,11 @@ def analyze_match(match):
     home_name = match["teams"]["home"]["name"]
     away_name = match["teams"]["away"]["name"]
 
-# =====================================================
-# OVER 1.5 MORE GOALS
-# =====================================================
+  # =====================================================
+  # OVER 1.5 MORE GOALS
+  # =====================================================
 
-if (
+  if (
 
     minute >= 20
 
@@ -2214,7 +2214,7 @@ if (
 
     and goal_score >= 80
 
-):
+ ):
 
     market = "🔥 OVER 1.5 MORE GOALS"
 # =====================================================
@@ -2229,7 +2229,7 @@ elif (
 
     and best_pressure >= 55
 
-):
+ ):
 
     if home_goals > away_goals:
 
