@@ -2980,8 +2980,17 @@ async def value_alert_loop():
                     )
               
                     key = f"{home}_{away}"
-              
-                    steam = aggressive_sharp_move(
+
+                    track_opening_odds(
+                        key,
+                        sharp_odd
+                   )
+
+                   clv = calculate_clv(
+                       key,
+                       sharp_odd
+                   )
+                   steam = aggressive_sharp_move(
                         drop,
                         velocity
                     )
@@ -3035,8 +3044,12 @@ async def value_alert_loop():
                     if steam:
                         reason.append(
                             "Aggressive Steam"
-                        )
-                  
+                    )
+
+                    if clv >= 5:
+                        reason.append(
+                            "Positive CLV"
+                    )
                     if soft_edge >= 12:
                         reason.append(
                             "Sharp/Soft Value"
@@ -3083,6 +3096,9 @@ async def value_alert_loop():
 
 ⚡ Velocity:
 {velocity}
+
+📈 CLV:
+{clv}%
 
 📊 Regime:
 {regime}
