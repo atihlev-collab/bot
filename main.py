@@ -2978,7 +2978,18 @@ async def value_alert_loop():
                         sharp_odd
 
                     )
-                    # STEAM MOVE BONUS
+                    steam = aggressive_sharp_move(
+                        drop,
+                        velocity
+                    )
+                    regime = market_regime(
+                       key,
+                       sharp_odd
+                   )
+                   if regime == "CHAOTIC":
+                       continue
+                       
+                     # STEAM MOVE BONUS
 
                     if drop >= 0.20:
                          soft_edge += 3
@@ -3002,7 +3013,10 @@ async def value_alert_loop():
                         and
 
                         velocity < 0.02
+                       
+                        and
 
+                        not steam
                     ):
 
                         continue
