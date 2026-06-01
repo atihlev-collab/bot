@@ -2943,10 +2943,10 @@ async def value_alert_loop():
                         continue
 
                     sharp_odd = odds_data["sharp_odd"]
-                    if sharp_odd < 1.60:
+                    if sharp_odd < 1.70:
                         continue
 
-                    if sharp_odd > 2.20:
+                    if sharp_odd > 2.10:
                         continue
                     soft_odd = odds_data["soft_odd"]
 
@@ -2965,7 +2965,7 @@ async def value_alert_loop():
                         2
                    )
 
-                   if soft_edge > 25:
+                   if soft_edge > 20:
                        continue
                     
 
