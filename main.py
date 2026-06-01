@@ -1273,10 +1273,10 @@ def calculate_pressure(team):
         pressure += 6
 
     if attacks >= 16:
-        pressure += 14
+        pressure += 16
 
     if attacks >= 26:
-        pressure += 14
+        pressure += 16
 
     xg = estimate_xg(
         shots_on,
@@ -2332,9 +2332,9 @@ if (
 
     minute >= 20
 
-    and total_xg >= 1.8
+    and total_xg >= 1.4
 
-    and total_shots >= 8
+    and total_shots >= 7
 
     and total_dangerous >= 35
 
@@ -2352,22 +2352,22 @@ elif (
 
     dominance >= 25
 
-    and total_xg < 2.2
+    and total_xg < 1.8
 
     and abs(home_goals - away_goals) <= 1
 
     and (
 
         (
-            home_xg >= 1.0
-            and away_xg <= 0.8
+            home_xg >= 0.8
+            and away_xg <= 0.7
         )
 
         or
 
         (
-            away_xg >= 1.0
-            and home_xg <= 0.8
+            away_xg >= 0.8
+            and home_xg <= 0.7
         )
 
     )
@@ -2421,14 +2421,14 @@ elif (
 
      if (
            (   
-            total_fouls >= 18
+            total_fouls >= 15
             and total_cards >= 2
            )
      
           or
 
           (
-            total_fouls >= 24
+            total_fouls >= 20
             and total_cards >= 1
           )
 
@@ -2456,19 +2456,19 @@ elif (
 
     if (
 
-        total_corners >= 6
+        total_corners >= 5
 
         and
 
         (
-            home_pressure >= 60
+            home_pressure >= 55
             or
-            away_pressure >= 60
+            away_pressure >= 55
         )
 
         and
 
-        total_attacks >= 35
+        total_attacks >= 30
 
     ):
 
