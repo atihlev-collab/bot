@@ -3093,21 +3093,7 @@ async def value_alert_loop():
 🔥 Reason:
 {", ".join(reason)}
 """
-                    reason_count = len(reason)
-                    if steam:
-                        reason.append(
-                             "Aggressive Steam"
-                        )
-
-                   if regime == "STABLE_SHARP":
-                        reason.append(
-                            "Stable Sharp"
-                       )  
-                
-                   reason_count = len(reason)
-               
-                   if reason_count < 2:
-                        continue
+                   
                     send_telegram(msg)
 
                     save_value(key)
