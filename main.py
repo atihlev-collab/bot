@@ -2278,9 +2278,20 @@ elif (
     # =====================================================
 
     home_team = match["teams"]["home"]["name"]
-
     away_team = match["teams"]["away"]["name"]
 
+    if (
+
+        minute >= 35
+        and best_pressure >= 68
+        and abs(home_goals-away_goals) < 4
+
+    ):
+
+        market = "🔥 GOAL 35-85"
+
+    else:
+        return
     match_name = (
         f"{home_team} vs {away_team}"
     )
