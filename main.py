@@ -2965,7 +2965,7 @@ async def value_alert_loop():
                         2
                    )
 
-                   if soft_edge > 20:
+                   if soft_edge > 18:
                        continue
                     
 
@@ -2997,7 +2997,7 @@ async def value_alert_loop():
                     if drop >= 0.30:
                          soft_edge += 5
 
-                    if velocity >= 0.03:
+                    if velocity >= 0.04:
                          soft_edge += 3
 
                     if velocity >= 0.05:
@@ -3035,12 +3035,12 @@ async def value_alert_loop():
                     if regime == "STABLE_SHARP":
                         soft_edge += 3
                         
-                    if soft_edge >= 8:
+                    if soft_edge >= 12:
                         reason.append(
                             "Sharp/Soft Value"
                         )
 
-                    if drop >= 0.25:
+                    if drop >= 0.20:
                         reason.append(
                             "Odds Drop"
                         )
@@ -3082,7 +3082,10 @@ async def value_alert_loop():
 🔥 Reason:
 {", ".join(reason)}
 """
+                    reason_count = len(reason)
 
+                    if reason_count < 2:
+                        continue
                     send_telegram(msg)
 
                     save_value(key)
