@@ -2046,7 +2046,7 @@ def analyze_match(match):
     home_goals = match["goals"]["home"]
     away_goals = match["goals"]["away"]
 
-     total_goals = home_goals + away_goals
+    total_goals = home_goals + away_goals
 
     # =====================================================
     # FAST GOAL MOMENTUM
