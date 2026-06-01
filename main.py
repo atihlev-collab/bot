@@ -3002,10 +3002,7 @@ async def value_alert_loop():
 
                     if velocity >= 0.05:
                         soft_edge += 5
-                    if steam:
-                        reason.append(
-                            "Aggressive Steam"
-                        )
+                   
                     if (
 
                         soft_edge < 10
@@ -3025,13 +3022,17 @@ async def value_alert_loop():
 
                         continue
 
-                    key = f"{home}_{away}"
 
                     if not can_send_value(key):
                         continue
 
                     reason = []
-                 
+                  
+                    if steam:
+                        reason.append(
+                            "Aggressive Steam"
+                        )
+                  
                     if regime == "STABLE_SHARP":
                         soft_edge += 3
                         
@@ -3092,6 +3093,9 @@ async def value_alert_loop():
                         reason.append(
                             "Stable Sharp"
                        )  
+                
+                   reason_count = len(reason)
+               
                    if reason_count < 2:
                         continue
                     send_telegram(msg)
