@@ -2965,7 +2965,7 @@ async def value_alert_loop():
                         2
                    )
 
-                   if soft_edge > 18:
+                   if soft_edge > 22:
                        continue
                     
 
