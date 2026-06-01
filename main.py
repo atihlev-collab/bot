@@ -3002,6 +3002,10 @@ async def value_alert_loop():
 
                     if velocity >= 0.05:
                         soft_edge += 5
+                    if steam:
+                        reason.append(
+                            "Aggressive Steam"
+                        )
                     if (
 
                         soft_edge < 10
