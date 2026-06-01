@@ -2939,18 +2939,30 @@ async def value_alert_loop():
                         sharp_odd
 
                     )
+                    # STEAM MOVE BONUS
 
+                    if drop >= 0.20:
+                         soft_edge += 3
+
+                    if drop >= 0.30:
+                         soft_edge += 5
+
+                    if velocity >= 0.03:
+                         soft_edge += 3
+
+                    if velocity >= 0.05:
+                        soft_edge += 5
                     if (
 
-                        soft_edge < 8
+                        soft_edge < 10
 
                         and
 
-                        drop < 0.25
+                        drop < 0.20
 
                         and
 
-                        velocity < 0.03
+                        velocity < 0.02
 
                     ):
 
