@@ -2193,9 +2193,25 @@ def analyze_match(match):
     away_goals = match["goals"]["away"]
 
     total_goals = home_goals + away_goals
+    # =====================================================
+    # FAST GOAL MOMENTUM
+    # =====================================================
 
-    if total_goals >= 6:
-        return
+     goal_gap = abs(
+         home_goals - away_goals
+     )
+
+     fast_goal_bonus = 0
+
+     if minute <= 60:
+
+     if goal_gap >= 2:
+           fast_goal_bonus = 10
+
+     elif goal_gap >= 1:
+           fast_goal_bonus = 5
+     if total_goals >= 6:
+           return
 
     score = f"{home_goals}-{away_goals}"
 
@@ -2245,6 +2261,8 @@ def analyze_match(match):
         home_pressure,
         away_pressure
     )
+
+    best_pressure += fast_goal_bonus
 
     best_xg = max(
         home_xg,
@@ -2343,7 +2361,27 @@ if (
 ):
 
     market = "🔥 OVER 1.5 MORE GOALS"
+# =====================================================
+# MOMENTUM NEXT GOAL
+# =====================================================
 
+elif (
+
+    minute <= 65
+
+    and goal_gap >= 2
+
+    and best_pressure >= 55
+
+):
+
+    if home_goals > away_goals:
+
+        market = f"🎯 NEXT GOAL HOME ({home_name})"
+
+    else:
+
+        market = f"🎯 NEXT GOAL AWAY ({away_name})"
 # =====================================================
 # NEXT GOAL
 # =====================================================
