@@ -2505,8 +2505,8 @@ elif (
     if edge < 6:
         return
 
-    # LIVE само 81%+
-    if confidence < 81:
+    # LIVE само 82%+
+    if confidence < 82:
         return
 
     # =====================================================
