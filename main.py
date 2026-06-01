@@ -1,4 +1,4 @@
-4# =========================================================
+# =========================================================
 # PRACTICAL LIVE AI SYSTEM
 # SMART RESET + PREMATCH AI VERSION
 # =========================================================
@@ -11,9 +11,6 @@ import threading
 import asyncio
 import logging
 
-import numpy as np
-
-from scipy.stats import poisson
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -57,6 +54,8 @@ BLOCKED_WORDS = [
 
     "reserve",
     "reserves",
+
+    "friendly"
 ]
 
 # =========================================================
@@ -98,9 +97,6 @@ prematch_sent = {}
 # =========================================================
 
 odds_cache = {}
-
-opening_odds = {}
-
 prematch_sent = {}
 
 # =========================================================
@@ -297,375 +293,24 @@ def odds_drop_signal(
 
     except:
 
-        return 0, 0
-
-    now = time.time()
-
-    # =====================================================
-    # FIRST TIME
-    # =====================================================
+        return 0
 
     if key not in odds_cache:
 
-        odds_cache[key] = {
+        odds_cache[key] = odd
 
-            "odd": odd,
-            "time": now
+        return 0
 
-        }
+    old_odd = odds_cache[key]
 
-        return 0, 0
+    drop = old_odd - odd
 
-    old_odd = odds_cache[key]["odd"]
+    odds_cache[key] = odd
 
-    old_time = odds_cache[key]["time"]
-
-    # =====================================================
-    # DROP
-    # =====================================================
-
-    drop = round(
-
-        old_odd - odd,
-
+    return round(
+        drop,
         2
-
     )
-
-    # =====================================================
-    # VELOCITY
-    # =====================================================
-
-    minutes = max(
-
-        (now - old_time) / 60,
-
-        1
-
-    )
-
-    velocity = round(
-
-        drop / minutes,
-
-        3
-
-    )
-
-    # =====================================================
-    # UPDATE CACHE
-    # =====================================================
-
-    odds_cache[key] = {
-
-        "odd": odd,
-        "time": now
-
-    }
-
-    return drop, velocity
-
-
-# =========================================================
-# REAL ODDS API
-# =========================================================
-
-def get_match_odds(fixture_id):
-
-    try:
-
-        url = f"{BASE_URL}/odds"
-
-        params = {
-
-            "fixture": fixture_id
-
-        }
-
-        response = requests.get(
-
-            url,
-            headers=HEADERS,
-            params=params,
-            timeout=20
-
-        ).json()
-
-        data = response.get(
-            "response",
-            []
-        )
-
-        if not data:
-            return None
-
-        best_market = None
-
-        sharp_odd = None
-        soft_odd = None
-
-        for item in data:
-
-            for bookmaker in item.get(
-                "bookmakers",
-                []
-            ):
-
-                name = bookmaker.get(
-                    "name",
-                    ""
-                )
-
-                for bet in bookmaker.get(
-                    "bets",
-                    []
-                ):
-
-                    # =================================================
-                    # MATCH WINNER
-                    # =================================================
-
-                    if bet["name"] == "Match Winner":
-
-                        values = bet.get(
-                            "values",
-                            []
-                        )
-
-                        for v in values:
-
-                            try:
-
-                                odd = float(
-                                    v["odd"]
-                                )
-
-                            except:
-                                continue
-
-                            value_name = v["value"]
-
-                            # HOME
-                            if value_name == "Home":
-
-                                if name in [
-
-                                    "Pinnacle",
-                                    "Bet365"
-
-                                ]:
-
-                                    sharp_odd = odd
-                                    best_market = (
-                                        "🏠 HOME WIN"
-                                    )
-
-                                elif name in [
-
-                                    "Betano",
-                                    "1xBet"
-
-                                ]:
-
-                                    soft_odd = odd
-
-                            # AWAY
-                            elif value_name == "Away":
-
-                                if name in [
-
-                                    "Pinnacle",
-                                    "Bet365"
-
-                                ]:
-
-                                    if (
-                                        sharp_odd is None
-                                        or odd < sharp_odd
-                                    ):
-
-                                        sharp_odd = odd
-                                        best_market = (
-                                            "✈ AWAY WIN"
-                                        )
-
-                                elif name in [
-
-                                    "Betano",
-                                    "1xBet"
-
-                                ]:
-
-                                    soft_odd = odd
-
-                    # =================================================
-                    # OVER 2.5
-                    # =================================================
-
-                    elif bet["name"] == "Goals Over/Under":
-
-                        values = bet.get(
-                            "values",
-                            []
-                        )
-
-                        for v in values:
-
-                            if (
-
-                                v["value"]
-                                ==
-                                "Over 2.5"
-
-                            ):
-
-                                try:
-
-                                    odd = float(
-                                        v["odd"]
-                                    )
-
-                                except:
-                                    continue
-
-                                if name in [
-
-                                    "Pinnacle",
-                                    "Bet365"
-
-                                ]:
-
-                                    if (
-                                        sharp_odd is None
-                                        or odd < sharp_odd
-                                    ):
-
-                                        sharp_odd = odd
-                                        best_market = (
-                                            "⚽ OVER 2.5 GOALS"
-                                        )
-
-                                elif name in [
-
-                                    "Betano",
-                                    "1xBet"
-
-                                ]:
-
-                                    soft_odd = odd
-
-        if sharp_odd is None:
-            return None
-
-        return {
-
-            "sharp_odd": sharp_odd,
-            "soft_odd": soft_odd,
-            "market": best_market
-
-        }
-
-    except:
-
-        return None
- # =========================================================
-# POISSON ENGINE
-# =========================================================
-
-def poisson_probability(
-
-    home_attack,
-    away_attack
-
-):
-
-    try:
-
-        home_lambda = round(
-            home_attack,
-            2
-        )
-
-        away_lambda = round(
-            away_attack,
-            2
-        )
-
-        max_goals = 6
-
-        home_probs = [
-
-            poisson.pmf(
-                i,
-                home_lambda
-            )
-
-            for i in range(
-                max_goals
-            )
-
-        ]
-
-        away_probs = [
-
-            poisson.pmf(
-                i,
-                away_lambda
-            )
-
-            for i in range(
-                max_goals
-            )
-
-        ]
-
-        matrix = np.outer(
-
-            home_probs,
-            away_probs
-
-        )
-
-        over25 = 0
-
-        for h in range(max_goals):
-
-            for a in range(max_goals):
-
-                if h + a >= 3:
-
-                    over25 += matrix[h][a]
-
-        btts = 0
-
-        for h in range(1, max_goals):
-
-            for a in range(1, max_goals):
-
-                btts += matrix[h][a]
-
-        return {
-
-            "over25": round(
-                over25 * 100,
-                2
-            ),
-
-            "btts": round(
-                btts * 100,
-                2
-            )
-
-        }
-
-    except:
-
-        return {
-
-            "over25": 0,
-            "btts": 0
-
-        }       
 # =========================================================
 # MATCH STATS
 # =========================================================
@@ -831,10 +476,6 @@ def value_edge(confidence, odds):
 # PREMATCH SCORE ENGINE
 # =========================================================
 
-# =========================================================
-# PREMATCH VALUE ENGINE
-# =========================================================
-
 def calculate_match_score(
     country,
     league,
@@ -847,182 +488,20 @@ def calculate_match_score(
     market = "⚽ OVER 2.5 GOALS"
     odd = "1.80"
 
-    league_text = (
-        league.lower()
-    )
-
-    match_text = (
-        f"{home} {away}".lower()
-    )
-
-    # =====================================================
-    # LEAGUE QUALITY
-    # =====================================================
-
-    if country in [
-
-        "England",
-        "Spain",
-        "Germany",
-        "Italy",
-        "France",
-        "Netherlands",
-        "Portugal",
-
-        "Brazil",
-        "Argentina",
-        "Norway",
-        "Sweden",
-        "Denmark",
-        "Japan",
-        "USA"
-
-    ]:
-
-        score += 12
-
-    # =====================================================
-    # INTERNATIONAL TOURNAMENTS
-    # =====================================================
-
-    if any(
-
-        x in league_text
-
-        for x in [
-
-            "champions",
-            "europa",
-            "conference",
-            "libertadores",
-            "world cup",
-            "euro",
-            "copa america",
-            "nations league"
-
-        ]
-
-    ):
-
-        score += 12
-
-    # =====================================================
-    # SMART LEAGUE FILTER
-    # =====================================================
-
-    bad_words = [
-
-        "women",
-        "u19",
-        "u21",
-        "u23",
-        "reserve",
-        "regional"
-
-    ]
-
-    if any(
-
-        x in league_text
-
-        for x in bad_words
-
-    ):
-
-        score -= 100
-
-    # =====================================================
-    # FRIENDLY FILTER
-    # =====================================================
-
-    national_teams = [
-
-        "Brazil",
-        "Argentina",
-        "Germany",
-        "France",
-        "Spain",
-        "Portugal",
-        "England",
-        "Italy",
-        "Netherlands",
-        "Belgium",
-        "Croatia",
-        "Uruguay",
-        "Mexico",
-        "USA",
-        "Japan"
-
-    ]
-
-    # block random club friendlies
-    if (
-
-        "friendly" in league_text
-
-        and not any(
-
-            x.lower() in match_text
-
-            for x in national_teams
-
-        )
-
-    ):
-
-        score -= 25
-
-    # =====================================================
-    # SUMMER / ACTIVE LEAGUES BONUS
-    # =====================================================
-
-    active_countries = [
-
-        "Norway",
-        "Sweden",
-        "Denmark",
-        "Finland",
-        "Iceland",
-
-        "Brazil",
-        "Argentina",
-        "Chile",
-        "Colombia",
-        "Uruguay",
-        "Paraguay",
-
-        "USA",
-        "Mexico",
-
-        "Japan",
-        "South Korea",
-        "Australia"
-
-    ]
-
-    if country in active_countries:
-
-        score += 8
-
-    # =====================================================
-    # MARKET FIT
-    # =====================================================
-
     # GOAL LEAGUES
     if country in [
 
         "Netherlands",
         "Germany",
-        "Norway",
-        "Sweden"
+        "Norway"
 
     ]:
+
+        score += 12
 
         market = "⚽ OVER 2.5 GOALS"
 
         odd = "1.80"
-
-        score += 8
 
     # UNDER LEAGUES
     elif country in [
@@ -1033,74 +512,72 @@ def calculate_match_score(
 
     ]:
 
+        score += 10
+
         market = "📉 UNDER 2.5 GOALS"
 
         odd = "1.75"
 
-        score += 7
-
     # BTTS LEAGUES
     elif country in [
 
-        "Denmark",
-        "Belgium"
+        "Sweden",
+        "Denmark"
 
     ]:
+
+        score += 11
 
         market = "💎 BTTS"
 
         odd = "1.85"
 
-        score += 8
+    # DERBY BONUS
+    if "derby" in league.lower():
 
-    # =====================================================
-    # BIG TEAMS
-    # =====================================================
+        score += 5
 
+    # CUP PENALTY
+    if "cup" in league.lower():
+
+        score -= 5
+
+    # REMOVE BAD LEAGUES
+    if any(
+
+        x in league.lower()
+
+        for x in [
+
+            "u21",
+            "women",
+            "reserve",
+            "friendly"
+
+        ]
+
+    ):
+
+        score -= 100
+
+    # BIG TEAMS SMALL BOOST
     big_teams = [
 
-        "Manchester City",
+        "Ajax",
+        "PSV",
         "Liverpool",
         "Arsenal",
         "Barcelona",
         "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Ajax",
-        "PSV",
-        "Benfica",
-        "Flamengo"
+        "Manchester City"
 
     ]
 
     if home in big_teams:
-
-        score += 4
+        score += 3
 
     if away in big_teams:
-
-        score += 4
-
-    # =====================================================
-    # VALUE STYLE ODDS
-    # =====================================================
-
-    try:
-
-        odd_value = float(odd)
-
-        # sweet spot
-        if 1.70 <= odd_value <= 2.05:
-
-            score += 6
-
-        elif odd_value > 2.40:
-
-            score -= 8
-
-    except:
-
-        pass
+        score += 3
 
     return score, market, odd
 
@@ -1386,7 +863,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-       # =====================================================
+      # =====================================================
     # MARKET
     # =====================================================
 
@@ -1399,40 +876,26 @@ def analyze_match(match):
     market = None
     bonus_market = ""
 
-    home_name = (
-        match["teams"]["home"]["name"]
-    )
-
-    away_name = (
-        match["teams"]["away"]["name"]
-    )
-
-    # =====================================================
     # NEXT GOAL
-    # =====================================================
-
     if dominance >= 15:
 
         if home_pressure > away_pressure:
 
             market = (
                 f"🎯 NEXT GOAL HOME "
-                f"({home_name})"
+                f"({match['teams']['home']['name']})"
             )
 
         else:
 
             market = (
                 f"🎯 NEXT GOAL AWAY "
-                f"({away_name})"
+                f"({match['teams']['away']['name']})"
             )
 
-    # =====================================================
     # BTTS
-    # =====================================================
-
     elif (
-        best_xg >= 2.0
+        best_xg >= 2.4
         and home_shots >= 4
         and away_shots >= 4
         and total_goals <= 3
@@ -1444,14 +907,11 @@ def analyze_match(match):
 
         market = "💎 BTTS / GOAL-GOAL"
 
-    # =====================================================
     # OVER GOALS
-    # =====================================================
-
     elif (
         total_goals <= 1
-        and best_pressure >= 65
-        and best_xg >= 1.8
+        and best_pressure >= 68
+        and best_xg >= 2
         and minute >= 40
     ):
 
@@ -1459,112 +919,82 @@ def analyze_match(match):
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
-    # =====================================================
     # LATE GOAL
-    # =====================================================
-
     elif (
         minute >= 75
-        and best_pressure >= 68
+        and best_pressure >= 72
         and abs(home_goals-away_goals) < 4
     ):
 
         market = "🔥 GOAL 75-90"
 
-    # =====================================================
-    # SMART LATE CARDS
-    # =====================================================
 
+    # CARDS MARKET
     elif (
 
-        minute >= 68
-        and minute <= 82
-        and abs(
-            home_goals-away_goals
-        ) <= 1
+        minute >= 30
+        and minute <= 75
 
     ):
 
+        home_fouls = extract(
+            home,
+            "Fouls"
+        )
+
+        away_fouls = extract(
+            away,
+            "Fouls"
+        )
+
+        home_yellow = extract(
+            home,
+            "Yellow Cards"
+        )
+
+        away_yellow = extract(
+            away,
+            "Yellow Cards"
+        )
+
         total_fouls = (
-
-            extract(home, "Fouls")
+            home_fouls
             +
-            extract(away, "Fouls")
-
+            away_fouls
         )
 
         total_cards = (
-
-            extract(home, "Yellow Cards")
+            home_yellow
             +
-            extract(away, "Yellow Cards")
-
+            away_yellow
         )
 
         if (
 
-            total_fouls >= 20
-            and total_cards >= 2
+            total_fouls >= 22
+            and total_cards >= 3
+            and abs(
+                home_goals-away_goals
+            ) <= 1
 
         ):
 
             market = (
-                "🟨 LIVE OVER CARDS"
+                f"🟨 OVER {total_cards+1}.5 CARDS"
             )
 
-    # =====================================================
-    # SMART CHASING CORNERS
-    # =====================================================
-
+    # SMART CORNERS
     elif (
-
-        minute >= 60
-        and minute <= 85
-
+        minute >= 30
+        and minute <= 50
+        and total_corners >= 4
+        and best_pressure >= 70
+        and abs(home_goals-away_goals) <= 1
     ):
 
-        big_teams = [
-
-            "Liverpool",
-            "Arsenal",
-            "Manchester City",
-            "Barcelona",
-            "Real Madrid",
-            "Bayern",
-            "PSV",
-            "Ajax",
-            "Benfica",
-            "Flamengo"
-
-        ]
-
-        # HOME chasing
-        if (
-
-            home_name in big_teams
-            and home_goals < away_goals
-            and home_pressure >= 65
-            and total_corners >= 6
-
-        ):
-
-            market = (
-                f"📐 OVER {total_corners+2}.5 CORNERS"
-            )
-
-        # AWAY chasing
-        elif (
-
-            away_name in big_teams
-            and away_goals < home_goals
-            and away_pressure >= 65
-            and total_corners >= 6
-
-        ):
-
-            market = (
-                f"📐 OVER {total_corners+2}.5 CORNERS"
-            )
+        market = (
+            f"📐 OVER {total_corners+3}.5 CORNERS"
+        )
 
     if market is None:
 
@@ -1736,31 +1166,6 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
-            text = (
-                home + " " + away
-            ).lower()
-
-            # допълнителен боклук филтър
-            if any(
-
-                x in text
-
-                for x in [
-
-                    " women",
-                    " kvinn",
-                    " female",
-                    " ladies",
-                    " u19",
-                    " u21",
-                    " u23"
-
-                ]
-
-            ):
-
-                continue
-
             score, market, odd = (
                 calculate_match_score(
                     country,
@@ -1770,100 +1175,56 @@ async def daily_ticket():
                 )
             )
 
-            confidence = 58 + score
+            confidence = 65 + score
 
-            # само силни фишове
-            if confidence < 84:
+            if confidence < 75:
                 continue
 
             odd = float(odd)
 
-            # value sweet spot
-            if odd < 1.65:
+            if odd < 1.50:
                 continue
 
-            if odd > 2.05:
+            if odd > 2.10:
                 continue
-
-            # само реални пазари
-            if market not in [
-
-                "⚽ OVER 2.5 GOALS",
-                "📉 UNDER 2.5 GOALS",
-                "💎 BTTS"
-
-            ]:
-
-                continue
-
-            # топ летни лиги
-            preferred = [
-
-                "Norway",
-                "Sweden",
-                "Denmark",
-                "Brazil",
-                "Argentina",
-                "Japan",
-                "USA"
-
-            ]
-
-            if country in preferred:
-
-                confidence += 4
 
             picks.append(
-
                 (
-                    confidence,
                     home,
                     away,
                     market,
-                    odd,
-                    league
+                    odd
                 )
-
             )
+
+            total_odds *= odd
+
+            if total_odds >= 5:
+                break
 
         except:
             pass
 
-    # сортира най-силните
-    picks = sorted(
-        picks,
-        reverse=True
-    )
+    if len(picks) >= 3:
 
-    final_picks = picks[:3]
+        msg = "🔥 DAILY AI BET SLIP\n\n"
 
-    if len(final_picks) < 3:
-        return
+        for p in picks:
 
-    msg = "🔥 DAILY AI BET SLIP\n\n"
-
-    for p in final_picks:
+            msg += (
+                f"⚽ {p[0]} vs {p[1]}\n"
+                f"🎯 {p[2]}\n"
+                f"💰 {p[3]}\n\n"
+            )
 
         msg += (
-
-            f"🏆 {p[5]}\n"
-            f"⚽ {p[1]} vs {p[2]}\n"
-            f"🎯 {p[3]}\n"
-            f"💰 {p[4]}\n"
-            f"✅ {p[0]}%\n\n"
-
+            f"💎 TOTAL ODDS: "
+            f"{round(total_odds,2)}"
         )
 
-        total_odds *= p[4]
+        send_telegram(msg)
 
-    msg += (
-        f"💎 TOTAL ODDS: "
-        f"{round(total_odds,2)}"
-    )
-
-    send_telegram(msg)
-
-    daily_ticket_sent = True
+        daily_ticket_sent = True
 # =========================================================
 # PREMATCH AI
 # =========================================================
@@ -1893,282 +1254,78 @@ async def prematch_loop():
                         continue
 
                     home = m["teams"]["home"]["name"]
-
                     away = m["teams"]["away"]["name"]
 
-                    fixture_id = m["fixture"]["id"]
-
-                    odds_data = get_match_odds(
-                        fixture_id
-                    )
-
-                    if odds_data is None:
-                        continue
-
-                    sharp_odd = (
-                        odds_data["sharp_odd"]
-                    )
-
-                    soft_odd = (
-                        odds_data["soft_odd"]
-                    )
-
-                    market = (
-                        odds_data["market"]
-                    )
-
-                    odd = sharp_odd
-
-                    # =================================================
-                    # BLOCK WOMEN
-                    # =================================================
-
+                    # блокира женски мачове
                     text = (
                         home + " " + away
                     ).lower()
 
                     if any(
-
                         x in text
-
                         for x in [
-
                             " kvinner",
                             " women",
                             " female",
                             " ladies",
                             " w"
-
                         ]
-
                     ):
-
                         continue
 
-                    # =================================================
-                    # DATE
-                    # =================================================
-
                     date = datetime.fromisoformat(
-
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
                         )
-
                     ).astimezone(TZ)
 
                     diff = (
-
                         date - datetime.now(TZ)
-
                     ).total_seconds()
 
                     if diff < 0 or diff > 28800:
                         continue
 
-                    # =================================================
-                    # SCORE ENGINE
-                    # =================================================
-
-                    score, market, fake_odd = (
-
+                    score, market, odd = (
                         calculate_match_score(
-
                             country,
                             league,
                             home,
                             away
-
                         )
-
                     )
 
-                    confidence = 58 + score
+                    confidence = 65 + score
 
-                    # =================================================
-                    # SIMPLE ATTACK MODEL
-                    # =================================================
-
-                    home_attack = round(
-
-                        (
-                            len(home) % 5
-                        ) + 1.2,
-
-                        2
-
+                    drop = odds_drop_signal(
+                        home,
+                        away,
+                        odd
                     )
 
-                    away_attack = round(
-
-                        (
-                            len(away) % 5
-                        ) + 1.2,
-
-                        2
-
-                    )
-
-                    # =================================================
-                    # POISSON
-                    # =================================================
-
-                    poisson_data = poisson_probability(
-
-                        home_attack,
-                        away_attack
-
-                    )
-
-                    over25_prob = poisson_data["over25"]
-
-                    btts_prob = poisson_data["btts"]
-
-                    # =================================================
-                    # FAIR ODDS
-                    # =================================================
-
-                    if market == "⚽ OVER 2.5 GOALS":
-
-                        fair_odd = round(
-
-                            100 / max(
-                                over25_prob,
-                                1
-                            ),
-
-                            2
-
-                        )
-
-                    elif market == "💎 BTTS":
-
-                        fair_odd = round(
-
-                            100 / max(
-                                btts_prob,
-                                1
-                            ),
-
-                            2
-
-                        )
-
-                    else:
-
-                        fair_odd = odd
-
-                    # =================================================
-                    # IMPLIED PROBABILITY
-                    # =================================================
-
-                    market_probability = round(
-
-                        (1 / odd) * 100,
-
-                        2
-
-                    )
-
-                    our_probability = confidence
-
-                    true_edge = round(
-
-                        our_probability
-                        -
-                        market_probability,
-
-                        2
-
-                    )
-
-                    # =================================================
-                    # FAIR ODD VALUE
-                    # =================================================
-
-                    if odd > fair_odd:
-
-                        confidence += 5
-
-                    # =================================================
-                    # SHARP / SOFT VALUE
-                    # =================================================
-
-                    if soft_odd:
-
-                        soft_edge = round(
-
-                            (
-                                soft_odd
-                                -
-                                sharp_odd
-                            )
-
-                            /
-                            sharp_odd * 100,
-
-                            2
-
-                        )
-
-                        if soft_edge >= 5:
-
-                            confidence += 6
-
-                    # =================================================
-                    # DROP + VELOCITY
-                    # =================================================
-
-                    drop, velocity = (
-
-                        odds_drop_signal(
-
-                            home,
-                            away,
-                            odd
-
-                        )
-
-                    )
-
-                    if (
-
-                        drop >= 0.15
-
-                        or
-
-                        velocity >= 0.02
-
-                    ):
+                    if drop >= 0.15:
 
                         confidence += 8
 
-                    # =================================================
-                    # LEAGUE BONUS
-                    # =================================================
+                        market = (
+                            "🔥 BET365 VALUE DROP"
+                        )
 
                     if "Premier" in league:
-
                         confidence += 4
 
                     elif "La Liga" in league:
-
                         confidence += 3
 
                     elif "Serie A" in league:
-
                         confidence += 2
 
                     elif "Cup" in league:
-
                         confidence -= 6
 
                     confidence += min(
-
                         len(home) % 5,
-
                         4
-
                     )
 
                     confidence = min(
@@ -2176,28 +1333,13 @@ async def prematch_loop():
                         92
                     )
 
-                    # =================================================
-                    # FILTERS
-                    # =================================================
-
-                    if confidence < 90:
+                    if confidence < 82:
                         continue
-
-                    if true_edge < 5:
-                        continue
-
-                    # =================================================
-                    # DUPLICATE
-                    # =================================================
 
                     key = f"{home}_{away}"
 
                     if not can_send_prematch(key):
                         continue
-
-                    # =================================================
-                    # MESSAGE
-                    # =================================================
 
                     msg = f"""
 🔥 PRE-MATCH AI SIGNAL
@@ -2211,26 +1353,8 @@ async def prematch_loop():
 
 🎯 {market}
 
-💰 Sharp Odd:
-{sharp_odd}
-
-📉 Odds Drop:
-{drop}
-
-⚡ Velocity:
-{velocity}
-
-💎 True Edge:
-+{true_edge}%
-
-📊 Over 2.5 Prob:
-{over25_prob}%
-
-💎 BTTS Prob:
-{btts_prob}%
-
-⚖ Fair Odd:
-{fair_odd}
+💰 Odd:
+{odd}
 
 ✅ Confidence:
 {confidence}%
@@ -2257,6 +1381,7 @@ async def prematch_loop():
             )
 
         await asyncio.sleep(1200)
+
 # =========================================================
 # LIVE LOOP
 # =========================================================
@@ -2347,4 +1472,5 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
