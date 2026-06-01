@@ -449,7 +449,153 @@ def get_team_form(team_id):
 
         return 1.3
 
-                  
+                    # =================================================
+                    # MATCH WINNER
+                    # =================================================
+
+                    if bet["name"] == "Match Winner":
+
+                        values = bet.get(
+                            "values",
+                            []
+                        )
+
+                        for v in values:
+
+                            try:
+
+                                odd = float(
+                                    v["odd"]
+                                )
+
+                            except:
+                                continue
+
+                            value_name = v["value"]
+
+                            # HOME
+                            if value_name == "Home":
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    sharp_odd = odd
+                                    best_market = (
+                                        "🏠 HOME WIN"
+                                    )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+                            # AWAY
+                            elif value_name == "Away":
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    if (
+                                        sharp_odd is None
+                                        or odd < sharp_odd
+                                    ):
+
+                                        sharp_odd = odd
+                                        best_market = (
+                                            "✈ AWAY WIN"
+                                        )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+                    # =================================================
+                    # OVER 2.5
+                    # =================================================
+
+                    elif bet["name"] == "Goals Over/Under":
+
+                        values = bet.get(
+                            "values",
+                            []
+                        )
+
+                        for v in values:
+
+                            if (
+
+                                v["value"]
+                                ==
+                                "Over 2.5"
+
+                            ):
+
+                                try:
+
+                                    odd = float(
+                                        v["odd"]
+                                    )
+
+                                except:
+                                    continue
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    if (
+                                        sharp_odd is None
+                                        or odd < sharp_odd
+                                    ):
+
+                                        sharp_odd = odd
+                                        best_market = (
+                                            "⚽ OVER 2.5 GOALS"
+                                        )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+        if sharp_odd is None:
+            return None
+
+        return {
+
+            "sharp_odd": sharp_odd,
+            "soft_odd": soft_odd,
+            "market": best_market
+
+        }
+
+    except:
+
+        return None
  # =========================================================
 # POISSON ENGINE
 # =========================================================
@@ -2047,27 +2193,25 @@ def analyze_match(match):
     away_goals = match["goals"]["away"]
 
     total_goals = home_goals + away_goals
-
     # =====================================================
     # FAST GOAL MOMENTUM
     # =====================================================
 
-    goal_gap = abs(
-        home_goals - away_goals
-    )
+     goal_gap = abs(
+         home_goals - away_goals
+     )
 
-    fast_goal_bonus = 0
+     fast_goal_bonus = 0
 
-    if minute <= 60:
+     if minute <= 60:
 
-        if goal_gap >= 2:
-            fast_goal_bonus = 10
+     if goal_gap >= 2:
+           fast_goal_bonus = 10
 
-        elif goal_gap >= 1:
-            fast_goal_bonus = 5
-
-    if total_goals >= 6:
-        return
+     elif goal_gap >= 1:
+           fast_goal_bonus = 5
+     if total_goals >= 6:
+           return
 
     score = f"{home_goals}-{away_goals}"
 
@@ -2198,7 +2342,137 @@ def analyze_match(match):
     home_name = match["teams"]["home"]["name"]
     away_name = match["teams"]["away"]["name"]
 
- 
+# =====================================================
+# OVER 1.5 MORE GOALS
+# =====================================================
+
+if (
+
+    minute >= 20
+
+    and total_xg >= 1.4
+
+    and total_shots >= 7
+
+    and total_dangerous >= 30
+
+    and goal_score >= 80
+
+):
+
+    market = "🔥 OVER 1.5 MORE GOALS"
+# =====================================================
+# MOMENTUM NEXT GOAL
+# =====================================================
+
+elif (
+
+    minute <= 65
+
+    and goal_gap >= 2
+
+    and best_pressure >= 55
+
+):
+
+    if home_goals > away_goals:
+
+        market = f"🎯 NEXT GOAL HOME ({home_name})"
+
+    else:
+
+        market = f"🎯 NEXT GOAL AWAY ({away_name})"
+# =====================================================
+# NEXT GOAL
+# =====================================================
+
+elif (
+
+    dominance >= 25
+
+    and total_xg < 1.8
+
+    and abs(home_goals - away_goals) <= 1
+
+    and (
+
+        (
+            home_xg >= 0.8
+            and away_xg <= 0.7
+        )
+
+        or
+
+        (
+            away_xg >= 0.8
+            and home_xg <= 0.7
+        )
+
+    )
+
+):
+
+    if home_xg > away_xg:
+
+        market = f"🎯 NEXT GOAL HOME ({home_name})"
+
+    else:
+
+        market = f"🎯 NEXT GOAL AWAY ({away_name})"
+    # =====================================================
+    # LATE GOAL
+    # =====================================================
+
+    elif (
+
+        minute >= 35
+        and best_pressure >= 68
+        and abs(home_goals-away_goals) < 4
+
+    ):
+
+        market = "🔥 GOAL 35-85"
+
+       # =====================================================
+    # CARDS
+    # =====================================================
+
+    elif (
+
+        minute >= 45
+        and minute <= 85
+        and abs(home_goals-away_goals) <= 2
+
+    ):
+
+        total_fouls = (
+            extract(home, "Fouls")
+            +
+            extract(away, "Fouls")
+        )
+
+        total_cards = (
+            extract(home, "Yellow Cards")
+            +
+            extract(away, "Yellow Cards")
+        )
+
+     if (
+           (   
+            total_fouls >= 15
+            and total_cards >= 2
+           )
+     
+          or
+
+          (
+            total_fouls >= 20
+            and total_cards >= 1
+          )
+
+    ):
+            market = "🟨 LIVE OVER CARDS"
+        
 # =====================================================
 # CORNERS
 # =====================================================
@@ -2278,20 +2552,9 @@ elif (
     # =====================================================
 
     home_team = match["teams"]["home"]["name"]
+
     away_team = match["teams"]["away"]["name"]
 
-    if (
-
-        minute >= 35
-        and best_pressure >= 68
-        and abs(home_goals-away_goals) < 4
-
-    ):
-
-        market = "🔥 GOAL 35-85"
-
-    else:
-        return
     match_name = (
         f"{home_team} vs {away_team}"
     )
@@ -2922,7 +3185,7 @@ def main():
     init_learning_database()
 
     print(
-    "🚀 VERSION 02-JUNE-2026"
+        "🚀 PRACTICAL LIVE AI SYSTEM STARTED"
     )
 
     # LIVE
