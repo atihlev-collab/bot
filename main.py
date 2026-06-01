@@ -2823,7 +2823,7 @@ async def daily_ticket():
                     confidence,
                     home,
                     away,
-                    market,
+                    score_market,
                     odd,
                     league,
                     country,
@@ -2967,15 +2967,9 @@ async def value_alert_loop():
 
                    if soft_edge > 25:
                        continue
-                        /
+                    
 
-                        sharp_odd
-
-                        * 100,
-
-                        2
-
-                    )
+                    
 
                     drop, velocity = odds_drop_signal(
 
