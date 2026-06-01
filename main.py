@@ -2492,7 +2492,7 @@ elif (
 
     confidence = min(
         confidence,
-        90
+        95
     )
 
     estimated_odds = 1.80
@@ -2740,7 +2740,7 @@ async def daily_ticket():
             # ONLY REAL MARKETS
             # =====================================================
 
-            if market not in [
+            if score_market not in [
 
                 "⚽ OVER 2.5 GOALS",
                 "📉 UNDER 2.5 GOALS"
@@ -2920,14 +2920,15 @@ async def value_alert_loop():
                         continue
 
                     soft_edge = round(
-                    if soft_edge > 25:
-                        continue
                         (
-                            soft_odd
-                            -
-                            sharp_odd
+                            soft_odd - sharp_odd
                         )
+                        / sharp_odd * 100,
+                        2
+                   )
 
+                   if soft_edge > 25:
+                       continue
                         /
 
                         sharp_odd
