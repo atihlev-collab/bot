@@ -2052,23 +2052,23 @@ def analyze_match(match):
     # FAST GOAL MOMENTUM
     # =====================================================
 
-     goal_gap = abs(
-         home_goals - away_goals
-     )
+    goal_gap = abs(
+        home_goals - away_goals
+    )
 
-     fast_goal_bonus = 0
+    fast_goal_bonus = 0
 
-     if minute <= 60:
+    if minute <= 60:
 
-         if goal_gap >= 2:
-             fast_goal_bonus = 10
+        if goal_gap >= 2:
+          fast_goal_bonus = 10
 
-         elif goal_gap >= 1:
+        elif goal_gap >= 1:
             fast_goal_bonus = 5
      if total_goals >= 6:
-        return
+         return
 
-    score = f"{home_goals}-{away_goals}"
+     score = f"{home_goals}-{away_goals}"
 
     # =====================================================
     # RESET AFTER GOAL
