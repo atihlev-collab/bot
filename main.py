@@ -3027,7 +3027,10 @@ async def value_alert_loop():
                         continue
 
                     reason = []
-
+                 
+                    if regime == "STABLE_SHARP":
+                        soft_edge += 3
+                        
                     if soft_edge >= 8:
                         reason.append(
                             "Sharp/Soft Value"
