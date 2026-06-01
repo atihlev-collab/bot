@@ -3066,6 +3066,12 @@ async def value_alert_loop():
 ⚡ Velocity:
 {velocity}
 
+📊 Regime:
+{regime}
+
+🚂 Steam:
+{steam}
+
 🔥 Reason:
 {", ".join(reason)}
 """
