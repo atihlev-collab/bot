@@ -2978,6 +2978,9 @@ async def value_alert_loop():
                         sharp_odd
 
                     )
+              
+                    key = f"{home}_{away}"
+              
                     steam = aggressive_sharp_move(
                         drop,
                         velocity
@@ -2986,6 +2989,7 @@ async def value_alert_loop():
                        key,
                        sharp_odd
                    )
+             
                    if regime == "CHAOTIC":
                        continue
                        
@@ -3033,9 +3037,6 @@ async def value_alert_loop():
                             "Aggressive Steam"
                         )
                   
-                    if regime == "STABLE_SHARP":
-                        soft_edge += 3
-                        
                     if soft_edge >= 12:
                         reason.append(
                             "Sharp/Soft Value"
@@ -3051,6 +3052,15 @@ async def value_alert_loop():
                             "Steam Move"
                         )
 
+                    if regime == "STABLE_SHARP":
+                       reason.append(
+                           "Stable Sharp"
+                       )
+
+                    reason_count = len(reason)
+
+                    if reason_count < 2:
+                        continue
                     msg = f"""
 💎 VALUE ALERT
 
