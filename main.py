@@ -2886,11 +2886,11 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 60
+    minimum_pressure = 55
 
     if minute >= 60:
 
-        minimum_pressure = 65
+        minimum_pressure = 60
 
     if best_pressure < minimum_pressure:
 
@@ -2901,7 +2901,7 @@ def analyze_match(match):
 
         return
 
-    minimum_xg = 1.3
+    minimum_xg = 1.0
 
     if best_xg < minimum_xg:
 
@@ -2997,8 +2997,8 @@ def analyze_match(match):
 
     elif (
         total_goals <= 1
-        and best_pressure >= 65
-        and best_xg >= 1.8
+        and best_pressure >= 60
+        and best_xg >= 1.5
         and minute >= 40
     ):
 
@@ -3012,7 +3012,7 @@ def analyze_match(match):
 
     elif (
         minute >= 75
-        and best_pressure >= 68
+        and best_pressure >= 62
         and abs(home_goals-away_goals) < 4
     ):
 
@@ -3024,7 +3024,7 @@ def analyze_match(match):
 
     elif (
 
-        minute >= 68
+        minute >= 60
         and minute <= 82
         and abs(
             home_goals-away_goals
@@ -3050,7 +3050,7 @@ def analyze_match(match):
 
         if (
 
-            total_fouls >= 20
+            total_fouls >= 16
             and total_cards >= 2
 
         ):
@@ -3090,8 +3090,8 @@ def analyze_match(match):
 
             home_name in big_teams
             and home_goals < away_goals
-            and home_pressure >= 65
-            and total_corners >= 6
+            and home_pressure >= 60
+            and total_corners >= 5
 
         ):
 
@@ -3104,8 +3104,8 @@ def analyze_match(match):
 
             away_name in big_teams
             and away_goals < home_goals
-            and away_pressure >= 65
-            and total_corners >= 6
+            and away_pressure >= 60
+            and total_corners >= 5
 
         ):
 
