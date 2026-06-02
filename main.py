@@ -2928,6 +2928,10 @@ def analyze_match(match):
     home_goals = match["goals"]["home"]
     away_goals = match["goals"]["away"]
 
+    goal_difference = abs(
+        home_goals - away_goals
+    )
+    
     total_goals = home_goals + away_goals
 
     if total_goals >= 6:
@@ -2990,6 +2994,15 @@ def analyze_match(match):
     dominance = abs(
         home_pressure - away_pressure
     )
+    # BIG TEAM DOMINATION
+
+    if goal_difference >= 2:
+
+        best_pressure += 8
+
+    elif goal_difference >= 3:
+
+        best_pressure += 12
 
        # =====================================================
     # FILTERS
@@ -3063,6 +3076,29 @@ def analyze_match(match):
         match["teams"]["away"]["name"]
     )
 
+    # BIG SCORE DOMINATION
+
+    if (
+
+        goal_difference >= 2
+
+        and
+
+        minute <= 70
+
+    ):
+
+        if home_goals > away_goals:
+
+            market = (
+                f"🎯 NEXT GOAL HOME ({home_name})"
+            )
+
+        else:
+
+            market = (
+                f"🎯 NEXT GOAL AWAY ({away_name})"
+           )
     # =====================================================
     # NEXT GOAL
     # =====================================================
