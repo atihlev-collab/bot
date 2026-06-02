@@ -3463,6 +3463,10 @@ async def daily_ticket():
             if not away_form:
                 continue
 
+            confidence += home_form["wins"] * 2
+
+            confidence += away_form["wins"] * 2
+            
             over25_prob = 0
             btts_prob = 0
             
