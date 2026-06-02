@@ -3456,6 +3456,16 @@ async def daily_ticket():
             home_form = get_team_form(home_id)
 
             away_form = get_team_form(away_id)
+           
+            if not home_form:
+                continue
+
+             if not away_form:
+               continue
+
+            over25_prob = 0
+            btts_prob = 0
+            
             # само силни фишове
             if confidence < 84:
                 continue
