@@ -2995,11 +2995,11 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 68
+    minimum_pressure = 65
 
     if minute >= 60:
 
-        minimum_pressure = 72
+        minimum_pressure = 70
 
     if best_pressure < minimum_pressure:
 
@@ -3144,7 +3144,7 @@ def analyze_match(match):
 
         if (
 
-            total_fouls >= 20
+            total_fouls >= 18
             and total_cards >= 2
 
         ):
@@ -3185,7 +3185,7 @@ def analyze_match(match):
             home_name in big_teams
             and home_goals < away_goals
             and home_pressure >= 65
-            and total_corners >= 6
+            and total_corners >= 5
 
         ):
 
@@ -3199,7 +3199,7 @@ def analyze_match(match):
             away_name in big_teams
             and away_goals < home_goals
             and away_pressure >= 65
-            and total_corners >= 6
+            and total_corners >= 5
 
         ):
 
