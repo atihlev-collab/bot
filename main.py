@@ -3532,44 +3532,8 @@ async def prematch_loop():
 
                     confidence = 58 + score
 
-                    # =================================================
-                    # SIMPLE ATTACK MODEL
-                    # =================================================
-
-                    home_attack = round(
-
-                        (
-                            len(home) % 5
-                        ) + 1.2,
-
-                        2
-
-                    )
-
-                    away_attack = round(
-
-                        (
-                            len(away) % 5
-                        ) + 1.2,
-
-                        2
-
-                    )
-
-                    # =================================================
-                    # POISSON
-                    # =================================================
-
-                    poisson_data = poisson_probability(
-
-                        home_attack,
-                        away_attack
-
-                    )
-
-                    over25_prob = poisson_data["over25"]
-
-                    btts_prob = poisson_data["btts"]
+                    over25_prob = 0
+                    btts_prob = 0
 
                     # =================================================
                     # FAIR ODDS
@@ -3744,8 +3708,7 @@ async def prematch_loop():
                     if soft_edge < 8:
                         continue
     
-                    if true_edge < 5:
-                        continue
+                  
 
                     # =================================================
                     # DUPLICATE
