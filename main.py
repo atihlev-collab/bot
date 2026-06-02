@@ -3372,113 +3372,47 @@ async def prematch_loop():
                         market_probability,
 
                         2
+# =================================================
+# VALUE SCANNER
+# =================================================
 
-                    )
+drop, velocity = odds_drop_signal(
+    home,
+    away,
+    odd
+)
 
-                    # =================================================
-                    # FAIR ODD VALUE
-                    # =================================================
+soft_edge = 0
 
-                    if odd > fair_odd:
+if soft_odd:
 
-                        confidence += 5
+    soft_edge = round(
+        (
+            soft_odd - sharp_odd
+        )
+        / sharp_odd * 100,
+        2
+    )
 
-                    # =================================================
-                    # SHARP / SOFT VALUE
-                    # =================================================
+value_score = 0
 
-                    if soft_odd:
+if drop >= 0.15:
+    value_score += 30
 
-                        soft_edge = round(
+if drop >= 0.25:
+    value_score += 50
 
-                            (
-                                soft_odd
-                                -
-                                sharp_odd
-                            )
+if velocity >= 0.02:
+    value_score += 20
 
-                            /
-                            sharp_odd * 100,
+if soft_edge >= 5:
+    value_score += 25
 
-                            2
+if soft_edge >= 10:
+    value_score += 40
 
-                        )
-
-                        if soft_edge >= 5:
-
-                            confidence += 6
-
-                    # =================================================
-                    # DROP + VELOCITY
-                    # =================================================
-
-                    drop, velocity = (
-
-                        odds_drop_signal(
-
-                            home,
-                            away,
-                            odd
-
-                        )
-
-                    )
-
-                    if (
-
-                        drop >= 0.15
-
-                        or
-
-                        velocity >= 0.02
-
-                    ):
-
-                        confidence += 8
-
-                    # =================================================
-                    # LEAGUE BONUS
-                    # =================================================
-
-                    if "Premier" in league:
-
-                        confidence += 4
-
-                    elif "La Liga" in league:
-
-                        confidence += 3
-
-                    elif "Serie A" in league:
-
-                        confidence += 2
-
-                    elif "Cup" in league:
-
-                        confidence -= 6
-
-                    confidence += min(
-
-                        len(home) % 5,
-
-                        4
-
-                    )
-
-                    confidence = min(
-                        confidence,
-                        92
-                    )
-
-                    # =================================================
-                    # FILTERS
-                    # =================================================
-
-                    if confidence < 90:
-                        continue
-
-                    if true_edge < 5:
-                        continue
-
+if value_score < 50:
+    continue
                     # =================================================
                     # DUPLICATE
                     # =================================================
