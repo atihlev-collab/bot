@@ -568,104 +568,7 @@ def get_match_odds(fixture_id):
     except:
 
         return None
- # =========================================================
-# POISSON ENGINE
-# =========================================================
 
-def poisson_probability(
-
-    home_attack,
-    away_attack
-
-):
-
-    try:
-
-        home_lambda = round(
-            home_attack,
-            2
-        )
-
-        away_lambda = round(
-            away_attack,
-            2
-        )
-
-        max_goals = 6
-
-        home_probs = [
-
-            poisson.pmf(
-                i,
-                home_lambda
-            )
-
-            for i in range(
-                max_goals
-            )
-
-        ]
-
-        away_probs = [
-
-            poisson.pmf(
-                i,
-                away_lambda
-            )
-
-            for i in range(
-                max_goals
-            )
-
-        ]
-
-        matrix = np.outer(
-
-            home_probs,
-            away_probs
-
-        )
-
-        over25 = 0
-
-        for h in range(max_goals):
-
-            for a in range(max_goals):
-
-                if h + a >= 3:
-
-                    over25 += matrix[h][a]
-
-        btts = 0
-
-        for h in range(1, max_goals):
-
-            for a in range(1, max_goals):
-
-                btts += matrix[h][a]
-
-        return {
-
-            "over25": round(
-                over25 * 100,
-                2
-            ),
-
-            "btts": round(
-                btts * 100,
-                2
-            )
-
-        }
-
-    except:
-
-        return {
-
-            "over25": 0,
-            "btts": 0
-
-        }     
    # =========================================================
 # ADVANCED SHARP MARKET ENGINE
 # CLEAN PROBABILITY + CLV + REGIME
@@ -1491,80 +1394,6 @@ def calculate_match_score(
 
         "Italy",
         "Romania",
-        "Bulgaria"
-
-    ]:
-
-        market = "📉 UNDER 2.5 GOALS"
-
-        odd = "1.75"
-
-        score += 7
-
-    # BTTS LEAGUES
-    elif country in [
-
-        "Denmark",
-        "Belgium"
-
-    ]:
-
-        market = "💎 BTTS"
-
-        odd = "1.85"
-
-        score += 8
-
-    # =====================================================
-    # BIG TEAMS
-    # =====================================================
-
-    big_teams = [
-
-        "Manchester City",
-        "Liverpool",
-        "Arsenal",
-        "Barcelona",
-        "Real Madrid",
-        "Bayern",
-        "PSG",
-        "Ajax",
-        "PSV",
-        "Benfica",
-        "Flamengo"
-
-    ]
-
-    if home in big_teams:
-
-        score += 4
-
-    if away in big_teams:
-
-        score += 4
-
-    # =====================================================
-    # VALUE STYLE ODDS
-    # =====================================================
-
-    try:
-
-        odd_value = float(odd)
-
-        # sweet spot
-        if 1.70 <= odd_value <= 2.05:
-
-            score += 6
-
-        elif odd_value > 2.40:
-
-            score -= 8
-
-    except:
-
-        pass
-
-    return score, market, odd
 
 # =========================================================
 # SAVE SIGNAL
@@ -3327,90 +3156,7 @@ async def daily_ticket():
 
             # value sweet spot
             if odd < 1.65:
-                continue
 
-            if odd > 2.05:
-                continue
-
-            # само реални пазари
-            if market not in [
-
-                "⚽ OVER 2.5 GOALS",
-                "📉 UNDER 2.5 GOALS",
-                "💎 BTTS"
-
-            ]:
-
-                continue
-
-            # топ летни лиги
-            preferred = [
-
-                "Norway",
-                "Sweden",
-                "Denmark",
-                "Brazil",
-                "Argentina",
-                "Japan",
-                "USA"
-
-            ]
-
-            if country in preferred:
-
-                confidence += 4
-
-            picks.append(
-
-                (
-                    confidence,
-                    home,
-                    away,
-                    market,
-                    odd,
-                    league
-                )
-
-            )
-
-        except:
-            pass
-
-    # сортира най-силните
-    picks = sorted(
-        picks,
-        reverse=True
-    )
-
-    final_picks = picks[:3]
-
-    if len(final_picks) < 3:
-        return
-
-    msg = "🔥 DAILY AI BET SLIP\n\n"
-
-    for p in final_picks:
-
-        msg += (
-
-            f"🏆 {p[5]}\n"
-            f"⚽ {p[1]} vs {p[2]}\n"
-            f"🎯 {p[3]}\n"
-            f"💰 {p[4]}\n"
-            f"✅ {p[0]}%\n\n"
-
-        )
-
-        total_odds *= p[4]
-
-    msg += (
-        f"💎 TOTAL ODDS: "
-        f"{round(total_odds,2)}"
-    )
-
-    send_telegram(msg)
-
-    daily_ticket_sent = True
 # =========================================================
 # PREMATCH AI
 # =========================================================
@@ -3421,7 +3167,7 @@ async def prematch_loop():
 
         try:
 
-            await daily_ticket()
+            
 
             matches = get_upcoming_matches()
 
