@@ -3790,17 +3790,17 @@ async def prematch_loop():
 
                     confidence = min(
                         confidence,
-                        92
+                        95
                     )
 
                     # =================================================
                     # FILTERS
                     # =================================================
 
-                    if confidence < 90:
+                    if confidence < 92:
                         continue
 
-                    if drop < 0.15:
+                    if drop < 0.20:
                         continue
 
                     if not soft_odd:
@@ -3811,7 +3811,7 @@ async def prematch_loop():
                         / sharp_odd * 100
                     )
 
-                    if soft_edge < 8:
+                    if soft_edge < 10:
                         continue
     
                   
