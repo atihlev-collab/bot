@@ -1346,13 +1346,13 @@ def calculate_pressure(team):
         pressure += 8
 
     if shots_on >= 3:
-        pressure += 15
+        pressure += 18
 
     if shots_on >= 5:
-        pressure += 12
+        pressure += 18
 
     if total_shots >= 7:
-        pressure += 10
+        pressure += 12
 
     if total_shots >= 11:
         pressure += 10
@@ -1363,11 +1363,14 @@ def calculate_pressure(team):
     if corners >= 6:
         pressure += 6
 
-    if attacks >= 16:
-        pressure += 14
+    if attacks >= 15:
+        pressure += 18
 
-    if attacks >= 26:
-        pressure += 14
+    if attacks >= 25:
+        pressure += 18
+
+    if attacks >= 35:
+       pressure += 12
 
     xg = estimate_xg(
         shots_on,
@@ -1375,11 +1378,11 @@ def calculate_pressure(team):
         attacks
     )
 
-    if xg >= 1.1:
-        pressure += 10
+    if xg >= 1.5:
+        pressure += 3
 
-    if xg >= 1.8:
-        pressure += 10
+    if xg >= 2.2:
+        pressure += 3
 
     return pressure, xg
 
