@@ -3730,6 +3730,20 @@ async def prematch_loop():
                     if confidence < 90:
                         continue
 
+                    if drop < 0.15:
+                        continue
+
+                    if not soft_odd:
+                        continue
+
+                    soft_edge = (
+                        (soft_odd - sharp_odd)
+                        / sharp_odd * 100
+                    )
+
+                    if soft_edge < 8:
+                        continue
+    
                     if true_edge < 5:
                         continue
 
