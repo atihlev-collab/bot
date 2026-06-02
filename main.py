@@ -743,7 +743,7 @@ def analyze_match(match):
     if minute is None:
         return
 
-    if minute < 30 or minute > 75:
+    if minute < 25 or minute > 80:
         return
 
     home_goals = match["goals"]["home"]
@@ -816,7 +816,7 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 60
+    minimum_pressure = 55
 
     if minute >= 60:
 
@@ -831,7 +831,7 @@ def analyze_match(match):
 
         return
 
-    minimum_xg = 1.3
+    minimum_xg = 0.8
 
     if best_xg < minimum_xg:
 
@@ -851,7 +851,7 @@ def analyze_match(match):
     if max(
         home_shots,
         away_shots
-    ) < 4:
+    ) < 3:
 
         return
 
