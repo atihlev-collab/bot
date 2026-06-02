@@ -2922,7 +2922,7 @@ def analyze_match(match):
     if minute is None:
         return
 
-    if minute < 30 or minute > 75:
+    if minute < 30 or minute > 88:
         return
 
     home_goals = match["goals"]["home"]
@@ -2934,7 +2934,7 @@ def analyze_match(match):
     
     total_goals = home_goals + away_goals
 
-    if total_goals >= 6:
+    if total_goals >= 7:
         return
 
     score = f"{home_goals}-{away_goals}"
