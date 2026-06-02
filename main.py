@@ -2897,11 +2897,11 @@ def analyze_match(match):
         return
 
     # леко отпуснато
-    if dominance < 12:
+    if dominance < 10:
 
         return
 
-    minimum_xg = 1.0
+    minimum_xg = 0.8
 
     if best_xg < minimum_xg:
 
@@ -2921,7 +2921,7 @@ def analyze_match(match):
     if max(
         home_shots,
         away_shots
-    ) < 4:
+    ) < 3:
 
         return
 
@@ -2958,7 +2958,7 @@ def analyze_match(match):
     # NEXT GOAL
     # =====================================================
 
-    if dominance >= 15:
+    if dominance >= 12:
 
         if home_pressure > away_pressure:
 
