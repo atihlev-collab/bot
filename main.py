@@ -3475,6 +3475,20 @@ async def daily_ticket():
                 away_form["avg_scored"] * 2  
             )
 
+            # DEFENSIVE BONUS / PENALTY
+
+            if home_form["avg_conceded"] >= 1.5:
+                confidence += 2
+
+            if away_form["avg_conceded"] >= 1.5:
+                confidence += 2
+
+            if home_form["avg_conceded"] <= 0.8:
+                confidence -= 2
+
+            if away_form["avg_conceded"] <= 0.8:
+                confidence -= 2
+    
             confidence += home_form["over25"]
 
             confidence += away_form["over25"]
