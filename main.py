@@ -2995,18 +2995,18 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 60
+    minimum_pressure = 68
 
     if minute >= 60:
 
-        minimum_pressure = 65
+        minimum_pressure = 72
 
     if best_pressure < minimum_pressure:
 
         return
 
     # леко отпуснато
-    if dominance < 12:
+    if dominance < 18:
 
         return
 
@@ -3030,7 +3030,7 @@ def analyze_match(match):
     if max(
         home_shots,
         away_shots
-    ) < 4:
+    ) < 5:
 
         return
 
