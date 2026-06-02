@@ -3083,22 +3083,7 @@ def analyze_match(match):
                 f"({away_name})"
             )
 
-    # =====================================================
-    # BTTS
-    # =====================================================
-
-    elif (
-        best_xg >= 2.0
-        and home_shots >= 4
-        and away_shots >= 4
-        and total_goals <= 3
-        and (
-            home_goals == 0
-            or away_goals == 0
-        )
-    ):
-
-        market = "💎 BTTS / GOAL-GOAL"
+   
 
     # =====================================================
     # OVER GOALS
