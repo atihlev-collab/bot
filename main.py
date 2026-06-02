@@ -3371,48 +3371,47 @@ async def prematch_loop():
                         -
                         market_probability,
 
-                        2
-# =================================================
-# VALUE SCANNER
-# =================================================
+                    # ===================================
+                    # VALUE SCANNER
+                    # ===================================           
 
-drop, velocity = odds_drop_signal(
-    home,
-    away,
-    odd
-)
+                    drop, velocity = odds_drop_signal(
+                        home,
+                        away,
+                        odd
+                    )
 
-soft_edge = 0
+                    soft_edge = 0
 
-if soft_odd:
+                    if soft_odd:
 
-    soft_edge = round(
-        (
-            soft_odd - sharp_odd
-        )
-        / sharp_odd * 100,
-        2
-    )
+                        soft_edge = round(
+                            (
+                                soft_odd - sharp_odd
+                            )
+                            / sharp_odd * 100,
+                            2
+                        )
 
-value_score = 0
+                    value_score = 0
 
-if drop >= 0.15:
-    value_score += 30
+                    if drop >= 0.15:
+                        value_score += 30
 
-if drop >= 0.25:
-    value_score += 50
+                    if drop >= 0.25:
+                        value_score += 50
 
-if velocity >= 0.02:
-    value_score += 20
+                   if velocity >= 0.02:
+                        value_score += 20
 
-if soft_edge >= 5:
-    value_score += 25
+                   if soft_edge >= 5:
+                        value_score += 25
 
-if soft_edge >= 10:
-    value_score += 40
+                   if soft_edge >= 10:
+                        value_score += 40
 
-if value_score < 50:
-    continue
+                   if value_score < 50:
+                        continue
                     # =================================================
                     # DUPLICATE
                     # =================================================
