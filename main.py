@@ -1128,6 +1128,112 @@ def aggressive_sharp_alert(
         return True
 
     return False   
+
+
+# =====================================================
+# TEAM FORM
+# =========================================================
+
+def get_team_form(team_id):
+
+    try:
+
+        r = requests.get(
+
+            f"{BASE_URL}/fixtures",
+
+            headers=HEADERS,
+
+            params={
+
+                "team": team_id,
+                "last": 5
+
+            },
+
+            timeout=20
+
+        ).json()
+
+        matches = r.get(
+            "response",
+            []
+        )
+
+        if not matches:
+
+            return None
+
+        scored = 0
+        conceded = 0
+
+        wins = 0
+
+        over25 = 0
+        btts = 0
+
+        for m in matches:
+
+            home_id = m["teams"]["home"]["id"]
+
+            home_goals = (
+                m["goals"]["home"] or 0
+            )
+
+            away_goals = (
+                m["goals"]["away"] or 0
+            )
+
+            total = (
+                home_goals + away_goals
+            )
+
+            if home_id == team_id:
+
+                gf = home_goals
+                ga = away_goals
+
+            else:
+
+                gf = away_goals
+                ga = home_goals
+
+            scored += gf
+            conceded += ga
+
+            if gf > ga:
+                wins += 1
+
+            if total >= 3:
+                over25 += 1
+
+            if gf > 0 and ga > 0:
+                btts += 1
+
+        return {
+
+            "avg_scored": round(
+                scored / 5,
+                2
+            ),
+
+            "avg_conceded": round(
+                conceded / 5,
+                2
+            ),
+
+            "wins": wins,
+
+            "over25": over25,
+
+            "btts": btts
+
+        }
+
+    except:
+
+        return None
+        
 # =========================================================
 # MATCH STATS
 # =========================================================
