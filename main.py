@@ -2971,226 +2971,45 @@ async def prematch_loop():
                     if diff < 0 or diff > 28800:
                         continue
 
-                    # =================================================
-                    # SCORE ENGINE
-                    # =================================================
+                   # =================================================
+                   # VALUE SCANNER
+                   # =================================================
 
-                    score, market, fake_odd = (
+                   drop, velocity = odds_drop_signal(
+                       home,
+                       away,
+                       odd
+                  )
 
-                        calculate_match_score(
+                  soft_edge = 0
 
-                            country,
-                            league,
-                            home,
-                            away
+                  if soft_odd:
 
-                        )
+                      soft_edge = round(
+                      (soft_odd - sharp_odd)
+                      / sharp_odd * 100,
+                      2
+                 )
 
-                    )
+                 value_score = 0
 
-                    confidence = 58 + score
+                 if drop >= 0.15:
+                     value_score += 30
 
-                    # =================================================
-                    # SIMPLE ATTACK MODEL
-                    # =================================================
+                if drop >= 0.25:
+                    value_score += 50
 
-                    home_attack = round(
+                if velocity >= 0.02:
+                   value_score += 20
 
-                        (
-                            len(home) % 5
-                        ) + 1.2,
+                if soft_edge >= 5:
+                   value_score += 25
 
-                        2
+                if soft_edge >= 10:
+                   value_score += 40
 
-                    )
-
-                    away_attack = round(
-
-                        (
-                            len(away) % 5
-                        ) + 1.2,
-
-                        2
-
-                    )
-
-                    # =================================================
-                    # POISSON
-                    # =================================================
-
-                    poisson_data = poisson_probability(
-
-                        home_attack,
-                        away_attack
-
-                    )
-
-                    over25_prob = poisson_data["over25"]
-
-                    btts_prob = poisson_data["btts"]
-
-                    # =================================================
-                    # FAIR ODDS
-                    # =================================================
-
-                    if market == "⚽ OVER 2.5 GOALS":
-
-                        fair_odd = round(
-
-                            100 / max(
-                                over25_prob,
-                                1
-                            ),
-
-                            2
-
-                        )
-
-                    elif market == "💎 BTTS":
-
-                        fair_odd = round(
-
-                            100 / max(
-                                btts_prob,
-                                1
-                            ),
-
-                            2
-
-                        )
-
-                    else:
-
-                        fair_odd = odd
-
-                    # =================================================
-                    # IMPLIED PROBABILITY
-                    # =================================================
-
-                    market_probability = round(
-
-                        (1 / odd) * 100,
-
-                        2
-
-                    )
-
-                    our_probability = confidence
-
-                    true_edge = round(
-
-                        our_probability
-                        -
-                        market_probability,
-
-                        2
-
-                    )
-
-                    # =================================================
-                    # FAIR ODD VALUE
-                    # =================================================
-
-                    if odd > fair_odd:
-
-                        confidence += 5
-
-                    # =================================================
-                    # SHARP / SOFT VALUE
-                    # =================================================
-
-                    if soft_odd:
-
-                        soft_edge = round(
-
-                            (
-                                soft_odd
-                                -
-                                sharp_odd
-                            )
-
-                            /
-                            sharp_odd * 100,
-
-                            2
-
-                        )
-
-                        if soft_edge >= 5:
-
-                            confidence += 6
-
-                    # =================================================
-                    # DROP + VELOCITY
-                    # =================================================
-
-                    drop, velocity = (
-
-                        odds_drop_signal(
-
-                            home,
-                            away,
-                            odd
-
-                        )
-
-                    )
-
-                    if (
-
-                        drop >= 0.15
-
-                        or
-
-                        velocity >= 0.02
-
-                    ):
-
-                        confidence += 8
-
-                    # =================================================
-                    # LEAGUE BONUS
-                    # =================================================
-
-                    if "Premier" in league:
-
-                        confidence += 4
-
-                    elif "La Liga" in league:
-
-                        confidence += 3
-
-                    elif "Serie A" in league:
-
-                        confidence += 2
-
-                    elif "Cup" in league:
-
-                        confidence -= 6
-
-                    confidence += min(
-
-                        len(home) % 5,
-
-                        4
-
-                    )
-
-                    confidence = min(
-                        confidence,
-                        92
-                    )
-
-                    # =================================================
-                    # FILTERS
-                    # =================================================
-
-                    if confidence < 90:
-                        continue
-
-                    if true_edge < 5:
-                        continue
-
+                if value_score < 50:
+                   continue
                     # =================================================
                     # DUPLICATE
                     # =================================================
@@ -3205,7 +3024,7 @@ async def prematch_loop():
                     # =================================================
 
                     msg = f"""
-🔥 PRE-MATCH AI SIGNAL
+🔥 SHARP MONEY ALERT
 
 🌍 {country}
 🏆 {league}
@@ -3219,26 +3038,20 @@ async def prematch_loop():
 💰 Sharp Odd:
 {sharp_odd}
 
-📉 Odds Drop:
+💸 Soft Odd:
+{soft_odd}
+
+📉 Drop:
 {drop}
 
 ⚡ Velocity:
 {velocity}
 
-💎 True Edge:
-+{true_edge}%
+💎 Soft Edge:
+{soft_edge}%
 
-📊 Over 2.5 Prob:
-{over25_prob}%
-
-💎 BTTS Prob:
-{btts_prob}%
-
-⚖ Fair Odd:
-{fair_odd}
-
-✅ Confidence:
-{confidence}%
+🔥 Value Score:
+{value_score}
 """
 
                     print(msg)
