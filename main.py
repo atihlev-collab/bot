@@ -3105,8 +3105,8 @@ def analyze_match(match):
     # =====================================================
 
     elif (
-        minute >= 75
-        and best_pressure >= 68
+        minute >= 70
+        and best_pressure >= 65
         and abs(home_goals-away_goals) < 4
     ):
 
