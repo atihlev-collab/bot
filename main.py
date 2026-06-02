@@ -895,7 +895,7 @@ def analyze_match(match):
 
     # BTTS
     elif (
-        best_xg >= 2.4
+        best_xg >= 2.0
         and home_shots >= 4
         and away_shots >= 4
         and total_goals <= 3
@@ -910,7 +910,7 @@ def analyze_match(match):
     # OVER GOALS
     elif (
         total_goals <= 1
-        and best_pressure >= 68
+        and best_pressure >= 62
         and best_xg >= 2
         and minute >= 40
     ):
@@ -922,7 +922,7 @@ def analyze_match(match):
     # LATE GOAL
     elif (
         minute >= 75
-        and best_pressure >= 72
+        and best_pressure >= 65
         and abs(home_goals-away_goals) < 4
     ):
 
@@ -971,7 +971,7 @@ def analyze_match(match):
 
         if (
 
-            total_fouls >= 22
+            total_fouls >= 18
             and total_cards >= 3
             and abs(
                 home_goals-away_goals
@@ -1030,8 +1030,8 @@ def analyze_match(match):
 
         return
 
-    # LIVE само 78%+
-    if confidence < 78:
+    # LIVE само 80%+
+    if confidence < 80:
 
         return
 
