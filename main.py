@@ -3449,6 +3449,13 @@ async def daily_ticket():
 
             confidence = 58 + score
 
+            home_id = m["teams"]["home"]["id"]
+
+            away_id = m["teams"]["away"]["id"]
+
+            home_form = get_team_form(home_id)
+
+            away_form = get_team_form(away_id)
             # само силни фишове
             if confidence < 84:
                 continue
