@@ -1398,7 +1398,7 @@ def calculate_match_score(
 # SAVE SIGNAL
 # =========================================================
 
-def save_signal(
+    def save_signal(
 
     fixture_id,
     match_name,
