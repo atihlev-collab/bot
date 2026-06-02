@@ -11,6 +11,9 @@ import threading
 import asyncio
 import logging
 
+import numpy as np
+
+from scipy.stats import poisson
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -54,8 +57,6 @@ BLOCKED_WORDS = [
 
     "reserve",
     "reserves",
-
-    "friendly"
 ]
 
 # =========================================================
@@ -97,6 +98,9 @@ prematch_sent = {}
 # =========================================================
 
 odds_cache = {}
+
+opening_odds = {}
+
 prematch_sent = {}
 
 # =========================================================
@@ -293,24 +297,837 @@ def odds_drop_signal(
 
     except:
 
-        return 0
+        return 0, 0
+
+    now = time.time()
+
+    # =====================================================
+    # FIRST TIME
+    # =====================================================
 
     if key not in odds_cache:
 
-        odds_cache[key] = odd
+        odds_cache[key] = {
+
+            "odd": odd,
+            "time": now
+
+        }
+
+        return 0, 0
+
+    old_odd = odds_cache[key]["odd"]
+
+    old_time = odds_cache[key]["time"]
+
+    # =====================================================
+    # DROP
+    # =====================================================
+
+    drop = round(
+
+        old_odd - odd,
+
+        2
+
+    )
+
+    # =====================================================
+    # VELOCITY
+    # =====================================================
+
+    minutes = max(
+
+        (now - old_time) / 60,
+
+        1
+
+    )
+
+    velocity = round(
+
+        drop / minutes,
+
+        3
+
+    )
+
+    # =====================================================
+    # UPDATE CACHE
+    # =====================================================
+
+    odds_cache[key] = {
+
+        "odd": odd,
+        "time": now
+
+    }
+
+    return drop, velocity
+
+
+# =========================================================
+# REAL ODDS API
+# =========================================================
+
+def get_match_odds(fixture_id):
+
+    try:
+
+        url = f"{BASE_URL}/odds"
+
+        params = {
+
+            "fixture": fixture_id
+
+        }
+
+        response = requests.get(
+
+            url,
+            headers=HEADERS,
+            params=params,
+            timeout=20
+
+        ).json()
+
+        data = response.get(
+            "response",
+            []
+        )
+
+        if not data:
+            return None
+
+        best_market = None
+
+        sharp_odd = None
+        soft_odd = None
+
+        for item in data:
+
+            for bookmaker in item.get(
+                "bookmakers",
+                []
+            ):
+
+                name = bookmaker.get(
+                    "name",
+                    ""
+                )
+
+                for bet in bookmaker.get(
+                    "bets",
+                    []
+                ):
+
+                    # =================================================
+                    # MATCH WINNER
+                    # =================================================
+
+                    if bet["name"] == "Match Winner":
+
+                        values = bet.get(
+                            "values",
+                            []
+                        )
+
+                        for v in values:
+
+                            try:
+
+                                odd = float(
+                                    v["odd"]
+                                )
+
+                            except:
+                                continue
+
+                            value_name = v["value"]
+
+                            # HOME
+                            if value_name == "Home":
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    sharp_odd = odd
+                                    best_market = (
+                                        "🏠 HOME WIN"
+                                    )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+                            # AWAY
+                            elif value_name == "Away":
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    if (
+                                        sharp_odd is None
+                                        or odd < sharp_odd
+                                    ):
+
+                                        sharp_odd = odd
+                                        best_market = (
+                                            "✈ AWAY WIN"
+                                        )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+                    # =================================================
+                    # OVER 2.5
+                    # =================================================
+
+                    elif bet["name"] == "Goals Over/Under":
+
+                        values = bet.get(
+                            "values",
+                            []
+                        )
+
+                        for v in values:
+
+                            if (
+
+                                v["value"]
+                                ==
+                                "Over 2.5"
+
+                            ):
+
+                                try:
+
+                                    odd = float(
+                                        v["odd"]
+                                    )
+
+                                except:
+                                    continue
+
+                                if name in [
+
+                                    "Pinnacle",
+                                    "Bet365"
+
+                                ]:
+
+                                    if (
+                                        sharp_odd is None
+                                        or odd < sharp_odd
+                                    ):
+
+                                        sharp_odd = odd
+                                        best_market = (
+                                            "⚽ OVER 2.5 GOALS"
+                                        )
+
+                                elif name in [
+
+                                    "Betano",
+                                    "1xBet"
+
+                                ]:
+
+                                    soft_odd = odd
+
+        if sharp_odd is None:
+            return None
+
+        return {
+
+            "sharp_odd": sharp_odd,
+            "soft_odd": soft_odd,
+            "market": best_market
+
+        }
+
+    except:
+
+        return None
+ # =========================================================
+# POISSON ENGINE
+# =========================================================
+
+def poisson_probability(
+
+    home_attack,
+    away_attack
+
+):
+
+    try:
+
+        home_lambda = round(
+            home_attack,
+            2
+        )
+
+        away_lambda = round(
+            away_attack,
+            2
+        )
+
+        max_goals = 6
+
+        home_probs = [
+
+            poisson.pmf(
+                i,
+                home_lambda
+            )
+
+            for i in range(
+                max_goals
+            )
+
+        ]
+
+        away_probs = [
+
+            poisson.pmf(
+                i,
+                away_lambda
+            )
+
+            for i in range(
+                max_goals
+            )
+
+        ]
+
+        matrix = np.outer(
+
+            home_probs,
+            away_probs
+
+        )
+
+        over25 = 0
+
+        for h in range(max_goals):
+
+            for a in range(max_goals):
+
+                if h + a >= 3:
+
+                    over25 += matrix[h][a]
+
+        btts = 0
+
+        for h in range(1, max_goals):
+
+            for a in range(1, max_goals):
+
+                btts += matrix[h][a]
+
+        return {
+
+            "over25": round(
+                over25 * 100,
+                2
+            ),
+
+            "btts": round(
+                btts * 100,
+                2
+            )
+
+        }
+
+    except:
+
+        return {
+
+            "over25": 0,
+            "btts": 0
+
+        }     
+   # =========================================================
+# ADVANCED SHARP MARKET ENGINE
+# CLEAN PROBABILITY + CLV + REGIME
+# =========================================================
+
+sharp_history = {}
+
+closing_history = {}
+
+# =========================================================
+# CLEAN SHARP PROBABILITY
+# =========================================================
+
+def clean_probability(odd):
+
+    try:
+
+        raw_probability = (
+
+            1 / float(odd)
+
+        ) * 100
+
+        # bookmaker margin removal
+        clean_prob = round(
+
+            raw_probability * 0.97,
+
+            2
+
+        )
+
+        return clean_prob
+
+    except:
 
         return 0
 
-    old_odd = odds_cache[key]
+# =========================================================
+# OPENING ODDS HISTORY
+# =========================================================
 
-    drop = old_odd - odd
+def track_opening_odds(
 
-    odds_cache[key] = odd
+    match_key,
+    odd
 
-    return round(
-        drop,
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return
+
+    if match_key not in opening_odds:
+
+        opening_odds[match_key] = {
+
+            "opening": odd,
+            "time": time.time()
+
+        }
+
+# =========================================================
+# CLOSING LINE VALUE
+# =========================================================
+
+def calculate_clv(
+
+    match_key,
+    current_odd
+
+):
+
+    try:
+
+        current_odd = float(current_odd)
+
+    except:
+
+        return 0
+
+    if match_key not in opening_odds:
+
+        return 0
+
+    opening = opening_odds[match_key][
+        "opening"
+    ]
+
+    clv = round(
+
+        (
+            opening
+            -
+            current_odd
+        )
+
+        / opening * 100,
+
         2
+
     )
+
+    return clv
+
+# =========================================================
+# MARKET REGIME DETECTION
+# =========================================================
+
+def market_regime(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return "UNKNOWN"
+
+    if match_key not in sharp_history:
+
+        sharp_history[match_key] = []
+
+    sharp_history[match_key].append(
+        odd
+    )
+
+    # keep only last 6
+    sharp_history[match_key] = (
+
+        sharp_history[match_key][-6:]
+
+    )
+
+    history = sharp_history[match_key]
+
+    if len(history) < 4:
+
+        return "NORMAL"
+
+    drops = 0
+    rises = 0
+
+    for i in range(
+
+        1,
+        len(history)
+
+    ):
+
+        if history[i] < history[i-1]:
+
+            drops += 1
+
+        elif history[i] > history[i-1]:
+
+            rises += 1
+
+    # =====================================================
+    # STABLE SHARP
+    # =====================================================
+
+    if drops >= 4 and rises <= 1:
+
+        return "STABLE_SHARP"
+
+    # =====================================================
+    # CHAOTIC
+    # =====================================================
+
+    if rises >= 2 and drops >= 2:
+
+        return "CHAOTIC"
+
+    return "NORMAL"
+
+# =========================================================
+# AGGRESSIVE SHARP ALERT
+# =========================================================
+
+def aggressive_sharp_move(
+
+    drop,
+    velocity
+
+):
+
+    try:
+
+        drop = float(drop)
+        velocity = float(velocity)
+
+    except:
+
+        return False
+
+    if (
+
+        drop >= 0.25
+
+        and
+
+        velocity >= 0.03
+
+    ):
+
+        return True
+
+    return False     
+ # =========================================================
+# ADVANCED SHARP MARKET ENGINE
+# =========================================================
+
+sharp_history = {}
+
+opening_odds_history = {}
+
+closing_line_history = {}
+
+# =========================================================
+# CLEAN SHARP PROBABILITY
+# =========================================================
+
+def clean_sharp_probability(odd):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return 0
+
+    raw_probability = (
+
+        1 / odd
+
+    ) * 100
+
+    # remove bookmaker margin
+    clean_probability = round(
+
+        raw_probability * 0.97,
+
+        2
+
+    )
+
+    return clean_probability
+
+# =========================================================
+# OPENING ODDS TRACKER
+# =========================================================
+
+def track_opening_odds(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return
+
+    if match_key not in opening_odds_history:
+
+        opening_odds_history[match_key] = {
+
+            "opening_odd": odd,
+            "created": time.time()
+
+        }
+
+# =========================================================
+# CLV TRACKING
+# =========================================================
+
+def calculate_clv(
+
+    match_key,
+    current_odd
+
+):
+
+    try:
+
+        current_odd = float(current_odd)
+
+    except:
+
+        return 0
+
+    if match_key not in opening_odds_history:
+
+        return 0
+
+    opening_odd = (
+
+        opening_odds_history[match_key][
+            "opening_odd"
+        ]
+
+    )
+
+    clv = round(
+
+        (
+            opening_odd
+            -
+            current_odd
+        )
+
+        /
+        opening_odd * 100,
+
+        2
+
+    )
+
+    return clv
+
+# =========================================================
+# MARKET REGIME DETECTION
+# =========================================================
+
+def market_regime_detection(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return "UNKNOWN"
+
+    if match_key not in sharp_history:
+
+        sharp_history[match_key] = []
+
+    sharp_history[match_key].append(
+        odd
+    )
+
+    # keep last 8 values
+    sharp_history[match_key] = (
+
+        sharp_history[match_key][-8:]
+
+    )
+
+    history = sharp_history[match_key]
+
+    if len(history) < 4:
+
+        return "NORMAL"
+
+    drops = 0
+    rises = 0
+
+    for i in range(
+
+        1,
+        len(history)
+
+    ):
+
+        if history[i] < history[i-1]:
+
+            drops += 1
+
+        elif history[i] > history[i-1]:
+
+            rises += 1
+
+    # =====================================================
+    # STABLE SHARP
+    # =====================================================
+
+    if drops >= 5 and rises <= 1:
+
+        return "STABLE_SHARP"
+
+    # =====================================================
+    # CHAOTIC MARKET
+    # =====================================================
+
+    if rises >= 3 and drops >= 3:
+
+        return "CHAOTIC"
+
+    # =====================================================
+    # AGGRESSIVE STEAM
+    # =====================================================
+
+    if drops >= 4 and rises == 0:
+
+        return "STEAM_MOVE"
+
+    return "NORMAL"
+
+# =========================================================
+# AGGRESSIVE SHARP ALERT
+# =========================================================
+
+def aggressive_sharp_alert(
+
+    drop,
+    velocity,
+    clv
+
+):
+
+    try:
+
+        drop = float(drop)
+        velocity = float(velocity)
+        clv = float(clv)
+
+    except:
+
+        return False
+
+    # =====================================================
+    # EXTREME SHARP MOVE
+    # =====================================================
+
+    if (
+
+        drop >= 0.25
+
+        and
+
+        velocity >= 0.03
+
+        and
+
+        clv >= 4
+
+    ):
+
+        return True
+
+    return False   
 # =========================================================
 # MATCH STATS
 # =========================================================
@@ -476,6 +1293,10 @@ def value_edge(confidence, odds):
 # PREMATCH SCORE ENGINE
 # =========================================================
 
+# =========================================================
+# PREMATCH VALUE ENGINE
+# =========================================================
+
 def calculate_match_score(
     country,
     league,
@@ -488,20 +1309,182 @@ def calculate_match_score(
     market = "⚽ OVER 2.5 GOALS"
     odd = "1.80"
 
-    # GOAL LEAGUES
+    league_text = (
+        league.lower()
+    )
+
+    match_text = (
+        f"{home} {away}".lower()
+    )
+
+    # =====================================================
+    # LEAGUE QUALITY
+    # =====================================================
+
     if country in [
 
-        "Netherlands",
+        "England",
+        "Spain",
         "Germany",
-        "Norway"
+        "Italy",
+        "France",
+        "Netherlands",
+        "Portugal",
+
+        "Brazil",
+        "Argentina",
+        "Norway",
+        "Sweden",
+        "Denmark",
+        "Japan",
+        "USA"
 
     ]:
 
         score += 12
 
+    # =====================================================
+    # INTERNATIONAL TOURNAMENTS
+    # =====================================================
+
+    if any(
+
+        x in league_text
+
+        for x in [
+
+            "champions",
+            "europa",
+            "conference",
+            "libertadores",
+            "world cup",
+            "euro",
+            "copa america",
+            "nations league"
+
+        ]
+
+    ):
+
+        score += 12
+
+    # =====================================================
+    # SMART LEAGUE FILTER
+    # =====================================================
+
+    bad_words = [
+
+        "women",
+        "u19",
+        "u21",
+        "u23",
+        "reserve",
+        "regional"
+
+    ]
+
+    if any(
+
+        x in league_text
+
+        for x in bad_words
+
+    ):
+
+        score -= 100
+
+    # =====================================================
+    # FRIENDLY FILTER
+    # =====================================================
+
+    national_teams = [
+
+        "Brazil",
+        "Argentina",
+        "Germany",
+        "France",
+        "Spain",
+        "Portugal",
+        "England",
+        "Italy",
+        "Netherlands",
+        "Belgium",
+        "Croatia",
+        "Uruguay",
+        "Mexico",
+        "USA",
+        "Japan"
+
+    ]
+
+    # block random club friendlies
+    if (
+
+        "friendly" in league_text
+
+        and not any(
+
+            x.lower() in match_text
+
+            for x in national_teams
+
+        )
+
+    ):
+
+        score -= 25
+
+    # =====================================================
+    # SUMMER / ACTIVE LEAGUES BONUS
+    # =====================================================
+
+    active_countries = [
+
+        "Norway",
+        "Sweden",
+        "Denmark",
+        "Finland",
+        "Iceland",
+
+        "Brazil",
+        "Argentina",
+        "Chile",
+        "Colombia",
+        "Uruguay",
+        "Paraguay",
+
+        "USA",
+        "Mexico",
+
+        "Japan",
+        "South Korea",
+        "Australia"
+
+    ]
+
+    if country in active_countries:
+
+        score += 8
+
+    # =====================================================
+    # MARKET FIT
+    # =====================================================
+
+    # GOAL LEAGUES
+    if country in [
+
+        "Netherlands",
+        "Germany",
+        "Norway",
+        "Sweden"
+
+    ]:
+
         market = "⚽ OVER 2.5 GOALS"
 
         odd = "1.80"
+
+        score += 8
 
     # UNDER LEAGUES
     elif country in [
@@ -512,72 +1495,74 @@ def calculate_match_score(
 
     ]:
 
-        score += 10
-
         market = "📉 UNDER 2.5 GOALS"
 
         odd = "1.75"
 
+        score += 7
+
     # BTTS LEAGUES
     elif country in [
 
-        "Sweden",
-        "Denmark"
+        "Denmark",
+        "Belgium"
 
     ]:
-
-        score += 11
 
         market = "💎 BTTS"
 
         odd = "1.85"
 
-    # DERBY BONUS
-    if "derby" in league.lower():
+        score += 8
 
-        score += 5
+    # =====================================================
+    # BIG TEAMS
+    # =====================================================
 
-    # CUP PENALTY
-    if "cup" in league.lower():
-
-        score -= 5
-
-    # REMOVE BAD LEAGUES
-    if any(
-
-        x in league.lower()
-
-        for x in [
-
-            "u21",
-            "women",
-            "reserve",
-            "friendly"
-
-        ]
-
-    ):
-
-        score -= 100
-
-    # BIG TEAMS SMALL BOOST
     big_teams = [
 
-        "Ajax",
-        "PSV",
+        "Manchester City",
         "Liverpool",
         "Arsenal",
         "Barcelona",
         "Real Madrid",
-        "Manchester City"
+        "Bayern",
+        "PSG",
+        "Ajax",
+        "PSV",
+        "Benfica",
+        "Flamengo"
 
     ]
 
     if home in big_teams:
-        score += 3
+
+        score += 4
 
     if away in big_teams:
-        score += 3
+
+        score += 4
+
+    # =====================================================
+    # VALUE STYLE ODDS
+    # =====================================================
+
+    try:
+
+        odd_value = float(odd)
+
+        # sweet spot
+        if 1.70 <= odd_value <= 2.05:
+
+            score += 6
+
+        elif odd_value > 2.40:
+
+            score -= 8
+
+    except:
+
+        pass
 
     return score, market, odd
 
@@ -628,6 +1613,1091 @@ def save_signal(
 
     conn.commit()
     conn.close()
+   # =========================================================
+# SELF LEARNING AI ENGINE
+# RESULT TRACKING + AUTO LEARNING
+# =========================================================
+
+learning_stats = {}
+
+# =========================================================
+# RESULT DATABASE
+# =========================================================
+
+def init_learning_database():
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS learning_results (
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        fixture_id INTEGER,
+        match_name TEXT,
+
+        market TEXT,
+
+        country TEXT,
+        league TEXT,
+
+        minute INTEGER,
+
+        confidence REAL,
+        pressure REAL,
+        xg REAL,
+
+        odd REAL,
+
+        edge REAL,
+
+        odds_drop REAL,
+        velocity REAL,
+
+        result TEXT,
+
+        created_at TEXT
+
+    )
+
+    """)
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# SAVE LEARNING SIGNAL
+# =========================================================
+
+def save_learning_signal(
+
+    fixture_id,
+    match_name,
+
+    market,
+
+    country,
+    league,
+
+    minute,
+
+    confidence,
+    pressure,
+    xg,
+
+    odd,
+
+    edge,
+
+    drop,
+    velocity
+
+):
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    INSERT INTO learning_results (
+
+        fixture_id,
+        match_name,
+
+        market,
+
+        country,
+        league,
+
+        minute,
+
+        confidence,
+        pressure,
+        xg,
+
+        odd,
+
+        edge,
+
+        odds_drop,
+        velocity,
+
+        result,
+
+        created_at
+
+    )
+
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+
+    """, (
+
+        fixture_id,
+        match_name,
+
+        market,
+
+        country,
+        league,
+
+        minute,
+
+        confidence,
+        pressure,
+        xg,
+
+        odd,
+
+        edge,
+
+        drop,
+        velocity,
+
+        "PENDING",
+
+        str(datetime.now())
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# UPDATE RESULT
+# =========================================================
+
+def update_signal_result(
+
+    fixture_id,
+    result
+
+):
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    UPDATE learning_results
+
+    SET result=?
+
+    WHERE fixture_id=?
+
+    """, (
+
+        result,
+        fixture_id
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# AUTO LEARNING ANALYSIS
+# =========================================================
+
+def learning_analysis():
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT
+
+        market,
+        confidence,
+        country,
+        result
+
+    FROM learning_results
+
+    WHERE result != 'PENDING'
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    if not rows:
+
+        return
+
+    market_stats = {}
+
+    country_stats = {}
+
+    confidence_stats = {}
+
+    # =====================================================
+    # ANALYZE
+    # =====================================================
+
+    for row in rows:
+
+        market = row[0]
+
+        confidence = int(row[1])
+
+        country = row[2]
+
+        result = row[3]
+
+        win = 1 if result == "WIN" else 0
+
+        # =================================================
+        # MARKET
+        # =================================================
+
+        if market not in market_stats:
+
+            market_stats[market] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        market_stats[market]["total"] += 1
+
+        market_stats[market]["wins"] += win
+
+        # =================================================
+        # COUNTRY
+        # =================================================
+
+        if country not in country_stats:
+
+            country_stats[country] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        country_stats[country]["total"] += 1
+
+        country_stats[country]["wins"] += win
+
+        # =================================================
+        # CONFIDENCE
+        # =================================================
+
+        bucket = (
+
+            confidence // 5
+
+        ) * 5
+
+        if bucket not in confidence_stats:
+
+            confidence_stats[bucket] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        confidence_stats[bucket]["total"] += 1
+
+        confidence_stats[bucket]["wins"] += win
+
+    # =====================================================
+    # SAVE LEARNING
+    # =====================================================
+
+    learning_stats["markets"] = market_stats
+
+    learning_stats["countries"] = country_stats
+
+    learning_stats["confidence"] = confidence_stats
+
+# =========================================================
+# SMART AUTO BONUS
+# =========================================================
+
+def get_learning_bonus(
+
+    market,
+    country,
+    confidence
+
+):
+
+    bonus = 0
+
+    # =====================================================
+    # MARKET BONUS
+    # =====================================================
+
+    if (
+
+        "markets" in learning_stats
+
+        and
+
+        market in learning_stats["markets"]
+
+    ):
+
+        data = learning_stats["markets"][market]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 65:
+
+                bonus += 4
+
+            elif hitrate <= 45:
+
+                bonus -= 4
+
+    # =====================================================
+    # COUNTRY BONUS
+    # =====================================================
+
+    if (
+
+        "countries" in learning_stats
+
+        and
+
+        country in learning_stats["countries"]
+
+    ):
+
+        data = learning_stats["countries"][country]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 62:
+
+                bonus += 3
+
+            elif hitrate <= 45:
+
+                bonus -= 3
+
+    # =====================================================
+    # CONFIDENCE BONUS
+    # =====================================================
+
+    bucket = (
+
+        int(confidence) // 5
+
+    ) * 5
+
+    if (
+
+        "confidence" in learning_stats
+
+        and
+
+        bucket in learning_stats["confidence"]
+
+    ):
+
+        data = learning_stats["confidence"][bucket]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 70:
+
+                bonus += 4
+
+            elif hitrate <= 50:
+
+                bonus -= 4
+
+    return bonus 
+ # =========================================================
+# FULL ADVANCED SELF-LEARNING BETTING AI ENGINE
+# ADD THIS ABOVE:
+# =========================================================
+# LIVE STATS
+# =========================================================
+
+# =========================================================
+# ADVANCED SHARP MARKET ENGINE
+# =========================================================
+
+sharp_history = {}
+
+opening_odds_history = {}
+
+closing_line_history = {}
+
+# =========================================================
+# CLEAN SHARP PROBABILITY
+# =========================================================
+
+def clean_sharp_probability(odd):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return 0
+
+    raw_probability = (
+
+        1 / odd
+
+    ) * 100
+
+    clean_probability = round(
+
+        raw_probability * 0.97,
+
+        2
+
+    )
+
+    return clean_probability
+
+# =========================================================
+# OPENING ODDS TRACKER
+# =========================================================
+
+def track_opening_odds(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return
+
+    if match_key not in opening_odds_history:
+
+        opening_odds_history[match_key] = {
+
+            "opening_odd": odd,
+            "created": time.time()
+
+        }
+
+# =========================================================
+# CLV TRACKING
+# =========================================================
+
+def calculate_clv(
+
+    match_key,
+    current_odd
+
+):
+
+    try:
+
+        current_odd = float(current_odd)
+
+    except:
+
+        return 0
+
+    if match_key not in opening_odds_history:
+
+        return 0
+
+    opening_odd = (
+
+        opening_odds_history[match_key][
+            "opening_odd"
+        ]
+
+    )
+
+    clv = round(
+
+        (
+            opening_odd
+            -
+            current_odd
+        )
+
+        /
+        opening_odd * 100,
+
+        2
+
+    )
+
+    return clv
+
+# =========================================================
+# MARKET REGIME DETECTION
+# =========================================================
+
+def market_regime_detection(
+
+    match_key,
+    odd
+
+):
+
+    try:
+
+        odd = float(odd)
+
+    except:
+
+        return "UNKNOWN"
+
+    if match_key not in sharp_history:
+
+        sharp_history[match_key] = []
+
+    sharp_history[match_key].append(
+        odd
+    )
+
+    sharp_history[match_key] = (
+
+        sharp_history[match_key][-8:]
+
+    )
+
+    history = sharp_history[match_key]
+
+    if len(history) < 4:
+
+        return "NORMAL"
+
+    drops = 0
+    rises = 0
+
+    for i in range(
+
+        1,
+        len(history)
+
+    ):
+
+        if history[i] < history[i-1]:
+
+            drops += 1
+
+        elif history[i] > history[i-1]:
+
+            rises += 1
+
+    if drops >= 5 and rises <= 1:
+
+        return "STABLE_SHARP"
+
+    if rises >= 3 and drops >= 3:
+
+        return "CHAOTIC"
+
+    if drops >= 4 and rises == 0:
+
+        return "STEAM_MOVE"
+
+    return "NORMAL"
+
+# =========================================================
+# AGGRESSIVE SHARP ALERT
+# =========================================================
+
+def aggressive_sharp_alert(
+
+    drop,
+    velocity,
+    clv
+
+):
+
+    try:
+
+        drop = float(drop)
+        velocity = float(velocity)
+        clv = float(clv)
+
+    except:
+
+        return False
+
+    if (
+
+        drop >= 0.25
+
+        and
+
+        velocity >= 0.03
+
+        and
+
+        clv >= 4
+
+    ):
+
+        return True
+
+    return False
+
+# =========================================================
+# SELF LEARNING AI ENGINE
+# =========================================================
+
+learning_stats = {}
+
+# =========================================================
+# RESULT DATABASE
+# =========================================================
+
+def init_learning_database():
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS learning_results (
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        fixture_id INTEGER,
+        match_name TEXT,
+
+        market TEXT,
+
+        country TEXT,
+        league TEXT,
+
+        minute INTEGER,
+
+        confidence REAL,
+        pressure REAL,
+        xg REAL,
+
+        odd REAL,
+
+        edge REAL,
+
+        odds_drop REAL,
+        velocity REAL,
+
+        result TEXT,
+
+        created_at TEXT
+
+    )
+
+    """)
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# SAVE LEARNING SIGNAL
+# =========================================================
+
+def save_learning_signal(
+
+    fixture_id,
+    match_name,
+
+    market,
+
+    country,
+    league,
+
+    minute,
+
+    confidence,
+    pressure,
+    xg,
+
+    odd,
+
+    edge,
+
+    drop,
+    velocity
+
+):
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    INSERT INTO learning_results (
+
+        fixture_id,
+        match_name,
+
+        market,
+
+        country,
+        league,
+
+        minute,
+
+        confidence,
+        pressure,
+        xg,
+
+        odd,
+
+        edge,
+
+        odds_drop,
+        velocity,
+
+        result,
+
+        created_at
+
+    )
+
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+
+    """, (
+
+        fixture_id,
+        match_name,
+
+        market,
+
+        country,
+        league,
+
+        minute,
+
+        confidence,
+        pressure,
+        xg,
+
+        odd,
+
+        edge,
+
+        drop,
+        velocity,
+
+        "PENDING",
+
+        str(datetime.now())
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# UPDATE RESULT
+# =========================================================
+
+def update_signal_result(
+
+    fixture_id,
+    result
+
+):
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    UPDATE learning_results
+
+    SET result=?
+
+    WHERE fixture_id=?
+
+    """, (
+
+        result,
+        fixture_id
+
+    ))
+
+    conn.commit()
+
+    conn.close()
+
+# =========================================================
+# AUTO LEARNING ANALYSIS
+# =========================================================
+
+def learning_analysis():
+
+    conn = sqlite3.connect(
+        "learning_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    SELECT
+
+        market,
+        confidence,
+        country,
+        result
+
+    FROM learning_results
+
+    WHERE result != 'PENDING'
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    if not rows:
+
+        return
+
+    market_stats = {}
+
+    country_stats = {}
+
+    confidence_stats = {}
+
+    for row in rows:
+
+        market = row[0]
+
+        confidence = int(row[1])
+
+        country = row[2]
+
+        result = row[3]
+
+        win = 1 if result == "WIN" else 0
+
+        if market not in market_stats:
+
+            market_stats[market] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        market_stats[market]["total"] += 1
+
+        market_stats[market]["wins"] += win
+
+        if country not in country_stats:
+
+            country_stats[country] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        country_stats[country]["total"] += 1
+
+        country_stats[country]["wins"] += win
+
+        bucket = (
+
+            confidence // 5
+
+        ) * 5
+
+        if bucket not in confidence_stats:
+
+            confidence_stats[bucket] = {
+
+                "wins":0,
+                "total":0
+
+            }
+
+        confidence_stats[bucket]["total"] += 1
+
+        confidence_stats[bucket]["wins"] += win
+
+    learning_stats["markets"] = market_stats
+
+    learning_stats["countries"] = country_stats
+
+    learning_stats["confidence"] = confidence_stats
+
+# =========================================================
+# SMART AUTO BONUS
+# =========================================================
+
+def get_learning_bonus(
+
+    market,
+    country,
+    confidence
+
+):
+
+    bonus = 0
+
+    if (
+
+        "markets" in learning_stats
+
+        and
+
+        market in learning_stats["markets"]
+
+    ):
+
+        data = learning_stats["markets"][market]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 65:
+
+                bonus += 4
+
+            elif hitrate <= 45:
+
+                bonus -= 4
+
+    if (
+
+        "countries" in learning_stats
+
+        and
+
+        country in learning_stats["countries"]
+
+    ):
+
+        data = learning_stats["countries"][country]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 62:
+
+                bonus += 3
+
+            elif hitrate <= 45:
+
+                bonus -= 3
+
+    bucket = (
+
+        int(confidence) // 5
+
+    ) * 5
+
+    if (
+
+        "confidence" in learning_stats
+
+        and
+
+        bucket in learning_stats["confidence"]
+
+    ):
+
+        data = learning_stats["confidence"][bucket]
+
+        if data["total"] >= 10:
+
+            hitrate = (
+
+                data["wins"]
+                /
+                data["total"]
+
+            ) * 100
+
+            if hitrate >= 70:
+
+                bonus += 4
+
+            elif hitrate <= 50:
+
+                bonus -= 4
+
+    return bonus   
 # =========================================================
 # LIVE STATS
 # =========================================================
@@ -743,7 +2813,7 @@ def analyze_match(match):
     if minute is None:
         return
 
-    if minute < 25 or minute > 80:
+    if minute < 30 or minute > 75:
         return
 
     home_goals = match["goals"]["home"]
@@ -816,7 +2886,7 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 55
+    minimum_pressure = 60
 
     if minute >= 60:
 
@@ -831,7 +2901,7 @@ def analyze_match(match):
 
         return
 
-    minimum_xg = 0.8
+    minimum_xg = 1.3
 
     if best_xg < minimum_xg:
 
@@ -851,7 +2921,7 @@ def analyze_match(match):
     if max(
         home_shots,
         away_shots
-    ) < 3:
+    ) < 4:
 
         return
 
@@ -863,7 +2933,7 @@ def analyze_match(match):
     if total_goals >= 5:
 
         return
-      # =====================================================
+       # =====================================================
     # MARKET
     # =====================================================
 
@@ -876,24 +2946,38 @@ def analyze_match(match):
     market = None
     bonus_market = ""
 
+    home_name = (
+        match["teams"]["home"]["name"]
+    )
+
+    away_name = (
+        match["teams"]["away"]["name"]
+    )
+
+    # =====================================================
     # NEXT GOAL
+    # =====================================================
+
     if dominance >= 15:
 
         if home_pressure > away_pressure:
 
             market = (
                 f"🎯 NEXT GOAL HOME "
-                f"({match['teams']['home']['name']})"
+                f"({home_name})"
             )
 
         else:
 
             market = (
                 f"🎯 NEXT GOAL AWAY "
-                f"({match['teams']['away']['name']})"
+                f"({away_name})"
             )
 
+    # =====================================================
     # BTTS
+    # =====================================================
+
     elif (
         best_xg >= 2.0
         and home_shots >= 4
@@ -907,11 +2991,14 @@ def analyze_match(match):
 
         market = "💎 BTTS / GOAL-GOAL"
 
+    # =====================================================
     # OVER GOALS
+    # =====================================================
+
     elif (
         total_goals <= 1
-        and best_pressure >= 62
-        and best_xg >= 2
+        and best_pressure >= 65
+        and best_xg >= 1.8
         and minute >= 40
     ):
 
@@ -919,82 +3006,112 @@ def analyze_match(match):
             f"⚽ OVER {total_goals+1}.5 GOALS"
         )
 
+    # =====================================================
     # LATE GOAL
+    # =====================================================
+
     elif (
         minute >= 75
-        and best_pressure >= 65
+        and best_pressure >= 68
         and abs(home_goals-away_goals) < 4
     ):
 
         market = "🔥 GOAL 75-90"
 
+    # =====================================================
+    # SMART LATE CARDS
+    # =====================================================
 
-    # CARDS MARKET
     elif (
 
-        minute >= 30
-        and minute <= 75
+        minute >= 68
+        and minute <= 82
+        and abs(
+            home_goals-away_goals
+        ) <= 1
 
     ):
 
-        home_fouls = extract(
-            home,
-            "Fouls"
-        )
-
-        away_fouls = extract(
-            away,
-            "Fouls"
-        )
-
-        home_yellow = extract(
-            home,
-            "Yellow Cards"
-        )
-
-        away_yellow = extract(
-            away,
-            "Yellow Cards"
-        )
-
         total_fouls = (
-            home_fouls
+
+            extract(home, "Fouls")
             +
-            away_fouls
+            extract(away, "Fouls")
+
         )
 
         total_cards = (
-            home_yellow
+
+            extract(home, "Yellow Cards")
             +
-            away_yellow
+            extract(away, "Yellow Cards")
+
         )
 
         if (
 
-            total_fouls >= 18
-            and total_cards >= 3
-            and abs(
-                home_goals-away_goals
-            ) <= 1
+            total_fouls >= 20
+            and total_cards >= 2
 
         ):
 
             market = (
-                f"🟨 OVER {total_cards+1}.5 CARDS"
+                "🟨 LIVE OVER CARDS"
             )
 
-    # SMART CORNERS
+    # =====================================================
+    # SMART CHASING CORNERS
+    # =====================================================
+
     elif (
-        minute >= 30
-        and minute <= 50
-        and total_corners >= 4
-        and best_pressure >= 70
-        and abs(home_goals-away_goals) <= 1
+
+        minute >= 60
+        and minute <= 85
+
     ):
 
-        market = (
-            f"📐 OVER {total_corners+3}.5 CORNERS"
-        )
+        big_teams = [
+
+            "Liverpool",
+            "Arsenal",
+            "Manchester City",
+            "Barcelona",
+            "Real Madrid",
+            "Bayern",
+            "PSV",
+            "Ajax",
+            "Benfica",
+            "Flamengo"
+
+        ]
+
+        # HOME chasing
+        if (
+
+            home_name in big_teams
+            and home_goals < away_goals
+            and home_pressure >= 65
+            and total_corners >= 6
+
+        ):
+
+            market = (
+                f"📐 OVER {total_corners+2}.5 CORNERS"
+            )
+
+        # AWAY chasing
+        elif (
+
+            away_name in big_teams
+            and away_goals < home_goals
+            and away_pressure >= 65
+            and total_corners >= 6
+
+        ):
+
+            market = (
+                f"📐 OVER {total_corners+2}.5 CORNERS"
+            )
 
     if market is None:
 
@@ -1030,8 +3147,8 @@ def analyze_match(match):
 
         return
 
-    # LIVE само 80%+
-    if confidence < 80:
+    # LIVE само 78%+
+    if confidence < 78:
 
         return
 
@@ -1166,6 +3283,31 @@ async def daily_ticket():
             home = m["teams"]["home"]["name"]
             away = m["teams"]["away"]["name"]
 
+            text = (
+                home + " " + away
+            ).lower()
+
+            # допълнителен боклук филтър
+            if any(
+
+                x in text
+
+                for x in [
+
+                    " women",
+                    " kvinn",
+                    " female",
+                    " ladies",
+                    " u19",
+                    " u21",
+                    " u23"
+
+                ]
+
+            ):
+
+                continue
+
             score, market, odd = (
                 calculate_match_score(
                     country,
@@ -1175,56 +3317,100 @@ async def daily_ticket():
                 )
             )
 
-            confidence = 65 + score
+            confidence = 58 + score
 
-            if confidence < 75:
+            # само силни фишове
+            if confidence < 84:
                 continue
 
             odd = float(odd)
 
-            if odd < 1.50:
+            # value sweet spot
+            if odd < 1.65:
                 continue
 
-            if odd > 2.10:
+            if odd > 2.05:
                 continue
+
+            # само реални пазари
+            if market not in [
+
+                "⚽ OVER 2.5 GOALS",
+                "📉 UNDER 2.5 GOALS",
+                "💎 BTTS"
+
+            ]:
+
+                continue
+
+            # топ летни лиги
+            preferred = [
+
+                "Norway",
+                "Sweden",
+                "Denmark",
+                "Brazil",
+                "Argentina",
+                "Japan",
+                "USA"
+
+            ]
+
+            if country in preferred:
+
+                confidence += 4
 
             picks.append(
+
                 (
+                    confidence,
                     home,
                     away,
                     market,
-                    odd
+                    odd,
+                    league
                 )
+
             )
-
-            total_odds *= odd
-
-            if total_odds >= 5:
-                break
 
         except:
             pass
 
-    if len(picks) >= 3:
+    # сортира най-силните
+    picks = sorted(
+        picks,
+        reverse=True
+    )
 
-        msg = "🔥 DAILY AI BET SLIP\n\n"
+    final_picks = picks[:3]
 
-        for p in picks:
+    if len(final_picks) < 3:
+        return
 
-            msg += (
-                f"⚽ {p[0]} vs {p[1]}\n"
-                f"🎯 {p[2]}\n"
-                f"💰 {p[3]}\n\n"
-            )
+    msg = "🔥 DAILY AI BET SLIP\n\n"
+
+    for p in final_picks:
 
         msg += (
-            f"💎 TOTAL ODDS: "
-            f"{round(total_odds,2)}"
+
+            f"🏆 {p[5]}\n"
+            f"⚽ {p[1]} vs {p[2]}\n"
+            f"🎯 {p[3]}\n"
+            f"💰 {p[4]}\n"
+            f"✅ {p[0]}%\n\n"
+
         )
 
-        send_telegram(msg)
+        total_odds *= p[4]
 
-        daily_ticket_sent = True
+    msg += (
+        f"💎 TOTAL ODDS: "
+        f"{round(total_odds,2)}"
+    )
+
+    send_telegram(msg)
+
+    daily_ticket_sent = True
 # =========================================================
 # PREMATCH AI
 # =========================================================
@@ -1254,78 +3440,282 @@ async def prematch_loop():
                         continue
 
                     home = m["teams"]["home"]["name"]
+
                     away = m["teams"]["away"]["name"]
 
-                    # блокира женски мачове
+                    fixture_id = m["fixture"]["id"]
+
+                    odds_data = get_match_odds(
+                        fixture_id
+                    )
+
+                    if odds_data is None:
+                        continue
+
+                    sharp_odd = (
+                        odds_data["sharp_odd"]
+                    )
+
+                    soft_odd = (
+                        odds_data["soft_odd"]
+                    )
+
+                    market = (
+                        odds_data["market"]
+                    )
+
+                    odd = sharp_odd
+
+                    # =================================================
+                    # BLOCK WOMEN
+                    # =================================================
+
                     text = (
                         home + " " + away
                     ).lower()
 
                     if any(
+
                         x in text
+
                         for x in [
+
                             " kvinner",
                             " women",
                             " female",
                             " ladies",
                             " w"
+
                         ]
+
                     ):
+
                         continue
 
+                    # =================================================
+                    # DATE
+                    # =================================================
+
                     date = datetime.fromisoformat(
+
                         m["fixture"]["date"].replace(
                             "Z","+00:00"
                         )
+
                     ).astimezone(TZ)
 
                     diff = (
+
                         date - datetime.now(TZ)
+
                     ).total_seconds()
 
                     if diff < 0 or diff > 28800:
                         continue
 
-                    score, market, odd = (
+                    # =================================================
+                    # SCORE ENGINE
+                    # =================================================
+
+                    score, market, fake_odd = (
+
                         calculate_match_score(
+
                             country,
                             league,
                             home,
                             away
+
                         )
+
                     )
 
-                    confidence = 65 + score
+                    confidence = 58 + score
 
-                    drop = odds_drop_signal(
-                        home,
-                        away,
-                        odd
+                    # =================================================
+                    # SIMPLE ATTACK MODEL
+                    # =================================================
+
+                    home_attack = round(
+
+                        (
+                            len(home) % 5
+                        ) + 1.2,
+
+                        2
+
                     )
 
-                    if drop >= 0.15:
+                    away_attack = round(
+
+                        (
+                            len(away) % 5
+                        ) + 1.2,
+
+                        2
+
+                    )
+
+                    # =================================================
+                    # POISSON
+                    # =================================================
+
+                    poisson_data = poisson_probability(
+
+                        home_attack,
+                        away_attack
+
+                    )
+
+                    over25_prob = poisson_data["over25"]
+
+                    btts_prob = poisson_data["btts"]
+
+                    # =================================================
+                    # FAIR ODDS
+                    # =================================================
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        fair_odd = round(
+
+                            100 / max(
+                                over25_prob,
+                                1
+                            ),
+
+                            2
+
+                        )
+
+                    elif market == "💎 BTTS":
+
+                        fair_odd = round(
+
+                            100 / max(
+                                btts_prob,
+                                1
+                            ),
+
+                            2
+
+                        )
+
+                    else:
+
+                        fair_odd = odd
+
+                    # =================================================
+                    # IMPLIED PROBABILITY
+                    # =================================================
+
+                    market_probability = round(
+
+                        (1 / odd) * 100,
+
+                        2
+
+                    )
+
+                    our_probability = confidence
+
+                    true_edge = round(
+
+                        our_probability
+                        -
+                        market_probability,
+
+                        2
+
+                    )
+
+                    # =================================================
+                    # FAIR ODD VALUE
+                    # =================================================
+
+                    if odd > fair_odd:
+
+                        confidence += 5
+
+                    # =================================================
+                    # SHARP / SOFT VALUE
+                    # =================================================
+
+                    if soft_odd:
+
+                        soft_edge = round(
+
+                            (
+                                soft_odd
+                                -
+                                sharp_odd
+                            )
+
+                            /
+                            sharp_odd * 100,
+
+                            2
+
+                        )
+
+                        if soft_edge >= 5:
+
+                            confidence += 6
+
+                    # =================================================
+                    # DROP + VELOCITY
+                    # =================================================
+
+                    drop, velocity = (
+
+                        odds_drop_signal(
+
+                            home,
+                            away,
+                            odd
+
+                        )
+
+                    )
+
+                    if (
+
+                        drop >= 0.15
+
+                        or
+
+                        velocity >= 0.02
+
+                    ):
 
                         confidence += 8
 
-                        market = (
-                            "🔥 BET365 VALUE DROP"
-                        )
+                    # =================================================
+                    # LEAGUE BONUS
+                    # =================================================
 
                     if "Premier" in league:
+
                         confidence += 4
 
                     elif "La Liga" in league:
+
                         confidence += 3
 
                     elif "Serie A" in league:
+
                         confidence += 2
 
                     elif "Cup" in league:
+
                         confidence -= 6
 
                     confidence += min(
+
                         len(home) % 5,
+
                         4
+
                     )
 
                     confidence = min(
@@ -1333,13 +3723,28 @@ async def prematch_loop():
                         92
                     )
 
-                    if confidence < 82:
+                    # =================================================
+                    # FILTERS
+                    # =================================================
+
+                    if confidence < 90:
                         continue
+
+                    if true_edge < 5:
+                        continue
+
+                    # =================================================
+                    # DUPLICATE
+                    # =================================================
 
                     key = f"{home}_{away}"
 
                     if not can_send_prematch(key):
                         continue
+
+                    # =================================================
+                    # MESSAGE
+                    # =================================================
 
                     msg = f"""
 🔥 PRE-MATCH AI SIGNAL
@@ -1353,8 +3758,26 @@ async def prematch_loop():
 
 🎯 {market}
 
-💰 Odd:
-{odd}
+💰 Sharp Odd:
+{sharp_odd}
+
+📉 Odds Drop:
+{drop}
+
+⚡ Velocity:
+{velocity}
+
+💎 True Edge:
++{true_edge}%
+
+📊 Over 2.5 Prob:
+{over25_prob}%
+
+💎 BTTS Prob:
+{btts_prob}%
+
+⚖ Fair Odd:
+{fair_odd}
 
 ✅ Confidence:
 {confidence}%
@@ -1381,7 +3804,6 @@ async def prematch_loop():
             )
 
         await asyncio.sleep(1200)
-
 # =========================================================
 # LIVE LOOP
 # =========================================================
@@ -1472,5 +3894,4 @@ def main():
 if __name__ == "__main__":
 
     main()
-
 
