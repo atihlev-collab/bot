@@ -141,30 +141,21 @@ def send_telegram(message):
 
     try:
 
-        print(
-            "SENDING TO TELEGRAM..."
-        )
+        print("SENDING TO TELEGRAM...")
 
-        asyncio.create_task(
+        asyncio.run(
             bot.send_message(
                 chat_id=CHAT_ID,
                 text=message
             )
         )
 
-        print(
-            "TELEGRAM SENT"
-        )
+        print("TELEGRAM SENT")
 
     except Exception as e:
 
-        print(
-            "TELEGRAM ERROR:"
-        )
-
-        print(
-            str(e)
-        )        
+        print("TELEGRAM ERROR:")
+        print(str(e))
 
 #========================================================
 # DUPLICATE PROTECTION
