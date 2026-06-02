@@ -3,6 +3,7 @@
 # SMART RESET + PREMATCH AI VERSION
 # =========================================================
 
+
 import requests
 import time
 import sqlite3
@@ -567,7 +568,104 @@ def get_match_odds(fixture_id):
     except:
 
         return None
+ # =========================================================
+# POISSON ENGINE
+# =========================================================
 
+def poisson_probability(
+
+    home_attack,
+    away_attack
+
+):
+
+    try:
+
+        home_lambda = round(
+            home_attack,
+            2
+        )
+
+        away_lambda = round(
+            away_attack,
+            2
+        )
+
+        max_goals = 6
+
+        home_probs = [
+
+            poisson.pmf(
+                i,
+                home_lambda
+            )
+
+            for i in range(
+                max_goals
+            )
+
+        ]
+
+        away_probs = [
+
+            poisson.pmf(
+                i,
+                away_lambda
+            )
+
+            for i in range(
+                max_goals
+            )
+
+        ]
+
+        matrix = np.outer(
+
+            home_probs,
+            away_probs
+
+        )
+
+        over25 = 0
+
+        for h in range(max_goals):
+
+            for a in range(max_goals):
+
+                if h + a >= 3:
+
+                    over25 += matrix[h][a]
+
+        btts = 0
+
+        for h in range(1, max_goals):
+
+            for a in range(1, max_goals):
+
+                btts += matrix[h][a]
+
+        return {
+
+            "over25": round(
+                over25 * 100,
+                2
+            ),
+
+            "btts": round(
+                btts * 100,
+                2
+            )
+
+        }
+
+    except:
+
+        return {
+
+            "over25": 0,
+            "btts": 0
+
+        }     
    # =========================================================
 # ADVANCED SHARP MARKET ENGINE
 # CLEAN PROBABILITY + CLV + REGIME
@@ -1393,12 +1491,86 @@ def calculate_match_score(
 
         "Italy",
         "Romania",
+        "Bulgaria"
+
+    ]:
+
+        market = "📉 UNDER 2.5 GOALS"
+
+        odd = "1.75"
+
+        score += 7
+
+    # BTTS LEAGUES
+    elif country in [
+
+        "Denmark",
+        "Belgium"
+
+    ]:
+
+        market = "💎 BTTS"
+
+        odd = "1.85"
+
+        score += 8
+
+    # =====================================================
+    # BIG TEAMS
+    # =====================================================
+
+    big_teams = [
+
+        "Manchester City",
+        "Liverpool",
+        "Arsenal",
+        "Barcelona",
+        "Real Madrid",
+        "Bayern",
+        "PSG",
+        "Ajax",
+        "PSV",
+        "Benfica",
+        "Flamengo"
+
+    ]
+
+    if home in big_teams:
+
+        score += 4
+
+    if away in big_teams:
+
+        score += 4
+
+    # =====================================================
+    # VALUE STYLE ODDS
+    # =====================================================
+
+    try:
+
+        odd_value = float(odd)
+
+        # sweet spot
+        if 1.70 <= odd_value <= 2.05:
+
+            score += 6
+
+        elif odd_value > 2.40:
+
+            score -= 8
+
+    except:
+
+        pass
+
+    return score, market, odd
 
 # =========================================================
 # SAVE SIGNAL
 # =========================================================
 
-    def save_signal(
+def save_signal(
 
     fixture_id,
     match_name,
@@ -2714,22 +2886,22 @@ def analyze_match(match):
     # FILTERS
     # =====================================================
 
-    minimum_pressure = 55
+    minimum_pressure = 60
 
     if minute >= 60:
 
-        minimum_pressure = 60
+        minimum_pressure = 65
 
     if best_pressure < minimum_pressure:
 
         return
 
     # леко отпуснато
-    if dominance < 10:
+    if dominance < 12:
 
         return
 
-    minimum_xg = 0.8
+    minimum_xg = 1.3
 
     if best_xg < minimum_xg:
 
@@ -2749,7 +2921,7 @@ def analyze_match(match):
     if max(
         home_shots,
         away_shots
-    ) < 3:
+    ) < 4:
 
         return
 
@@ -2786,7 +2958,7 @@ def analyze_match(match):
     # NEXT GOAL
     # =====================================================
 
-    if dominance >= 12:
+    if dominance >= 15:
 
         if home_pressure > away_pressure:
 
@@ -2825,8 +2997,8 @@ def analyze_match(match):
 
     elif (
         total_goals <= 1
-        and best_pressure >= 60
-        and best_xg >= 1.5
+        and best_pressure >= 65
+        and best_xg >= 1.8
         and minute >= 40
     ):
 
@@ -2840,7 +3012,7 @@ def analyze_match(match):
 
     elif (
         minute >= 75
-        and best_pressure >= 62
+        and best_pressure >= 68
         and abs(home_goals-away_goals) < 4
     ):
 
@@ -2852,7 +3024,7 @@ def analyze_match(match):
 
     elif (
 
-        minute >= 60
+        minute >= 68
         and minute <= 82
         and abs(
             home_goals-away_goals
@@ -2878,7 +3050,7 @@ def analyze_match(match):
 
         if (
 
-            total_fouls >= 16
+            total_fouls >= 20
             and total_cards >= 2
 
         ):
@@ -2918,8 +3090,8 @@ def analyze_match(match):
 
             home_name in big_teams
             and home_goals < away_goals
-            and home_pressure >= 60
-            and total_corners >= 5
+            and home_pressure >= 65
+            and total_corners >= 6
 
         ):
 
@@ -2932,8 +3104,8 @@ def analyze_match(match):
 
             away_name in big_teams
             and away_goals < home_goals
-            and away_pressure >= 60
-            and total_corners >= 5
+            and away_pressure >= 65
+            and total_corners >= 6
 
         ):
 
@@ -3155,7 +3327,90 @@ async def daily_ticket():
 
             # value sweet spot
             if odd < 1.65:
+                continue
 
+            if odd > 2.05:
+                continue
+
+            # само реални пазари
+            if market not in [
+
+                "⚽ OVER 2.5 GOALS",
+                "📉 UNDER 2.5 GOALS",
+                "💎 BTTS"
+
+            ]:
+
+                continue
+
+            # топ летни лиги
+            preferred = [
+
+                "Norway",
+                "Sweden",
+                "Denmark",
+                "Brazil",
+                "Argentina",
+                "Japan",
+                "USA"
+
+            ]
+
+            if country in preferred:
+
+                confidence += 4
+
+            picks.append(
+
+                (
+                    confidence,
+                    home,
+                    away,
+                    market,
+                    odd,
+                    league
+                )
+
+            )
+
+        except:
+            pass
+
+    # сортира най-силните
+    picks = sorted(
+        picks,
+        reverse=True
+    )
+
+    final_picks = picks[:3]
+
+    if len(final_picks) < 3:
+        return
+
+    msg = "🔥 DAILY AI BET SLIP\n\n"
+
+    for p in final_picks:
+
+        msg += (
+
+            f"🏆 {p[5]}\n"
+            f"⚽ {p[1]} vs {p[2]}\n"
+            f"🎯 {p[3]}\n"
+            f"💰 {p[4]}\n"
+            f"✅ {p[0]}%\n\n"
+
+        )
+
+        total_odds *= p[4]
+
+    msg += (
+        f"💎 TOTAL ODDS: "
+        f"{round(total_odds,2)}"
+    )
+
+    send_telegram(msg)
+
+    daily_ticket_sent = True
 # =========================================================
 # PREMATCH AI
 # =========================================================
@@ -3166,7 +3421,7 @@ async def prematch_loop():
 
         try:
 
-            
+            await daily_ticket()
 
             matches = get_upcoming_matches()
 
@@ -3370,7 +3625,224 @@ async def prematch_loop():
                         -
                         market_probability,
 
-                    
+                        2
+
+                    )
+
+                    # =================================================
+                    # FAIR ODD VALUE
+                    # =================================================
+
+                    if odd > fair_odd:
+
+                        confidence += 5
+
+                    # =================================================
+                    # SHARP / SOFT VALUE
+                    # =================================================
+
+                    if soft_odd:
+
+                        soft_edge = round(
+
+                            (
+                                soft_odd
+                                -
+                                sharp_odd
+                            )
+
+                            /
+                            sharp_odd * 100,
+
+                            2
+
+                        )
+
+                        if soft_edge >= 5:
+
+                            confidence += 6
+
+                    # =================================================
+                    # DROP + VELOCITY
+                    # =================================================
+
+                    drop, velocity = (
+
+                        odds_drop_signal(
+
+                            home,
+                            away,
+                            odd
+
+                        )
+
+                    )
+
+                    if (
+
+                        drop >= 0.15
+
+                        or
+
+                        velocity >= 0.02
+
+                    ):
+
+                        confidence += 8
+
+                    # =================================================
+                    # LEAGUE BONUS
+                    # =================================================
+
+                    if "Premier" in league:
+
+                        confidence += 4
+
+                    elif "La Liga" in league:
+
+                        confidence += 3
+
+                    elif "Serie A" in league:
+
+                        confidence += 2
+
+                    elif "Cup" in league:
+
+                        confidence -= 6
+
+                    confidence += min(
+
+                        len(home) % 5,
+
+                        4
+
+                    )
+
+                    confidence = min(
+                        confidence,
+                        92
+                    )
+
+                    # =================================================
+                    # FILTERS
+                    # =================================================
+
+                    if confidence < 90:
+                        continue
+
+                    if true_edge < 5:
+                        continue
+
+                    # =================================================
+                    # DUPLICATE
+                    # =================================================
+
+                    key = f"{home}_{away}"
+
+                    if not can_send_prematch(key):
+                        continue
+
+                    # =================================================
+                    # MESSAGE
+                    # =================================================
+
+                    msg = f"""
+🔥 PRE-MATCH AI SIGNAL
+
+🌍 {country}
+🏆 {league}
+
+⚽ {home} vs {away}
+
+⏰ {date.strftime("%d.%m %H:%M")}
+
+🎯 {market}
+
+💰 Sharp Odd:
+{sharp_odd}
+
+📉 Odds Drop:
+{drop}
+
+⚡ Velocity:
+{velocity}
+
+💎 True Edge:
++{true_edge}%
+
+📊 Over 2.5 Prob:
+{over25_prob}%
+
+💎 BTTS Prob:
+{btts_prob}%
+
+⚖ Fair Odd:
+{fair_odd}
+
+✅ Confidence:
+{confidence}%
+"""
+
+                    print(msg)
+
+                    send_telegram(msg)
+
+                    save_prematch(key)
+
+                except Exception as e:
+
+                    print(
+                        "PREMATCH MATCH ERROR:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "PREMATCH ERROR:",
+                e
+            )
+
+        await asyncio.sleep(1200)
+# =========================================================
+# LIVE LOOP
+# =========================================================
+
+async def live_loop():
+
+    while True:
+
+        try:
+
+            matches = get_live_matches()
+
+            print(
+                f"[{datetime.now()}] "
+                f"Live matches: {len(matches)}"
+            )
+
+            for match in matches:
+
+                try:
+
+                    analyze_match(match)
+
+                except Exception as e:
+
+                    print(
+                        "Match Error:",
+                        e
+                    )
+
+        except Exception as e:
+
+            print(
+                "LIVE ERROR:",
+                e
+            )
+
+        await asyncio.sleep(45)
+
 # =========================================================
 # THREAD
 # =========================================================
@@ -3422,4 +3894,5 @@ def main():
 if __name__ == "__main__":
 
     main()
+
 
