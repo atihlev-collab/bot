@@ -4020,15 +4020,7 @@ def main():
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
-    send_telegram("""
-🧪 TEST SIGNAL
 
-✅ Telegram Works
-
-⚽ Rangel Test
-
-🎯 NEXT GOAL HOME
-""")
     # LIVE
     live_thread = threading.Thread(
         target=start_live_loop,
