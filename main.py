@@ -3466,7 +3466,15 @@ async def daily_ticket():
             confidence += home_form["wins"] * 2
 
             confidence += away_form["wins"] * 2
-            
+
+            confidence += int(
+                home_form["avg_scored"] * 2
+            )
+
+            confidence += int(
+                away_form["avg_scored"] * 2  
+            )
+        
             over25_prob = 0
             btts_prob = 0
             
