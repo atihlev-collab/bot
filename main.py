@@ -3010,7 +3010,7 @@ def analyze_match(match):
         return
 
     # леко отпуснато
-    if dominance < 18:
+    if dominance < 15:
 
         return
 
@@ -3270,7 +3270,6 @@ def analyze_match(match):
 
     # LIVE само 78%+
     if confidence < 75:
-
         return
 
     # =====================================================
@@ -3871,7 +3870,7 @@ async def prematch_loop():
                     if confidence < 85:
                         continue
 
-                    if drop < 0.20:
+                    if drop < 0.10:
                         continue
 
                     if not soft_odd:
