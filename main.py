@@ -3269,7 +3269,7 @@ def analyze_match(match):
         return
 
     # LIVE само 78%+
-    if confidence < 78:
+    if confidence < 75:
 
         return
 
@@ -3560,7 +3560,7 @@ async def daily_ticket():
 
     final_picks = picks[:3]
 
-    if len(final_picks) < 3:
+    if len(final_picks) == 0:
         return
 
     msg = "🔥 DAILY AI BET SLIP\n\n"
@@ -3867,7 +3867,7 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 92:
+                    if confidence < 85:
                         continue
 
                     if drop < 0.20:
@@ -3881,7 +3881,7 @@ async def prematch_loop():
                         / sharp_odd * 100
                     )
 
-                    if soft_edge < 10:
+                    if soft_edge < 5:
                         continue
     
                   
