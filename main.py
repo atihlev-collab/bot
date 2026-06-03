@@ -3003,7 +3003,7 @@ def analyze_match(match):
 
     if minute >= 60:
 
-        minimum_pressure = 70
+        minimum_pressure = 68
         
 
     if best_pressure < minimum_pressure:
@@ -3239,9 +3239,10 @@ def analyze_match(match):
         f"MARKET FOUND: {home_name} vs {away_name} -> {market}"
     )
     if market is None:
-
+        print(f"NO MARKET: {home_name} vs {away_name}")
         return
-      # =====================================================
+       
+    # =====================================================
     # CONFIDENCE
     # =====================================================
 
@@ -3274,7 +3275,14 @@ def analyze_match(match):
 
     # LIVE само 78%+
     if confidence < 75:
-        return
+    print(
+        f"REJECTED CONF={confidence} "
+        f"P={best_pressure} "
+        f"D={dominance} "
+        f"xG={best_xg} "
+        f"{home_team} vs {away_team}"
+    )
+    return
 
     print(
         f"SIGNAL READY: {home_team} vs {away_team} CONF={confidence}"
