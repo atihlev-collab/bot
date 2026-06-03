@@ -3276,6 +3276,9 @@ def analyze_match(match):
     if confidence < 75:
         return
 
+    print(
+        f"SIGNAL READY: {home_team} vs {away_team} CONF={confidence}"
+)
     # =====================================================
     # MATCH INFO
     # =====================================================
@@ -3285,10 +3288,10 @@ def analyze_match(match):
     away_team = match["teams"]["away"]["name"]
 
     match_name = (
-        f"{home_team} vs {away_team}"
+      f"{home_team} vs {away_team}"
     )
 
-      # =====================================================
+    # =====================================================
     # MESSAGE
     # =====================================================
 
