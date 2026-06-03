@@ -3273,7 +3273,7 @@ def analyze_match(match):
 
         return
 
-    # LIVE само 78%+
+    # LIVE само 75%+
     if confidence < 75:
         print("TEST")
         return
