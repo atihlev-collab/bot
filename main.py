@@ -2987,13 +2987,13 @@ def analyze_match(match):
     )
     # BIG TEAM DOMINATION
 
-    if goal_difference >= 2:
-
-        best_pressure += 8
-
-    elif goal_difference >= 3:
+    if goal_difference >= 3:
 
         best_pressure += 12
+
+    elif goal_difference >= 2:
+
+        best_pressure += 8
 
        # =====================================================
     # FILTERS
@@ -3560,6 +3560,7 @@ async def daily_ticket():
 
     final_picks = picks[:3]
 
+    print(f"DAILY PICKS FOUND: {len(final_picks)}")
     if len(final_picks) == 0:
         return
 
