@@ -3004,7 +3004,12 @@ def analyze_match(match):
     if minute >= 60:
 
         minimum_pressure = 70
-
+        
+ print(
+    f"DEBUG {home_name} vs {away_name} | "
+    f"P={best_pressure} D={dominance} "
+    f"xG={best_xg}"
+)
     if best_pressure < minimum_pressure:
 
         return
