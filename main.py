@@ -3235,6 +3235,9 @@ def analyze_match(match):
                 f"📐 OVER {total_corners+2}.5 CORNERS"
             )
 
+    print(
+        f"MARKET FOUND: {home_name} vs {away_name} -> {market}"
+    )
     if market is None:
 
         return
