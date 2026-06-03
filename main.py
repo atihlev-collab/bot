@@ -3275,7 +3275,9 @@ def analyze_match(match):
 
     # LIVE само 78%+
     if confidence < 75:
-    print(
+        print("TEST")
+        return
+       
         f"REJECTED CONF={confidence} "
         f"P={best_pressure} "
         f"D={dominance} "
