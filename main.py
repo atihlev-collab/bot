@@ -3275,20 +3275,8 @@ def analyze_match(match):
 
     # LIVE само 75%+
     if confidence < 75:
-        print("TEST")
         return
-       
-        f"REJECTED CONF={confidence} "
-        f"P={best_pressure} "
-        f"D={dominance} "
-        f"xG={best_xg} "
-        f"{home_team} vs {away_team}"
-    )
-    return
-
-    print(
-        f"SIGNAL READY: {home_team} vs {away_team} CONF={confidence}"
-)
+   
     # =====================================================
     # MATCH INFO
     # =====================================================
