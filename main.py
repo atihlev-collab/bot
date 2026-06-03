@@ -3496,7 +3496,7 @@ async def daily_ticket():
             btts_prob = 0
             
             # само силни фишове
-            if confidence < 84:
+            if confidence < 50:
                 continue
 
             odd = float(odd)
