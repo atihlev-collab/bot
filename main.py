@@ -3463,36 +3463,45 @@ async def daily_ticket():
             over25_prob = poisson_data["over25"]
             btts_prob = poisson_data["btts"]
 
-            if market == "⚽ OVER 2.5 GOALS":
+            if market == "⚽ OVER 2.5 GOALS":          
 
-                if over25_prob < 55:
-                    continue
+                if over25_prob < 55:                     
 
-                confidence += int(
-                    (over25_prob - 50) / 3
-                )
+                    continue                                 
 
-             elif market == "💎 BTTS":
+                confidence += int(                      
 
-                 if btts_prob < 50:
-                    continue
+                    (over25_prob - 50) / 3                    
 
-                confidence += int(
-                   (btts_prob - 45) / 3
-                )
+               )                                        
 
-            confidence += home_form["wins"] * 2
+            elif market == "💎 BTTS":                
 
-            confidence += away_form["wins"] * 2
+                if btts_prob < 50:                      
 
-            confidence += int(
-                home_form["avg_scored"] * 2
-            )
+                    continue                                 
 
-            confidence += int(
-                away_form["avg_scored"] * 2
-            )
+                confidence += int(                      
 
+                    (btts_prob - 45) / 3                    
+
+               )                                          
+
+            confidence += home_form["wins"] * 2    
+
+            confidence += away_form["wins"] * 2      
+
+            confidence += int(                       
+
+               home_form["avg_scored"] * 2              
+
+           )                                          
+
+            confidence += int(                    
+
+               away_form["avg_scored"] * 2              
+
+           )                                          
             # DEFENSIVE BONUS / PENALTY
 
             if home_form["avg_conceded"] >= 1.5:
