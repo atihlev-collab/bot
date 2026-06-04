@@ -3338,12 +3338,12 @@ def analyze_match(match):
 ✅ Confidence:
 {confidence}%
 """
+ 
+asyncio.create_task(
+    send_telegram(message)
+)
 
-    send_telegram(
-        message
-    )
-
-    update_live_stats(
+update_live_stats(
         market,
         confidence
     )
@@ -3941,7 +3941,7 @@ async def prematch_loop():
 
                     print(msg)
 
-                    send_telegram(msg)
+                    await send_telegram(msg)
 
                     save_prematch(key)
 
