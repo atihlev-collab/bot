@@ -3459,7 +3459,7 @@ async def daily_ticket():
             over25_prob = poisson_data["over25"]  
             btts_prob = poisson_data["btts"]      
 
-           if market == "⚽ OVER 2.5 GOALS":    
+            if market == "⚽ OVER 2.5 GOALS":    
                if over25_prob < 55:             
                    continue                   
                confidence += int(                
