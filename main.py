@@ -3446,10 +3446,10 @@ async def daily_ticket():
             away_form = get_team_form(away_id)    
 
             if not home_form:                     
-                    continue                         
+                continue                         
 
             if not away_form:                     
-                    continue                        
+                continue                        
 
             poisson_data = poisson_probability(   
                 home_form["avg_scored"],           
@@ -3464,7 +3464,7 @@ async def daily_ticket():
                    continue                   
                confidence += int(                
                    (over25_prob - 50) / 3       
-                   )                                  
+               )                                  
 
            elif market == "💎 BTTS":            
               if btts_prob < 50:                 
