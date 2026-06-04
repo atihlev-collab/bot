@@ -143,12 +143,17 @@ def send_telegram(message):
 
         print("SENDING TO TELEGRAM...")
 
-        asyncio.run(
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        loop.run_until_complete(
             bot.send_message(
                 chat_id=CHAT_ID,
                 text=message
             )
         )
+
+        loop.close()
 
         print("TELEGRAM SENT")
 
