@@ -3776,7 +3776,14 @@ async def prematch_loop():
 
                     )
 
-                    our_probability = confidence
+                    if market == "⚽ OVER 2.5 GOALS":
+                         our_probability = over25_prob
+
+                    elif market == "💎 BTTS":
+                         our_probability = btts_prob
+
+                    else:
+                         our_probability = confidence
 
                     true_edge = round(
 
