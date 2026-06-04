@@ -3587,7 +3587,7 @@ async def daily_ticket():
         f"{round(total_odds,2)}"
     )
 
-    send_telegram(msg)
+    await send_telegram(msg)
 
     daily_ticket_sent = True
 # =========================================================
