@@ -3462,7 +3462,25 @@ async def daily_ticket():
 
             over25_prob = poisson_data["over25"]
             btts_prob = poisson_data["btts"]
-           
+
+            if market == "⚽ OVER 2.5 GOALS":
+
+                if over25_prob < 55:
+                    continue
+
+               confidence += int(
+                  (over25_prob - 50) / 3
+               )
+
+           elif market == "💎 BTTS":
+
+              if btts_prob < 50:
+                  continue
+
+              confidence += int(
+                 (btts_prob - 45) / 3
+              )
+          
             confidence += home_form["wins"] * 2
 
             confidence += away_form["wins"] * 2
