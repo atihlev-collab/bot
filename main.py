@@ -4030,8 +4030,7 @@ def main():
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
 
-    send_telegram("🧪 TEST AFTER DEPLOY")
-  
+    
     # LIVE
     live_thread = threading.Thread(
         target=start_live_loop,
