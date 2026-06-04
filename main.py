@@ -3455,6 +3455,14 @@ async def daily_ticket():
             if not away_form:
                 continue
 
+            poisson_data = poisson_probability(
+               home_form["avg_scored"],
+               away_form["avg_scored"]
+            )
+
+            over25_prob = poisson_data["over25"]
+            btts_prob = poisson_data["btts"]
+           
             confidence += home_form["wins"] * 2
 
             confidence += away_form["wins"] * 2
@@ -3492,9 +3500,7 @@ async def daily_ticket():
             confidence += int(
                 away_form["btts"] / 2
             )
-          
-            over25_prob = 0
-            btts_prob = 0
+           
             
             # само силни фишове
             if confidence < 60:
