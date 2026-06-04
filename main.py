@@ -3437,10 +3437,13 @@ async def daily_ticket():
                 away                                      
             )                                              
 
-            confidence = 58 + score     
+            confidence = 58 + score                                   
 
-            confidence += home_form["wins"] * 2     
-            confidence += away_form["wins"] * 2      
+            confidence += home_form["wins"] * 2                        
+            confidence += away_form["wins"] * 2                      
+
+            home_id = m["teams"]["home"]["id"]                        
+            away_id = m["teams"]["away"]["id"]                           
 
             confidence += int(
                 home_form["avg_scored"] * 2
