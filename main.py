@@ -3439,7 +3439,39 @@ async def daily_ticket():
 
             confidence = 58 + score                         
 
-                                        
+            home_id = m["teams"]["home"]["id"]     
+            away_id = m["teams"]["away"]["id"]     
+
+            home_form = get_team_form(home_id)    
+            away_form = get_team_form(away_id)    
+
+            if not home_form:                     
+                    continue                         
+
+            if not away_form:                     
+                    continue                        
+
+            poisson_data = poisson_probability(   
+                    home_form["avg_scored"],           
+                    away_form["avg_scored"]          
+            )                                   
+
+            over25_prob = poisson_data["over25"]  
+            btts_prob = poisson_data["btts"]      
+
+           if market == "⚽ OVER 2.5 GOALS":    
+                    if over25_prob < 55:             
+                            continue                   
+                    confidence += int(                
+                            (over25_prob - 50) / 3       
+                    )                                  
+
+            elif market == "💎 BTTS":            
+                     if btts_prob < 50:                 
+                             continue                      
+                     confidence += int(                 
+                             (btts_prob - 45) / 3           
+                     )                                                           
           
            
             
