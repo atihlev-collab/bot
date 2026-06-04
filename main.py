@@ -2911,7 +2911,7 @@ def analyze_match(match):
     if minute is None:
         return
 
-    if minute < 30 or minute > 88:
+    if minute < 30 or minute > 75:
         return
 
     home_goals = match["goals"]["home"]
