@@ -3338,29 +3338,28 @@ def analyze_match(match):
 ✅ Confidence:
 {confidence}%
 """
- 
+
 asyncio.create_task(
     send_telegram(message)
 )
 
 update_live_stats(
-        market,
-        confidence
-    )
+    market,
+    confidence
+)
 
-    save_signal(
+save_signal(
+    fixture_id,
+    match_name,
+    market,
+    best_pressure,
+    confidence,
+    edge
+)
 
-        fixture_id,
-        match_name,
-        market,
-        best_pressure,
-        confidence,
-        edge
-    )
-
-    save_sent(
-        fixture_id
-    )
+save_sent(
+    fixture_id
+)
 # =========================================================
 # DAILY BET SLIP
 # =========================================================
