@@ -3466,7 +3466,7 @@ async def daily_ticket():
                    (over25_prob - 50) / 3       
                )                                  
 
-           elif market == "💎 BTTS":            
+            elif market == "💎 BTTS":            
               if btts_prob < 50:                 
                   continue                      
               confidence += int(                 
