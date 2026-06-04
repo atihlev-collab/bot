@@ -3468,30 +3468,30 @@ async def daily_ticket():
                 if over25_prob < 55:
                     continue
 
-               confidence += int(
-                  (over25_prob - 50) / 3
-               )
+                confidence += int(
+                    (over25_prob - 50) / 3
+                )
 
-           elif market == "💎 BTTS":
+             elif market == "💎 BTTS":
 
-               if btts_prob < 50:
-                   continue
+                 if btts_prob < 50:
+                    continue
 
-              confidence += int(
-                  (btts_prob - 45) / 3
-              )
-          
-             confidence += home_form["wins"] * 2
+                confidence += int(
+                   (btts_prob - 45) / 3
+                )
 
-             confidence += away_form["wins"] * 2
+            confidence += home_form["wins"] * 2
 
-             confidence += int(
-                 home_form["avg_scored"] * 2
-                 )
+            confidence += away_form["wins"] * 2
 
-             confidence += int(
-                 away_form["avg_scored"] * 2  
-             )
+            confidence += int(
+                home_form["avg_scored"] * 2
+            )
+
+            confidence += int(
+                away_form["avg_scored"] * 2
+            )
 
             # DEFENSIVE BONUS / PENALTY
 
