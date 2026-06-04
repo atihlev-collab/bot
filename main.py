@@ -134,21 +134,19 @@ def init_database():
     conn.close()
 
 # =========================================================
-# TELEGRAM
+# TELEGRAM ASYNC
 # =========================================================
 
-def send_telegram(message):
+async def send_telegram(message):
 
     try:
 
         print("SENDING TO TELEGRAM...")
 
-        asyncio.run(
-    bot.send_message(
-        chat_id=CHAT_ID,
-        text=message
-    )
-)
+        await bot.send_message(
+            chat_id=CHAT_ID,
+            text=message
+        )
 
         print("TELEGRAM SENT")
 
