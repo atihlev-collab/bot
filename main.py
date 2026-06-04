@@ -3432,70 +3432,8 @@ async def daily_ticket():
 
                       
 
-            if market == "⚽ OVER 2.5 GOALS":          
-
-                if over25_prob < 55:                     
-
-                    continue                                 
-
-                confidence += int(                      
-
-                    (over25_prob - 50) / 3                    
-
-               )                                        
-
-            elif market == "💎 BTTS":                
-
-                if btts_prob < 50:                      
-
-                    continue                                 
-
-                confidence += int(                      
-
-                    (btts_prob - 45) / 3                    
-
-               )                                          
-
-            confidence += home_form["wins"] * 2    
-
-            confidence += away_form["wins"] * 2      
-
-            confidence += int(                       
-
-               home_form["avg_scored"] * 2              
-
-           )                                          
-
-            confidence += int(                    
-
-               away_form["avg_scored"] * 2              
-
-           )                                          
-            # DEFENSIVE BONUS / PENALTY
-
-            if home_form["avg_conceded"] >= 1.5:
-                confidence += 2
-
-            if away_form["avg_conceded"] >= 1.5:
-                confidence += 2
-
-            if home_form["avg_conceded"] <= 0.8:
-                confidence -= 2
-
-            if away_form["avg_conceded"] <= 0.8:
-                confidence -= 2
-    
-            confidence += home_form["over25"]
-
-            confidence += away_form["over25"]
-
-            confidence += int(
-                home_form["btts"] / 2
-            )
-
-            confidence += int(
-                away_form["btts"] / 2
-            )
+                                        
+          
            
             
             # само силни фишове
