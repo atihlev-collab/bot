@@ -3430,38 +3430,27 @@ async def daily_ticket():
 
                 continue
 
-            score, market, odd = (
-                calculate_match_score(
-                    country,
-                    league,
-                    home,
-                    away
-                )
-            )
+                   score, market, fake_odd = (          
 
-            confidence = 58 + score
+                    confidence = 58 + score              
+                    home_id = m["teams"]["home"]["id"] 
+                    away_id = m["teams"]["away"]["id"]  
+                    home_form = get_team_form(home_id)   
+                    away_form = get_team_form(away_id)   
 
-            home_id = m["teams"]["home"]["id"]
+                    if not home_form:                  
+                        continue                            
 
-            away_id = m["teams"]["away"]["id"]
+                    if not away_form:                    
+                        continue                             
 
-            home_form = get_team_form(home_id)
+                    poisson_data = poisson_probability(  
+                        home_form["avg_scored"],            
+                        away_form["avg_scored"]             
+                    )                                   
 
-            away_form = get_team_form(away_id)
-           
-            if not home_form:
-                continue
-
-            if not away_form:
-                continue
-
-            poisson_data = poisson_probability(
-                home_form["avg_scored"],
-                away_form["avg_scored"]
-            )
-
-            over25_prob = poisson_data["over25"]
-            btts_prob = poisson_data["btts"]
+                    over25_prob = poisson_data["over25"] 
+                    btts_prob = poisson_data["btts"]     
 
             if market == "⚽ OVER 2.5 GOALS":          
 
