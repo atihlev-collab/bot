@@ -3430,7 +3430,14 @@ async def daily_ticket():
 
                 continue
 
-                      
+            score, market, odd = calculate_match_score(    
+                country,   
+                league,
+                home,                                      
+                away                                      
+            )                                              
+
+            confidence = 58 + score                         
 
                                         
           
