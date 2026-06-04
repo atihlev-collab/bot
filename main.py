@@ -3439,8 +3439,8 @@ async def daily_ticket():
 
             confidence = 58 + score     
 
-            confidence += home_form["wins"] * 2      ← същото ниво като confidence = 58 + score
-            confidence += away_form["wins"] * 2      ← същото ниво
+            confidence += home_form["wins"] * 2     
+            confidence += away_form["wins"] * 2      
 
             confidence += int(
                 home_form["avg_scored"] * 2
