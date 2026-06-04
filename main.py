@@ -3033,7 +3033,7 @@ def analyze_match(match):
     if max(
         home_shots,
         away_shots
-    ) < 5:
+    ) < 3:
 
         return
 
