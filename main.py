@@ -3726,14 +3726,14 @@ async def prematch_loop():
                     if not away_form:                      
                         continue                             
 
-                    poisson_data = poisson_probability(     
-                        home_form["avg_scored"],              
-                        away_form["avg_scored"]               
-                    )                                       
+                    poisson_data = poisson_probability(      
+                        home_form["avg_scored"],            
+                        away_form["avg_scored"]              
+                    )                                        
 
-                        over25_prob = poisson_data["over25"]  
+                    over25_prob = poisson_data["over25"]     
 
-                        btts_prob = poisson_data["btts"]        
+                    btts_prob = poisson_data["btts"]            
                     # =================================================
                     # FAIR ODDS
                     # =================================================
