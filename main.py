@@ -3471,7 +3471,7 @@ async def daily_ticket():
                 if btts_prob < 50:               
                     continue                      
 
-               confidence += int(               
+                confidence += int(               
                    (btts_prob - 45) / 3           
                )                                                              
           
