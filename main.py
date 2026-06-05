@@ -3469,7 +3469,7 @@ async def daily_ticket():
 
 ) / 2
 
-away_attack = (
+    away_attack = (
 
     away_form["avg_scored"]
     +
