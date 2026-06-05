@@ -4492,6 +4492,62 @@ async def prematch_loop():
                         confidence += 4
 
                     # =================================================
+                    # BOTH SIDES VALUE ENGINE
+                    # =================================================
+
+                    attack_power = (
+
+                        home_form["avg_scored"]
+                        +
+                        away_form["avg_scored"]
+
+                    )
+
+                    defence_weakness = (
+
+                        home_form["avg_conceded"]
+                        +
+                        away_form["avg_conceded"]
+
+                    )
+
+                    if (
+
+                        attack_power >= 3.5
+
+                        and
+
+                        defence_weakness >= 2.5
+
+                    ):
+
+                        confidence += 6
+
+                    elif (
+
+                        attack_power >= 3
+
+                        and
+
+                        defence_weakness >= 2
+
+                    ):
+
+                        confidence += 4
+
+                    elif (
+
+                        attack_power < 2
+
+                        and
+
+                        defence_weakness < 2
+
+                    ):
+
+                        confidence -= 6
+
+                    # =================================================
                     # CONSISTENCY ENGINE
                     # =================================================
 
