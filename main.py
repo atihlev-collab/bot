@@ -3767,36 +3767,27 @@ async def prematch_loop():
 
                   
                    
-                    home_attack = (
+                   home_attack = (
+                       home_form["avg_scored"]
+                       +
+                       away_form["avg_conceded"]
+                   ) / 2
 
-                        home_form["avg_scored"]
-                        +
-                        away_form["avg_conceded"]
+                   away_attack = (
+                       away_form["avg_scored"]
+                       +
+                       home_form["avg_conceded"]
+                   ) / 2
 
-                    ) / 2
-
-                    away_attack = (
-
-                        away_form["avg_scored"]
-                        +
-                        home_form["avg_conceded"]
-
-                    ) / 2
-
-                    poisson_data = poisson_probability(
-
-                        home_attack,
-                        away_attack
-
-                       poisson_data = poisson_probability(
+                   poisson_data = poisson_probability(
 
                        home_attack,
                        away_attack
 
-                    )                          
+                   )
 
-                    over25_prob = poisson_data["over25"]     
-                    btts_prob = poisson_data["btts"]     
+                   over25_prob = poisson_data["over25"]
+                   btts_prob = poisson_data["btts"]
                                           
                     if market == "⚽ OVER 2.5 GOALS":                            
                         if over25_prob < 55:
