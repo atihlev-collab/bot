@@ -4320,6 +4320,58 @@ async def prematch_loop():
                         confidence += 8
 
                     # =================================================
+                    # GOAL SYNERGY ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"]
+                        >=
+                        away_form["avg_conceded"]
+
+                    ):
+
+                        confidence += 2
+
+                    if (
+
+                        away_form["avg_scored"]
+                        >=
+                        home_form["avg_conceded"]
+
+                    ):
+
+                        confidence += 2
+
+                    if (
+
+                        home_form["avg_scored"]
+                        >= 1.8
+
+                        and
+
+                        away_form["avg_conceded"]
+                        >= 1.8
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        away_form["avg_scored"]
+                        >= 1.8
+
+                        and
+
+                        home_form["avg_conceded"]
+                        >= 1.8
+
+                    ):
+
+                        confidence += 4
+
+                    # =================================================
                     # RECENT FORM ENGINE
                     # =================================================
 
