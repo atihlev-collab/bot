@@ -4138,6 +4138,46 @@ async def prematch_loop():
                     ):
 
                         confidence -= 6
+
+                    # =================================================
+                    # GOAL EXPLOSION ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] >= 2
+
+                        and
+
+                        away_form["avg_scored"] >= 2
+
+                    ):
+
+                        confidence += 5
+
+                    elif (
+
+                        home_form["avg_scored"] >= 1.8
+
+                        and
+
+                        away_form["avg_scored"] >= 1.8
+
+                    ):
+
+                        confidence += 3
+
+                    if (
+
+                        home_form["avg_scored"] <= 0.8
+
+                        and
+
+                        away_form["avg_scored"] <= 0.8
+
+                    ):
+
+                        confidence -= 6
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
