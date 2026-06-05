@@ -3767,7 +3767,7 @@ async def prematch_loop():
 
                   
                    
-                   home_attack = (
+    home_attack = (
 
     home_form["avg_scored"]
     +
