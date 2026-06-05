@@ -5389,6 +5389,30 @@ async def prematch_loop():
                         confidence += 4
 
                     # =================================================
+                    # ALL SYSTEMS GO ENGINE
+                    # =================================================
+
+                    if (
+
+                        true_edge >= 8
+
+                        and
+
+                        model_edge >= 8
+
+                        and
+
+                        poisson_edge >= 8
+
+                        and
+
+                        clv >= 5
+
+                    ):
+
+                        confidence += 10
+
+                    # =================================================
                     # TRIPLE VALUE ENGINE
                     # =================================================
 
@@ -5438,6 +5462,42 @@ async def prematch_loop():
                     ):
 
                         confidence += 6
+
+                    # =================================================
+                    # FAKE VALUE ENGINE
+                    # =================================================
+
+                    if (
+
+                        true_edge >= 10
+
+                        and
+
+                        over25_prob < 55
+
+                        and
+
+                        market == "⚽ OVER 2.5 GOALS"
+
+                    ):
+
+                        confidence -= 8
+
+                    if (
+
+                        true_edge >= 10
+
+                        and
+
+                        btts_prob < 50
+
+                        and
+
+                        market == "💎 BTTS"
+
+                    ):
+
+                        confidence -= 8
 
                     # =================================================
                     # MARKET CONSENSUS ENGINE
