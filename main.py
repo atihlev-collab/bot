@@ -4568,6 +4568,46 @@ async def prematch_loop():
                         confidence -= 8
 
                     # =================================================
+                    # ELITE VALUE ENGINE
+                    # =================================================
+
+                    if (
+
+                        model_edge >= 10
+
+                        and
+
+                        true_edge >= 10
+
+                    ):
+
+                        confidence += 6
+
+                    elif (
+
+                        model_edge >= 7
+
+                        and
+
+                        true_edge >= 7
+
+                    ):
+
+                        confidence += 4
+
+                    elif (
+
+                        model_edge >= 5
+
+                        and
+
+                        true_edge >= 5
+
+                    ):
+
+                        confidence += 2
+
+                    # =================================================
                     # NO VALUE PENALTY ENGINE
                     # =================================================
 
