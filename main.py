@@ -3880,14 +3880,7 @@ async def prematch_loop():
 
                     true_edge = round(
 
-                    if model_edge >= 5:
-                        confidence += 3
-
-                    if model_edge >= 8:
-                        confidence += 4
-
-                    if model_edge >= 12:
-                        confidence += 5
+                    
 
                         our_probability
                         -
@@ -3896,6 +3889,15 @@ async def prematch_loop():
                         2
 
                     )
+
+                   if model_edge >= 5:
+                        confidence += 3
+
+                    if model_edge >= 8:
+                        confidence += 4
+
+                    if model_edge >= 12:
+                        confidence += 5
 
                     # =================================================
                     # VALUE + FORM FILTER ENGINE
