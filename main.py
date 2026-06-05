@@ -4776,6 +4776,50 @@ async def prematch_loop():
                             confidence += 2
 
                     # =================================================
+                    # POISSON EDGE ENGINE
+                    # =================================================
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        poisson_edge = (
+
+                            over25_prob
+                            -
+                            market_probability
+
+                        )
+
+                    elif market == "💎 BTTS":
+
+                        poisson_edge = (
+
+                            btts_prob
+                            -
+                            market_probability
+
+                        )
+
+                    else:
+
+                        poisson_edge = 0
+
+                    if poisson_edge >= 15:
+
+                        confidence += 6
+
+                    elif poisson_edge >= 10:
+
+                        confidence += 4
+
+                    elif poisson_edge >= 5:
+
+                        confidence += 2
+
+                    elif poisson_edge <= -5:
+
+                        confidence -= 6
+
+                    # =================================================
                     # MARKET CONSENSUS ENGINE
                     # =================================================
 
