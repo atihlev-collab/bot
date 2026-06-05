@@ -4536,6 +4536,34 @@ async def prematch_loop():
                         confidence += 6
 
                     # =================================================
+                    # GOAL EXPECTATION ENGINE
+                    # =================================================
+
+                    expected_goals = (
+
+                        home_attack
+                        +
+                        away_attack
+
+                    )
+
+                    if expected_goals >= 3:
+
+                        confidence += 3
+
+                    if expected_goals >= 4:
+
+                        confidence += 5
+
+                    if expected_goals >= 5:
+
+                        confidence += 7
+
+                    if expected_goals <= 2:
+
+                        confidence -= 5
+
+                    # =================================================
                     # CHAOS MATCH ENGINE
                     # =================================================
 
@@ -4754,6 +4782,30 @@ async def prematch_loop():
                     if scored_gap >= 2:
 
                         confidence -= 3
+
+                    #=================================================
+                    # FORM STABILITY ENGINE
+                    # =================================================
+
+                    total_form = (
+
+                        home_form["wins"]
+                        +
+                        away_form["wins"]
+
+                    )
+
+                    if total_form >= 7:
+
+                        confidence += 3
+
+                    if total_form >= 9:
+
+                        confidence += 5
+
+                    if total_form <= 2:
+
+                        confidence -= 5
 
                     # =================================================
                     # DOUBLE FAILURE ENGINE
@@ -5609,6 +5661,34 @@ async def prematch_loop():
                     ):
 
                         confidence += 6
+
+                    # =================================================
+                    # SMART MONEY CONFIRMATION
+                    # =================================================
+
+                    if (
+
+                        clv >= 5
+
+                        and
+
+                        soft_edge >= 5
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        clv >= 8
+
+                        and
+
+                        soft_edge >= 8
+
+                    ):
+
+                        confidence += 8
 
                     # =================================================
                     # SELF LEARNING ENGINE
