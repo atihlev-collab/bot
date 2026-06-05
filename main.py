@@ -3969,6 +3969,26 @@ async def prematch_loop():
 
                     )
 
+                    match_key = (
+                        f"{home}_{away}"
+                    )
+
+                    track_opening_odds(
+                        match_key,
+                        odd
+                    )
+
+                    clv = calculate_clv(
+                        match_key,
+                        odd
+                    )
+
+                    if clv >= 3:
+                        confidence += 3
+
+                    if clv >= 5:
+                        confidence += 4
+
                     if (
 
                         drop >= 0.15
@@ -4018,7 +4038,7 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
-                    if confidence < 80:
+                    if confidence < 82:
                         continue
 
                     if drop < 0.05:
