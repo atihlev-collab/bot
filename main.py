@@ -3851,8 +3851,70 @@ async def prematch_loop():
                         2
 
                     )
-                    if true_edge < 7:
-                        continue
+
+                    # =================================================
+                    # VALUE + FORM FILTER ENGINE
+                    # =================================================
+
+                    form_score = (
+
+                        home_form["wins"]
+                        +
+                        away_form["wins"]
+
+                    )
+
+                    goals_score = (
+
+                        home_form["avg_scored"]
+                        +
+                        away_form["avg_scored"]
+
+                    )
+
+                    over_score = (
+
+                        home_form["over25"]
+                        +
+                        away_form["over25"]
+
+                    )
+
+                    btts_score = (
+
+                        home_form["btts"]
+                        +
+                        away_form["btts"]
+
+                    )
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        if over_score < 4:
+                            continue
+
+                        if goals_score < 2.4:
+                            continue
+
+                        if true_edge < 7:
+                            continue
+
+                    elif market == "💎 BTTS":
+
+                        if btts_score < 4:
+                            continue
+
+                        if goals_score < 2.2:
+                            continue
+
+                        if true_edge < 6:
+                            continue
+
+                    confidence += min(
+                        form_score,
+                        8
+                    )
+                    
 
                     # =================================================
                     # FAIR ODD VALUE
