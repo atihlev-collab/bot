@@ -4588,6 +4588,27 @@ async def prematch_loop():
                         confidence -= 4
 
                     # =================================================
+                    # MATCH BALANCE ENGINE
+                    # =================================================
+
+                    win_balance = abs(
+
+                        home_form["wins"]
+
+                        -
+                        away_form["wins"]
+
+                    )
+
+                    if win_balance <= 1:
+
+                        confidence += 3
+
+                    elif win_balance >= 4:
+
+                        confidence -= 3
+
+                    # =================================================
                     # CHAOS MATCH ENGINE
                     # =================================================
 
@@ -5655,6 +5676,26 @@ async def prematch_loop():
 
                     elif regime == "CHAOTIC":
                         confidence -= 5
+
+                    # =================================================
+                    # MARKET STABILITY ENGINE
+                    # =================================================
+
+                    if (
+
+                        drop >= 0.08
+
+                        and
+
+                        drop <= 0.25
+
+                    ):
+
+                        confidence += 3
+
+                    elif drop > 0.50:
+
+                        confidence -= 4
 
                     # =================================================
                     # AGGRESSIVE SHARP MONEY
