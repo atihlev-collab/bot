@@ -4728,6 +4728,34 @@ async def prematch_loop():
                         confidence -= 4
 
                     # =================================================
+                    # PERFECT FORM ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["wins"] >= 4
+
+                        and
+
+                        away_form["wins"] >= 4
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        home_form["wins"] == 5
+
+                        and
+
+                        away_form["wins"] == 5
+
+                    ):
+
+                        confidence += 8
+
+                    # =================================================
                     # MARKET DISAGREEMENT ENGINE
                     # =================================================
 
@@ -4846,6 +4874,29 @@ async def prematch_loop():
                     elif poisson_edge <= -5:
 
                         confidence -= 6
+
+                    # =================================================
+                    # DOUBLE CONFIRMATION ENGINE
+                    # =================================================
+
+                    confirmations = 0
+
+                    if true_edge >= 7:
+                        confirmations += 1
+
+                    if model_edge >= 7:
+                        confirmations += 1
+
+                    if market_gap >= 7:
+                        confirmations += 1
+
+                    if confirmations >= 2:
+
+                        confidence += 4
+
+                    if confirmations >= 3:
+
+                        confidence += 7
 
                     # =================================================
                     # MARKET CONSENSUS ENGINE
@@ -5351,6 +5402,22 @@ async def prematch_loop():
                     ):
 
                         confidence += 8
+
+                    # =================================================
+                    # STEAM MOVE ENGINE
+                    # =================================================
+
+                    if drop >= 0.15:
+
+                        confidence += 3
+
+                    if drop >= 0.25:
+
+                        confidence += 5
+
+                    if drop >= 0.35:
+
+                        confidence += 7
 
                     # =================================================
                     # SMART CLV BOOST
