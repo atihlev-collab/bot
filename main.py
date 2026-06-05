@@ -3914,7 +3914,31 @@ async def prematch_loop():
                         form_score,
                         8
                     )
-                    
+                   
+                    # =================================================
+                    # MARKET CONFIDENCE ENGINE
+                    # =================================================
+
+                    if true_edge >= 7:
+                        confidence += 3
+
+                    if true_edge >= 10:
+                        confidence += 4
+
+                    if true_edge >= 15:
+                        confidence += 5
+
+                    if drop >= 0.10:
+                        confidence += 3
+
+                    if drop >= 0.20:
+                        confidence += 4
+
+                    if velocity >= 0.02:
+                        confidence += 3
+
+                    if velocity >= 0.04:
+                        confidence += 4 
 
                     # =================================================
                     # FAIR ODD VALUE
