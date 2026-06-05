@@ -4074,6 +4074,34 @@ async def prematch_loop():
                     if total_btts <= 2:
 
                         confidence -= 4
+
+                    # =================================================
+                    # OVER25 MONSTER ENGINE
+                    # =================================================
+
+                    total_over25 = (
+
+                        home_form["over25"]
+                        +
+                        away_form["over25"]
+
+                    )
+
+                    if total_over25 >= 6:
+
+                        confidence += 3
+
+                    if total_over25 >= 8:
+
+                        confidence += 5
+
+                    if total_over25 >= 10:
+
+                        confidence += 7
+
+                    if total_over25 <= 2:
+
+                        confidence -= 5
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
