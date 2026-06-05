@@ -3788,6 +3788,11 @@ async def prematch_loop():
                         home_attack,
                         away_attack
 
+                       poisson_data = poisson_probability(
+
+                       home_attack,
+                       away_attack
+
                     )                          
 
                     over25_prob = poisson_data["over25"]     
