@@ -4564,6 +4564,30 @@ async def prematch_loop():
                         confidence -= 5
 
                     # =================================================
+                    # POISSON BALANCE ENGINE
+                    # =================================================
+
+                    goal_balance = abs(
+
+                        home_attack
+                        -
+                        away_attack
+
+                    )
+
+                    if goal_balance <= 0.5:
+
+                        confidence += 4
+
+                    elif goal_balance <= 1:
+
+                        confidence += 2
+
+                    elif goal_balance >= 2:
+
+                        confidence -= 4
+
+                    # =================================================
                     # CHAOS MATCH ENGINE
                     # =================================================
 
@@ -4582,6 +4606,42 @@ async def prematch_loop():
                         and
 
                         away_form["avg_conceded"] >= 1.5
+
+                    ):
+
+                        confidence += 8
+
+                    # =================================================
+                    # GOAL FEST ENGINE
+                    # =================================================
+
+                    if (
+
+                        total_scored >= 4
+
+                        and
+
+                        total_btts >= 6
+
+                        and
+
+                        total_over25 >= 6
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        total_scored >= 5
+
+                        and
+
+                        total_btts >= 8
+
+                        and
+
+                        total_over25 >= 8
 
                     ):
 
@@ -5064,6 +5124,34 @@ async def prematch_loop():
                     elif value_score == 2:
 
                         confidence += 4
+
+                    # =================================================
+                    # ELITE VALUE FILTER
+                    # =================================================
+
+                    if (
+
+                        true_edge >= 10
+
+                        and
+
+                        odd >= 1.75
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        true_edge >= 15
+
+                        and
+
+                        odd >= 1.90
+
+                    ):
+
+                        confidence += 6
 
                     # =================================================
                     # MARKET CONSENSUS ENGINE
