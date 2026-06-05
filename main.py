@@ -3794,6 +3794,8 @@ async def prematch_loop():
                         2
 
                     )
+                    if true_edge < 7:
+                        continue
 
                     # =================================================
                     # FAIR ODD VALUE
