@@ -4178,6 +4178,33 @@ async def prematch_loop():
                     ):
 
                         confidence -= 6
+
+                    # =================================================
+                    # DEFENSIVE NIGHTMARE ENGINE
+                    # =================================================
+
+                    weak_defence = 0
+
+                    if home_form["avg_conceded"] >= 1.8:
+                        weak_defence += 1
+
+                    if away_form["avg_conceded"] >= 1.8:
+                        weak_defence += 1
+
+                    if home_form["avg_conceded"] >= 2.5:
+                        weak_defence += 1
+
+                    if away_form["avg_conceded"] >= 2.5:
+                        weak_defence += 1
+
+                    if weak_defence >= 2:
+                        confidence += 4
+
+                    if weak_defence >= 3:
+                        confidence += 6
+
+                    if weak_defence >= 4:
+                        confidence += 8
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
