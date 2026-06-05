@@ -3777,9 +3777,9 @@ async def prematch_loop():
                        away_form["avg_scored"]
                        +
                        home_form["avg_conceded"]
-                   ) / 2
+                    ) / 2
 
-                   poisson_data = poisson_probability(
+                    poisson_data = poisson_probability(
 
                        home_attack,
                        away_attack
