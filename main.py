@@ -4165,6 +4165,34 @@ async def prematch_loop():
                         confidence -= 5
 
                     # =================================================
+                    # HOT MATCH ENGINE
+                    # =================================================
+
+                    if (
+
+                        total_scored >= 4
+
+                        and
+
+                        total_over25 >= 6
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        total_scored >= 5
+
+                        and
+
+                        total_over25 >= 8
+
+                    ):
+
+                        confidence += 6
+
+                    # =================================================
                     # FAKE GOALS ENGINE
                     # =================================================
 
@@ -5204,6 +5232,26 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # EXTREME MARKET VALUE
+                    # =================================================
+
+                    if (
+
+                        odd >= fair_odd * 1.15
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        odd >= fair_odd * 1.25
+
+                    ):
+
+                        confidence += 8
+
+                    # =================================================
                     # SHARP / SOFT VALUE
                     # =================================================
 
@@ -5323,6 +5371,34 @@ async def prematch_loop():
                     elif clv <= -3:
 
                         confidence -= 6
+
+                    # =================================================
+                    # SHARP AGREEMENT ENGINE
+                    # =================================================
+
+                    if (
+
+                        clv >= 5
+
+                        and
+
+                        drop >= 0.10
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        clv >= 8
+
+                        and
+
+                        drop >= 0.20
+
+                    ):
+
+                        confidence += 6
 
                     # =================================================
                     # SELF LEARNING ENGINE
