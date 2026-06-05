@@ -4889,6 +4889,32 @@ async def prematch_loop():
                         confidence -= 5
 
                     # =================================================
+                    # ONE SIDED MATCH ENGINE
+                    # =================================================
+
+                    scoring_gap = abs(
+
+                        home_form["avg_scored"]
+
+                        -
+
+                        away_form["avg_scored"]
+
+                    )
+
+                    if scoring_gap >= 1.5:
+
+                        confidence -= 3
+
+                    if scoring_gap >= 2.5:
+
+                        confidence -= 6
+
+                    if scoring_gap >= 3.5:
+
+                        confidence -= 10
+
+                    # =================================================
                     # DOUBLE FAILURE ENGINE
                     # =================================================
 
@@ -5123,6 +5149,46 @@ async def prematch_loop():
                     elif edge_alignment >= 10:
 
                         confidence -= 5
+
+                    # =================================================
+                    # VALUE QUALITY ENGINE
+                    # =================================================
+
+                    if (
+
+                        true_edge >= 8
+
+                        and
+
+                        odd >= 1.80
+
+                    ):
+
+                        confidence += 3
+
+                    if (
+
+                        true_edge >= 12
+
+                        and
+
+                        odd >= 2.00
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        true_edge >= 15
+
+                        and
+
+                        odd >= 2.20
+
+                    ):
+
+                        confidence += 8
 
                     # =================================================
                     # DOUBLE CONFIRMATION ENGINE
