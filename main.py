@@ -3752,6 +3752,46 @@ async def prematch_loop():
                     if away_form["avg_conceded"] <= 0.8:
                         confidence -= 2
 
+                    # =================================================
+                    # DEFENCE QUALITY ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_conceded"] >= 2
+
+                        and
+
+                        away_form["avg_conceded"] >= 2
+
+                    ):
+
+                        confidence += 5
+
+                    elif (
+
+                        home_form["avg_conceded"] >= 1.5
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.5
+
+                    ):
+
+                        confidence += 3
+
+                    if (
+
+                        home_form["avg_conceded"] <= 0.7
+
+                        and
+
+                        away_form["avg_conceded"] <= 0.7
+
+                    ):
+
+                        confidence -= 6
+
                     confidence += home_form["over25"]
 
                     confidence += away_form["over25"]
