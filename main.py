@@ -4344,7 +4344,25 @@ async def prematch_loop():
                     if true_edge >= 15:
                         confidence += 5
 
-                    
+                    # =================================================
+                    # EXTREME VALUE ENGINE
+                    # =================================================
+
+                    if true_edge >= 20:
+
+                        confidence += 8
+
+                    elif true_edge >= 15:
+
+                        confidence += 5
+
+                    elif true_edge >= 10:
+
+                        confidence += 3
+
+                    if true_edge <= -8:
+
+                        confidence -= 10
 
                     # =================================================
                     # FAIR ODD VALUE
