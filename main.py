@@ -3835,7 +3835,35 @@ async def prematch_loop():
 
                     elif market == "💎 BTTS":                                    
                         if btts_prob < 50:                                      
-                            continue                                              
+                            continue   
+                    # =================================================
+                    # WALL DEFENCE ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_conceded"] <= 0.8
+
+                        and
+
+                        away_form["avg_conceded"] <= 0.8
+
+                    ):
+
+                        confidence -= 8
+
+                    elif (
+
+                        home_form["avg_conceded"] <= 1.0
+
+                        and
+
+                        away_form["avg_conceded"] <= 1.0
+
+                    ):
+
+                        confidence -= 4       
+                   
                     # =================================================
                     # FAIR ODDS
                     # =================================================
