@@ -4303,6 +4303,34 @@ async def prematch_loop():
                         if btts_prob < 40:
 
                             confidence -= 12
+
+                    # =================================================
+                    # DRAW RISK ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] <= 1.0
+
+                        and
+
+                        away_form["avg_scored"] <= 1.0
+
+                    ):
+
+                        confidence -= 6
+
+                    if (
+
+                        home_form["wins"] <= 1
+
+                        and
+
+                        away_form["wins"] <= 1
+
+                    ):
+
+                        confidence -= 4
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
