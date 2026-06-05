@@ -3929,6 +3929,32 @@ async def prematch_loop():
 
                     )
 
+                                       attack_vs_defence = (
+
+                        home_form["avg_scored"]
+                        +
+                        away_form["avg_scored"]
+
+                    ) - (
+
+                        home_form["avg_conceded"]
+                        +
+                        away_form["avg_conceded"]
+
+                    )
+
+                    if attack_vs_defence >= 1:
+
+                        confidence += 2
+
+                    if attack_vs_defence >= 2:
+
+                        confidence += 3
+
+                    if attack_vs_defence >= 3:
+
+                        confidence += 4
+                       
                     if market == "⚽ OVER 2.5 GOALS":
 
                         if over_score < 4:
