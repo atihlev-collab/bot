@@ -4364,6 +4364,54 @@ async def prematch_loop():
                         confidence += 8
 
                     # =================================================
+                    # OPEN GAME ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.5
+
+                        and
+
+                        home_form["avg_conceded"] >= 1.2
+
+                    ):
+
+                        confidence += 2
+
+                    if (
+
+                        away_form["avg_scored"] >= 1.5
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.2
+
+                    ):
+
+                        confidence += 2
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.8
+
+                        and
+
+                        home_form["avg_conceded"] >= 1.5
+
+                        and
+
+                        away_form["avg_scored"] >= 1.8
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.5
+
+                    ):
+
+                        confidence += 6
+
+                    # =================================================
                     # GOAL SYNERGY ENGINE
                     # =================================================
 
