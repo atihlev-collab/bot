@@ -4468,6 +4468,30 @@ async def prematch_loop():
                         confidence += 6
 
                     # =================================================
+                    # CHAOS MATCH ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.8
+
+                        and
+
+                        home_form["avg_conceded"] >= 1.5
+
+                        and
+
+                        away_form["avg_scored"] >= 1.8
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.5
+
+                    ):
+
+                        confidence += 8
+
+                    # =================================================
                     # GOAL SYNERGY ENGINE
                     # =================================================
 
@@ -4897,6 +4921,29 @@ async def prematch_loop():
                     if confirmations >= 3:
 
                         confidence += 7
+
+                    # =================================================
+                    # TRIPLE VALUE ENGINE
+                    # =================================================
+
+                    value_score = 0
+
+                    if true_edge >= 5:
+                        value_score += 1
+
+                    if model_edge >= 5:
+                        value_score += 1
+
+                    if poisson_edge >= 5:
+                        value_score += 1
+
+                    if value_score == 3:
+
+                        confidence += 8
+
+                    elif value_score == 2:
+
+                        confidence += 4
 
                     # =================================================
                     # MARKET CONSENSUS ENGINE
@@ -5462,6 +5509,34 @@ async def prematch_loop():
                         and
 
                         drop >= 0.20
+
+                    ):
+
+                        confidence += 6
+
+                    # =================================================
+                    # ELITE SHARP MONEY ENGINE
+                    # =================================================
+
+                    if (
+
+                        clv >= 5
+
+                        and
+
+                        velocity >= 0.02
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        clv >= 8
+
+                        and
+
+                        velocity >= 0.03
 
                     ):
 
