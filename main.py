@@ -4128,10 +4128,47 @@ async def prematch_loop():
                     )
 
                     # =================================================
+                    # GOAL LEAGUE ENGINE
+                    # =================================================
+
+                    if country in [
+
+                        "Norway",
+                        "Sweden",
+                        "Denmark",
+                        "Netherlands"
+
+                    ]:
+
+                        if market == "⚽ OVER 2.5 GOALS":
+
+                            confidence += 5
+
+                        elif market == "💎 BTTS":
+
+                            confidence += 4
+
+                    if country in [
+
+                        "Italy",
+                        "Romania",
+                        "Bulgaria"
+
+                    ]:
+
+                        if market == "⚽ OVER 2.5 GOALS":
+
+                            confidence -= 4
+
+                    if "Cup" in league:
+
+                        confidence -= 5
+
+                    # =================================================
                     # FILTERS
                     # =================================================
 
-                    if confidence < 82:
+                    if confidence < 84:
                         continue
 
                     if drop < 0.05:
