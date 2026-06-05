@@ -4289,6 +4289,38 @@ async def prematch_loop():
                     if true_edge <= -5:
 
                         confidence -= 10
+
+                    # =================================================
+                    # LOW POISSON PENALTY ENGINE
+                    # =================================================
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        if over25_prob < 55:
+
+                            confidence -= 5
+
+                        if over25_prob < 50:
+
+                            confidence -= 8
+
+                        if over25_prob < 45:
+
+                            confidence -= 12
+
+                    elif market == "💎 BTTS":
+
+                        if btts_prob < 50:
+
+                            confidence -= 5
+
+                        if btts_prob < 45:
+
+                            confidence -= 8
+
+                        if btts_prob < 40:
+
+                            confidence -= 12
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
