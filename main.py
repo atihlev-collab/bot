@@ -4577,7 +4577,7 @@ async def prematch_loop():
                         / sharp_odd * 100
                     )
 
-                    if soft_edge < 5:
+                    if soft_edge < 3:
                         continue
     
                   
