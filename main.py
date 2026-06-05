@@ -4497,10 +4497,7 @@ async def prematch_loop():
 
                     )
 
-                    confidence = min(
-                        confidence,
-                        95
-                    )
+                   
 
                     # =================================================
                     # GOAL LEAGUE ENGINE
@@ -4538,6 +4535,11 @@ async def prematch_loop():
                     if "Cup" in league:
 
                         confidence -= 5
+
+                    confidence = min(
+                        confidence,
+                        95
+                    )
 
                     # =================================================
                     # FILTERS
