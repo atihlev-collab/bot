@@ -5023,6 +5023,34 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # LOW ACTIVITY ENGINE
+                    # =================================================
+
+                    if (
+
+                        total_scored < 2
+
+                        and
+
+                        total_btts < 3
+
+                    ):
+
+                        confidence -= 6
+
+                    if (
+
+                        total_scored < 1.5
+
+                        and
+
+                        total_over25 < 2
+
+                    ):
+
+                        confidence -= 8
+
+                    # =================================================
                     # RECENT FORM ENGINE
                     # =================================================
 
@@ -5321,6 +5349,32 @@ async def prematch_loop():
                     elif edge_alignment >= 10:
 
                         confidence -= 5
+
+                    # =================================================
+                    # EDGE ACCELERATION ENGINE
+                    # =================================================
+
+                    edge_power = (
+
+                        true_edge
+                        +
+                        model_edge
+                        +
+                        poisson_edge
+
+                    )
+
+                    if edge_power >= 30:
+
+                        confidence += 8
+
+                    elif edge_power >= 20:
+
+                        confidence += 5
+
+                    elif edge_power >= 15:
+
+                        confidence += 3
 
                     # =================================================
                     # VALUE QUALITY ENGINE
