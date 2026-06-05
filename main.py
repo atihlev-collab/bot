@@ -4253,6 +4253,30 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # DOUBLE ACTIVE TEAMS ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.5
+
+                        and
+
+                        away_form["avg_scored"] >= 1.5
+
+                        and
+
+                        home_form["avg_conceded"] >= 1
+
+                        and
+
+                        away_form["avg_conceded"] >= 1
+
+                    ):
+
+                        confidence += 5
+
+                    # =================================================
                     # GOAL EXPLOSION ENGINE
                     # =================================================
 
@@ -4709,6 +4733,30 @@ async def prematch_loop():
                         form_score,
                         8
                     )
+
+                    # =================================================
+                    # LOW TEMPO ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"]
+                        +
+                        away_form["avg_scored"]
+
+                    ) < 2:
+
+                        confidence -= 5
+
+                    if (
+
+                        home_form["avg_conceded"]
+                        +
+                        away_form["avg_conceded"]
+
+                    ) < 2:
+
+                        confidence -= 4
                    
                     # =================================================
                     # MARKET CONFIDENCE ENGINE
