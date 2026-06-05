@@ -5080,6 +5080,30 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # MARKET EFFICIENCY ENGINE
+                    # =================================================
+
+                    edge_alignment = abs(
+
+                        true_edge
+                        -
+                        model_edge
+
+                    )
+
+                    if edge_alignment <= 2:
+
+                        confidence += 4
+
+                    elif edge_alignment <= 4:
+
+                        confidence += 2
+
+                    elif edge_alignment >= 10:
+
+                        confidence -= 5
+
+                    # =================================================
                     # DOUBLE CONFIRMATION ENGINE
                     # =================================================
 
