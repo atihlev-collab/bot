@@ -4636,6 +4636,46 @@ async def prematch_loop():
                         confidence -= 3
 
                     # =================================================
+                    # DOUBLE FAILURE ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["wins"] <= 1
+
+                        and
+
+                        away_form["wins"] <= 1
+
+                    ):
+
+                        confidence -= 5
+
+                    if (
+
+                        home_form["avg_scored"] <= 1
+
+                        and
+
+                        away_form["avg_scored"] <= 1
+
+                    ):
+
+                        confidence -= 5
+
+                    if (
+
+                        home_form["over25"] <= 1
+
+                        and
+
+                        away_form["over25"] <= 1
+
+                    ):
+
+                        confidence -= 6
+
+                    # =================================================
                     # RECENT FORM ENGINE
                     # =================================================
 
