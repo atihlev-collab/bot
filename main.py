@@ -4683,10 +4683,10 @@ async def prematch_loop():
                     if model_edge < 3:
                         continue
 
-                    if confidence < 84:
+                    if confidence < 80:
                         continue
 
-                    if drop < 0.03:
+                    if drop < 0.01:
                         continue
 
                     if not soft_odd:
@@ -4697,7 +4697,7 @@ async def prematch_loop():
                         / sharp_odd * 100
                     )
 
-                    if soft_edge < 3:
+                    if soft_edge < 1.5:
                         continue
     
                   
