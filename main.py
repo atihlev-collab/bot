@@ -4372,6 +4372,58 @@ async def prematch_loop():
                         confidence += 4
 
                     # =================================================
+                    # CONSISTENCY ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["over25"] >= 4
+
+                        and
+
+                        away_form["over25"] >= 4
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        home_form["btts"] >= 4
+
+                        and
+
+                        away_form["btts"] >= 4
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        home_form["over25"] <= 1
+
+                        and
+
+                        away_form["over25"] <= 1
+
+                    ):
+
+                        confidence -= 6
+
+                    if (
+
+                        home_form["btts"] <= 1
+
+                        and
+
+                        away_form["btts"] <= 1
+
+                    ):
+
+                        confidence -= 6
+
+                    # =================================================
                     # RECENT FORM ENGINE
                     # =================================================
 
