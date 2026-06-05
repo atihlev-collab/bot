@@ -3461,7 +3461,7 @@ async def daily_ticket():
             if not away_form:                     
                 continue                        
 
-           home_attack = (
+            home_attack = (
 
                home_form["avg_scored"]
                +
