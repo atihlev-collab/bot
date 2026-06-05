@@ -3989,6 +3989,20 @@ async def prematch_loop():
                     if clv >= 5:
                         confidence += 4
 
+                    regime = market_regime_detection(
+                        match_key,
+                        odd
+                    )
+
+                    if regime == "STABLE_SHARP":
+                        confidence += 4
+
+                    elif regime == "STEAM_MOVE":
+                        confidence += 6
+
+                    elif regime == "CHAOTIC":
+                        confidence -= 5
+
                     if (
 
                         drop >= 0.15
