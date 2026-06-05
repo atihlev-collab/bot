@@ -4632,6 +4632,30 @@ async def prematch_loop():
                         confidence -= 4
 
                     # =================================================
+                    # EXTREME IMBALANCE ENGINE
+                    # =================================================
+
+                    if (
+
+                        abs(home_attack - away_attack)
+
+                        >= 2.5
+
+                    ):
+
+                        confidence -= 6
+
+                    if (
+
+                        abs(home_attack - away_attack)
+
+                        >= 3.5
+
+                    ):
+
+                        confidence -= 10
+
+                    # =================================================
                     # MATCH BALANCE ENGINE
                     # =================================================
 
@@ -5227,6 +5251,34 @@ async def prematch_loop():
                         confidence += 3
 
                     # =================================================
+                    # PREMIUM VALUE ENGINE
+                    # =================================================
+
+                    if (
+
+                        expected_value >= 1.35
+
+                        and
+
+                        odd >= 1.90
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        expected_value >= 1.50
+
+                        and
+
+                        odd >= 2.10
+
+                    ):
+
+                        confidence += 8
+
+                    # =================================================
                     # RISK REWARD ENGINE
                     # =================================================
 
@@ -5411,6 +5463,34 @@ async def prematch_loop():
                     ):
 
                         confidence += 10
+
+                    # =================================================
+                    # MARKET TRAP ENGINE
+                    # =================================================
+
+                    if (
+
+                        drop >= 0.20
+
+                        and
+
+                        true_edge < 5
+
+                    ):
+
+                        confidence -= 6
+
+                    if (
+
+                        drop >= 0.30
+
+                        and
+
+                        model_edge < 5
+
+                    ):
+
+                        confidence -= 8
 
                     # =================================================
                     # TRIPLE VALUE ENGINE
