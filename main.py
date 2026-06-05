@@ -4317,6 +4317,26 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # DEAD ATTACK ENGINE
+                    # =================================================
+
+                    dead_attack = 0
+
+                    if home_form["avg_scored"] <= 0.8:
+                        dead_attack += 1
+
+                    if away_form["avg_scored"] <= 0.8:
+                        dead_attack += 1
+
+                    if dead_attack == 1:
+
+                        confidence -= 4
+
+                    elif dead_attack == 2:
+
+                        confidence -= 10
+
+                    # =================================================
                     # DEFENSIVE NIGHTMARE ENGINE
                     # =================================================
 
