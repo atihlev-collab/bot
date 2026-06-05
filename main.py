@@ -4030,6 +4030,20 @@ async def prematch_loop():
                         confidence += 8
 
                     # =================================================
+                    # SELF LEARNING ENGINE
+                    # =================================================
+
+                    learning_bonus = (
+                        get_learning_bonus(
+                            market,
+                            country,
+                            confidence
+                        )
+                    )
+
+                    confidence += learning_bonus
+
+                    # =================================================
                     # LEAGUE BONUS
                     # =================================================
 
