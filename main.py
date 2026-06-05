@@ -3752,17 +3752,7 @@ async def prematch_loop():
                     confidence += int(
                         away_form["btts"] / 2
                     ) 
-                    confidence += home_form["wins"] * 2
-
-                    confidence += away_form["wins"] * 2
-
-                    confidence += int(
-                        home_form["avg_scored"]
-                    )
-
-                    confidence += int(
-                        away_form["avg_scored"]
-                    )
+                    
 
                     confidence += int(
                         home_form["avg_scored"]
@@ -3928,17 +3918,7 @@ async def prematch_loop():
                     if true_edge >= 15:
                         confidence += 5
 
-                    if drop >= 0.10:
-                        confidence += 3
-
-                    if drop >= 0.20:
-                        confidence += 4
-
-                    if velocity >= 0.02:
-                        confidence += 3
-
-                    if velocity >= 0.04:
-                        confidence += 4 
+                    
 
                     # =================================================
                     # FAIR ODD VALUE
