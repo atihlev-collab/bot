@@ -4022,6 +4022,34 @@ async def prematch_loop():
 
                     if defence_collapse >= 3:
                         confidence += 5
+
+                    # =================================================
+                    # GOAL MACHINE ENGINE
+                    # =================================================
+
+                    total_scored = (
+
+                        home_form["avg_scored"]
+                        +
+                        away_form["avg_scored"]
+
+                    )
+
+                    if total_scored >= 3:
+
+                        confidence += 3
+
+                    if total_scored >= 4:
+
+                        confidence += 5
+
+                    if total_scored >= 5:
+
+                        confidence += 7
+
+                    if total_scored <= 1.5:
+
+                        confidence -= 5
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
