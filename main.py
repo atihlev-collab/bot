@@ -4205,6 +4205,30 @@ async def prematch_loop():
 
                     if weak_defence >= 4:
                         confidence += 8
+
+                    # =================================================
+                    # RECENT FORM ENGINE
+                    # =================================================
+
+                    recent_form = (
+
+                        home_form["wins"]
+                        +
+                        away_form["wins"]
+
+                    )
+
+                    if recent_form >= 7:
+
+                        confidence += 4
+
+                    elif recent_form >= 5:
+
+                        confidence += 2
+
+                    elif recent_form <= 1:
+
+                        confidence -= 4
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
