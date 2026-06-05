@@ -3832,7 +3832,62 @@ async def prematch_loop():
                     else:
                          our_probability = confidence
 
+                    # =================================================
+                    # CLEAN SHARP PROBABILITY
+                    # =================================================
+
+                    sharp_probability = (
+                        clean_sharp_probability(
+                            sharp_odd
+                        )
+                    )
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        model_edge = round(
+
+                            over25_prob
+                            -
+                            sharp_probability,
+
+                            2
+
+                        )
+
+                    elif market == "💎 BTTS":
+
+                        model_edge = round(
+
+                            btts_prob
+                            -
+                            sharp_probability,
+
+                            2
+
+                        )
+
+                    else:
+
+                        model_edge = round(
+
+                            confidence
+                            -
+                            sharp_probability,
+
+                            2
+
+                        )
+
                     true_edge = round(
+
+                    if model_edge >= 5:
+                        confidence += 3
+
+                    if model_edge >= 8:
+                        confidence += 4
+
+                    if model_edge >= 12:
+                        confidence += 5
 
                         our_probability
                         -
