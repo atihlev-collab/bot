@@ -3955,6 +3955,54 @@ async def prematch_loop():
 
                         confidence += 4
 
+                    # =================================================
+                    # DEFENCE COLLAPSE ENGINE
+                    # =================================================
+
+                    defence_collapse = 0
+
+                    if home_form["avg_conceded"] >= 1.5:
+                        defence_collapse += 1
+
+                    if away_form["avg_conceded"] >= 1.5:
+                        defence_collapse += 1
+
+                    if home_form["avg_conceded"] >= 2:
+                        defence_collapse += 1
+
+                    if away_form["avg_conceded"] >= 2:
+                        defence_collapse += 1
+
+                    if defence_collapse >= 2:
+                        confidence += 3
+
+                    if defence_collapse >= 3:
+                        confidence += 5
+
+                    # =================================================
+                    # FORM MOMENTUM ENGINE
+                    # =================================================
+
+                    total_wins = (
+
+                        home_form["wins"]
+                        +
+                        away_form["wins"]
+
+                    )
+
+                    if total_wins >= 6:
+
+                        confidence += 3
+
+                    if total_wins >= 8:
+
+                        confidence += 5
+
+                    if total_wins <= 1:
+
+                        confidence -= 4
+
                     defence_collapse = 0
 
                     if home_form["avg_conceded"] >= 1.5:
