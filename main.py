@@ -3771,9 +3771,9 @@ async def prematch_loop():
                        home_form["avg_scored"]
                        +
                        away_form["avg_conceded"]
-                   ) / 2
+                    ) / 2
 
-                   away_attack = (
+                    away_attack = (
                        away_form["avg_scored"]
                        +
                        home_form["avg_conceded"]
