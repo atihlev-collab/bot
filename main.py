@@ -4273,6 +4273,22 @@ async def prematch_loop():
                     if market_gap <= -10:
 
                         confidence -= 6
+
+                    # =================================================
+                    # NO VALUE PENALTY ENGINE
+                    # =================================================
+
+                    if true_edge <= 2:
+
+                        confidence -= 4
+
+                    if true_edge <= 0:
+
+                        confidence -= 6
+
+                    if true_edge <= -5:
+
+                        confidence -= 10
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
