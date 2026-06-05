@@ -4564,6 +4564,50 @@ async def prematch_loop():
                         confidence -= 5
 
                     # =================================================
+                    # ATTACK PRESSURE ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_attack >= 1.8
+
+                        and
+
+                        away_attack >= 1.8
+
+                    ):
+
+                        confidence += 6
+
+                    elif (
+
+                        home_attack >= 1.5
+
+                        and
+
+                        away_attack >= 1.5
+
+                    ):
+
+                        confidence += 3
+
+                    # =================================================
+                    # EXPECTED GOAL VALUE ENGINE
+                    # =================================================
+
+                    if expected_goals >= 3.5:
+
+                        confidence += 4
+
+                    elif expected_goals >= 3.0:
+
+                        confidence += 2
+
+                    elif expected_goals <= 2.0:
+
+                        confidence -= 5
+
+                    # =================================================
                     # POISSON BALANCE ENGINE
                     # =================================================
 
@@ -5167,6 +5211,42 @@ async def prematch_loop():
                         confidence -= 8
 
                     # =================================================
+                    # ELITE EV ENGINE
+                    # =================================================
+
+                    if expected_value >= 1.30:
+
+                        confidence += 8
+
+                    elif expected_value >= 1.20:
+
+                        confidence += 5
+
+                    elif expected_value >= 1.10:
+
+                        confidence += 3
+
+                    # =================================================
+                    # RISK REWARD ENGINE
+                    # =================================================
+
+                    if odd >= 2.20 and true_edge >= 8:
+
+                        confidence += 4
+
+                    elif odd >= 2.00 and true_edge >= 6:
+
+                        confidence += 3
+
+                    elif odd <= 1.50 and true_edge < 8:
+
+                        confidence -= 6
+
+                    elif odd <= 1.40 and true_edge < 10:
+
+                        confidence -= 10
+
+                    # =================================================
                     # MARKET EFFICIENCY ENGINE
                     # =================================================
 
@@ -5252,6 +5332,61 @@ async def prematch_loop():
                     if confirmations >= 3:
 
                         confidence += 7
+
+                    # =================================================
+                    # FOUR FACTOR ENGINE
+                    # =================================================
+
+                    factors = 0
+
+                    if true_edge >= 5:
+                        factors += 1
+
+                    if model_edge >= 5:
+                        factors += 1
+
+                    if poisson_edge >= 5:
+                        factors += 1
+
+                    if clv >= 3:
+                        factors += 1
+
+                    if factors >= 3:
+
+                        confidence += 5
+
+                    if factors == 4:
+
+                        confidence += 8
+
+                    # =================================================
+                    # ELITE CONFLUENCE ENGINE
+                    # =================================================
+
+                    confluence = 0
+
+                    if true_edge >= 7:
+                        confluence += 1
+
+                    if model_edge >= 7:
+                        confluence += 1
+
+                    if poisson_edge >= 7:
+                        confluence += 1
+
+                    if clv >= 5:
+                        confluence += 1
+
+                    if soft_edge >= 5:
+                        confluence += 1
+
+                    if confluence >= 4:
+
+                        confidence += 8
+
+                    elif confluence >= 3:
+
+                        confidence += 4
 
                     # =================================================
                     # TRIPLE VALUE ENGINE
@@ -6071,7 +6206,7 @@ async def prematch_loop():
                     if model_edge < 3:
                         continue
 
-                    if confidence < 80:
+                    if confidence < 75:
                         continue
 
                     if drop < 0.01:
