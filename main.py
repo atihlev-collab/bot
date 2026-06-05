@@ -3486,7 +3486,7 @@ async def daily_ticket():
                )                                                              
           
            
-            
+            confidence = min(confidence, 95)
             # само силни фишове
             if confidence < 60:
                 continue
