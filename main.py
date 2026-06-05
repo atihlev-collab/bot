@@ -4680,6 +4680,13 @@ async def prematch_loop():
                     # FILTERS
                     # =================================================
 
+                    # =================================================
+                    # MINIMUM MODEL EDGE FILTER
+                    # =================================================
+
+                    if model_edge < 3:
+                        continue
+
                     if confidence < 84:
                         continue
 
