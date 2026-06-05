@@ -4413,6 +4413,34 @@ async def prematch_loop():
                         confidence += 5
 
                     # =================================================
+                    # FAIR ODD MONSTER ENGINE
+                    # =================================================
+
+                    value_gap = round(
+
+                        odd - fair_odd,
+
+                        2
+
+                    )
+
+                    if value_gap >= 0.10:
+
+                        confidence += 3
+
+                    if value_gap >= 0.20:
+
+                        confidence += 5
+
+                    if value_gap >= 0.30:
+
+                        confidence += 7
+
+                    if value_gap <= -0.15:
+
+                        confidence -= 6
+
+                    # =================================================
                     # SHARP / SOFT VALUE
                     # =================================================
 
