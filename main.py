@@ -3727,6 +3727,14 @@ async def prematch_loop():
                     confidence += int(
                         away_form["avg_scored"]
                     )
+
+                    confidence += int(
+                        home_form["avg_scored"]
+                    )
+
+                    confidence += int(
+                        away_form["avg_scored"]
+                    )
                    
                     poisson_data = poisson_probability(      
                         home_form["avg_scored"],            
