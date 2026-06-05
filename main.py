@@ -3461,10 +3461,21 @@ async def daily_ticket():
             if not away_form:                     
                 continue                        
 
-            poisson_data = poisson_probability(   
-                home_form["avg_scored"],           
-                away_form["avg_scored"]          
-            )                                   
+           home_attack = (
+
+               home_form["avg_scored"]
+               +
+               away_form["avg_conceded"]
+
+) / 2
+
+away_attack = (
+
+    away_form["avg_scored"]
+    +
+    home_form["avg_conceded"]
+
+) / 2                             
 
             over25_prob = poisson_data["over25"]  
             btts_prob = poisson_data["btts"]      
@@ -3756,10 +3767,28 @@ async def prematch_loop():
 
                   
                    
-                    poisson_data = poisson_probability(      
-                        home_form["avg_scored"],            
-                        away_form["avg_scored"]              
-                    )                                        
+                   home_attack = (
+
+    home_form["avg_scored"]
+    +
+    away_form["avg_conceded"]
+
+) / 2
+
+away_attack = (
+
+    away_form["avg_scored"]
+    +
+    home_form["avg_conceded"]
+
+) / 2
+
+poisson_data = poisson_probability(
+
+    home_attack,
+    away_attack
+
+)                          
 
                     over25_prob = poisson_data["over25"]     
                     btts_prob = poisson_data["btts"]     
