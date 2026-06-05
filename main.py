@@ -4542,6 +4542,26 @@ async def prematch_loop():
                         confidence += 8
 
                     # =================================================
+                    # SMART CLV BOOST
+                    # =================================================
+
+                    if clv >= 8:
+
+                        confidence += 6
+
+                    elif clv >= 5:
+
+                        confidence += 4
+
+                    elif clv >= 3:
+
+                        confidence += 2
+
+                    elif clv <= -3:
+
+                        confidence -= 6
+
+                    # =================================================
                     # SELF LEARNING ENGINE
                     # =================================================
 
