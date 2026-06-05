@@ -4050,6 +4050,30 @@ async def prematch_loop():
                     if total_scored <= 1.5:
 
                         confidence -= 5
+
+                    # =================================================
+                    # BTTS MONSTER ENGINE
+                    # =================================================
+
+                    total_btts = (
+
+                        home_form["btts"]
+                        +
+                        away_form["btts"]
+
+                    )
+
+                    if total_btts >= 6:
+
+                        confidence += 3
+
+                    if total_btts >= 8:
+
+                        confidence += 5
+
+                    if total_btts <= 2:
+
+                        confidence -= 4
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
