@@ -4348,6 +4348,46 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # MARKET CONSENSUS ENGINE
+                    # =================================================
+
+                    if (
+
+                        model_edge >= 8
+
+                        and
+
+                        true_edge >= 8
+
+                    ):
+
+                        confidence += 5
+
+                    elif (
+
+                        model_edge >= 5
+
+                        and
+
+                        true_edge >= 5
+
+                    ):
+
+                        confidence += 3
+
+                    if (
+
+                        model_edge < 0
+
+                        and
+
+                        true_edge < 0
+
+                    ):
+
+                        confidence -= 8
+
+                    # =================================================
                     # NO VALUE PENALTY ENGINE
                     # =================================================
 
