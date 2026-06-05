@@ -4003,6 +4003,20 @@ async def prematch_loop():
                     elif regime == "CHAOTIC":
                         confidence -= 5
 
+                    # =================================================
+                    # AGGRESSIVE SHARP MONEY
+                    # =================================================
+
+                    if aggressive_sharp_alert(
+
+                        drop,
+                        velocity,
+                        clv
+
+                    ):
+
+                        confidence += 8
+
                     if (
 
                         drop >= 0.15
