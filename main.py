@@ -4312,7 +4312,7 @@ async def prematch_loop():
                         if goals_score < 2.4:
                             continue
 
-                        if true_edge < 7:
+                        if true_edge < 5:
                             continue
 
                     elif market == "💎 BTTS":
@@ -4323,7 +4323,7 @@ async def prematch_loop():
                         if goals_score < 2.2:
                             continue
 
-                        if true_edge < 6:
+                        if true_edge < 4:
                             continue
 
                     confidence += min(
