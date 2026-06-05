@@ -3715,7 +3715,43 @@ async def prematch_loop():
                     if not away_form:                      
                         continue    
                      
-                       
+                    # FORM ENGINE
+
+                    confidence += home_form["wins"] * 2
+
+                    confidence += away_form["wins"] * 2
+
+                    confidence += int(
+                        home_form["avg_scored"]
+                    )
+
+                    confidence += int(
+                        away_form["avg_scored"]
+                    )
+
+                    if home_form["avg_conceded"] >= 1.5:
+                        confidence += 2
+
+                    if away_form["avg_conceded"] >= 1.5:
+                        confidence += 2
+
+                    if home_form["avg_conceded"] <= 0.8:
+                        confidence -= 2
+
+                    if away_form["avg_conceded"] <= 0.8:
+                        confidence -= 2
+
+                    confidence += home_form["over25"]
+
+                    confidence += away_form["over25"]
+
+                    confidence += int(
+                        home_form["btts"] / 2
+                    )
+
+                    confidence += int(
+                        away_form["btts"] / 2
+                    ) 
                     confidence += home_form["wins"] * 2
 
                     confidence += away_form["wins"] * 2
