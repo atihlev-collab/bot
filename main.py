@@ -3890,7 +3890,7 @@ async def prematch_loop():
 
                     )
 
-                   if model_edge >= 5:
+                    if model_edge >= 5:
                         confidence += 3
 
                     if model_edge >= 8:
