@@ -4700,6 +4700,58 @@ async def prematch_loop():
                         confidence += 2
 
                     # =================================================
+                    # MODEL CONFIRMATION ENGINE
+                    # =================================================
+
+                    if (
+
+                        over25_prob >= 65
+
+                        and
+
+                        market == "⚽ OVER 2.5 GOALS"
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        btts_prob >= 60
+
+                        and
+
+                        market == "💎 BTTS"
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        over25_prob < 52
+
+                        and
+
+                        market == "⚽ OVER 2.5 GOALS"
+
+                    ):
+
+                        confidence -= 6
+
+                    if (
+
+                        btts_prob < 48
+
+                        and
+
+                        market == "💎 BTTS"
+
+                    ):
+
+                        confidence -= 6
+
+                    # =================================================
                     # NO VALUE PENALTY ENGINE
                     # =================================================
 
