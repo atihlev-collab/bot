@@ -4229,6 +4229,50 @@ async def prematch_loop():
                     elif recent_form <= 1:
 
                         confidence -= 4
+
+                    # =================================================
+                    # MARKET DISAGREEMENT ENGINE
+                    # =================================================
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        market_gap = (
+
+                            over25_prob
+                            -
+                            market_probability
+
+                        )
+
+                    elif market == "💎 BTTS":
+
+                        market_gap = (
+
+                            btts_prob
+                            -
+                            market_probability
+
+                        )
+
+                    else:
+
+                        market_gap = 0
+
+                    if market_gap >= 8:
+
+                        confidence += 3
+
+                    if market_gap >= 12:
+
+                        confidence += 5
+
+                    if market_gap >= 15:
+
+                        confidence += 7
+
+                    if market_gap <= -10:
+
+                        confidence -= 6
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
