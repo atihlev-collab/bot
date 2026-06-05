@@ -4028,7 +4028,45 @@ async def prematch_loop():
 
                         confidence -= 4
 
-                    
+                    # =================================================
+                    # BALANCED ATTACK ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.3
+
+                        and
+
+                        away_form["avg_scored"] >= 1.3
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.8
+
+                        and
+
+                        away_form["avg_scored"] >= 1.8
+
+                    ):
+
+                        confidence += 6
+
+                    if (
+
+                        home_form["avg_scored"] <= 0.8
+
+                        or
+
+                        away_form["avg_scored"] <= 0.8
+
+                    ):
+
+                        confidence -= 4
 
                     # =================================================
                     # GOAL MACHINE ENGINE
