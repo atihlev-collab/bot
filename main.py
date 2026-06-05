@@ -4102,6 +4102,42 @@ async def prematch_loop():
                     if total_over25 <= 2:
 
                         confidence -= 5
+
+                    # =================================================
+                    # WINNER MENTALITY ENGINE
+                    # =================================================
+
+                    if home_form["wins"] >= 4:
+
+                        confidence += 3
+
+                    if away_form["wins"] >= 4:
+
+                        confidence += 3
+
+                    if (
+
+                        home_form["wins"] >= 4
+
+                        and
+
+                        away_form["wins"] >= 4
+
+                    ):
+
+                        confidence += 4
+
+                    if (
+
+                        home_form["wins"] == 0
+
+                        and
+
+                        away_form["wins"] == 0
+
+                    ):
+
+                        confidence -= 6
                        
                     if market == "⚽ OVER 2.5 GOALS":
 
