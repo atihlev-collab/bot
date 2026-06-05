@@ -3,7 +3,7 @@
 # SMART RESET + PREMATCH AI VERSION
 # =========================================================
    
-
+ 
 import requests
 import time
 import sqlite3
@@ -4137,6 +4137,46 @@ async def prematch_loop():
                         confidence -= 4
 
                     # =================================================
+                    # UNBEATEN ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["wins"] >= 3
+
+                        and
+
+                        away_form["wins"] >= 3
+
+                    ):
+
+                        confidence += 3
+
+                    if (
+
+                        home_form["wins"] >= 4
+
+                        and
+
+                        away_form["wins"] >= 4
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        home_form["wins"] == 0
+
+                        or
+
+                        away_form["wins"] == 0
+
+                    ):
+
+                        confidence -= 4
+
+                    # =================================================
                     # GOAL MACHINE ENGINE
                     # =================================================
 
@@ -4417,6 +4457,34 @@ async def prematch_loop():
                         confidence += 6
 
                     if weak_defence >= 4:
+                        confidence += 8
+
+                    # =================================================
+                    # BOTH DEFENCES BROKEN ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_conceded"] >= 1.8
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.8
+
+                    ):
+
+                        confidence += 5
+
+                    if (
+
+                        home_form["avg_conceded"] >= 2.2
+
+                        and
+
+                        away_form["avg_conceded"] >= 2.2
+
+                    ):
+
                         confidence += 8
 
                     # =================================================
@@ -5627,6 +5695,31 @@ async def prematch_loop():
                         confidence,
                         95
                     )
+
+                    # =================================================
+                    # SUMMER LEAGUE BOOST
+                    # =================================================
+
+                    if country in [
+
+                        "Norway",
+                        "Sweden",
+                        "Finland",
+                        "Iceland"
+
+                    ]:
+
+                        confidence += 3
+
+                    if country in [
+
+                        "Brazil",
+                        "Argentina",
+                        "Japan"
+
+                    ]:
+
+                        confidence += 2
 
                     # =================================================
                     # FILTERS
