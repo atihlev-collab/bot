@@ -4424,6 +4424,42 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # EXTREME FORM DIFFERENCE ENGINE
+                    # =================================================
+
+                    win_gap = abs(
+
+                        home_form["wins"]
+
+                        -
+
+                        away_form["wins"]
+
+                    )
+
+                    if win_gap >= 4:
+
+                        confidence -= 4
+
+                    if win_gap >= 5:
+
+                        confidence -= 6
+
+                    scored_gap = abs(
+
+                        home_form["avg_scored"]
+
+                        -
+
+                        away_form["avg_scored"]
+
+                    )
+
+                    if scored_gap >= 2:
+
+                        confidence -= 3
+
+                    # =================================================
                     # RECENT FORM ENGINE
                     # =================================================
 
