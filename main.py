@@ -4744,6 +4744,38 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # POISSON DOMINATION ENGINE
+                    # =================================================
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        if over25_prob >= 70:
+
+                            confidence += 6
+
+                        elif over25_prob >= 65:
+
+                            confidence += 4
+
+                        elif over25_prob >= 60:
+
+                            confidence += 2
+
+                    elif market == "💎 BTTS":
+
+                        if btts_prob >= 68:
+
+                            confidence += 6
+
+                        elif btts_prob >= 62:
+
+                            confidence += 4
+
+                        elif btts_prob >= 58:
+
+                            confidence += 2
+
+                    # =================================================
                     # MARKET CONSENSUS ENGINE
                     # =================================================
 
