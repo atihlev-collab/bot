@@ -5127,6 +5127,46 @@ async def prematch_loop():
                         confidence -= 6
 
                     # =================================================
+                    # PRICE VS PROBABILITY ENGINE
+                    # =================================================
+
+                    if market == "⚽ OVER 2.5 GOALS":
+
+                        expected_value = (
+
+                            (over25_prob / 100) * odd
+
+                        )
+
+                    elif market == "💎 BTTS":
+
+                        expected_value = (
+
+                            (btts_prob / 100) * odd
+
+                        )
+
+                    else:
+
+                        expected_value = 1
+
+                    if expected_value >= 1.20:
+
+                        confidence += 8
+
+                    elif expected_value >= 1.10:
+
+                        confidence += 5
+
+                    elif expected_value >= 1.05:
+
+                        confidence += 3
+
+                    elif expected_value < 1:
+
+                        confidence -= 8
+
+                    # =================================================
                     # MARKET EFFICIENCY ENGINE
                     # =================================================
 
