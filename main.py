@@ -4097,6 +4097,34 @@ async def prematch_loop():
                         confidence -= 5
 
                     # =================================================
+                    # FAKE GOALS ENGINE
+                    # =================================================
+
+                    if (
+
+                        home_form["avg_scored"] >= 2.5
+
+                        and
+
+                        away_form["avg_scored"] <= 0.8
+
+                    ):
+
+                        confidence -= 5
+
+                    if (
+
+                        away_form["avg_scored"] >= 2.5
+
+                        and
+
+                        home_form["avg_scored"] <= 0.8
+
+                    ):
+
+                        confidence -= 5
+
+                    # =================================================
                     # BTTS MONSTER ENGINE
                     # =================================================
 
