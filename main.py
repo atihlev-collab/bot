@@ -6535,6 +6535,8 @@ async def prematch_loop():
 
                     raw_confidence = confidence
 
+                    print("RAW CONFIDENCE:", raw_confidence)
+
                     if confidence >= 140:
                         confidence = 95
 
