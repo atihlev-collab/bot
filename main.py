@@ -5650,6 +5650,14 @@ async def prematch_loop():
 
                         confidence += 10
 
+                    drop, velocity = odds_drop_signal(
+
+                        home,
+                        away,
+                        odd
+
+                    )
+
                     # =================================================
                     # MARKET TRAP ENGINE
                     # =================================================
