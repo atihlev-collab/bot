@@ -6578,7 +6578,7 @@ async def prematch_loop():
                     if confidence < 70:
                         continue
 
-                    if drop < 0.01:
+                    if drop < -999:
                         continue
 
                     if not soft_odd:
