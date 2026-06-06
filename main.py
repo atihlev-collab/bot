@@ -6710,7 +6710,7 @@ def start_live_loop():
     loop.run_until_complete(
         live_loop()
     )
-   def start_prematch_loop():
+def start_prematch_loop():
 
     try:
 
