@@ -3442,8 +3442,11 @@ async def daily_ticket():
             home_id = m["teams"]["home"]["id"]                      
             away_id = m["teams"]["away"]["id"]                        
 
-            home_form = get_team_form(home_id)                       
-            away_form = get_team_form(away_id)                        
+            if not home_form:
+                continue
+
+            if not away_form:
+                continue                        
 
             confidence += home_form["wins"] * 2                     
             confidence += away_form["wins"] * 2                      
@@ -3455,11 +3458,7 @@ async def daily_ticket():
             confidence += int(                                       
                 away_form["avg_scored"] * 2                         
             )                                                       
-            if not home_form:                     
-                continue                         
-
-            if not away_form:                     
-                continue                        
+                                
 
             home_attack = (
 
