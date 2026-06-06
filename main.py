@@ -3994,7 +3994,16 @@ async def prematch_loop():
                        +
                        clv
 
-                    )
+                     )
+
+                     if signal_score >= 20:
+                        confidence += 5
+
+                     elif signal_score >= 15:
+                        confidence += 3
+
+                     elif signal_score <= 0:
+                        confidence -= 5
 
                     if model_edge >= 5:
                         confidence += 3
