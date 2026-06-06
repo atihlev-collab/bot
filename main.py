@@ -6550,7 +6550,7 @@ async def prematch_loop():
                     elif confidence >= 75:
                        confidence = 75
 
-                   else:
+                    else:
                        confidence = 70
 
                     # =================================================
