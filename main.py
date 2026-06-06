@@ -3665,11 +3665,11 @@ async def prematch_loop():
 
                             2
 
-                     )
+                    )
 
-                     market = (
+                    market = (
                        odds_data["market"]
-                     )
+                    )
 
                     odd = sharp_odd
 
