@@ -4191,9 +4191,9 @@ async def prematch_loop():
 
                     total_scored = (
 
-                        home_form["avg_scored"]
-                        +
-                        away_form["avg_scored"]
+                    home_form["avg_scored"]
+                    +
+                    away_form["avg_scored"]
 
                     )
 
@@ -4213,21 +4213,6 @@ async def prematch_loop():
 
                     )
 
-                    total_over25 = (
-
-                    home_form["over25"]
-                    +
-                    away_form["over25"]
-
-                    )
-
-                    total_btts = (
-
-                        home_form["btts"]
-                        +
-                        away_form["btts"]
-
-                    )
 
                     if total_scored >= 3:
 
