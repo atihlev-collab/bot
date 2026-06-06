@@ -3607,6 +3607,8 @@ async def daily_ticket():
 async def prematch_loop():
 
     while True:
+       
+        print("PREMATCH LOOP RUNNING")
 
         try:
 
