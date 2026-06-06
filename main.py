@@ -3845,6 +3845,26 @@ async def prematch_loop():
                     elif market == "💎 BTTS":                                    
                         if btts_prob < 48:                                      
                             continue   
+
+                    # =================================================
+                    # POISSON MONSTER ENGINE
+                    # =================================================
+
+                    if over25_prob >= 60:
+                        confidence += 3
+
+                    if over25_prob >= 65:
+                        confidence += 5
+
+                    if over25_prob >= 70:
+                        confidence += 7
+
+                    if btts_prob >= 60:
+                        confidence += 3
+
+                    if btts_prob >= 65:
+                        confidence += 5
+                   
                     # =================================================
                     # WALL DEFENCE ENGINE
                     # =================================================
