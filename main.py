@@ -3611,9 +3611,13 @@ async def prematch_loop():
         print("PREMATCH LOOP RUNNING")
 
         try:
+           
+            print("BEFORE DAILY")
 
             await daily_ticket()
 
+            print("AFTER DAILY")
+           
             matches = get_upcoming_matches()
 
             print("PREMATCH MATCHES:", len(matches))
