@@ -6574,7 +6574,7 @@ async def prematch_loop():
                     if model_edge < 3:
                         continue
 
-                    if confidence < 75:
+                    if confidence < 80:
                         continue
 
                     # НИКАКЪВ drop филтър
