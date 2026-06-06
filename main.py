@@ -3839,11 +3839,11 @@ async def prematch_loop():
                     btts_prob = poisson_data["btts"]
                                           
                     if market == "⚽ OVER 2.5 GOALS":                            
-                        if over25_prob < 55:
+                        if over25_prob < 52:
                             continue                                             
 
                     elif market == "💎 BTTS":                                    
-                        if btts_prob < 50:                                      
+                        if btts_prob < 48:                                      
                             continue   
                     # =================================================
                     # WALL DEFENCE ENGINE
