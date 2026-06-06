@@ -3986,6 +3986,16 @@ async def prematch_loop():
 
                     )
 
+                    signal_score = (
+
+                       true_edge * 2
+                       +
+                       model_edge * 2
+                       +
+                       clv
+
+                    )
+
                     if model_edge >= 5:
                         confidence += 3
 
@@ -4003,6 +4013,9 @@ async def prematch_loop():
 
                     if true_edge >= 12:
                         confidence += 4
+
+                   if true_edge >= 15:
+                        confidence += 5
 
                     # =================================================
                     # VALUE + FORM FILTER ENGINE
