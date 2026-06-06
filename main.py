@@ -6641,12 +6641,16 @@ async def prematch_loop():
 
                     save_prematch(key)
 
+                import traceback
+
                 except Exception as e:
 
                     print(
                         "PREMATCH MATCH ERROR:",
                         e
                     )
+
+                    traceback.print_exc()
 
         except Exception as e:
 
