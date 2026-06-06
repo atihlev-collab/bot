@@ -4026,6 +4026,22 @@ async def prematch_loop():
                     if true_edge >= 15:
                         confidence += 5
 
+                   # =================================================
+                   # FAIR VALUE ENGINE
+                   # =================================================
+
+                   if odd > fair_odd:
+
+                       confidence += 3
+
+                   if odd >= fair_odd * 1.10:
+
+                       confidence += 4
+
+                    elif odd < fair_odd:
+
+                       confidence -= 3
+
                     # =================================================
                     # VALUE + FORM FILTER ENGINE
                     # =================================================
