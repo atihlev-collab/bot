@@ -6575,11 +6575,11 @@ async def prematch_loop():
                     if model_edge < 3:
                         continue
 
-                    if confidence < 70:
+                    if confidence < 75:
                         continue
 
-                    # if drop < 0.01:
-                    #     continue
+                    if drop < 0.01 and clv < 3:
+                        continue
 
                     if not soft_odd:
                         continue
