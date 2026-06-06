@@ -4014,7 +4014,7 @@ async def prematch_loop():
                     if true_edge >= 12:
                         confidence += 4
 
-                   if true_edge >= 15:
+                    if true_edge >= 15:
                         confidence += 5
 
                     # =================================================
