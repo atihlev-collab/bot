@@ -3859,11 +3859,22 @@ async def prematch_loop():
                     if over25_prob >= 70:
                         confidence += 7
 
+                    if over25_prob >= 75:
+                        confidence += 5
+
+                    if over25_prob >= 80:
+                        confidence += 7
+
                     if btts_prob >= 60:
                         confidence += 3
 
                     if btts_prob >= 65:
                         confidence += 5
+                    if btts_prob >= 70:
+                        confidence += 5
+
+                    if btts_prob >= 75:
+                        confidence += 7
                    
                     # =================================================
                     # WALL DEFENCE ENGINE
