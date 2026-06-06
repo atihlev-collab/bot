@@ -6565,7 +6565,7 @@ async def prematch_loop():
                     if model_edge < 3:
                         continue
 
-                    if confidence < 75:
+                    if confidence < 70:
                         continue
 
                     if drop < 0.01:
