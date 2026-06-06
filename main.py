@@ -5656,11 +5656,11 @@ async def prematch_loop():
 
                         and
 
-                        clv >= 5
+                        clv >= 4
 
                     ):
 
-                        confidence += 10
+                        confidence += 5
 
                     drop, velocity = odds_drop_signal(
 
@@ -6318,7 +6318,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 4
 
                     if (
 
@@ -6330,7 +6330,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 4
 
                     # =================================================
                     # STEAM MOVE ENGINE
@@ -6346,7 +6346,7 @@ async def prematch_loop():
 
                     if drop >= 0.35:
 
-                        confidence += 7
+                        confidence += 3
 
                     # =================================================
                     # SMART CLV BOOST
