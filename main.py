@@ -6130,6 +6130,12 @@ async def prematch_loop():
                     if clv >= 5:
                         confidence += 4
 
+                    if clv >= 8:
+                        confidence += 5
+
+                    if clv >= 12:
+                        confidence += 6
+
                     regime = market_regime_detection(
                         match_key,
                         odd
