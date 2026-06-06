@@ -3996,7 +3996,7 @@ async def prematch_loop():
 
                      )
 
-                     if signal_score >= 20:
+                      if signal_score >= 20:
                         confidence += 5
 
                      elif signal_score >= 15:
