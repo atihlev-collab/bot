@@ -6710,6 +6710,24 @@ def start_live_loop():
     loop.run_until_complete(
         live_loop()
     )
+   def start_prematch_loop():
+
+    try:
+
+        asyncio.run(
+            prematch_loop()
+        )
+
+    except Exception as e:
+
+        import traceback
+
+        print(
+            "PREMATCH THREAD CRASH:",
+            e
+        )
+
+        traceback.print_exc()
 
 # =========================================================
 # MAIN
@@ -6732,10 +6750,9 @@ def main():
 
     # PREMATCH
     prematch_thread = threading.Thread(
-        target=lambda:
-        asyncio.run(prematch_loop()),
-        daemon=True
-    )
+    target=start_prematch_loop,
+    daemon=True
+)
 
     prematch_thread.start()
 
