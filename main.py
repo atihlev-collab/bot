@@ -3651,7 +3651,7 @@ async def prematch_loop():
                     )
 
                     if odds_data is None:
-                        print("NO ODDS:", home, away)
+                        if odds_data is None:
                         continue
 
                     sharp_odd = (
@@ -6578,7 +6578,7 @@ async def prematch_loop():
                     if confidence < 75:
                         continue
 
-                    if drop < 0.01 and clv < 3:
+                    if drop < 0.01 and soft_edge < 3:
                         continue
 
                     if not soft_odd:
