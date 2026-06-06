@@ -3650,9 +3650,9 @@ async def prematch_loop():
                         fixture_id
                     )
 
-                   if odds_data is None:
-                       print("NO ODDS:", home, away)
-                       continue
+                    if odds_data is None:
+                        print("NO ODDS:", home, away)
+                        continue
 
                     sharp_odd = (
                         odds_data["sharp_odd"]
