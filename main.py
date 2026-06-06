@@ -4006,6 +4006,20 @@ async def prematch_loop():
 
                     )
 
+                    match_key = (
+                        f"{home}_{away}"
+                    )
+
+                    track_opening_odds(
+                         match_key,
+                         odd
+                     ) 
+
+                    clv = calculate_clv(
+                         match_key,
+                         odd
+                     )
+
                     signal_score = (
 
                        true_edge * 2
