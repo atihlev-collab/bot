@@ -4197,6 +4197,38 @@ async def prematch_loop():
 
                     )
 
+                    total_btts = (
+
+                    home_form["btts"]
+                    +
+                    away_form["btts"]
+
+                    )
+
+                    total_over25 = (
+
+                    home_form["over25"]
+                    +
+                    away_form["over25"]
+
+                    )
+
+                    total_over25 = (
+
+                    home_form["over25"]
+                    +
+                    away_form["over25"]
+
+                    )
+
+                    total_btts = (
+
+                        home_form["btts"]
+                        +
+                        away_form["btts"]
+
+                    )
+
                     if total_scored >= 3:
 
                         confidence += 3
@@ -4273,14 +4305,6 @@ async def prematch_loop():
                     # BTTS MONSTER ENGINE
                     # =================================================
 
-                    total_btts = (
-
-                        home_form["btts"]
-                        +
-                        away_form["btts"]
-
-                    )
-
                     if total_btts >= 6:
 
                         confidence += 3
@@ -4296,14 +4320,6 @@ async def prematch_loop():
                     # =================================================
                     # OVER25 MONSTER ENGINE
                     # =================================================
-
-                    total_over25 = (
-
-                        home_form["over25"]
-                        +
-                        away_form["over25"]
-
-                    )
 
                     if total_over25 >= 6:
 
