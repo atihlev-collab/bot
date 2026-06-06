@@ -6533,10 +6533,25 @@ async def prematch_loop():
 
                         confidence -= 5
 
-                    confidence = min(
-                        confidence,
-                        95
-                    )
+                    raw_confidence = confidence
+
+                    if confidence >= 140:
+                        confidence = 95
+
+                    elif confidence >= 120:
+                       confidence = 90
+
+                    elif confidence >= 100:
+                       confidence = 85
+
+                    elif confidence >= 85:
+                       confidence = 80
+
+                    elif confidence >= 75:
+                       confidence = 75
+
+                   else:
+                       confidence = 70
 
                     # =================================================
                     # SUMMER LEAGUE BOOST
