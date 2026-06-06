@@ -6234,15 +6234,6 @@ async def prematch_loop():
                     # DROP + VELOCITY
                     # =================================================
 
-                    drop, velocity = (
-
-                        odds_drop_signal(
-
-                            home,
-                            away,
-                            odd
-
-                        )
 
                     )
 
