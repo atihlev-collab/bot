@@ -3651,15 +3651,15 @@ async def prematch_loop():
                     )
 
                     if odds_data is None:
-                        if odds_data is None:
-                        continue
+                       if odds_data is None:
+                       continue
 
                     sharp_odd = (
-                        odds_data["sharp_odd"]
+                       odds_data["sharp_odd"]
                     )
 
                     soft_odd = (
-                        odds_data["soft_odd"]
+                       odds_data["soft_odd"]
                     )
 
                     soft_edge = 0
