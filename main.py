@@ -4087,17 +4087,17 @@ async def prematch_loop():
 
                        confidence -= 3
 
-                   # =================================================
-                   # EXTREME VALUE ENGINE
-                   # =================================================
+                    # =================================================
+                    # EXTREME VALUE ENGINE
+                    # =================================================
 
-                   if odd >= fair_odd * 1.20:
+                    if odd >= fair_odd * 1.20:
 
-                       confidence += 6
+                        confidence += 6
 
-                   if odd >= fair_odd * 1.30:
+                    if odd >= fair_odd * 1.30:
 
-                       confidence += 8
+                        confidence += 8
 
                     # =================================================
                     # VALUE + FORM FILTER ENGINE
