@@ -6234,8 +6234,6 @@ async def prematch_loop():
                     # DROP + VELOCITY
                     # =================================================
 
-                    )
-
                     match_key = (
                         f"{home}_{away}"
                     )
