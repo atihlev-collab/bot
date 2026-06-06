@@ -3995,6 +3995,15 @@ async def prematch_loop():
                     if model_edge >= 12:
                         confidence += 5
 
+                    if true_edge >= 5:
+                        confidence += 2
+
+                    if true_edge >= 8:
+                        confidence += 3
+
+                    if true_edge >= 12:
+                        confidence += 4
+
                     # =================================================
                     # VALUE + FORM FILTER ENGINE
                     # =================================================
