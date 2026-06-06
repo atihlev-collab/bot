@@ -3649,6 +3649,24 @@ async def prematch_loop():
                         odds_data["soft_odd"]
                     )
 
+                   soft_edge = 0
+
+                   if soft_odd:
+
+                   soft_edge = round(
+
+                      (
+                   soft_odd
+                   -
+                   sharp_odd
+                      )
+
+                      / sharp_odd * 100,
+
+                      2
+
+                    )
+
                     market = (
                         odds_data["market"]
                     )
