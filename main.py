@@ -3622,8 +3622,8 @@ async def prematch_loop():
 
             print(
                 "PREMATCH MATCHES:",
-            )
                 len(matches)
+            )
             for m in matches:
 
                 try:
