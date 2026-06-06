@@ -3651,7 +3651,6 @@ async def prematch_loop():
                     )
 
                     if odds_data is None:
-                       if odds_data is None:
                        continue
 
                     sharp_odd = (
