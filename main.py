@@ -3446,10 +3446,12 @@ async def daily_ticket():
             away_form = get_team_form(away_id)
 
             if not home_form:
+                print("NO HOME FORM:", home)
                 continue
 
             if not away_form:
-                continue                        
+                print("NO AWAY FORM:", away)
+                continue                   
 
             confidence += home_form["wins"] * 2                     
             confidence += away_form["wins"] * 2                      
@@ -3648,8 +3650,9 @@ async def prematch_loop():
                         fixture_id
                     )
 
-                    if odds_data is None:
-                        continue
+                   if odds_data is None:
+                       print("NO ODDS:", home, away)
+                       continue
 
                     sharp_odd = (
                         odds_data["sharp_odd"]
