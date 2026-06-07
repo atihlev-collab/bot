@@ -4322,18 +4322,6 @@ async def prematch_loop():
 
                     if (
 
-                        home_form["wins"] >= 3
-
-                        and
-
-                        away_form["wins"] >= 3
-
-                    ):
-
-                        confidence += 3
-
-                    if (
-
                         home_form["wins"] >= 4
 
                         and
@@ -4343,6 +4331,18 @@ async def prematch_loop():
                     ):
 
                         confidence += 5
+
+                    elif (
+
+                        home_form["wins"] >= 3
+
+                        and
+
+                        away_form["wins"] >= 3
+
+                    ):
+
+                        confidence += 3
 
                     if (
 
@@ -4389,11 +4389,11 @@ async def prematch_loop():
 
                         confidence += 7
 
-                    if total_scored >= 4:
+                    elif total_scored >= 4:
 
                         confidence += 5
 
-                    if total_scored >= 3:
+                    elif total_scored >= 3:
 
                         confidence += 3
 
@@ -4461,13 +4461,13 @@ async def prematch_loop():
                     # BTTS MONSTER ENGINE
                     # =================================================
 
-                    if total_btts >= 6:
-
-                        confidence += 3
-
                     if total_btts >= 8:
 
                         confidence += 5
+
+                    elif total_btts >= 6:
+
+                        confidence += 3
 
                     if total_btts <= 2:
 
@@ -4481,11 +4481,11 @@ async def prematch_loop():
 
                         confidence += 7
 
-                    if total_over25 >= 8:
+                    elif total_over25 >= 8:
 
                         confidence += 5
 
-                    if total_over25 >= 6:
+                    elif total_over25 >= 6:
 
                         confidence += 3
 
