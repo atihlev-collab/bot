@@ -4084,15 +4084,15 @@ async def prematch_loop():
                     # VALUE CORE ENGINE
                     # =================================================
 
-                     value_score = 0
+                    value_score = 0
 
-                     value_score += true_edge * 1.5
+                    value_score += true_edge * 1.5
 
-                     value_score += model_edge * 1.5
+                    value_score += model_edge * 1.5
 
-                     value_score += clv * 0.5
+                    value_score += clv * 0.5
  
-                     if value_score >= 40:
+                    if value_score >= 40:
                         confidence += 12
 
                     elif value_score >= 30:
