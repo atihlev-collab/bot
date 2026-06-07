@@ -5618,7 +5618,7 @@ async def prematch_loop():
 
                         confidence += 4
 
-                     elif (
+                    elif (
 
                         true_edge >= 8
 
