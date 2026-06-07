@@ -3765,9 +3765,9 @@ async def prematch_loop():
                      
                     # FORM ENGINE
 
-                    confidence += home_form["wins"] * 2
+                    confidence += home_form["wins"] * 3
 
-                    confidence += away_form["wins"] * 2
+                    confidence += away_form["wins"] * 3
 
                     confidence += int(
                         home_form["avg_scored"]
