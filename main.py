@@ -6520,21 +6520,7 @@ async def prematch_loop():
 
                     elif "Serie A" in league:
 
-                        confidence += 2
-
-                    elif "Cup" in league:
-
-                        confidence -= 6
-
-                    confidence += min(
-
-                        len(home) % 5,
-
-                        4
-
-                    )
-
-                   
+                        confidence += 
 
                     # =================================================
                     # GOAL LEAGUE ENGINE
@@ -6573,6 +6559,30 @@ async def prematch_loop():
 
                         confidence -= 5
 
+                    # =================================================
+                    # SUMMER LEAGUE BOOST
+                    # =================================================
+
+                    if country in [
+
+                        "Norway",
+                        "Sweden",
+                        "Finland",
+                        "Iceland"
+
+                    ]:
+
+                        confidence += 3
+
+                    if country in [
+
+                        "Brazil",
+                        "Argentina",
+                        "Japan"
+
+                    ]:
+
+                        confidence += 2
                     raw_confidence = confidence
 
                     print("RAW CONFIDENCE:", raw_confidence)
