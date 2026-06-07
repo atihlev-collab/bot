@@ -4142,17 +4142,17 @@ async def prematch_loop():
                     # FAIR VALUE ENGINE
                     # =================================================
 
-                    if odd > fair_odd:
-
-                       confidence += 3
-
                     if odd >= fair_odd * 1.10:
 
                        confidence += 4
 
-                    elif odd < fair_odd:
+                    elif odd > fair_odd:
 
-                       confidence -= 3
+                       confidence += 2
+
+                   else:
+
+                      confidence -= 3
 
                     # =================================================
                     # EXTREME VALUE ENGINE
@@ -4162,7 +4162,7 @@ async def prematch_loop():
 
                         confidence += 8
 
-                    if odd >= fair_odd * 1.20:
+                    elif odd >= fair_odd * 1.20:
 
                         confidence += 4
 
@@ -4216,17 +4216,17 @@ async def prematch_loop():
 
                     )
 
-                    if attack_vs_defence >= 1:
-
-                        confidence += 2
-
-                    if attack_vs_defence >= 2:
-
-                        confidence += 3
-
                     if attack_vs_defence >= 3:
 
                         confidence += 4
+
+                    elif attack_vs_defence >= 2:
+
+                        confidence += 3
+
+                    elif attack_vs_defence >= 1:
+
+                        confidence += 2
 
                     # =================================================
                     # DEFENCE COLLAPSE ENGINE
@@ -4246,11 +4246,11 @@ async def prematch_loop():
                     if away_form["avg_conceded"] >= 2:
                         defence_collapse += 1
 
-                    if defence_collapse >= 2:
-                        confidence += 3
-
                     if defence_collapse >= 3:
                         confidence += 5
+
+                    if defence_collapse >= 2:
+                        confidence += 3
 
                     # =================================================
                     # FORM MOMENTUM ENGINE
@@ -4264,13 +4264,13 @@ async def prematch_loop():
 
                     )
 
-                    if total_wins >= 6:
-
-                        confidence += 3
-
                     if total_wins >= 8:
 
                         confidence += 5
+
+                    if total_wins >= 6:
+
+                        confidence += 3
 
                     if total_wins <= 1:
 
@@ -4279,18 +4279,6 @@ async def prematch_loop():
                     # =================================================
                     # BALANCED ATTACK ENGINE
                     # =================================================
-
-                    if (
-
-                        home_form["avg_scored"] >= 1.3
-
-                        and
-
-                        away_form["avg_scored"] >= 1.3
-
-                    ):
-
-                        confidence += 4
 
                     if (
 
@@ -4303,6 +4291,18 @@ async def prematch_loop():
                     ):
 
                         confidence += 6
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.3
+
+                        and
+
+                        away_form["avg_scored"] >= 1.3
+
+                    ):
+
+                        confidence += 4
 
                     if (
 
