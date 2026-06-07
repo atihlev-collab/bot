@@ -200,7 +200,7 @@ def can_send_prematch(key, cooldown=86400):
 
     row = cursor.fetchone()
 
-   def can_send_prematch(key, cooldown=86400):
+    def can_send_prematch(key, cooldown=86400):
 
     conn = sqlite3.connect(
         "practical_live_ai.db"
