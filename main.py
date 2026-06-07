@@ -5442,7 +5442,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 5
+                        confidence += 2
 
                     if (
 
