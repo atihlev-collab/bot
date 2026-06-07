@@ -6692,7 +6692,7 @@ async def prematch_loop():
 
                     save_prematch(key)
                     print("PREMATCH SAVED:", key)
-                    print("TOTAL SAVED:", len(prematch_sent))
+                   
 
                 except Exception as e:
 
