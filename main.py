@@ -5568,7 +5568,7 @@ async def prematch_loop():
 
                         confidence += 8
 
-                    if (
+                    elif (
 
                         true_edge >= 12
 
@@ -5580,7 +5580,7 @@ async def prematch_loop():
 
                         confidence += 5
 
-                    if (
+                    elif (
 
                         true_edge >= 8
 
@@ -5635,11 +5635,11 @@ async def prematch_loop():
 
                     if factors >= 4:
 
-                        confidence += 8
+                        confidence += 6
 
                     if factors == 3:
 
-                        confidence += 5
+                        confidence += 3
 
                     # =================================================
                     # ELITE CONFLUENCE ENGINE
