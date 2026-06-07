@@ -6262,34 +6262,41 @@ async def prematch_loop():
 
                         confidence -= 3
 
-                    # =================================================
-                    # FAIR ODD MONSTER ENGINE
-                    # =================================================
+                   # =================================================
+                   # FAIR ODD MONSTER ENGINE
+                   # =================================================
 
-                    value_gap = round(
+                   value_gap = round(
 
-                        odd - fair_odd,
+                       odd - fair_odd,
 
-                        2
+                       2
 
                     )
 
-                    if value_gap >= 0.10:
+                    if value_gap >= 0.40:
 
-                        confidence += 3
+                         confidence += 8
 
-                    if value_gap >= 0.20:
+                    elif value_gap >= 0.30:
 
-                        confidence += 5
+                         confidence += 6
 
-                    if value_gap >= 0.30:
+                    elif value_gap >= 0.20:
 
-                        confidence += 7
+                         confidence += 4
 
-                    if value_gap <= -0.15:
+                    elif value_gap >= 0.10:
 
-                        confidence -= 6
+                         confidence += 2
 
+                    elif value_gap <= -0.25:
+
+                        confidence -= 8
+
+                    elif value_gap <= -0.15:
+
+                        confidence -= 4
                     # =================================================
                     # EXTREME MARKET VALUE
                     # =================================================
