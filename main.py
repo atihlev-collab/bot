@@ -128,6 +128,15 @@ def init_database():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS prematch_sent (
+
+        match_key TEXT PRIMARY KEY,
+        created_at TEXT
+
+    )
+    """)
+
     conn.commit()
     conn.close()
 
