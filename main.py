@@ -200,21 +200,6 @@ def can_send_prematch(key, cooldown=86400):
 
     row = cursor.fetchone()
 
-    def can_send_prematch(key, cooldown=86400):
-
-    conn = sqlite3.connect(
-        "practical_live_ai.db"
-    )
-
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT match_key FROM prematch_sent WHERE match_key=?",
-        (key,)
-    )
-
-    row = cursor.fetchone()
-
     cursor.execute(
         "SELECT COUNT(*) FROM prematch_sent"
     )
@@ -224,9 +209,6 @@ def can_send_prematch(key, cooldown=86400):
         cursor.fetchone()[0]
     )
 
-    conn.close()
-
-    return row is None
     conn.close()
 
     return row is None
@@ -250,7 +232,6 @@ def save_prematch(key):
 
     conn.commit()
     conn.close()
-
 # =========================================================
 # BLOCK CHECK
 # =========================================================
