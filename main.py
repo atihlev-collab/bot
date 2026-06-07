@@ -4736,17 +4736,17 @@ async def prematch_loop():
 
                     )
 
-                    if expected_goals >= 3:
-
-                        confidence += 3
-
-                    if expected_goals >= 4:
-
-                        confidence += 5
-
                     if expected_goals >= 5:
 
                         confidence += 7
+
+                    elif expected_goals >= 4:
+
+                        confidence += 5
+
+                    elif expected_goals >= 3:
+
+                        confidence += 3
 
                     if expected_goals <= 2:
 
@@ -4828,21 +4828,21 @@ async def prematch_loop():
 
                         abs(home_attack - away_attack)
 
-                        >= 2.5
-
-                    ):
-
-                        confidence -= 6
-
-                    if (
-
-                        abs(home_attack - away_attack)
-
                         >= 3.5
 
                     ):
 
                         confidence -= 10
+
+                    elif (
+
+                        abs(home_attack - away_attack)
+
+                        >= 2.5
+
+                    ):
+
+                        confidence -= 6
 
                     # =================================================
                     # MATCH BALANCE ENGINE
