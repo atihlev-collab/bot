@@ -3271,8 +3271,8 @@ def analyze_match(match):
 
         return
 
-    # LIVE само 82%+
-    if confidence < 82:
+    # LIVE само 78%+
+    if confidence < 78:
         return
    
     # =====================================================
