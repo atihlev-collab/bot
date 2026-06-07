@@ -4678,11 +4678,11 @@ async def prematch_loop():
 
                     if (
 
-                        home_form["avg_scored"] >= 1.8
+                         home_form["avg_scored"] >= 1.8
 
-                        and
+                         and
 
-                        home_form["avg_conceded"] >= 1.5
+                         home_form["avg_conceded"] >= 1.5
 
                
 
@@ -4710,9 +4710,9 @@ async def prematch_loop():
 
                     ):
                          
-                        confidence += 2
+                         confidence += 2
 
-                    if (
+                    if ( 
                            
                         away_form["avg_scored"] >= 1.5
 
