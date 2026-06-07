@@ -6654,19 +6654,19 @@ async def prematch_loop():
 
                     print("RAW CONFIDENCE:", raw_confidence)
 
-                    if confidence >= 320:
+                    if confidence >= 260:
                         confidence = 95
 
-                    elif confidence >= 250:
+                    elif confidence >= 200:
                        confidence = 90
 
-                    elif confidence >= 190:
+                    elif confidence >= 150:
                        confidence = 85
 
-                    elif confidence >= 140:
+                    elif confidence >= 110:
                        confidence = 80
 
-                    elif confidence >= 100:
+                    elif confidence >= 80:
                        confidence = 75
 
                     else:
@@ -6682,24 +6682,26 @@ async def prematch_loop():
                     # MINIMUM MODEL EDGE FILTER
                     # =================================================
 
-                    if model_edge < 3:
+                    if model_edge < 2:
                         continue
 
-                    if confidence < 80:
+                    if confidence < 75:
                         continue
 
-                    # НИКАКЪВ drop филтър
+                    if not soft_odd:
+                        soft_edge = 0
 
                     if not soft_odd:
                         continue
 
-                    soft_edge = (
-                        (soft_odd - sharp_odd)
-                        / sharp_odd * 100
-                    )
+                    else:
+                        soft_edge = (
+                            (soft_odd - sharp_odd)
+                            / sharp_odd * 100
+                        )
 
-                    if soft_edge < 1.5:
-                        continue
+                        if soft_edge < 1.5:
+                            continue
     
                   
 
