@@ -5434,18 +5434,6 @@ async def prematch_loop():
 
                     if (
 
-                        expected_value >= 1.35
-
-                        and
-
-                        odd >= 1.90
-
-                    ):
-
-                        confidence += 2
-
-                    if (
-
                         expected_value >= 1.50
 
                         and
@@ -5454,7 +5442,14 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 3
+
+                    elif (
+                        expected_value >= 1.35
+                        and
+                        odd >= 1.90
+                    ):
+                        confidence += 2
 
                     # =================================================
                     # RISK REWARD ENGINE
