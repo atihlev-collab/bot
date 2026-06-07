@@ -5664,11 +5664,11 @@ async def prematch_loop():
 
                     if confluence >= 4:
 
-                        confidence += 8
+                        confidence += 6
 
                     elif confluence >= 3:
 
-                        confidence += 4
+                        confidence += 3
 
                     # =================================================
                     # ALL SYSTEMS GO ENGINE
@@ -5747,11 +5747,11 @@ async def prematch_loop():
 
                     if value_score == 3:
 
-                        confidence += 8
+                        confidence += 5
 
                     elif value_score == 2:
 
-                        confidence += 4
+                        confidence += 2
 
                     # =================================================
                     # ELITE VALUE FILTER
