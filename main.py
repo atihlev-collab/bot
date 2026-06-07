@@ -6605,30 +6605,7 @@ async def prematch_loop():
                     else:
                        confidence = 70
 
-                    # =================================================
-                    # SUMMER LEAGUE BOOST
-                    # =================================================
-
-                    if country in [
-
-                        "Norway",
-                        "Sweden",
-                        "Finland",
-                        "Iceland"
-
-                    ]:
-
-                        confidence += 3
-
-                    if country in [
-
-                        "Brazil",
-                        "Argentina",
-                        "Japan"
-
-                    ]:
-
-                        confidence += 2
+                   
 
                     # =================================================
                     # FILTERS
