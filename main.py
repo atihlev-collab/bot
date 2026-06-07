@@ -4080,26 +4080,32 @@ async def prematch_loop():
                     elif signal_score <= 0:
                         confidence -= 5
 
-                    if model_edge >= 5:
+                    # =================================================
+                    # VALUE CORE ENGINE
+                    # =================================================
+
+                     value_score = 0
+
+                     value_score += true_edge * 1.5
+
+                     value_score += model_edge * 1.5
+
+                     value_score += clv * 0.5
+ 
+                     if value_score >= 40:
+                        confidence += 12
+
+                    elif value_score >= 30:
+                        confidence += 9
+
+                    elif value_score >= 20:
+                        confidence += 6
+
+                    elif value_score >= 10:
                         confidence += 3
 
-                    if model_edge >= 8:
-                        confidence += 4
-
-                    if model_edge >= 12:
-                        confidence += 5
-
-                    if true_edge >= 5:
-                        confidence += 2
-
-                    if true_edge >= 8:
-                        confidence += 3
-
-                    if true_edge >= 12:
-                        confidence += 4
-
-                    if true_edge >= 15:
-                        confidence += 5
+                    elif value_score <= 0:
+                        confidence -= 8
 
                     # =================================================
                     # FAIR VALUE ENGINE
