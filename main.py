@@ -4497,14 +4497,6 @@ async def prematch_loop():
                     # WINNER MENTALITY ENGINE
                     # =================================================
 
-                    if home_form["wins"] >= 4:
-
-                        confidence += 3
-
-                    if away_form["wins"] >= 4:
-
-                        confidence += 3
-
                     if (
 
                         home_form["wins"] >= 4
@@ -4515,7 +4507,19 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 4
+                        confidence += 6
+
+                    elif (
+
+                        home_form["wins"] >= 4
+
+                        or
+
+                        away_form["wins"] >= 4
+
+                     ):
+
+                        confidence += 3
 
                     if (
 
@@ -4631,30 +4635,18 @@ async def prematch_loop():
                     if away_form["avg_conceded"] >= 2.5:
                         weak_defence += 1
 
-                    if weak_defence >= 2:
-                        confidence += 4
+                    if weak_defence >= 4:
+                        confidence += 8
 
-                    if weak_defence >= 3:
+                    elif weak_defence >= 3:
                         confidence += 6
 
-                    if weak_defence >= 4:
+                    elif weak_defence >= 2:
                         confidence += 4
 
                     # =================================================
                     # BOTH DEFENCES BROKEN ENGINE
                     # =================================================
-
-                    if (
-
-                        home_form["avg_conceded"] >= 1.8
-
-                        and
-
-                        away_form["avg_conceded"] >= 1.8
-
-                    ):
-
-                        confidence += 5
 
                     if (
 
@@ -4666,35 +4658,23 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 4
+                        confidence += 7
+
+                    elif (
+
+                        home_form["avg_conceded"] >= 1.8
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.8
+
+                    ):
+
+                        confidence += 5
 
                     # =================================================
                     # OPEN GAME ENGINE
                     # =================================================
-
-                    if (
-
-                        home_form["avg_scored"] >= 1.5
-
-                        and
-
-                        home_form["avg_conceded"] >= 1.2
-
-                    ):
-
-                        confidence += 2
-
-                    if (
-
-                        away_form["avg_scored"] >= 1.5
-
-                        and
-
-                        away_form["avg_conceded"] >= 1.2
-
-                    ):
-
-                        confidence += 2
 
                     if (
 
@@ -4703,6 +4683,8 @@ async def prematch_loop():
                         and
 
                         home_form["avg_conceded"] >= 1.5
+
+               
 
                         and
 
@@ -4715,6 +4697,32 @@ async def prematch_loop():
                     ):
 
                         confidence += 6
+
+                    else 
+
+                    if (
+
+                        home_form["avg_scored"] >= 1.5
+
+                        and
+
+                        home_form["avg_conceded"] >= 1.2
+
+                    ):
+                         
+                        confidence += 2
+
+                    if (
+                           
+                        away_form["avg_scored"] >= 1.5
+
+                        and
+
+                        away_form["avg_conceded"] >= 1.2
+
+                    ):
+
+                        confidence += 2
 
                     # =================================================
                     # GOAL EXPECTATION ENGINE
