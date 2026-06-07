@@ -5517,15 +5517,15 @@ async def prematch_loop():
 
                     if (
 
-                        true_edge >= 8
+                        true_edge >= 15
 
                         and
 
-                        odd >= 1.80
+                        odd >= 2.20
 
                     ):
 
-                        confidence += 3
+                        confidence += 8
 
                     if (
 
@@ -5541,15 +5541,15 @@ async def prematch_loop():
 
                     if (
 
-                        true_edge >= 15
+                        true_edge >= 8
 
                         and
 
-                        odd >= 2.20
+                        odd >= 1.80
 
                     ):
 
-                        confidence += 8
+                        confidence += 3
 
                     # =================================================
                     # DOUBLE CONFIRMATION ENGINE
@@ -5566,13 +5566,13 @@ async def prematch_loop():
                     if market_gap >= 7:
                         confirmations += 1
 
-                    if confirmations >= 2:
+                    if confirmations >= 3:
 
                         confidence += 4
 
-                    if confirmations >= 3:
+                    if confirmations >= 2:
 
-                        confidence += 7
+                        confidence += 4
 
                     # =================================================
                     # FOUR FACTOR ENGINE
@@ -5592,13 +5592,13 @@ async def prematch_loop():
                     if clv >= 3:
                         factors += 1
 
-                    if factors >= 3:
-
-                        confidence += 5
-
-                    if factors == 4:
+                    if factors >= 4:
 
                         confidence += 8
+
+                    if factors == 3:
+
+                        confidence += 5
 
                     # =================================================
                     # ELITE CONFLUENCE ENGINE
