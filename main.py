@@ -101,8 +101,6 @@ odds_cache = {}
 
 opening_odds = {}
 
-prematch_sent = {}
-
 # =========================================================
 # DATABASE
 # =========================================================
@@ -6770,7 +6768,7 @@ def main():
     init_database()
 
     print("🚀 PRACTICAL LIVE AI SYSTEM STARTED")
-
+    print("BOT START TIME:", datetime.now())
     
     # LIVE
     live_thread = threading.Thread(
