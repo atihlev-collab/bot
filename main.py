@@ -5650,19 +5650,19 @@ async def prematch_loop():
 
                     if (
 
-                        true_edge >= 8
+                        true_edge >= 10
 
                         and
 
-                        model_edge >= 8
+                        model_edge >= 10
 
                         and
 
-                        poisson_edge >= 8
+                        poisson_edge >= 10
 
                         and
 
-                        clv >= 4
+                        clv >= 5
 
                     ):
 
