@@ -6616,6 +6616,9 @@ async def prematch_loop():
 
                     key = f"{home}_{away}_{date.strftime('%Y%m%d')}"
 
+                    print("CHECKING:", key)
+                    print("IN MEMORY:", key in prematch_sent)
+
                     if not can_send_prematch(key):
                         continue
 
@@ -6665,6 +6668,8 @@ async def prematch_loop():
                     await send_telegram(msg)
 
                     save_prematch(key)
+                    print("PREMATCH SAVED:", key)
+                    print("TOTAL SAVED:", len(prematch_sent))
 
                 except Exception as e:
 
