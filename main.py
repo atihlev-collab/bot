@@ -6520,7 +6520,7 @@ async def prematch_loop():
 
                     elif "Serie A" in league:
 
-                        confidence += 
+                         confidence += 
 
                     # =================================================
                     # GOAL LEAGUE ENGINE
