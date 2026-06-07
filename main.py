@@ -4158,13 +4158,13 @@ async def prematch_loop():
                     # EXTREME VALUE ENGINE
                     # =================================================
 
-                    if odd >= fair_odd * 1.20:
-
-                        confidence += 6
-
-                    if odd >= fair_odd * 1.30:
+                    if odd >= fair_odd * 1.23:
 
                         confidence += 8
+
+                    if odd >= fair_odd * 1.20:
+
+                        confidence += 4
 
                     # =================================================
                     # VALUE + FORM FILTER ENGINE
@@ -5542,15 +5542,15 @@ async def prematch_loop():
 
                     if edge_power >= 30:
 
-                        confidence += 8
+                        confidence += 6
 
                     elif edge_power >= 20:
 
-                        confidence += 5
+                        confidence += 4
 
                     elif edge_power >= 15:
 
-                        confidence += 3
+                        confidence += 2
 
                     # =================================================
                     # VALUE QUALITY ENGINE
