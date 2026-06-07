@@ -6414,18 +6414,6 @@ async def prematch_loop():
 
                     if (
 
-                        clv >= 5
-
-                        and
-
-                        drop >= 0.10
-
-                    ):
-
-                        confidence += 4
-
-                    if (
-
                         clv >= 8
 
                         and
@@ -6436,21 +6424,21 @@ async def prematch_loop():
 
                         confidence += 6
 
-                    # =================================================
-                    # ELITE SHARP MONEY ENGINE
-                    # =================================================
-
-                    if (
+                    elif (
 
                         clv >= 5
 
                         and
 
-                        velocity >= 0.02
+                        drop >= 0.10
 
                     ):
 
                         confidence += 4
+
+                    # =================================================
+                    # ELITE SHARP MONEY ENGINE
+                    # =================================================
 
                     if (
 
@@ -6463,6 +6451,18 @@ async def prematch_loop():
                     ):
 
                         confidence += 6
+
+                    elif (
+
+                        clv >= 5
+
+                        and
+
+                        velocity >= 0.02
+
+                    ):
+
+                        confidence += 4
 
                     # =================================================
                     # SMART MONEY CONFIRMATION
@@ -6587,19 +6587,19 @@ async def prematch_loop():
 
                     print("RAW CONFIDENCE:", raw_confidence)
 
-                    if confidence >= 420:
+                    if confidence >= 320:
                         confidence = 95
 
-                    elif confidence >= 340:
+                    elif confidence >= 250:
                        confidence = 90
 
-                    elif confidence >= 260:
+                    elif confidence >= 190:
                        confidence = 85
 
-                    elif confidence >= 190:
+                    elif confidence >= 140:
                        confidence = 80
 
-                    elif confidence >= 140:
+                    elif confidence >= 100:
                        confidence = 75
 
                     else:
