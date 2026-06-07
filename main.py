@@ -5617,11 +5617,11 @@ async def prematch_loop():
 
                     if confirmations >= 3:
 
-                        confidence += 4
+                        confidence += 6
 
-                    if confirmations >= 2:
+                    elif confirmations >= 2:
 
-                        confidence += 4
+                        confidence += 3
 
                     # =================================================
                     # FOUR FACTOR ENGINE
@@ -5831,30 +5831,41 @@ async def prematch_loop():
 
                     if (
 
-                        model_edge >= 8
+                        model_edge >= 10
 
                         and
 
-                        true_edge >= 8
+                        true_edge >= 10
 
                     ):
 
-                        confidence += 5
+                        confidence += 6
+
+                    elif (                             
+
+                         model_edge >= 7
+
+                       and
+                       
+                        true_edge >= 7
+                    ):
+
+                        confidence += 4
 
                     elif (
 
                         model_edge >= 5
 
                         and
-
+                       
                         true_edge >= 5
 
-                    ):
+                       ):
 
-                        confidence += 3
+                        confidence += 2
 
                     if (
-
+                             
                         model_edge < 0
 
                         and
