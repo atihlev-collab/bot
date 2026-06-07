@@ -5447,17 +5447,17 @@ async def prematch_loop():
                     # ELITE EV ENGINE
                     # =================================================
 
-                    if expected_value >= 1.30:
+                    if expected_value >= 1.40:
 
-                        confidence += 8
+                        confidence += 6
 
-                    elif expected_value >= 1.20:
+                    elif expected_value >= 1.25:
 
-                        confidence += 5
+                        confidence += 4
 
-                    elif expected_value >= 1.10:
+                    elif expected_value >= 1.15:
 
-                        confidence += 3
+                        confidence += 2
 
                     # =================================================
                     # PREMIUM VALUE ENGINE
@@ -5473,14 +5473,14 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 3
+                        confidence += 6
 
                     elif (
                         expected_value >= 1.35
                         and
                         odd >= 1.90
                     ):
-                        confidence += 2
+                        confidence += 3
 
                     # =================================================
                     # RISK REWARD ENGINE
@@ -6648,7 +6648,7 @@ async def prematch_loop():
                     key = f"{home}_{away}_{date.strftime('%Y%m%d')}"
 
                     print("CHECKING:", key)
-                    print("IN MEMORY:", key in prematch_sent)
+                    print("CAN SEND:", can_send_prematch(key))
                   
                     if not can_send_prematch(key):
                         continue
