@@ -4607,7 +4607,7 @@ async def prematch_loop():
                         confidence += 6
 
                     if weak_defence >= 4:
-                        confidence += 8
+                        confidence += 4
 
                     # =================================================
                     # BOTH DEFENCES BROKEN ENGINE
@@ -4635,7 +4635,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 4
 
                     # =================================================
                     # OPEN GAME ENGINE
@@ -4848,7 +4848,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 4
 
                     # =================================================
                     # GOAL FEST ENGINE
@@ -4884,7 +4884,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 4
 
                     # =================================================
                     # GOAL SYNERGY ENGINE
@@ -5250,7 +5250,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
+                        confidence += 4
 
                     # =================================================
                     # MARKET DISAGREEMENT ENGINE
