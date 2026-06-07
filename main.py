@@ -5751,11 +5751,14 @@ async def prematch_loop():
                     ):
 
                         confidence += 6
+                     
 
                     # =================================================
                     # MARKET TRAP ENGINE
                     # =================================================
 
+                    drop = locals().get("drop", 0)
+               
                     if (
 
                         drop >= 0.30
