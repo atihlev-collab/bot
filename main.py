@@ -6262,11 +6262,11 @@ async def prematch_loop():
 
                         confidence -= 3
 
-                   # =================================================
-                   # FAIR ODD MONSTER ENGINE
-                   # =================================================
+                    # =================================================
+                    # FAIR ODD MONSTER ENGINE
+                    # =================================================
 
-                   value_gap = round(
+                    value_gap = round(
 
                        odd - fair_odd,
 
