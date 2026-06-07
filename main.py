@@ -5395,7 +5395,15 @@ async def prematch_loop():
 
                         poisson_edge = 0
 
-                    if poisson_edge >= 15:
+                    # =================================================
+                    # POISSON EDGE ENGINE
+                    # =================================================
+
+                    if poisson_edge >= 20:
+
+                        confidence += 8
+
+                    elif poisson_edge >= 15:
 
                         confidence += 6
 
@@ -5407,9 +5415,13 @@ async def prematch_loop():
 
                         confidence += 2
 
+                    elif poisson_edge <= -10:
+
+                        confidence -= 8
+
                     elif poisson_edge <= -5:
 
-                        confidence -= 6
+                        confidence -= 4
 
                     # =================================================
                     # PRICE VS PROBABILITY ENGINE
@@ -5435,15 +5447,15 @@ async def prematch_loop():
 
                         expected_value = 1
 
-                    if expected_value >= 1.20:
+                    if expected_value >= 1.30:
 
                         confidence += 8
 
-                    elif expected_value >= 1.10:
+                    elif expected_value >= 1.20:
 
                         confidence += 5
 
-                    elif expected_value >= 1.05:
+                    elif expected_value >= 1.10:
 
                         confidence += 3
 
@@ -5481,24 +5493,24 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 6
+                        confidence += 8
 
                     elif (
                         expected_value >= 1.35
                         and
                         odd >= 1.90
                     ):
-                        confidence += 3
+                        confidence += 5
 
                     # =================================================
                     # RISK REWARD ENGINE
                     # =================================================
 
-                    if odd >= 2.20 and true_edge >= 8:
+                    if odd >= 2.30 and true_edge >= 10:
 
-                        confidence += 4
+                        confidence += 5
 
-                    elif odd >= 2.00 and true_edge >= 6:
+                    elif odd >= 2.10 and true_edge >= 8:
 
                         confidence += 3
 
@@ -5522,18 +5534,21 @@ async def prematch_loop():
 
                     )
 
-                    if edge_alignment <= 2:
+                    if edge_alignment <= 1:
 
-                        confidence += 4
+                        confidence += 5
 
-                    elif edge_alignment <= 4:
+                    elif edge_alignment <= 3:
 
-                        confidence += 2
+                        confidence += 3
 
-                    elif edge_alignment >= 10:
+                    elif edge_alignment >= 12:
 
-                        confidence -= 5
+                        confidence -= 6
 
+                    elif edge_alignment >= 8:
+
+                        confidence -= 3
                     # =================================================
                     # EDGE ACCELERATION ENGINE
                     # =================================================
