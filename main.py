@@ -178,7 +178,7 @@ def save_sent(fixture_id):
 # PREMATCH DUPLICATE
 # =========================================================
 
-def can_send_prematch(key, cooldown=21600):
+def can_send_prematch(key, cooldown=86400):
 
     now = time.time()
 
@@ -6614,7 +6614,7 @@ async def prematch_loop():
                     # DUPLICATE
                     # =================================================
 
-                    key = f"{home}_{away}"
+                    key = f"{home}_{away}_{date.strftime('%Y%m%d')}"
 
                     if not can_send_prematch(key):
                         continue
