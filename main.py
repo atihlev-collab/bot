@@ -6536,7 +6536,7 @@ async def prematch_loop():
 
                     print("RAW CONFIDENCE:", raw_confidence)
 
-                    if confidence >= 240:
+                    if confidence >= 250:
                         confidence = 95
 
                     elif confidence >= 200:
@@ -6548,7 +6548,7 @@ async def prematch_loop():
                     elif confidence >= 130:
                        confidence = 80
 
-                    elif confidence >= 90:
+                    elif confidence >= 100:
                        confidence = 75
 
                     else:
