@@ -4124,16 +4124,16 @@ async def prematch_loop():
                     value_score += clv * 0.5
  
                     if value_score >= 40:
-                        confidence += 12
+                        confidence += 8
 
                     elif value_score >= 30:
-                        confidence += 9
-
-                    elif value_score >= 20:
                         confidence += 6
 
+                    elif value_score >= 20:
+                        confidence += 4
+
                     elif value_score >= 10:
-                        confidence += 3
+                        confidence += 2
 
                     elif value_score <= 0:
                         confidence -= 8
