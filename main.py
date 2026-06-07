@@ -5584,40 +5584,52 @@ async def prematch_loop():
 
                     if (
 
+                        true_edge >= 20
+
+                        and
+
+                        odd >= 2.30
+
+                    ):
+
+                        confidence += 10
+
+                    elif (
+
                         true_edge >= 15
 
                         and
 
-                        odd >= 2.20
+                        odd >= 2.10
 
                     ):
 
-                        confidence += 8
+                        confidence += 7
 
                     elif (
 
-                        true_edge >= 12
+                        true_edge >= 10
 
                         and
 
-                        odd >= 2.00
+                        odd >= 1.90
 
-                    ):
+                     ):
 
-                        confidence += 5
+                        confidence += 4
 
-                    elif (
+                     elif (
 
                         true_edge >= 8
 
                         and
-
+ 
                         odd >= 1.80
 
                     ):
 
-                        confidence += 3
-
+                        confidence += 2
+ 
                     # =================================================
                     # DOUBLE CONFIRMATION ENGINE
                     # =================================================
