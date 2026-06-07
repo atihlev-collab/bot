@@ -4698,9 +4698,9 @@ async def prematch_loop():
 
                         confidence += 6
 
-                    else 
+                    else: 
 
-                    if (
+                        if (
 
                         home_form["avg_scored"] >= 1.5
 
