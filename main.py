@@ -178,18 +178,42 @@ def save_sent(fixture_id):
 
 def can_send_prematch(key, cooldown=86400):
 
-    now = time.time()
+    conn = sqlite3.connect(
+        "practical_live_ai.db"
+    )
 
-    if key in prematch_sent:
+    cursor = conn.cursor()
 
-        if now - prematch_sent[key] < cooldown:
-            return False
+    cursor.execute(
+        "SELECT match_key FROM prematch_sent WHERE match_key=?",
+        (key,)
+    )
 
-    return True
+    row = cursor.fetchone()
+
+    conn.close()
+
+    return row is None
+
 
 def save_prematch(key):
 
-    prematch_sent[key] = time.time()
+    conn = sqlite3.connect(
+        "practical_live_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "INSERT OR IGNORE INTO prematch_sent VALUES (?,?)",
+        (
+            key,
+            str(datetime.now())
+        )
+    )
+
+    conn.commit()
+    conn.close()
 
 # =========================================================
 # BLOCK CHECK
@@ -4344,17 +4368,17 @@ async def prematch_loop():
                     )
 
 
-                    if total_scored >= 3:
+                    if total_scored >= 5:
 
-                        confidence += 3
+                        confidence += 7
 
                     if total_scored >= 4:
 
                         confidence += 5
 
-                    if total_scored >= 5:
+                    if total_scored >= 3:
 
-                        confidence += 7
+                        confidence += 3
 
                     if total_scored <= 1.5:
 
@@ -4366,18 +4390,6 @@ async def prematch_loop():
 
                     if (
 
-                        total_scored >= 4
-
-                        and
-
-                        total_over25 >= 6
-
-                    ):
-
-                        confidence += 4
-
-                    if (
-
                         total_scored >= 5
 
                         and
@@ -4386,7 +4398,19 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 6
+                        confidence += 4
+
+                    if (
+
+                        total_scored >= 4
+
+                        and
+
+                        total_over25 >= 6
+
+                    ):
+
+                        confidence += 2
 
                     # =================================================
                     # FAKE GOALS ENGINE
