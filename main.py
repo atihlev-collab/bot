@@ -5563,7 +5563,11 @@ async def prematch_loop():
 
                     )
 
-                    if edge_power >= 30:
+                    if edge_power >= 40:
+
+                        confidence += 8
+
+                    elif edge_power >= 30:
 
                         confidence += 6
 
@@ -5574,7 +5578,6 @@ async def prematch_loop():
                     elif edge_power >= 15:
 
                         confidence += 2
-
                     # =================================================
                     # VALUE QUALITY ENGINE
                     # =================================================
@@ -5699,6 +5702,26 @@ async def prematch_loop():
 
                     if (
 
+                        true_edge >= 15
+
+                        and
+
+                        model_edge >= 15
+
+                        and
+
+                        poisson_edge >= 15
+
+                        and
+
+                        clv >= 8
+
+                    ):
+
+                        confidence += 10
+
+                   elif (
+
                         true_edge >= 10
 
                         and
@@ -5715,15 +5738,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 8
-
-                    drop, velocity = odds_drop_signal(
-
-                        home,
-                        away,
-                        odd
-
-                    )
+                        confidence += 6
 
                     # =================================================
                     # MARKET TRAP ENGINE
