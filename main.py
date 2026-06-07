@@ -6452,29 +6452,29 @@ async def prematch_loop():
                     # SMART CLV BOOST
                     # =================================================
 
-                   if clv >= 12:
+                    if clv >= 12:
 
-                       confidence += 8
+                        confidence += 8
 
                     elif clv >= 8:
 
-                       confidence += 6
+                        confidence += 6
 
                     elif clv >= 5:
 
-                       confidence += 4
+                        confidence += 4
 
                     elif clv >= 3:
 
-                       confidence += 2
+                        confidence += 2
 
                     elif clv <= -5:
 
-                       confidence -= 8
+                        confidence -= 8
 
                     elif clv <= -3:
 
-                       confidence -= 4
+                         confidence -= 4
                     # =================================================
                     # SHARP AGREEMENT ENGINE
                     # =================================================
