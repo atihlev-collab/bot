@@ -6470,18 +6470,6 @@ async def prematch_loop():
 
                     if (
 
-                        clv >= 5
-
-                        and
-
-                        soft_edge >= 5
-
-                    ):
-
-                        confidence += 5
-
-                    if (
-
                         clv >= 8
 
                         and
@@ -6491,6 +6479,18 @@ async def prematch_loop():
                     ):
 
                         confidence += 8
+
+                    elif (
+
+                        clv >= 5
+
+                        and
+
+                        soft_edge >= 5
+
+                    ):
+
+                        confidence += 5
 
                     # =================================================
                     # SELF LEARNING ENGINE
