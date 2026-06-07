@@ -6512,11 +6512,11 @@ async def prematch_loop():
 
                         if market == "⚽ OVER 2.5 GOALS":
 
-                            confidence += 5
+                            confidence += 3
 
                         elif market == "💎 BTTS":
 
-                            confidence += 4
+                            confidence += 2
 
                     if country in [
 
