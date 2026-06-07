@@ -6616,7 +6616,7 @@ async def prematch_loop():
 
                     print("CHECKING:", key)
                     print("IN MEMORY:", key in prematch_sent)
-
+                  
                     if not can_send_prematch(key):
                         continue
 
