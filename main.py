@@ -5700,7 +5700,7 @@ async def prematch_loop():
 
                     ):
 
-                        confidence += 5
+                        confidence += 8
 
                     drop, velocity = odds_drop_signal(
 
@@ -5716,7 +5716,7 @@ async def prematch_loop():
 
                     if (
 
-                        drop >= 0.20
+                        drop >= 0.30
 
                         and
 
@@ -5728,7 +5728,7 @@ async def prematch_loop():
 
                     if (
 
-                        drop >= 0.30
+                        drop >= 0.40
 
                         and
 
