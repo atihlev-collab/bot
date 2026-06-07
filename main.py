@@ -4436,17 +4436,17 @@ async def prematch_loop():
                     # OVER25 MONSTER ENGINE
                     # =================================================
 
-                    if total_over25 >= 6:
+                    if total_over25 >= 10:
 
-                        confidence += 3
+                        confidence += 7
 
                     if total_over25 >= 8:
 
                         confidence += 5
 
-                    if total_over25 >= 10:
+                    if total_over25 >= 6:
 
-                        confidence += 7
+                        confidence += 3
 
                     if total_over25 <= 2:
 
