@@ -759,7 +759,7 @@ def analyze_prematch_match(match):
             away_form
         )
 
-        if home_score >= 50:
+        if home_score >= 85:
 
             signals.append(
 
@@ -775,15 +775,7 @@ def analyze_prematch_match(match):
 
         if home_score >= 70:
 
-            signals.append(
-
-                (
-                     "🔥 HOME -1",
-                     90,
-                     round(home_score, 1)
-                )
-
-            )
+        
             
         # OVER 2.5
 
