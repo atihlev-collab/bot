@@ -486,8 +486,8 @@ def analyze_live_match(match):
             minute
 
         )
-           ),
-           minute
+            ),
+            minute
 
         )
 
