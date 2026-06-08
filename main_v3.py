@@ -818,7 +818,104 @@ async def send_prematch_signal(
 
         country,
         league
+
+        # =========================================================
+# PREMATCH MESSAGE
+# =========================================================
+
+async def send_prematch_signal(
+
+    fixture_id,
+
+    country,
+    league,
+
+    home,
+    away,
+
+    market,
+
+    confidence,
+    probability
+
+):
+
+    message = f"""
+🔥 PREMATCH V3
+
+🏆 {home} vs {away}
+
+🌍 {country}
+🏟 {league}
+
+📊 Market:
+{market}
+
+🎯 Probability:
+{probability}%
+
+💎 Confidence:
+{confidence}%
+"""
+
+    await send_telegram(
+        message
+    )
+
+    save_signal(
+
+        fixture_id,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+
+        0,
+        confidence
+
+    )
         
+# =========================================================
+# PREMATCH LOOP
+# =========================================================
+
+def prematch_loop():
+
+    print("PREMATCH SCAN START")
+
+    matches = get_upcoming_matches()
+
+    print(
+        f"Matches found: {len(matches)}"
+    )
+
+    for match in matches:
+
+        signals = analyze_prematch_match(
+            match
+        )
+
+        if not signals:
+            continue
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        print(
+            f"SIGNAL: {home} vs {away}"
+        )
+
+        for market, confidence, probability in signals:
+
+            print(
+                market,
+                confidence,
+                probability
+           )
         
 if __name__ == "__main__":
 
