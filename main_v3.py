@@ -409,31 +409,27 @@ def calculate_form_score(
 
 ):
 
-    score = 0
+    score += home_form["form_pct"] * 0.5
+    score += away_form["form_pct"] * 0.5
 
-    score = 0
+    score += (
+        home_form["over25"]
+        +
+        away_form["over25"]
+    ) * 2
 
-score += home_form["form_pct"] * 0.5
-score += away_form["form_pct"] * 0.5
+    score += (
+        home_form["btts"]
+        +
+        away_form["btts"]
+    ) * 2
 
-score += (
-    home_form["over25"]
-    +
-    away_form["over25"]
-) * 2
+    return min(
+        100,
+        round(score, 2)
+    )
 
-score += (
-    home_form["btts"]
-    +
-    away_form["btts"]
-) * 2
-
-return min(
-    100,
-    round(score, 2)
-)
-
-    return score
+    
     
 # =========================================================
 # LEAGUE WEIGHT
