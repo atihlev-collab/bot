@@ -724,7 +724,7 @@ def analyze_prematch_match(match):
             away_form
         )
 
-        if home_score >= 25:
+        if home_score >= 35:
 
             signals.append(
 
