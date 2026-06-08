@@ -471,21 +471,21 @@ def analyze_live_match(match):
         ) < 75:
             return None
 
-      market = "⚽ LIVE OVER 2.5"
+        market = "⚽ LIVE OVER 2.5"
 
-      if home_pressure > away_pressure:
-          market = "🎯 NEXT GOAL HOME"
+        if home_pressure > away_pressure:
+            market = "🎯 NEXT GOAL HOME"
 
-     if away_pressure > home_pressure:
-         market = "🎯 NEXT GOAL AWAY"
+        if away_pressure > home_pressure:
+            market = "🎯 NEXT GOAL AWAY"
 
-     return (
+        return (
 
-         market,
-         confidence,
-         minute
+            market,
+            confidence,
+            minute
 
-     )
+        )
            ),
            minute
 
