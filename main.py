@@ -821,9 +821,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over_prob >= 60
+            over_prob >= 70
             and
-            over_conf >= 80
+            over_conf >= 90
         ):
 
             signals.append(
@@ -858,9 +858,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 58
+            btts_prob >= 68
             and
-            btts_conf >= 80
+            btts_conf >= 90
         ):
 
             signals.append(
