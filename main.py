@@ -253,7 +253,7 @@ def analyze_live_match(match):
         if minute < 55:
             return None
 
-       if minute > 80:
+        if minute > 80:
            return None
 
         home = match["goals"]["home"] or 0
@@ -261,7 +261,7 @@ def analyze_live_match(match):
 
         total = home + away
 
-        if total >= 3:
+        if total != 2:
             return None
 
         return (
