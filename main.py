@@ -237,6 +237,41 @@ def get_upcoming_matches():
             pass
 
     return matches
+# =========================================================
+# LIVE ANALYSIS
+# =========================================================
+
+def analyze_live_match(match):
+
+    try:
+
+        minute = match["fixture"]["status"]["elapsed"]
+
+        if not minute:
+            return None
+
+        if minute < 55:
+            return None
+
+        home = match["goals"]["home"] or 0
+        away = match["goals"]["away"] or 0
+
+        total = home + away
+
+        if total >= 3:
+            return None
+
+        return (
+
+            "⚽ LIVE OVER 2.5",
+            85,
+            minute
+
+        )
+
+    except:
+
+        return None
     
 # =========================================================
 # TEAM FORM
@@ -1058,7 +1093,56 @@ def prematch_loop():
 
         )
         
+# =========================================================
+# LIVE LOOP
+# =========================================================
 
+def live_loop():
+
+    matches = get_live_matches()
+
+    for match in matches:
+
+        signal = analyze_live_match(
+            match
+        )
+
+        if not signal:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        key = f"live_{fixture_id}"
+
+        if key in sent_live:
+            continue
+
+        sent_live[key] = time.time()
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        minute = signal[2]
+
+        asyncio.run(
+
+            send_telegram(
+
+                f"""
+🔥 LIVE SIGNAL
+
+🏆 {home} vs {away}
+
+⏱ Minute: {minute}
+
+⚽ OVER 2.5
+
+💎 Confidence: 85%
+"""
+
+            )
+
+        )
 
 if __name__ == "__main__":
 
@@ -1066,6 +1150,10 @@ if __name__ == "__main__":
    
     init_database()
 
-    prematch_loop()
+    while True:
+
+        prematch_loop()
+
+        time.sleep(300)
 
 
