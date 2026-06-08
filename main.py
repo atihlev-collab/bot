@@ -766,7 +766,38 @@ def analyze_prematch_match(match):
             -
             away_form["wins"]
         )
-        
+        # HOME WIN
+
+        home_score = home_win_score(
+            home_form,
+            away_form
+        )
+
+        home_edge = (
+            home_form["wins"]
+            -
+            away_form["wins"]
+        )
+
+        if (
+           home_score >= 70
+           and
+           home_form["wins"] >= 3
+           and
+           home_edge >= 2
+       ):
+
+            signals.append(
+
+               (
+                   "🏆 HOME WIN",
+                   confidence_from_score(
+                       home_score
+                   ),
+                   round(home_score, 1)
+              )
+
+        )
             
         # OVER 2.5
 
