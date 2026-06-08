@@ -373,6 +373,116 @@ def get_upcoming_matches():
 
     return matches
 
+# =========================================================
+# LIVE ANALYSIS
+# =========================================================
+
+def analyze_live_match(match):
+
+    try:
+
+        home_team = match["teams"]["home"]["name"]
+        away_team = match["teams"]["away"]["name"]
+
+        text = (
+            home_team +
+            " " +
+            away_team
+        ).lower()
+
+        blocked = [
+
+            "res",
+            "reserve",
+
+            "women",
+
+            "u17",
+            "u18",
+            "u19",
+            "u20",
+            "u21",
+            "u22",
+            "u23"
+
+        ]
+
+        for word in blocked:
+
+            if word in text:
+                return None
+
+        fixture_id = match["fixture"]["id"]
+
+        stats = get_statistics(
+            fixture_id
+        )
+
+        if len(stats) < 2:
+            return None
+
+        home_stats = stats[0]
+        away_stats = stats[1]
+
+        home_pressure = calculate_pressure(
+            home_stats
+        )
+
+        away_pressure = calculate_pressure(
+            away_stats
+        )
+
+        dominance = abs(
+            home_pressure -
+            away_pressure
+        )
+
+        minute = match["fixture"]["status"]["elapsed"]
+
+        if not minute:
+            return None
+
+        if minute < 55:
+            return None
+
+        if minute > 80:
+            return None
+
+        home = match["goals"]["home"] or 0
+        away = match["goals"]["away"] or 0
+
+        total = home + away
+
+        if home == 2 and away == 0:
+            return None
+
+        if home == 0 and away == 2:
+            return None
+
+        if total != 2:
+            return None
+
+        if dominance < 20:
+            return None
+
+        if max(
+            home_pressure,
+            away_pressure
+        ) < 70:
+            return None
+
+        return (
+
+            "⚽ LIVE OVER 2.5",
+            85,
+            minute
+
+        )
+
+    except:
+
+        return None
+
     
 # =========================================================
 # TEAM FORM
