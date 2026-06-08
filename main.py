@@ -761,6 +761,12 @@ def analyze_prematch_match(match):
 
         signals = []
 
+        home_edge = (
+            home_form["wins"]
+            -
+            away_form["wins"]
+        )
+
         # HOME WIN
 
         home_score = home_win_score(
@@ -772,7 +778,9 @@ def analyze_prematch_match(match):
            home_score >= 70
            and
            home_form["wins"] >= 3
-        ):
+           and
+           home_edge >= 2
+         ):
 
             signals.append(
 
