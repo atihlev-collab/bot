@@ -1340,7 +1340,27 @@ def live_loop():
         away = match["teams"]["away"]["name"]
 
         minute = signal[2]
+
         confidence = signal[1]
+
+        fixture_id = match["fixture"]["id"]
+
+        stats = get_statistics(
+            fixture_id
+        )
+
+        home_pressure = 0
+        away_pressure = 0
+
+        if len(stats) >= 2:
+
+        home_pressure = calculate_pressure(
+            stats[0]
+        )
+
+        away_pressure = calculate_pressure(
+            stats[1]
+        )
 
         asyncio.run(
 
@@ -1354,6 +1374,9 @@ def live_loop():
 ⏱ Minute: {minute}
 
 ⚽ OVER 2.5
+
+🔥 Home Pressure: {home_pressure}
+🔥 Away Pressure: {away_pressure}
 
 💎 Confidence: {confidence}%
 """
