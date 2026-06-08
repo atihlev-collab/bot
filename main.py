@@ -241,40 +241,7 @@ def get_upcoming_matches():
 # LIVE ANALYSIS
 # =========================================================
 
-def analyze_live_match(match):
 
-    try:
-
-        minute = match["fixture"]["status"]["elapsed"]
-
-        if not minute:
-            return None
-
-        if minute < 55:
-            return None
-
-        if minute > 80:
-           return None
-
-        home = match["goals"]["home"] or 0
-        away = match["goals"]["away"] or 0
-
-        total = home + away
-
-        if total != 2:
-            return None
-
-        return (
-
-            "⚽ LIVE OVER 2.5",
-            85,
-            minute
-
-        )
-
-    except:
-
-        return None
     
 # =========================================================
 # TEAM FORM
