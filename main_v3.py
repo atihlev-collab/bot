@@ -320,7 +320,7 @@ def get_team_form(team_id):
                 over25,
 
             "btts":
-                btts
+                btts, 
            "form_pct": form_pct
         }
 
@@ -411,23 +411,27 @@ def calculate_form_score(
 
     score = 0
 
-    score += (
-        home_form["wins"]
-        +
-        away_form["wins"]
-    )
+    score = 0
 
-    score += (
-        home_form["over25"]
-        +
-        away_form["over25"]
-    )
+score += home_form["form_pct"] * 0.5
+score += away_form["form_pct"] * 0.5
 
-    score += (
-        home_form["btts"]
-        +
-        away_form["btts"]
-    )
+score += (
+    home_form["over25"]
+    +
+    away_form["over25"]
+) * 2
+
+score += (
+    home_form["btts"]
+    +
+    away_form["btts"]
+) * 2
+
+return min(
+    100,
+    round(score, 2)
+)
 
     return score
     
@@ -510,3 +514,127 @@ def value_edge(
         2
     )
     
+# =========================================================
+# SAVE SIGNAL
+# =========================================================
+
+def save_signal(
+
+    fixture_id,
+    country,
+    league,
+
+    home,
+    away,
+
+    market,
+
+    odd,
+    confidence
+
+):
+
+    conn = sqlite3.connect(
+        "v3_ai.db"
+    )
+
+    cur = conn.cursor()
+
+    cur.execute(
+
+        """
+        INSERT INTO signals (
+
+            fixture_id,
+
+            country,
+            league,
+
+            home_team,
+            away_team,
+
+            market,
+
+            odd,
+            confidence,
+
+            created_at
+
+        )
+
+        VALUES (?,?,?,?,?,?,?,?,?)
+        """,
+
+        (
+
+            fixture_id,
+
+            country,
+            league,
+
+            home,
+            away,
+
+            market,
+
+            odd,
+            confidence,
+
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+        )
+
+    )
+
+    conn.commit()
+    conn.close()
+
+# =========================================================
+# PREMATCH SCORE
+# =========================================================
+
+def calculate_final_score(
+
+    form_score,
+    poisson_score,
+
+    value_score,
+    league_bonus
+
+):
+
+    score = (
+
+        form_score * 0.30 +
+
+        poisson_score * 0.30 +
+
+        value_score * 0.25 +
+
+        league_bonus * 0.15
+
+    )
+
+    return round(score, 2)
+
+# =========================================================
+# CONFIDENCE
+# =========================================================
+
+def confidence_from_score(score):
+
+    if score >= 80:
+        return 95
+
+    if score >= 75:
+        return 90
+
+    if score >= 70:
+        return 85
+
+    if score >= 65:
+        return 80
+
+    return 0
