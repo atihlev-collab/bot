@@ -827,6 +827,63 @@ async def send_prematch_signal(
         confidence
 
     )
+
+# =========================================================
+# SEND PREMATCH SIGNAL
+# =========================================================
+
+async def send_prematch_signal(
+
+    fixture_id,
+    country,
+    league,
+
+    home,
+    away,
+
+    market,
+
+    confidence,
+    probability
+
+):
+
+    message = f"""
+🔥 PREMATCH V3
+
+🏆 {home} vs {away}
+
+🌍 {country}
+🏟 {league}
+
+📊 Market:
+{market}
+
+🎯 Probability:
+{probability}%
+
+💎 Confidence:
+{confidence}%
+"""
+
+    await send_telegram(message)
+
+    save_signal(
+
+        fixture_id,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+
+        0,
+        confidence
+
+    )
         
 # =========================================================
 # PREMATCH LOOP
