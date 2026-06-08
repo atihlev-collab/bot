@@ -828,62 +828,7 @@ async def send_prematch_signal(
 
     )
 
-# =========================================================
-# SEND PREMATCH SIGNAL
-# =========================================================
 
-async def send_prematch_signal(
-
-    fixture_id,
-    country,
-    league,
-
-    home,
-    away,
-
-    market,
-
-    confidence,
-    probability
-
-):
-
-    message = f"""
-🔥 PREMATCH V3
-
-🏆 {home} vs {away}
-
-🌍 {country}
-🏟 {league}
-
-📊 Market:
-{market}
-
-🎯 Probability:
-{probability}%
-
-💎 Confidence:
-{confidence}%
-"""
-
-    await send_telegram(message)
-
-    save_signal(
-
-        fixture_id,
-
-        country,
-        league,
-
-        home,
-        away,
-
-        market,
-
-        0,
-        confidence
-
-    )
         
 # =========================================================
 # PREMATCH LOOP
@@ -934,7 +879,28 @@ def prematch_loop():
                 confidence,
                 probability
             )
-        
+
+asyncio.run(
+
+    send_prematch_signal(
+
+        fixture_id,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+
+        confidence,
+        probability
+
+    )
+
+)
+
 if __name__ == "__main__":
 
     print("MAIN V3 STARTED")
