@@ -302,6 +302,9 @@ def get_team_form(team_id):
 
         total = len(games)
 
+        points = wins * 3
+        form_pct = round((points / 15) * 100, 2)
+
         return {
 
             "avg_scored":
@@ -318,7 +321,7 @@ def get_team_form(team_id):
 
             "btts":
                 btts
-
+           "form_pct": form_pct
         }
 
     except:
