@@ -274,6 +274,7 @@ def get_team_form(team_id):
         conceded = 0
 
         wins = 0
+        losses = 0
 
         over25 = 0
         btts = 0
@@ -301,6 +302,9 @@ def get_team_form(team_id):
             if team_goals > opp_goals:
                 wins += 1
 
+            elif team_goals < opp_goals:
+                losses += 1
+
             if (gh + ga) >= 3:
                 over25 += 1
 
@@ -322,6 +326,9 @@ def get_team_form(team_id):
 
             "wins":
                 wins,
+
+            "losses":
+                losses,
 
             "over25":
                 over25,
@@ -450,6 +457,12 @@ def home_win_score(
 ):
 
     score = 0
+
+    score += (
+        away_form["losses"]
+        -
+        home_form["losses"]
+    ) * 8
 
     score += (
         home_form["form_pct"]
