@@ -411,10 +411,35 @@ def analyze_live_match(match):
             if word in text:
                 return None
 
-        minute = match["fixture"]["status"]["elapsed"]
+fixture_id = match["fixture"]["id"]
 
-        if not minute:
-            return None
+stats = get_statistics(
+    fixture_id
+)
+
+if len(stats) < 2:
+    return None
+
+home_stats = stats[0]
+away_stats = stats[1]
+
+home_pressure = calculate_pressure(
+    home_stats
+)
+
+away_pressure = calculate_pressure(
+    away_stats
+)
+
+dominance = abs(
+    home_pressure -
+    away_pressure
+)
+
+minute = match["fixture"]["status"]["elapsed"]
+
+if not minute:
+    return None
 
         if minute < 55:
             return None
@@ -435,6 +460,15 @@ def analyze_live_match(match):
 
         if total != 2:
             return None
+
+        if dominance < 20:
+            return None
+
+        if max(
+            home_pressure,
+            away_pressure
+        ) < 70:
+           return None
 
         return (
 
