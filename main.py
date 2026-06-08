@@ -491,10 +491,7 @@ def home_win_score(
         home_form["avg_conceded"]
     ) * 5
 
-    return min(
-        100,
-        round(score, 2)
-    )
+    return round(score, 2)
     
 # =========================================================
 # LEAGUE WEIGHT
@@ -771,7 +768,7 @@ def analyze_prematch_match(match):
             away_form
         )
 
-        if home_score >= 90:
+        if home_score >= 70:
 
             signals.append(
 
