@@ -697,6 +697,12 @@ def analyze_prematch_match(match):
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
 
+        if home.endswith(" W"):
+            return None
+
+        if away.endswith(" W"):
+            return None
+        
         home_id = match["teams"]["home"]["id"]
         away_id = match["teams"]["away"]["id"]
 
@@ -734,7 +740,7 @@ def analyze_prematch_match(match):
             away_form
         )
 
-        if home_score >= 35:
+        if home_score >= 50:
 
             signals.append(
 
@@ -748,7 +754,7 @@ def analyze_prematch_match(match):
 
         # HOME HANDICAP
 
-        if home_score >= 50:
+        if home_score >= 70:
 
             signals.append(
 
