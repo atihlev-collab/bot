@@ -471,15 +471,21 @@ def analyze_live_match(match):
         ) < 75:
             return None
 
-        return (
+      market = "⚽ LIVE OVER 2.5"
 
-            "⚽ LIVE OVER 2.5",
-            min(
-                95,
-                max(
-                    home_pressure,
-                    away_pressure
-               )
+      if home_pressure > away_pressure:
+          market = "🎯 NEXT GOAL HOME"
+
+     if away_pressure > home_pressure:
+         market = "🎯 NEXT GOAL AWAY"
+
+     return (
+
+         market,
+         confidence,
+         minute
+
+     )
            ),
            minute
 
@@ -1362,7 +1368,7 @@ def live_loop():
               stats[1]
            )
 
-       asyncio.run(
+        asyncio.run(
 
            send_telegram(
 
@@ -1373,7 +1379,7 @@ def live_loop():
 
 ⏱ Minute: {minute}
 
-⚽ OVER 2.5
+{signal[0]}
 
 🔥 Home Pressure: {home_pressure}
 🔥 Away Pressure: {away_pressure}
