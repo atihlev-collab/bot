@@ -1354,17 +1354,17 @@ def live_loop():
 
         if len(stats) >= 2:
 
-        home_pressure = calculate_pressure(
+           home_pressure = calculate_pressure(
             stats[0]
-        )
+           )
 
-        away_pressure = calculate_pressure(
-            stats[1]
-        )
+           away_pressure = calculate_pressure(
+              stats[1]
+           )
 
-        asyncio.run(
+       asyncio.run(
 
-            send_telegram(
+           send_telegram(
 
                 f"""
 🔥 LIVE SIGNAL
