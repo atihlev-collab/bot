@@ -408,6 +408,8 @@ def calculate_form_score(
     away_form
 
 ):
+    
+    score = 0
 
     score += home_form["form_pct"] * 0.5
     score += away_form["form_pct"] * 0.5
@@ -634,3 +636,137 @@ def confidence_from_score(score):
         return 80
 
     return 0
+
+# =========================================================
+# PREMATCH ANALYSIS
+# =========================================================
+
+def analyze_prematch_match(match):
+
+    try:
+
+        fixture_id = match["fixture"]["id"]
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        if blocked_league(league):
+            return None
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        home_id = match["teams"]["home"]["id"]
+        away_id = match["teams"]["away"]["id"]
+
+        home_form = get_team_form(home_id)
+        away_form = get_team_form(away_id)
+
+        if not home_form or not away_form:
+            return None
+
+        over_prob = poisson_over25(
+
+            home_form["avg_scored"],
+            away_form["avg_scored"]
+
+        )
+
+        btts_prob = poisson_btts(
+
+            home_form["avg_scored"],
+            away_form["avg_scored"]
+
+        )
+
+        form_score = calculate_form_score(
+            home_form,
+            away_form
+        )
+
+        signals = []
+
+        # OVER 2.5
+
+        over_league = league_score(
+            country,
+            "⚽ OVER 2.5"
+        )
+
+        over_final = calculate_final_score(
+
+            form_score,
+            over_prob,
+
+            10,
+            over_league
+
+        )
+
+        over_conf = confidence_from_score(
+            over_final
+        )
+
+        if (
+            over_prob >= 60
+            and
+            over_conf >= 80
+        ):
+
+            signals.append(
+
+                (
+                    "⚽ OVER 2.5",
+                    over_conf,
+                    round(over_prob, 1)
+                )
+
+            )
+
+        # BTTS
+
+        btts_league = league_score(
+            country,
+            "💎 BTTS"
+        )
+
+        btts_final = calculate_final_score(
+
+            form_score,
+            btts_prob,
+
+            10,
+            btts_league
+
+        )
+
+        btts_conf = confidence_from_score(
+            btts_final
+        )
+
+        if (
+            btts_prob >= 58
+            and
+            btts_conf >= 80
+        ):
+
+            signals.append(
+
+                (
+                    "💎 BTTS",
+                    btts_conf,
+                    round(btts_prob, 1)
+                )
+
+            )
+
+        return signals
+
+    except Exception as e:
+
+        print(
+            "PREMATCH ERROR:",
+            str(e)
+        )
+
+        return None
