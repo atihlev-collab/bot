@@ -1154,6 +1154,8 @@ if __name__ == "__main__":
 
         prematch_loop()
 
+        live_loop()
+
         time.sleep(300)
 
 
