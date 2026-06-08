@@ -56,7 +56,7 @@ BLOCKED_WORDS = [
     "friendlies",
     "u22",
     "u24",
-    "olympic"
+    "olympic", 
     "reserve",
     "reserves"
 ]
@@ -689,7 +689,7 @@ def analyze_prematch_match(match):
         league = match["league"]["name"]
 
         if country in BAD_COUNTRIES:
-        return None
+            return None
     
         if blocked_league(league):
             return None
@@ -942,9 +942,12 @@ def prematch_loop():
             
             if key in sent_prematch:
 
-            if time.time() - sent_prematch[key] < 43200:
-                 continue
-            if key in sent_prematch:
+                if (
+                    time.time()
+                    -
+                    sent_prematch[key]
+             ) < 43200:
+
                  continue
 
             sent_prematch[key] = time.time()
