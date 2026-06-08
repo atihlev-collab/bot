@@ -430,8 +430,39 @@ def calculate_form_score(
         100,
         round(score, 2)
     )
-
     
+# =========================================================
+# HOME WIN SCORE
+# =========================================================
+
+def home_win_score(
+
+    home_form,
+    away_form
+
+):
+
+    score = 0
+
+    score += (
+        home_form["form_pct"]
+        -
+        away_form["form_pct"]
+    )
+
+    score += (
+        home_form["avg_scored"]
+        -
+        away_form["avg_scored"]
+    ) * 15
+
+    score += (
+        away_form["avg_conceded"]
+        -
+        home_form["avg_conceded"]
+    ) * 10
+
+    return round(score, 2)
     
 # =========================================================
 # LEAGUE WEIGHT
