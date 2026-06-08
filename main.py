@@ -406,10 +406,10 @@ def analyze_live_match(match):
 
         ]
 
-        for word in blocked:
+ for word in blocked:
 
-            if word in text:
-                return None
+      if word in text:
+          return None
 
 fixture_id = match["fixture"]["id"]
 
