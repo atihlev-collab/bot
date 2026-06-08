@@ -702,6 +702,12 @@ def analyze_prematch_match(match):
 
         if away.endswith(" W"):
             return None
+
+        if " II" in home:
+            return None
+
+        if " II" in away:
+            return None
         
         home_id = match["teams"]["home"]["id"]
         away_id = match["teams"]["away"]["id"]
