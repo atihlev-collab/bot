@@ -717,6 +717,25 @@ def analyze_prematch_match(match):
 
         signals = []
 
+        # HOME WIN
+
+        home_score = home_win_score(
+            home_form,
+            away_form
+        )
+
+        if home_score >= 25:
+
+            signals.append(
+
+                (
+                    "🏆 HOME WIN",
+                    85,
+                    round(home_score, 1)
+                )
+
+             )
+            
         # OVER 2.5
 
         over_league = league_score(
