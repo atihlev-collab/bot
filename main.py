@@ -465,13 +465,13 @@ def home_win_score(
         home_form["total_scored"]
         -
         away_form["total_scored"]
-    ) * 3
+    ) * 1
 
     score += (
         away_form["losses"]
         -
         home_form["losses"]
-    ) * 8
+    ) * 3
 
     score += (
         home_form["form_pct"]
@@ -483,13 +483,13 @@ def home_win_score(
         home_form["avg_scored"]
         -
         away_form["avg_scored"]
-    ) * 15
+    ) * 8
 
     score += (
         away_form["avg_conceded"]
         -
         home_form["avg_conceded"]
-    ) * 10
+    ) * 5
 
     return min(
         100,
