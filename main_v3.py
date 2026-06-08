@@ -10,7 +10,7 @@ import threading
 import time
 import logging
 
-import numpy as np
+
 
 from scipy.stats import poisson
 from datetime import datetime, timedelta
@@ -331,10 +331,7 @@ def get_team_form(team_id):
 
 def poisson_over25(home_attack, away_attack):
 
-    expected_goals = (
-        home_attack +
-        away_attack
-    )
+    
 
     prob = 0
 
@@ -430,3 +427,82 @@ def calculate_form_score(
     )
 
     return score
+    # =========================================================
+# LEAGUE WEIGHT
+# =========================================================
+
+TOP_GOAL_COUNTRIES = [
+
+    "Netherlands",
+    "Norway",
+    "Sweden",
+    "Denmark",
+    "Belgium",
+    "Austria"
+
+]
+
+LOW_GOAL_COUNTRIES = [
+
+    "Peru",
+    "Paraguay",
+    "Bolivia",
+    "Ecuador",
+    "Venezuela"
+
+]
+
+def league_score(country, market):
+
+    score = 0
+
+    if country in TOP_GOAL_COUNTRIES:
+
+        if market == "⚽ OVER 2.5":
+            score += 10
+
+        elif market == "💎 BTTS":
+            score += 8
+
+    if country in LOW_GOAL_COUNTRIES:
+
+        if market == "⚽ OVER 2.5":
+            score -= 10
+
+        elif market == "💎 BTTS":
+            score -= 8
+
+    return score
+
+# =========================================================
+# FAIR ODDS
+# =========================================================
+
+def fair_odds(probability):
+
+    if probability <= 0:
+        return 999
+
+    return round(
+        100 / probability,
+        2
+    )
+
+# =========================================================
+# VALUE
+# =========================================================
+
+def value_edge(
+
+    probability,
+    odd
+
+):
+
+    market_prob = 100 / odd
+
+    return round(
+        probability - market_prob,
+        2
+    )
+    def calculate_form_score(...)
