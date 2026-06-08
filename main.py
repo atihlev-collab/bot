@@ -241,7 +241,71 @@ def get_upcoming_matches():
 # LIVE ANALYSIS
 # =========================================================
 
+def analyze_live_match(match):
 
+    try:
+
+        home_team = match["teams"]["home"]["name"]
+        away_team = match["teams"]["away"]["name"]
+
+        text = (
+            home_team +
+            " " +
+            away_team
+        ).lower()
+
+        blocked = [
+
+            "res",
+            "reserve",
+
+            "women",
+
+            "u17",
+            "u18",
+            "u19",
+            "u20",
+            "u21",
+            "u22",
+            "u23"
+
+        ]
+
+        for word in blocked:
+
+            if word in text:
+                return None
+
+        minute = match["fixture"]["status"]["elapsed"]
+
+        if not minute:
+            return None
+
+        if minute < 55:
+            return None
+
+        if minute > 80:
+            return None
+
+        home = match["goals"]["home"] or 0
+        away = match["goals"]["away"] or 0
+
+        total = home + away
+
+        if total != 2:
+            return None
+
+        return (
+
+            "⚽ LIVE OVER 2.5",
+            85,
+            minute
+
+        )
+
+    except:
+
+        return None
     
 # =========================================================
 # TEAM FORM
