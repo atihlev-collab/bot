@@ -875,41 +875,58 @@ def prematch_loop():
         f"Matches found: {len(matches)}"
     )
 
-    for market, confidence, probability in signals:
+    for match in matches:
 
-    key = f"{fixture_id}_{market}"
-
-    if key in sent_prematch:
-        continue
-
-    sent_prematch[key] = time.time()
-
-    print(
-        market,
-        confidence,
-        probability
-    )
-
-    asyncio.run(
-
-        send_prematch_signal(
-
-            fixture_id,
-
-            country,
-            league,
-
-            home,
-            away,
-
-            market,
-
-            confidence,
-            probability
-
+        signals = analyze_prematch_match(
+            match
         )
 
-    )
+        if not signals:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        for market, confidence, probability in signals:
+
+            key = f"{fixture_id}_{market}"
+
+            if key in sent_prematch:
+                continue
+
+            sent_prematch[key] = time.time()
+
+            print(
+                market,
+                confidence,
+                probability
+            )
+
+            asyncio.run(
+
+                send_prematch_signal(
+
+                    fixture_id,
+
+                    country,
+                    league,
+
+                    home,
+                    away,
+
+                    market,
+
+                    confidence,
+                    probability
+
+                )
+
+            )
 
 if __name__ == "__main__":
 
