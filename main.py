@@ -225,6 +225,42 @@ def get_statistics(fixture_id):
         return []
 
 # =========================================================
+# EXTRACT STAT
+# =========================================================
+
+def extract(team, stat_name):
+
+    try:
+
+        for stat in team["statistics"]:
+
+            if stat["type"] == stat_name:
+
+                value = stat["value"]
+
+                if value is None:
+                    return 0
+
+                if isinstance(value, str):
+
+                    value = value.replace("%", "")
+
+                    try:
+                        value = int(value)
+
+                    except:
+
+                        return 0
+
+                return value
+
+    except:
+
+        pass
+
+    return 0
+
+# =========================================================
 # UPCOMING MATCHES
 # =========================================================
 
