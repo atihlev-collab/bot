@@ -506,4 +506,4 @@ def value_edge(
         probability - market_prob,
         2
     )
-    def calculate_form_score(...)
+    
