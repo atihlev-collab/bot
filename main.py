@@ -771,10 +771,6 @@ def analyze_prematch_match(match):
 
              )
 
-        # HOME HANDICAP
-
-        if home_score >= 70:
-
         
             
         # OVER 2.5
