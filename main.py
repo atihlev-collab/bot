@@ -474,8 +474,14 @@ def analyze_live_match(match):
         return (
 
             "⚽ LIVE OVER 2.5",
-            85,
-            minute
+            min(
+                95,
+                max(
+                    home_pressure,
+                    away_pressure
+               )
+           ),
+           minute
 
         )
 
@@ -1334,6 +1340,7 @@ def live_loop():
         away = match["teams"]["away"]["name"]
 
         minute = signal[2]
+        confidence = signal[1]
 
         asyncio.run(
 
@@ -1348,7 +1355,7 @@ def live_loop():
 
 ⚽ OVER 2.5
 
-💎 Confidence: 85%
+💎 Confidence: {confidence}%
 """
 
             )
