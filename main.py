@@ -740,6 +740,9 @@ def analyze_prematch_match(match):
         if not home_form or not away_form:
             return None
 
+        if away_form["avg_scored"] < 0.8:
+            return None
+
         over_prob = poisson_over25(
 
             home_form["avg_scored"],
@@ -923,6 +926,12 @@ async def send_prematch_signal(
 
 ⭐ Rating Class:
 {"ELITE" if probability >= 95 else "STRONG"}
+
+🏅 Model Rank:
+TOP 5 PICK
+
+📋 Filter:
+TOP5 MODEL PICK
 """
 
     await send_telegram(message)
@@ -999,7 +1008,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    top_signals = all_signals[:5]
+    top_signals = all_signals[:3]
 
     for (
         probability,
