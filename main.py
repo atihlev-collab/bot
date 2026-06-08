@@ -777,7 +777,9 @@ def analyze_prematch_match(match):
 
                 (
                     "🏆 HOME WIN",
-                    85,
+                    confidence_from_score(
+                        home_score
+                    )
                     round(home_score, 1)
                 )
 
@@ -906,6 +908,9 @@ async def send_prematch_signal(
 
 💎 Confidence:
 {confidence}%
+
+⭐ Rating Class:
+{"ELITE" if probability >= 95 else "STRONG"}
 """
 
     await send_telegram(message)
