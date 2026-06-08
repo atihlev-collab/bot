@@ -686,16 +686,16 @@ def calculate_final_score(
 
 def confidence_from_score(score):
 
-    if score >= 80:
+    if score >= 95:
         return 95
 
-    if score >= 75:
+    if score >= 90:
         return 90
 
-    if score >= 70:
+    if score >= 85:
         return 85
 
-    if score >= 65:
+    if score >= 80:
         return 80
 
     return 0
