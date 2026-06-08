@@ -779,7 +779,7 @@ def analyze_prematch_match(match):
                     "🏆 HOME WIN",
                     confidence_from_score(
                         home_score
-                    )
+                    ),
                     round(home_score, 1)
                 )
 
