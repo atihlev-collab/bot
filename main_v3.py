@@ -770,3 +770,56 @@ def analyze_prematch_match(match):
         )
 
         return None
+
+# =========================================================
+# SEND PREMATCH SIGNAL
+# =========================================================
+
+async def send_prematch_signal(
+
+    fixture_id,
+
+    country,
+    league,
+
+    home,
+    away,
+
+    market,
+
+    confidence,
+    probability
+
+):
+
+    msg = f"""
+🔥 PREMATCH V3
+
+🏆 {home} vs {away}
+
+🌍 {country}
+🏟 {league}
+
+📈 Market:
+{market}
+
+🎯 Probability:
+{probability}%
+
+💎 Confidence:
+{confidence}%
+"""
+
+    await send_telegram(msg)
+
+    save_signal(
+
+        fixture_id,
+
+        country,
+        league
+        
+        
+if __name__ == "__main__":
+
+    print("MAIN V3 STARTED")
