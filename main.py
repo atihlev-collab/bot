@@ -482,7 +482,10 @@ def home_win_score(
         home_form["avg_conceded"]
     ) * 10
 
-    return round(score, 2)
+    return min(
+        100,
+        round(score, 2)
+    )
     
 # =========================================================
 # LEAGUE WEIGHT
@@ -889,8 +892,8 @@ async def send_prematch_signal(
 📊 Market:
 {market}
 
-🎯 Probability:
-{probability}%
+📈 Rating:
+{probability}
 
 💎 Confidence:
 {confidence}%
