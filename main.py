@@ -292,10 +292,10 @@ def analyze_live_match(match):
 
         total = home + away
 
-        if home == 0 and away == 2:
+        if home == 2 and away == 0:
             return None
 
-        if home == 2 and away == 0:
+        if home == 0 and away == 2:
             return None
 
         if total != 2:
