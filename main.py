@@ -194,6 +194,37 @@ def get_live_matches():
         return []
 
 # =========================================================
+# LIVE STATISTICS
+# =========================================================
+
+def get_statistics(fixture_id):
+
+    try:
+
+        r = requests.get(
+
+            f"{BASE_URL}/fixtures/statistics",
+
+            headers=HEADERS,
+
+            params={
+                "fixture": fixture_id
+            },
+
+            timeout=20
+
+        ).json()
+
+        return r.get(
+            "response",
+            []
+        )
+
+    except:
+
+        return []
+
+# =========================================================
 # UPCOMING MATCHES
 # =========================================================
 
