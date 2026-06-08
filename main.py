@@ -253,6 +253,9 @@ def analyze_live_match(match):
         if minute < 55:
             return None
 
+       if minute > 80:
+           return None
+
         home = match["goals"]["home"] or 0
         away = match["goals"]["away"] or 0
 
