@@ -10,7 +10,7 @@ import threading
 import time
 import logging
 
-
+ 
 
 from scipy.stats import poisson
 from datetime import datetime, timedelta
@@ -764,11 +764,7 @@ def analyze_prematch_match(match):
 
         signals = []
 
-        home_edge = (
-            home_form["wins"]
-            -
-            away_form["wins"]
-        )
+    
         # HOME WIN
 
         home_score = home_win_score(
@@ -783,7 +779,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-           home_score >= 70
+           home_score >= 85
            and
            home_form["wins"] >= 3
            and
