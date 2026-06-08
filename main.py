@@ -52,7 +52,11 @@ BLOCKED_WORDS = [
     "u20",
     "u21",
     "u23",
-
+    "friendly",
+    "friendlies",
+    "u22",
+    "u24",
+    "olympic"
     "reserve",
     "reserves"
 ]
@@ -65,8 +69,11 @@ BAD_COUNTRIES = [
     "Indonesia",
 
     "Russia",
-    "Belarus"
+    "Belarus",
+    "Israel"
+
 ]
+
 
 # =========================================================
 # CACHE
@@ -681,6 +688,9 @@ def analyze_prematch_match(match):
         country = match["league"]["country"]
         league = match["league"]["name"]
 
+        if country in BAD_COUNTRIES:
+        return None
+    
         if blocked_league(league):
             return None
 
@@ -929,10 +939,17 @@ def prematch_loop():
 
             key = f"{fixture_id}_{market}"
 
+            
             if key in sent_prematch:
-                continue
+
+            if time.time() - sent_prematch[key] < 43200:
+                 continue
+            if key in sent_prematch:
+                 continue
 
             sent_prematch[key] = time.time()
+
+            # пази сигнала 12 часа
 
             print(
                 market,
