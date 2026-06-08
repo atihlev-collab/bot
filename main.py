@@ -1,3 +1,972 @@
+# =========================================================
+# MAIN V3
+# CLEAN BETTING SYSTEM
+# =========================================================
 
+import requests
+import sqlite3
+import asyncio
+import threading
+import time
+import logging
+
+
+
+from scipy.stats import poisson
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from telegram import Bot
+
+from config import BOT_TOKEN, API_KEY, CHAT_ID
+
+# =========================================================
+# CONFIG
+# =========================================================
+
+BASE_URL = "https://v3.football.api-sports.io"
+
+HEADERS = {
+    "x-apisports-key": API_KEY
+}
+
+TZ = ZoneInfo("Europe/Sofia")
+
+bot = Bot(token=BOT_TOKEN)
+
+logging.basicConfig(level=logging.WARNING)
+
+# =========================================================
+# LEAGUE FILTERS
+# =========================================================
+
+BLOCKED_WORDS = [
+
+    "women",
+    "female",
+
+    "youth",
+    "u17",
+    "u18",
+    "u19",
+    "u20",
+    "u21",
+    "u23",
+
+    "reserve",
+    "reserves"
+]
+
+BAD_COUNTRIES = [
+
+    "Bolivia",
+    "Venezuela",
+    "India",
+    "Indonesia",
+
+    "Russia",
+    "Belarus"
+]
+
+# =========================================================
+# CACHE
+# =========================================================
+
+sent_live = {}
+
+sent_prematch = {}
+
+# =========================================================
+# DATABASE
+# =========================================================
+
+def init_database():
+
+    conn = sqlite3.connect(
+        "v3_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS signals (
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        fixture_id INTEGER,
+
+        country TEXT,
+        league TEXT,
+
+        home_team TEXT,
+        away_team TEXT,
+
+        market TEXT,
+
+        odd REAL,
+
+        confidence REAL,
+
+        result TEXT,
+
+        created_at TEXT
+
+    )
+
+    """)
+
+    conn.commit()
+    conn.close()
+
+# =========================================================
+# TELEGRAM
+# =========================================================
+
+async def send_telegram(message):
+
+    try:
+
+        await bot.send_message(
+
+            chat_id=CHAT_ID,
+            text=message
+
+        )
+
+    except Exception as e:
+
+        print("TELEGRAM ERROR")
+        print(str(e))
+
+# =========================================================
+# FILTERS
+# =========================================================
+
+def blocked_league(league):
+
+    text = league.lower()
+
+    for word in BLOCKED_WORDS:
+
+        if word in text:
+
+            return True
+
+    return False
+
+# =========================================================
+# LIVE MATCHES
+# =========================================================
+
+def get_live_matches():
+
+    try:
+
+        r = requests.get(
+
+            f"{BASE_URL}/fixtures",
+
+            headers=HEADERS,
+
+            params={
+                "live": "all"
+            },
+
+            timeout=20
+
+        ).json()
+
+        return r.get(
+            "response",
+            []
+        )
+
+    except:
+
+        return []
+
+# =========================================================
+# UPCOMING MATCHES
+# =========================================================
+
+def get_upcoming_matches():
+
+    matches = []
+
+    now = datetime.now(TZ)
+
+    for i in range(2):
+
+        date = (
+            now + timedelta(days=i)
+        ).strftime("%Y-%m-%d")
+
+        try:
+
+            r = requests.get(
+
+                f"{BASE_URL}/fixtures",
+
+                headers=HEADERS,
+
+                params={
+                    "date": date
+                },
+
+                timeout=20
+
+            ).json()
+
+            matches.extend(
+                r.get(
+                    "response",
+                    []
+                )
+            )
+
+        except:
+
+            pass
+
+    return matches
+    
+# =========================================================
+# TEAM FORM
+# =========================================================
+
+def get_team_form(team_id):
+
+    try:
+
+        r = requests.get(
+
+            f"{BASE_URL}/fixtures",
+
+            headers=HEADERS,
+
+            params={
+                "team": team_id,
+                "last": 5
+            },
+
+            timeout=20
+
+        ).json()
+
+        games = r.get(
+            "response",
+            []
+        )
+
+        if not games:
+
+            return None
+
+        scored = 0
+        conceded = 0
+
+        wins = 0
+
+        over25 = 0
+        btts = 0
+
+        for g in games:
+
+            home_id = g["teams"]["home"]["id"]
+
+            gh = g["goals"]["home"] or 0
+            ga = g["goals"]["away"] or 0
+
+            if team_id == home_id:
+
+                team_goals = gh
+                opp_goals = ga
+
+            else:
+
+                team_goals = ga
+                opp_goals = gh
+
+            scored += team_goals
+            conceded += opp_goals
+
+            if team_goals > opp_goals:
+                wins += 1
+
+            if (gh + ga) >= 3:
+                over25 += 1
+
+            if gh > 0 and ga > 0:
+                btts += 1
+
+        total = len(games)
+
+        points = wins * 3
+        form_pct = round((points / 15) * 100, 2)
+
+        return {
+
+            "avg_scored":
+                round(scored / total, 2),
+
+            "avg_conceded":
+                round(conceded / total, 2),
+
+            "wins":
+                wins,
+
+            "over25":
+                over25,
+
+            "btts":
+                btts, 
+           "form_pct": form_pct
+        }
+
+    except:
+
+        return None
+
+# =========================================================
+# POISSON
+# =========================================================
+
+def poisson_over25(home_attack, away_attack):
+
+    
+
+    prob = 0
+
+    for h in range(8):
+
+        for a in range(8):
+
+            total = h + a
+
+            p = (
+                poisson.pmf(
+                    h,
+                    home_attack
+                )
+                *
+                poisson.pmf(
+                    a,
+                    away_attack
+                )
+            )
+
+            if total >= 3:
+
+                prob += p
+
+    return round(
+        prob * 100,
+        2
+    )
+
+# =========================================================
+# BTTS POISSON
+# =========================================================
+
+def poisson_btts(home_attack, away_attack):
+
+    prob = 0
+
+    for h in range(8):
+
+        for a in range(8):
+
+            p = (
+                poisson.pmf(
+                    h,
+                    home_attack
+                )
+                *
+                poisson.pmf(
+                    a,
+                    away_attack
+                )
+            )
+
+            if h > 0 and a > 0:
+
+                prob += p
+
+    return round(
+        prob * 100,
+        2
+    )
+
+# =========================================================
+# FORM SCORE
+# =========================================================
+
+def calculate_form_score(
+
+    home_form,
+    away_form
+
+):
+    
+    score = 0
+
+    score += home_form["form_pct"] * 0.5
+    score += away_form["form_pct"] * 0.5
+
+    score += (
+        home_form["over25"]
+        +
+        away_form["over25"]
+    ) * 2
+
+    score += (
+        home_form["btts"]
+        +
+        away_form["btts"]
+    ) * 2
+
+    return min(
+        100,
+        round(score, 2)
+    )
+    
+# =========================================================
+# HOME WIN SCORE
+# =========================================================
+
+def home_win_score(
+
+    home_form,
+    away_form
+
+):
+
+    score = 0
+
+    score += (
+        home_form["form_pct"]
+        -
+        away_form["form_pct"]
+    )
+
+    score += (
+        home_form["avg_scored"]
+        -
+        away_form["avg_scored"]
+    ) * 15
+
+    score += (
+        away_form["avg_conceded"]
+        -
+        home_form["avg_conceded"]
+    ) * 10
+
+    return round(score, 2)
+    
+# =========================================================
+# LEAGUE WEIGHT
+# =========================================================
+
+TOP_GOAL_COUNTRIES = [
+
+    "Netherlands",
+    "Norway",
+    "Sweden",
+    "Denmark",
+    "Belgium",
+    "Austria"
+
+]
+
+LOW_GOAL_COUNTRIES = [
+
+    "Peru",
+    "Paraguay",
+    "Bolivia",
+    "Ecuador",
+    "Venezuela"
+
+]
+
+def league_score(country, market):
+
+    score = 0
+
+    if country in TOP_GOAL_COUNTRIES:
+
+        if market == "⚽ OVER 2.5":
+            score += 10
+
+        elif market == "💎 BTTS":
+            score += 8
+
+    if country in LOW_GOAL_COUNTRIES:
+
+        if market == "⚽ OVER 2.5":
+            score -= 10
+
+        elif market == "💎 BTTS":
+            score -= 8
+
+    return score
+
+# =========================================================
+# FAIR ODDS
+# =========================================================
+
+def fair_odds(probability):
+
+    if probability <= 0:
+        return 999
+
+    return round(
+        100 / probability,
+        2
+    )
+
+# =========================================================
+# VALUE
+# =========================================================
+
+def value_edge(
+
+    probability,
+    odd
+
+):
+
+    market_prob = 100 / odd
+
+    return round(
+        probability - market_prob,
+        2
+    )
+    
+# =========================================================
+# SAVE SIGNAL
+# =========================================================
+
+def save_signal(
+
+    fixture_id,
+    country,
+    league,
+
+    home,
+    away,
+
+    market,
+
+    odd,
+    confidence
+
+):
+
+    conn = sqlite3.connect(
+        "v3_ai.db"
+    )
+
+    cur = conn.cursor()
+
+    cur.execute(
+
+        """
+        INSERT INTO signals (
+
+            fixture_id,
+
+            country,
+            league,
+
+            home_team,
+            away_team,
+
+            market,
+
+            odd,
+            confidence,
+
+            created_at
+
+        )
+
+        VALUES (?,?,?,?,?,?,?,?,?)
+        """,
+
+        (
+
+            fixture_id,
+
+            country,
+            league,
+
+            home,
+            away,
+
+            market,
+
+            odd,
+            confidence,
+
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+        )
+
+    )
+
+    conn.commit()
+    conn.close()
+
+# =========================================================
+# PREMATCH SCORE
+# =========================================================
+
+def calculate_final_score(
+
+    form_score,
+    poisson_score,
+
+    value_score,
+    league_bonus
+
+):
+
+    score = (
+
+        form_score * 0.30 +
+
+        poisson_score * 0.30 +
+
+        value_score * 0.25 +
+
+        league_bonus * 0.15
+
+    )
+
+    return round(score, 2)
+
+# =========================================================
+# CONFIDENCE
+# =========================================================
+
+def confidence_from_score(score):
+
+    if score >= 80:
+        return 95
+
+    if score >= 75:
+        return 90
+
+    if score >= 70:
+        return 85
+
+    if score >= 65:
+        return 80
+
+    return 0
+
+# =========================================================
+# PREMATCH ANALYSIS
+# =========================================================
+
+def analyze_prematch_match(match):
+
+    try:
+
+        fixture_id = match["fixture"]["id"]
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        if blocked_league(league):
+            return None
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        home_id = match["teams"]["home"]["id"]
+        away_id = match["teams"]["away"]["id"]
+
+        home_form = get_team_form(home_id)
+        away_form = get_team_form(away_id)
+
+        if not home_form or not away_form:
+            return None
+
+        over_prob = poisson_over25(
+
+            home_form["avg_scored"],
+            away_form["avg_scored"]
+
+        )
+
+        btts_prob = poisson_btts(
+
+            home_form["avg_scored"],
+            away_form["avg_scored"]
+
+        )
+
+        form_score = calculate_form_score(
+            home_form,
+            away_form
+        )
+
+        signals = []
+
+        # HOME WIN
+
+        home_score = home_win_score(
+            home_form,
+            away_form
+        )
+
+        if home_score >= 35:
+
+            signals.append(
+
+                (
+                    "🏆 HOME WIN",
+                    85,
+                    round(home_score, 1)
+                )
+
+             )
+
+        # HOME HANDICAP
+
+        if home_score >= 50:
+
+            signals.append(
+
+                (
+                     "🔥 HOME -1",
+                     90,
+                     round(home_score, 1)
+                )
+
+            )
+            
+        # OVER 2.5
+
+        over_league = league_score(
+            country,
+            "⚽ OVER 2.5"
+        )
+
+        over_final = calculate_final_score(
+
+            form_score,
+            over_prob,
+
+            10,
+            over_league
+
+        )
+
+        over_conf = confidence_from_score(
+            over_final
+        )
+
+        if (
+            over_prob >= 60
+            and
+            over_conf >= 80
+        ):
+
+            signals.append(
+
+                (
+                    "⚽ OVER 2.5",
+                    over_conf,
+                    round(over_prob, 1)
+                )
+
+            )
+
+        # BTTS
+
+        btts_league = league_score(
+            country,
+            "💎 BTTS"
+        )
+
+        btts_final = calculate_final_score(
+
+            form_score,
+            btts_prob,
+
+            10,
+            btts_league
+
+        )
+
+        btts_conf = confidence_from_score(
+            btts_final
+        )
+
+        if (
+            btts_prob >= 58
+            and
+            btts_conf >= 80
+        ):
+
+            signals.append(
+
+                (
+                    "💎 BTTS",
+                    btts_conf,
+                    round(btts_prob, 1)
+                )
+
+            )
+
+        return signals
+
+    except Exception as e:
+
+        print(
+            "PREMATCH ERROR:",
+            str(e)
+        )
+
+        return None
+        
+# =========================================================
+# SEND PREMATCH SIGNAL
+# =========================================================
+
+async def send_prematch_signal(
+
+    fixture_id,
+    country,
+    league,
+
+    home,
+    away,
+
+    market,
+
+    confidence,
+    probability
+
+):
+
+    message = f"""
+🔥 PREMATCH V3
+
+🏆 {home} vs {away}
+
+🌍 {country}
+🏟 {league}
+
+📊 Market:
+{market}
+
+🎯 Probability:
+{probability}%
+
+💎 Confidence:
+{confidence}%
+"""
+
+    await send_telegram(message)
+
+    save_signal(
+
+        fixture_id,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+
+        0,
+        confidence
+
+    )
+
+
+        
+# =========================================================
+# PREMATCH LOOP
+# =========================================================
+
+def prematch_loop():
+
+    print("PREMATCH SCAN START")
+
+    matches = get_upcoming_matches()
+
+    print(
+        f"Matches found: {len(matches)}"
+    )
+
+    for match in matches:
+
+        signals = analyze_prematch_match(
+            match
+        )
+
+        if not signals:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        for market, confidence, probability in signals:
+
+            key = f"{fixture_id}_{market}"
+
+            if key in sent_prematch:
+                continue
+
+            sent_prematch[key] = time.time()
+
+            print(
+                market,
+                confidence,
+                probability
+            )
+
+            asyncio.run(
+
+                send_prematch_signal(
+
+                    fixture_id,
+
+                    country,
+                    league,
+
+                    home,
+                    away,
+
+                    market,
+
+                    confidence,
+                    probability
+
+                )
+
+            )
+
+if __name__ == "__main__":
+
+    print("MAIN V3 STARTED")
+   
+    init_database()
+
+    prematch_loop()
 
 
