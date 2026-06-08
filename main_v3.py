@@ -735,6 +735,20 @@ def analyze_prematch_match(match):
                 )
 
              )
+
+        # HOME HANDICAP
+
+        if home_score >= 50:
+
+            signals.append(
+
+                (
+                     "🔥 HOME -1",
+                     90,
+                     round(home_score, 1)
+                )
+
+            )
             
         # OVER 2.5
 
