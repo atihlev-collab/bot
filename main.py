@@ -321,6 +321,9 @@ def get_team_form(team_id):
             "avg_scored":
                 round(scored / total, 2),
 
+            "total_scored":
+                scored,
+
             "avg_conceded":
                 round(conceded / total, 2),
 
@@ -457,6 +460,12 @@ def home_win_score(
 ):
 
     score = 0
+
+    score += (
+        home_form["total_scored"]
+        -
+        away_form["total_scored"]
+    ) * 3
 
     score += (
         away_form["losses"]
