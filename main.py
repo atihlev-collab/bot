@@ -338,41 +338,51 @@ def get_upcoming_matches():
 
     now = datetime.now(TZ)
 
-    for i in range(2):
+    try:
 
-        date = (
-            now + timedelta(days=i)
-        ).strftime("%Y-%m-%d")
+        r = requests.get(
 
-        try:
+            f"{BASE_URL}/fixtures",
 
-            r = requests.get(
+            headers=HEADERS,
 
-                f"{BASE_URL}/fixtures",
+            params={
+                "date": now.strftime("%Y-%m-%d")
+            },
 
-                headers=HEADERS,
+            timeout=20
 
-                params={
-                    "date": date
-                },
+        ).json()
 
-                timeout=20
+        for match in r.get(
+            "response",
+            []
+        ):
 
-            ).json()
-
-            matches.extend(
-                r.get(
-                    "response",
-                    []
+            fixture_time = datetime.fromisoformat(
+                match["fixture"]["date"].replace(
+                    "Z",
+                    "+00:00"
                 )
             )
 
-        except:
+            fixture_time = fixture_time.astimezone(TZ)
 
-            pass
+            hours_left = (
+                fixture_time - now
+            ).total_seconds() / 3600
+
+            if 0 <= hours_left <= 12:
+
+                matches.append(
+                    match
+                )
+
+    except:
+
+        pass
 
     return matches
-
 # =========================================================
 # LIVE ANALYSIS
 # =========================================================
