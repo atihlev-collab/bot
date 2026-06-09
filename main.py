@@ -1236,42 +1236,7 @@ if (
 
             )
 
-        # BTTS
-
-        btts_league = league_score(
-            country,
-            "💎 BTTS"
-        )
-
-        btts_final = calculate_final_score(
-
-            form_score,
-            btts_prob,
-
-            10,
-            btts_league
-
-        )
-
-        btts_conf = confidence_from_score(
-            btts_final
-        )
-
-        if (
-            btts_prob >= 68
-            and
-            btts_conf >= 90
-        ):
-
-            signals.append(
-
-                (
-                    "💎 BTTS",
-                    btts_conf,
-                    round(btts_prob, 1)
-                )
-
-            )
+        
 
         return signals
 
