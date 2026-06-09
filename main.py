@@ -549,7 +549,7 @@ def analyze_live_match(match):
         if minute < 20:
             return None
 
-        if minute > 75:
+        if minute > 84:
             return None
 
        
@@ -598,15 +598,8 @@ def analyze_live_match(match):
                     minute,
                     90
 
-                )
-            
-                    85,
-                    minute,
-                    85
-
-                )
-
-        
+                )            
+                  
 
         if total >= 6:
             return None
@@ -692,11 +685,7 @@ def analyze_live_match(match):
         if away_pressure > home_pressure:
             market = "🎯 NEXT GOAL AWAY"
 
-        market = "🎯 NEXT GOAL HOME"
-
-        if away_pressure > home_pressure:
-            market = "🎯 NEXT GOAL AWAY"
-
+       
         confidence = min(
             95,
             max(
