@@ -622,7 +622,7 @@ def analyze_live_match(match):
 
             market,
             confidence,
-            minute
+            minute, 
             goal_probability
 
         )
