@@ -1182,6 +1182,9 @@ async def send_prematch_signal(
 🌍 {country}
 🏟 {league}
 
+🗓 Date: {match_date}
+🕒 Kickoff: {kickoff_time}
+
 📊 Market:
 {market}
 
