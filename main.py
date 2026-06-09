@@ -1241,7 +1241,8 @@ def analyze_prematch_match(match):
             "reserve",
             "reserves",
 
-            "friendly"
+            "friendly",
+
             "russia",
             "russian",
 
@@ -1291,12 +1292,7 @@ def analyze_prematch_match(match):
         if not home_form or not away_form:
             return None
 
-        if (
-            home_form["played"] < 5
-            or
-            away_form["played"] < 5
-        ):
-            return None
+        
 
         if (
             away_form["avg_scored"] < 0.8
