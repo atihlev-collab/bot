@@ -1370,6 +1370,110 @@ def prematch_loop():
         )
         
 
+# =========================================================
+# LIVE LOOP
+# =========================================================
+
+def live_loop():
+
+    matches = get_live_matches()
+
+    for match in matches:
+
+        signal = analyze_live_match(
+            match
+        )
+
+        if not signal:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        key = f"live_{fixture_id}"
+
+        if key in sent_live:
+            continue
+
+        sent_live[key] = time.time()
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        minute = signal[2]
+
+        confidence = signal[1]
+
+        stats = get_statistics(
+            fixture_id
+        )
+
+        home_pressure = 0
+        away_pressure = 0
+
+        home_shots = 0
+        away_shots = 0
+
+        home_corners = 0
+        away_corners = 0
+
+        if len(stats) >= 2:
+
+            home_pressure = calculate_pressure(
+                stats[0]
+            )
+
+            away_pressure = calculate_pressure(
+                stats[1]
+            )
+
+            home_shots = extract(
+                stats[0],
+                "Shots on Goal"
+            )
+
+            away_shots = extract(
+                stats[1],
+                "Shots on Goal"
+            )
+
+            home_corners = extract(
+                stats[0],
+                "Corner Kicks"
+            )
+
+            away_corners = extract(
+                stats[1],
+                "Corner Kicks"
+            )
+
+        asyncio.run(
+
+            send_telegram(
+
+                f"""
+🔥 LIVE SIGNAL
+
+🏆 {home} vs {away}
+
+⏱ Minute: {minute}
+
+{signal[0]}
+
+🔥 Home Pressure: {home_pressure}
+🔥 Away Pressure: {away_pressure}
+
+🎯 Shots On Target:
+{home_shots} - {away_shots}
+
+🚩 Corners:
+{home_corners} - {away_corners}
+
+💎 Confidence: {confidence}%
+"""
+
+            )
+
+        )
 
 if __name__ == "__main__":
 
