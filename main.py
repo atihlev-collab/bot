@@ -1328,8 +1328,144 @@ TOP5 MODEL PICK
 
     )
 
+# =========================================================
+# PREMATCH LOOP
+# =========================================================
 
-        
+def prematch_loop():
+
+    print("PREMATCH SCAN START")
+
+    matches = get_upcoming_matches()
+
+    print(
+        f"Matches found: {len(matches)}"
+    )
+
+    all_signals = []
+
+    for match in matches:
+
+        signals = analyze_prematch_match(
+            match
+        )
+
+        if not signals:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        fixture_time = datetime.fromisoformat(
+            match["fixture"]["date"].replace(
+                "Z",
+                "+00:00"
+            )
+        ).astimezone(TZ)
+
+        match_date = fixture_time.strftime(
+            "%d.%m.%Y"
+        )
+
+        kickoff_time = fixture_time.strftime(
+            "%H:%M"
+        )
+
+        for market, confidence, probability in signals:
+
+            all_signals.append(
+
+                (
+                    probability,
+                    fixture_id,
+
+                    match_date,
+                    kickoff_time,
+
+                    country,
+                    league,
+
+                    home,
+                    away,
+
+                    market,
+                    confidence
+                )
+
+            )
+
+    all_signals.sort(
+        reverse=True,
+        key=lambda x: x[0]
+    )
+
+    top_signals = all_signals[:5]
+
+    for (
+        probability,
+        fixture_id,
+
+        match_date,
+        kickoff_time,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+        confidence
+    ) in top_signals:
+
+        key = f"{fixture_id}"
+
+        if key in sent_prematch:
+
+            if (
+                time.time()
+                -
+                sent_prematch[key]
+            ) < 43200:
+
+                continue
+
+        sent_prematch[key] = time.time()
+
+        print(
+            market,
+            confidence,
+            probability
+        )
+
+        asyncio.run(
+
+            send_prematch_signal(
+
+                fixture_id,
+
+                match_date,
+                kickoff_time,
+
+                country,
+                league,
+
+                home,
+                away,
+
+                market,
+
+                confidence,
+                probability
+
+            )
+
+        )
 
 # =========================================================
 # LIVE LOOP
