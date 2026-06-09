@@ -1343,12 +1343,23 @@ def analyze_prematch_match(match):
             away_form["wins"]
         )
 
+        form_gap = (
+
+            home_form["form_pct"]
+
+            -
+
+            away_form["form_pct"]
+
+        )
         if (
             home_score >= 72
             and
             home_form["wins"] >= 3
             and
             home_edge >= 2
+            and
+            form_gap >= 15
             and
             home_form["avg_scored"] >= 1.4
             and
@@ -1629,7 +1640,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    top_signals = all_signals[:5]
+    top_signals = all_signals[:7]
 
     for (
         probability,
