@@ -551,6 +551,23 @@ def analyze_live_match(match):
         confidence = min(
             95,
             max(
+                home_pressure,
+                away_pressure
+            )
+        )
+
+        return (
+
+            market,
+            confidence,
+            minute
+
+        )
+
+    except:
+
+        return None
+             
 # =========================================================
 # LIVE ANALYSIS
 # =========================================================
