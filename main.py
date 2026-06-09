@@ -1236,7 +1236,50 @@ if (
 
             )
 
-        
+        # BTTS
+
+btts_league = league_score(
+    country,
+    "💎 BTTS"
+)
+
+btts_final = calculate_final_score(
+
+    form_score,
+    btts_prob,
+
+    10,
+    btts_league
+
+)
+
+btts_conf = confidence_from_score(
+    btts_final
+)
+
+if (
+    btts_prob >= 65
+    and
+    btts_conf >= 85
+    and
+    home_form["avg_scored"] >= 1.2
+    and
+    away_form["avg_scored"] >= 1.0
+    and
+    home_form["btts"] >= 2
+    and
+    away_form["btts"] >= 2
+):
+
+    signals.append(
+
+        (
+            "💎 BTTS",
+            btts_conf,
+            round(btts_prob, 1)
+        )
+
+    )
 
         return signals
 
