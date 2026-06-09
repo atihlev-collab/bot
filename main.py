@@ -1384,6 +1384,98 @@ def analyze_prematch_match(match):
 
             )
 
+             # AWAY WIN
+
+        away_score = (
+
+            (
+                away_form["total_scored"]
+                -
+                home_form["total_scored"]
+            ) * 1
+
+            +
+
+            (
+                home_form["losses"]
+                -
+                away_form["losses"]
+            ) * 3
+
+            +
+
+            (
+                away_form["form_pct"]
+                -
+                home_form["form_pct"]
+            )
+
+            +
+
+            (
+                away_form["avg_scored"]
+                -
+                home_form["avg_scored"]
+            ) * 8
+
+            +
+
+            (
+                home_form["avg_conceded"]
+                -
+                away_form["avg_conceded"]
+            ) * 5
+
+        )
+
+        away_edge = (
+            away_form["wins"]
+            -
+            home_form["wins"]
+        )
+
+        away_gap = (
+
+            away_form["form_pct"]
+
+            -
+
+            home_form["form_pct"]
+
+        )
+
+        if (
+            away_score >= 72
+            and
+            away_form["wins"] >= 3
+            and
+            away_edge >= 2
+            and
+            away_gap >= 15
+            and
+            away_form["avg_scored"] >= 1.4
+            and
+            home_form["avg_conceded"] >= 1.2
+        ):
+
+            signals.append(
+
+                (
+                    "✈️ AWAY WIN",
+                    confidence_from_score(
+                        min(
+                            95,
+                            away_score
+                        )
+                    ),
+                    round(
+                        away_score,
+                        1
+                    )
+                )
+
+            )
+
         # OVER 2.5
 
         over_league = league_score(
