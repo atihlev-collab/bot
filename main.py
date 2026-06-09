@@ -1495,58 +1495,7 @@ def analyze_prematch_match(match):
                 )
 
             )
-
-        # DRAW NO BET HOME
-
-        if (
-            home_score >= 70
-            and
-            home_form["wins"] >= 2
-            and
-            home_form["avg_scored"] >= 1.2
-            and
-            away_form["avg_conceded"] >= 1.0
-        ):
-
-            signals.append(
-
-                (
-                    "🛡 HOME DNB",
-                    80,
-                    round(
-                        home_score,
-                        1
-                    )
-                )
-
-            )
-
-         # DRAW NO BET AWAY
-
-        if (
-            away_score >= 70
-            and
-            away_form["wins"] >= 2
-            and
-            away_form["avg_scored"] >= 1.2
-            and
-            home_form["avg_conceded"] >= 1.0
-        ):
-
-            signals.append(
-
-                (
-                    "🛡 AWAY DNB",
-                    80,
-                    round(
-                        away_score,
-                        1
-                    )
-                )
-
-            )
-
-     
+                        
 
         # OVER 2.5
 
