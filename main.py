@@ -1480,7 +1480,7 @@ def analyze_prematch_match(match):
         # DRAW NO BET HOME
 
         if (
-            home_score >= 60
+            home_score >= 70
             and
             home_form["wins"] >= 2
             and
@@ -1505,7 +1505,7 @@ def analyze_prematch_match(match):
          # DRAW NO BET AWAY
 
         if (
-            away_score >= 60
+            away_score >= 70
             and
             away_form["wins"] >= 2
             and
@@ -1672,6 +1672,13 @@ def analyze_prematch_match(match):
                 )
 
             )
+         
+        signals.sort(
+            reverse=True,
+            key=lambda x: x[2]
+        )
+
+        signals = signals[:2]
 
         return signals
 
