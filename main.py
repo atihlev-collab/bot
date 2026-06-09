@@ -260,79 +260,7 @@ def extract(team, stat_name):
 
     return 0
 
-# =========================================================
-# PRESSURE ENGINE
-# =========================================================
 
-def calculate_pressure(team):
-
-    pressure = 0
-
-    possession = extract(
-        team,
-        "Ball Possession"
-    )
-
-    shots_on = extract(
-        team,
-        "Shots on Goal"
-    )
-
-    total_shots = extract(
-        team,
-        "Total Shots"
-    )
-
-    corners = extract(
-        team,
-        "Corner Kicks"
-    )
-
-    attacks = extract(
-        team,
-        "Dangerous Attacks"
-    )
-
-    if shots_on == 0:
-        return 0
-
-    if total_shots < 5:
-        return 0
-
-    if possession >= 55:
-        pressure += 8
-
-    if possession >= 62:
-        pressure += 8
-
-    if shots_on >= 3:
-        pressure += 18
-
-    if shots_on >= 5:
-        pressure += 18
-
-    if total_shots >= 7:
-        pressure += 12
-
-    if total_shots >= 11:
-        pressure += 10
-
-    if corners >= 3:
-        pressure += 6
-
-    if corners >= 6:
-        pressure += 6
-
-    if attacks >= 15:
-        pressure += 18
-
-    if attacks >= 25:
-        pressure += 18
-
-    if attacks >= 35:
-        pressure += 12
-
-    return pressure
 
 # =========================================================
 # UPCOMING MATCHES
