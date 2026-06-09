@@ -1475,6 +1475,8 @@ def live_loop():
 
     matches = get_live_matches()
 
+    print("LIVE SCAN START")
+
     for match in matches:
 
         signal = analyze_live_match(
