@@ -847,6 +847,9 @@ def get_team_form(team_id):
 
             "btts":
                 btts, 
+
+            "played":
+                total,
            "form_pct": form_pct
         }
 
@@ -1292,7 +1295,12 @@ def analyze_prematch_match(match):
         if not home_form or not away_form:
             return None
 
-        
+        if (
+            home_form["played"] < 5
+            or
+            away_form["played"] < 5
+        ):
+            return None
 
         if (
             away_form["avg_scored"] < 0.8
