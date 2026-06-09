@@ -1344,6 +1344,16 @@ def analyze_prematch_match(match):
             away_form["wins"]
         )
 
+        goal_edge = (
+
+            home_form["total_scored"]
+
+            -
+
+            away_form["total_scored"]
+
+        )
+
         scoring_edge = (
 
             home_form["avg_scored"]
@@ -1484,18 +1494,18 @@ def analyze_prematch_match(match):
                         min(
                             95,
                             away_score
-                    )
-                ),
-                min(
-                    95,
-                    round(
-                        away_score,
-                        1
+                        )
+                    ),
+                    min(
+                        95,
+                        round(
+                            away_score,
+                            1
+                        )
                     )
                 )
 
             )
-                        
 
         # OVER 2.5
 
