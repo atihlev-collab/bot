@@ -1727,6 +1727,14 @@ def live_loop():
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
 
+        home_goals = (
+            match["goals"]["home"] or 0
+        )
+
+        away_goals = (
+            match["goals"]["away"] or 0
+        )
+
         minute = signal[2]
 
         goal_probability = signal[3]
