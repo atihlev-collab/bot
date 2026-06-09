@@ -599,11 +599,7 @@ def analyze_live_match(match):
                     90
 
                 )
-            else:
-
-                return (
-
-                    "🎯 NEXT GOAL AWAY",
+            
                     85,
                     minute,
                     85
