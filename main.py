@@ -563,25 +563,25 @@ def analyze_live_match(match):
         if total == 0 and minute > 65:
             return None
 
-        if dominance < 30:
+        if dominance < 25:
             return None
 
         if shots_diff < 2:
             return None
 
-        if corners_diff < 3:
+        if corners_diff < 2:
             return None
 
         if max(
             home_total_shots,
             away_total_shots
-        ) < 8:
+        ) < 7:
             return None
 
         if max(
             home_pressure,
             away_pressure
-        ) < 80:
+        ) < 75:
             return None
 
         market = "🎯 NEXT GOAL HOME"
