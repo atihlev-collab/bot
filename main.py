@@ -549,8 +549,16 @@ def analyze_live_match(match):
         if minute < 40:
             return None
 
-        if minute > 72:
+        if minute > 80:
             return None
+
+        if minute >= 70:
+
+            if max(
+                home_pressure,
+                away_pressure
+            ) < 85:
+                return None
 
         home = match["goals"]["home"] or 0
         away = match["goals"]["away"] or 0
