@@ -563,9 +563,9 @@ def analyze_live_match(match):
             home - away
         )
 
-         # FAST GOALS OVERRIDE
+        # FAST GOALS OVERRIDE
 
-         if (
+        if (
             minute <= 40
             and
             total >= 2
