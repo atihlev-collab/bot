@@ -1091,7 +1091,214 @@ def confidence_from_score(score):
 
     return 0
 
+# =========================================================
+# PREMATCH ANALYSIS
+# =========================================================
 
+def analyze_prematch_match(match):
+
+    try:
+
+        fixture_id = match["fixture"]["id"]
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        if country in BAD_COUNTRIES:
+            return None
+
+        if blocked_league(league):
+            return None
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        if home.endswith(" W"):
+            return None
+
+        if away.endswith(" W"):
+            return None
+
+        if " II" in home:
+            return None
+
+        if " II" in away:
+            return None
+
+        home_id = match["teams"]["home"]["id"]
+        away_id = match["teams"]["away"]["id"]
+
+        home_form = get_team_form(home_id)
+        away_form = get_team_form(away_id)
+
+        if not home_form or not away_form:
+            return None
+
+        if away_form["avg_scored"] < 0.8:
+            return None
+
+        over_prob = poisson_over25(
+
+            home_form["avg_scored"],
+            away_form["avg_scored"]
+
+        )
+
+        btts_prob = poisson_btts(
+
+            home_form["avg_scored"],
+            away_form["avg_scored"]
+
+        )
+
+        form_score = calculate_form_score(
+            home_form,
+            away_form
+        )
+
+        signals = []
+
+        # HOME WIN
+
+        home_score = home_win_score(
+            home_form,
+            away_form
+        )
+
+        home_edge = (
+            home_form["wins"]
+            -
+            away_form["wins"]
+        )
+
+        if (
+            home_score >= 70
+            and
+            home_form["wins"] >= 3
+            and
+            home_edge >= 2
+            and
+            home_form["avg_scored"] >= 1.4
+            and
+            away_form["avg_conceded"] >= 1.2
+        ):
+
+            signals.append(
+
+                (
+                    "🏆 HOME WIN",
+                    confidence_from_score(
+                        min(
+                            95,
+                            home_score
+                        )
+                    ),
+                    round(
+                        home_score,
+                        1
+                    )
+                )
+
+            )
+
+        # OVER 2.5
+
+        over_league = league_score(
+            country,
+            "⚽ OVER 2.5"
+        )
+
+        over_final = calculate_final_score(
+
+            form_score,
+            over_prob,
+
+            10,
+            over_league
+
+        )
+
+        over_conf = confidence_from_score(
+            over_final
+        )
+
+        if (
+            over_prob >= 70
+            and
+            over_conf >= 90
+        ):
+
+            signals.append(
+
+                (
+                    "⚽ OVER 2.5",
+                    over_conf,
+                    round(
+                        over_prob,
+                        1
+                    )
+                )
+
+            )
+
+        # BTTS
+
+        btts_league = league_score(
+            country,
+            "💎 BTTS"
+        )
+
+        btts_final = calculate_final_score(
+
+            form_score,
+            btts_prob,
+
+            10,
+            btts_league
+
+        )
+
+        btts_conf = confidence_from_score(
+            btts_final
+        )
+
+        if (
+            btts_prob >= 65
+            and
+            btts_conf >= 85
+            and
+            home_form["avg_scored"] >= 1.2
+            and
+            away_form["avg_scored"] >= 1.0
+            and
+            home_form["btts"] >= 2
+            and
+            away_form["btts"] >= 2
+        ):
+
+            signals.append(
+
+                (
+                    "💎 BTTS",
+                    btts_conf,
+                    round(
+                        btts_prob,
+                        1
+                    )
+                )
+
+            )
+
+        return signals
+
+    except Exception as e:
+
+        print(
+            "PREMATCH ERROR:",
+            str(e)
+        )
+
+        return None
         
 # =========================================================
 # SEND PREMATCH SIGNAL
