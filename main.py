@@ -361,61 +361,7 @@ def calculate_pressure(team):
         100
     )
  
-# =========================================================
-# UPCOMING MATCHES
-# =========================================================
 
-def get_upcoming_matches():
-
-    matches = []
-
-    now = datetime.now(TZ)
-
-    try:
-
-        r = requests.get(
-
-            f"{BASE_URL}/fixtures",
-
-            headers=HEADERS,
-
-            params={
-                "date": now.strftime("%Y-%m-%d")
-            },
-
-            timeout=20
-
-        ).json()
-
-        for match in r.get(
-            "response",
-            []
-        ):
-
-            fixture_time = datetime.fromisoformat(
-                match["fixture"]["date"].replace(
-                    "Z",
-                    "+00:00"
-                )
-            )
-
-            fixture_time = fixture_time.astimezone(TZ)
-
-            hours_left = (
-                fixture_time - now
-            ).total_seconds() / 3600
-
-            if 0 <= hours_left <= 12:
-
-                matches.append(
-                    match
-                )
-
-    except:
-
-        pass
-
-    return matches
 
 
 
