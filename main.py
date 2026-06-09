@@ -557,6 +557,44 @@ def analyze_live_match(match):
 
         total = home + away
 
+        goal_diff = abs(
+            home - away
+        )
+
+        # FAST GOALS OVERRIDE
+
+        if (
+            minute <= 35
+            and
+            total >= 2
+            and
+            goal_diff >= 2
+        ):
+
+            if home > away:
+
+                return (
+
+                    "🎯 NEXT GOAL HOME",
+                    85,
+                    minute,
+                    85
+
+                )
+
+            else:
+
+                return (
+
+                    "🎯 NEXT GOAL AWAY",
+                    85,
+                    minute,
+                    85
+
+                )
+
+        
+
         if total >= 6:
             return None
 
