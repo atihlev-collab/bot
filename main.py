@@ -630,6 +630,61 @@ def analyze_live_match(match):
         ) < 70:
             return None
 
+             # GOAL BEFORE FT
+
+        if (
+            minute <= 80
+            and
+            home_pressure >= 75
+            and
+            away_pressure >= 75
+            and
+            home_shots_on >= 3
+            and
+            away_shots_on >= 3
+        ):
+
+            return (
+
+                "🥅 GOAL BEFORE FT",
+                85,
+                minute,
+                85
+
+            )
+
+        # OVER 1.5 REMAINING GOALS
+
+        if (
+            minute <= 70
+            and
+            home_pressure >= 75
+            and
+            away_pressure >= 75
+            and
+            home_shots_on >= 4
+            and
+            away_shots_on >= 4
+            and
+            home_corners >= 4
+            and
+            away_corners >= 4
+        ):
+
+            return (
+
+                "🚀 OVER 1.5 REMAINING GOALS",
+                90,
+                minute,
+                90
+
+            )
+
+        market = "🎯 NEXT GOAL HOME"
+
+        if away_pressure > home_pressure:
+            market = "🎯 NEXT GOAL AWAY"
+
         market = "🎯 NEXT GOAL HOME"
 
         if away_pressure > home_pressure:
