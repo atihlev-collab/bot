@@ -495,35 +495,7 @@ def analyze_live_match(match):
             return None
 
         if max(
-            home_pressure,
-            away_pressure
-        ) < 80:
-            return None
 
-        market = "🎯 NEXT GOAL HOME"
-
-        if away_pressure > home_pressure:
-            market = "🎯 NEXT GOAL AWAY"
-
-        confidence = min(
-            95,
-            max(
-                home_pressure,
-                away_pressure
-            )
-        )
-
-        return (
-
-            market,
-            confidence,
-            minute
-
-        )
-
-    except:
-
-        return None
     
 # =========================================================
 # TEAM FORM
