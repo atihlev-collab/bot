@@ -563,14 +563,19 @@ def analyze_live_match(match):
             home - away
         )
 
-        # FAST GOALS OVERRIDE
+         # FAST GOALS OVERRIDE
 
-        if (
-            minute <= 35
+         if (
+            minute <= 40
             and
             total >= 2
             and
             goal_diff >= 2
+            and
+            max(
+                home_pressure,
+                away_pressure
+            ) >= 80
         ):
 
             if home > away:
@@ -578,12 +583,22 @@ def analyze_live_match(match):
                 return (
 
                     "🎯 NEXT GOAL HOME",
-                    85,
+                    90,
                     minute,
-                    85
+                    90
 
                 )
 
+            else:
+
+                return (
+
+                    "🎯 NEXT GOAL AWAY",
+                    90,
+                    minute,
+                    90
+
+                )
             else:
 
                 return (
