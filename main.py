@@ -448,7 +448,7 @@ def analyze_live_match(match):
         home_team = match["teams"]["home"]["name"]
         away_team = match["teams"]["away"]["name"]
 
-             banned = [
+        banned = [
 
             "russia",
             "belarus"
