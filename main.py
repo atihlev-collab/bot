@@ -1260,7 +1260,18 @@ def analyze_prematch_match(match):
         if not home_form or not away_form:
             return None
 
-        if away_form["avg_scored"] < 0.8:
+        if (
+            home_form["played"] < 5
+            or
+            away_form["played"] < 5
+        ):
+            return None
+
+        if (
+            away_form["avg_scored"] < 0.8
+            and
+            home_form["avg_scored"] < 1.0
+        ):
             return None
 
         over_prob = poisson_over25(
