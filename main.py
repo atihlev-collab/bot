@@ -597,11 +597,33 @@ def analyze_live_match(match):
             )
         )
 
+     
+        goal_probability = 50
+
+        goal_probability += (
+            max(
+                home_pressure,
+                away_pressure
+            ) - 75
+        ) * 2
+
+        goal_probability += shots_diff * 3
+
+        goal_probability += corners_diff * 2
+
+        goal_probability = min(
+            95,
+            max(
+                55,
+                goal_probability
+            )
+        )
         return (
 
             market,
             confidence,
             minute
+            goal_probability
 
         )
 
