@@ -546,19 +546,13 @@ def analyze_live_match(match):
         if not minute:
             return None
 
-        if minute < 40:
+        if minute < 20:
             return None
 
-        if minute > 80:
+        if minute > 75:
             return None
 
-        if minute >= 70:
-
-            if max(
-                home_pressure,
-                away_pressure
-            ) < 85:
-                return None
+       
 
         home = match["goals"]["home"] or 0
         away = match["goals"]["away"] or 0
@@ -633,15 +627,17 @@ def analyze_live_match(match):
              # GOAL BEFORE FT
 
         if (
-            minute <= 80
+            minute >= 75
             and
-            home_pressure >= 75
+            minute <= 84
             and
-            away_pressure >= 75
+            home_pressure >= 80
             and
-            home_shots_on >= 3
+            away_pressure >= 80
             and
-            away_shots_on >= 3
+            home_shots_on >= 4
+            and
+            away_shots_on >= 4
         ):
 
             return (
