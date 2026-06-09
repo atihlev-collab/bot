@@ -514,21 +514,24 @@ def analyze_live_match(match):
         if minute < 40:
             return None
 
-        if minute > 75:
+        if minute > 72:
             return None
 
         home = match["goals"]["home"] or 0
         away = match["goals"]["away"] or 0
 
         total = home + away
+     
+        if total >= 6:
+            return None
 
-        if total >= 5:
+        if total == 0 and minute > 65:
             return None
 
         if dominance < 30:
             return None
 
-        if shots_diff < 3:
+        if shots_diff < 2:
             return None
 
         if corners_diff < 3:
