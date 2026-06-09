@@ -1527,55 +1527,7 @@ def analyze_prematch_match(match):
 
             )
 
-        # OVER 1.5
-
-        over15_prob = min(
-
-            95,
-
-            (
-                home_form["avg_scored"]
-                +
-                away_form["avg_scored"]
-            ) * 35
-
-        )
-
-        over15_conf = confidence_from_score(
-
-            min(
-                95,
-                over15_prob
-            )
-
-        )
-
-        if (
-            over15_prob >= 75
-            and
-            home_form["avg_scored"] >= 1.0
-            and
-            away_form["avg_scored"] >= 0.8
-            and
-            (
-                home_form["over25"]
-                +
-                away_form["over25"]
-            ) >= 4
-        ):
-
-            signals.append(
-
-                (
-                    "⚽ OVER 1.5",
-                    over15_conf,
-                    round(
-                        over15_prob,
-                        1
-                    )
-                )
-
-            )
+     
 
         # OVER 2.5
 
