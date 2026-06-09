@@ -293,6 +293,12 @@ def calculate_pressure(team):
         "Dangerous Attacks"
     )
 
+    if shots_on == 0:
+        return 0
+
+    if total_shots < 5:
+        return 0
+
     if possession >= 55:
         pressure += 8
 
@@ -452,7 +458,7 @@ def analyze_live_match(match):
         if not minute:
             return None
 
-        if minute < 35:
+        if minute < 40:
             return None
 
         if minute > 75:
