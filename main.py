@@ -1596,7 +1596,7 @@ def live_loop():
 💎 Confidence: {confidence}%
 
 🎯 Goal Probability:
-72%
+{goal_probability}%
 """
 
             )
