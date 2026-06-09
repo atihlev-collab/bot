@@ -1530,7 +1530,13 @@ def analyze_prematch_match(match):
             home_form["avg_conceded"] >= 1.0
             and
             away_form["avg_conceded"] >= 1.0
-       ):
+            and
+            (
+                home_form["over25"]
+                +
+                away_form["over25"]
+            ) >= 5
+        ):
 
             signals.append(
 
