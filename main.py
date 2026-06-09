@@ -1344,6 +1344,16 @@ def analyze_prematch_match(match):
             away_form["wins"]
         )
 
+        scoring_edge = (
+
+            home_form["avg_scored"]
+
+            -
+
+            away_form["avg_scored"]
+
+        )
+
         form_gap = (
 
             home_form["form_pct"]
@@ -1379,15 +1389,18 @@ def analyze_prematch_match(match):
                             home_score
                         )
                     ),
-                    round(
-                        home_score,
-                        1
+                  min(
+                      95,
+                      round(
+                          home_score,
+                          1
+                       )
                     )
-                )
+                 )
 
             )
 
-             # AWAY WIN
+        # AWAY WIN
 
         away_score = (
 
@@ -1471,8 +1484,10 @@ def analyze_prematch_match(match):
                         min(
                             95,
                             away_score
-                        )
-                    ),
+                    )
+                ),
+                min(
+                    95,
                     round(
                         away_score,
                         1
@@ -1796,7 +1811,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    top_signals = all_signals[:7]
+    top_signals = all_signals[:5]
 
     for (
         probability,
