@@ -1212,6 +1212,35 @@ def analyze_prematch_match(match):
         country = match["league"]["country"]
         league = match["league"]["name"]
 
+             bad_words = [
+
+            "u17",
+            "u18",
+            "u19",
+            "u20",
+            "u21",
+            "u23",
+
+            "women",
+
+            "reserve",
+            "reserves",
+
+            "friendly"
+
+        ]
+
+        league_text = (
+            country +
+            " " +
+            league
+        ).lower()
+
+        for word in bad_words:
+
+            if word in league_text:
+                return None
+
         if country in BAD_COUNTRIES:
             return None
 
@@ -1280,7 +1309,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            home_score >= 75
+            home_score >= 72
             and
             home_form["wins"] >= 3
             and
@@ -1331,10 +1360,18 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over_prob >= 70
+            over_prob >= 68
             and
-            over_conf >= 90
-        ):
+            over_conf >= 85
+            and
+            home_form["avg_scored"] >= 1.2
+            and
+            away_form["avg_scored"] >= 1.0
+            and
+            home_form["avg_conceded"] >= 1.0
+            and
+            away_form["avg_conceded"] >= 1.0
+       ):
 
             signals.append(
 
@@ -1584,7 +1621,7 @@ def prematch_loop():
                 time.time()
                 -
                 sent_prematch[key]
-            ) < 43200:
+            ) < 86400:
 
                 continue
 
