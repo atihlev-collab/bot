@@ -1524,6 +1524,8 @@ def live_loop():
 
         minute = signal[2]
 
+        goal_probability = signal[3]
+
         confidence = signal[1]
 
         stats = get_statistics(
@@ -1592,6 +1594,9 @@ def live_loop():
 {home_corners} - {away_corners}
 
 💎 Confidence: {confidence}%
+
+🎯 Goal Probability:
+72%
 """
 
             )
