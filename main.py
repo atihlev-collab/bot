@@ -1255,74 +1255,7 @@ def analyze_prematch_match(match):
 
         return None
         
-# =========================================================
-# SEND PREMATCH SIGNAL
-# =========================================================
 
-async def send_prematch_signal(
-
-    fixture_id,
-    country,
-    league,
-
-    home,
-    away,
-
-    market,
-
-    confidence,
-    probability
-
-):
-
-    message = f"""
-🔥 PREMATCH V3
-
-🏆 {home} vs {away}
-
-🌍 {country}
-🏟 {league}
-
-🗓 Date: {match_date}
-🕒 Kickoff: {kickoff_time}
-
-📊 Market:
-{market}
-
-📈 Rating:
-{probability}
-
-💎 Confidence:
-{confidence}%
-
-⭐ Rating Class:
-{"ELITE" if probability >= 95 else "STRONG"}
-
-🏅 Model Rank:
-TOP 5 PICK
-
-📋 Filter:
-TOP5 MODEL PICK
-"""
-
-    await send_telegram(message)
-
-    save_signal(
-
-        fixture_id,
-
-        country,
-        league,
-
-        home,
-        away,
-
-        market,
-
-        0,
-        confidence
-
-    )
 
 # =========================================================
 # PREMATCH LOOP
