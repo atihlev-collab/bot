@@ -294,6 +294,13 @@ def calculate_pressure(team):
         "Dangerous Attacks"
     )
 
+    if shots_on == 0:
+        return 0
+
+    if total_shots < 4:
+        return 0
+
+ 
     # possession
 
     if possession >= 55:
