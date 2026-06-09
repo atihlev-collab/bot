@@ -472,13 +472,13 @@ def analyze_live_match(match):
         if total != 2:
             return None
 
-        if dominance < 25:
+        if dominance < 30:
             return None
 
         if max(
             home_pressure,
             away_pressure
-        ) < 75:
+        ) < 80:
             return None
 
         market = "⚽ LIVE OVER 2.5"
