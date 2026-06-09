@@ -551,7 +551,177 @@ def analyze_live_match(match):
         confidence = min(
             95,
             max(
+# =========================================================
+# LIVE ANALYSIS
+# =========================================================
 
+def analyze_live_match(match):
+
+    try:
+
+        home_team = match["teams"]["home"]["name"]
+        away_team = match["teams"]["away"]["name"]
+
+        text = (
+            home_team +
+            " " +
+            away_team
+        ).lower()
+
+        blocked = [
+
+            "res",
+            "reserve",
+
+            "women",
+
+            "u17",
+            "u18",
+            "u19",
+            "u20",
+            "u21",
+            "u22",
+            "u23"
+
+        ]
+
+        for word in blocked:
+
+            if word in text:
+                return None
+
+        fixture_id = match["fixture"]["id"]
+
+        stats = get_statistics(
+            fixture_id
+        )
+
+        if len(stats) < 2:
+            return None
+
+        home_stats = stats[0]
+        away_stats = stats[1]
+
+        home_pressure = calculate_pressure(
+            home_stats
+        )
+
+        away_pressure = calculate_pressure(
+            away_stats
+        )
+
+        home_shots_on = extract(
+            home_stats,
+            "Shots on Goal"
+        )
+
+        away_shots_on = extract(
+            away_stats,
+            "Shots on Goal"
+        )
+
+        home_total_shots = extract(
+            home_stats,
+            "Total Shots"
+        )
+
+        away_total_shots = extract(
+            away_stats,
+            "Total Shots"
+        )
+
+        home_corners = extract(
+            home_stats,
+            "Corner Kicks"
+        )
+
+        away_corners = extract(
+            away_stats,
+            "Corner Kicks"
+        )
+
+        shots_diff = abs(
+            home_shots_on -
+            away_shots_on
+        )
+
+        corners_diff = abs(
+            home_corners -
+            away_corners
+        )
+
+        dominance = abs(
+            home_pressure -
+            away_pressure
+        )
+
+        minute = match["fixture"]["status"]["elapsed"]
+
+        if not minute:
+            return None
+
+        if minute < 40:
+            return None
+
+        if minute > 72:
+            return None
+
+        home = match["goals"]["home"] or 0
+        away = match["goals"]["away"] or 0
+
+        total = home + away
+
+        if total >= 6:
+            return None
+
+        if total == 0 and minute > 65:
+            return None
+
+        if dominance < 30:
+            return None
+
+        if shots_diff < 2:
+            return None
+
+        if corners_diff < 3:
+            return None
+
+        if max(
+            home_total_shots,
+            away_total_shots
+        ) < 8:
+            return None
+
+        if max(
+            home_pressure,
+            away_pressure
+        ) < 80:
+            return None
+
+        market = "🎯 NEXT GOAL HOME"
+
+        if away_pressure > home_pressure:
+            market = "🎯 NEXT GOAL AWAY"
+
+        confidence = min(
+            95,
+            max(
+                home_pressure,
+                away_pressure
+            )
+        )
+
+        return (
+
+            market,
+            confidence,
+            minute
+
+        )
+
+    except:
+
+        return None
 
     
 # =========================================================
