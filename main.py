@@ -1364,6 +1364,8 @@ def analyze_prematch_match(match):
             and
             home_form["avg_scored"] >= 1.4
             and
+            home_form["avg_conceded"] <= 1.5
+            and
             away_form["avg_conceded"] >= 1.2
         ):
 
@@ -1455,6 +1457,8 @@ def analyze_prematch_match(match):
             away_gap >= 15
             and
             away_form["avg_scored"] >= 1.4
+            and
+            away_form["avg_conceded"] <= 1.5
             and
             home_form["avg_conceded"] >= 1.2
         ):
