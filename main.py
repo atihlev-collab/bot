@@ -448,6 +448,24 @@ def analyze_live_match(match):
         home_team = match["teams"]["home"]["name"]
         away_team = match["teams"]["away"]["name"]
 
+             banned = [
+
+            "russia",
+            "belarus"
+
+        ]
+
+        check_text = (
+            home_team +
+            " " +
+            away_team
+        ).lower()
+
+        for word in banned:
+
+            if word in check_text:
+                return None
+
         text = (
             home_team +
             " " +
@@ -1201,6 +1219,14 @@ def analyze_prematch_match(match):
         country = match["league"]["country"]
         league = match["league"]["name"]
 
+        if country in [
+
+            "Russia",
+            "Belarus"
+
+        ]:
+            return None
+
         bad_words = [
 
             "u17",
@@ -1216,6 +1242,11 @@ def analyze_prematch_match(match):
             "reserves",
 
             "friendly"
+            "russia",
+            "russian",
+
+            "belarus",
+            "belarusian",
 
         ]
 
@@ -1753,6 +1784,9 @@ def live_loop():
 🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
+
+📊 Score:
+{match["goals"]["home"] or 0} - {match["goals"]["away"] or 0}
 
 ⏱ Minute: {minute}
 
