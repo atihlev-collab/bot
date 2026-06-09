@@ -1201,7 +1201,7 @@ def analyze_prematch_match(match):
         country = match["league"]["country"]
         league = match["league"]["name"]
 
-             bad_words = [
+        bad_words = [
 
             "u17",
             "u18",
