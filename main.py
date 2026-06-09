@@ -1535,7 +1535,13 @@ def live_loop():
 
         fixture_id = match["fixture"]["id"]
 
-        key = f"live_{fixture_id}"
+        home_goals = match["goals"]["home"] or 0
+        away_goals = match["goals"]["away"] or 0
+
+        key = (
+            f"live_{fixture_id}_"
+            f"{home_goals}_{away_goals}"
+        )
 
         if key in sent_live:
             continue
