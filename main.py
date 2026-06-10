@@ -1930,9 +1930,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over_prob >= 68
+            over_prob >= 72
             and
-            over_conf >= 85
+            over_conf >= 90
             and
             home_form["avg_scored"] >= 1.2
             and
@@ -1946,7 +1946,7 @@ def analyze_prematch_match(match):
                 home_form["over25"]
                 +
                 away_form["over25"]
-            ) >= 5
+            ) >= 6
         ):
 
             signals.append(
@@ -1984,17 +1984,17 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 65
+            btts_prob >= 70
             and
-            btts_conf >= 85
+            btts_conf >= 90
             and
             home_form["avg_scored"] >= 1.2
             and
             away_form["avg_scored"] >= 1.0
             and
-            home_form["btts"] >= 2
+            home_form["btts"] >= 3
             and
-            away_form["btts"] >= 2
+            away_form["btts"] >= 3
         ):
 
             signals.append(
