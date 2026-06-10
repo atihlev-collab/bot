@@ -829,6 +829,13 @@ def get_team_form(team_id):
         points = wins * 3
         form_pct = round((points / 15) * 100, 2)
 
+         unbeaten = wins + draws
+
+         unbeaten_pct = round(
+             (unbeaten / total) * 100,
+             2
+        )
+     
         return {
 
             "avg_scored":
@@ -848,6 +855,12 @@ def get_team_form(team_id):
 
             "draws":
                 draws,
+
+            "unbeaten":
+                unbeaten,
+
+            "unbeaten_pct":
+                unbeaten_pct,
 
             "over25":
                 over25,
@@ -1375,6 +1388,8 @@ def analyze_prematch_match(match):
         if (
             home_score >= 72
             and
+            home_form["unbeaten_pct"] >= 60
+            and
             home_form["wins"] >= 3
             and
             home_edge >= 2
@@ -1473,6 +1488,8 @@ def analyze_prematch_match(match):
 
         if (
             away_score >= 72
+            and
+            away_form["unbeaten_pct"] >= 60
             and
             away_form["wins"] >= 3
             and
