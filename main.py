@@ -1716,7 +1716,7 @@ def analyze_prematch_match(match):
                     match_odds[0]
                 )
 
-                if edge >= 15:
+                if edge >= 10:
 
                     home_value = True
                  
@@ -1738,7 +1738,7 @@ def analyze_prematch_match(match):
             and
             home_form["unbeaten_pct"] >= 60
             and
-            home_form["wins"] >= 3
+            home_form["wins"] >= 4
             and
             home_edge >= 2
             and
@@ -1845,7 +1845,7 @@ def analyze_prematch_match(match):
                     match_odds[2]
                 )
 
-                if edge >= 15:
+                if edge >= 10:
 
                     away_value = True
 
@@ -1869,7 +1869,7 @@ def analyze_prematch_match(match):
             and
             away_form["unbeaten_pct"] >= 60
             and
-            away_form["wins"] >= 3
+            away_form["wins"] >= 4
             and
             away_edge >= 2
             and
