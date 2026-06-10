@@ -1779,7 +1779,7 @@ def prematch_loop():
             fixture_id
         )
 
-       if odds:
+        if odds:
 
            print(
                "ODDS DATA:",
