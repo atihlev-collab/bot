@@ -58,7 +58,7 @@ BLOCKED_WORDS = [
     "u24",
     "olympic", 
     "reserve",
-    "reserves"
+    "reserves",
     "academy",
     "amateur"
 ]
@@ -1425,13 +1425,13 @@ def analyze_prematch_match(match):
         away_id = match["teams"]["away"]["id"]
 
         home_form = get_team_form(
-            home_id,
-            venue="home"
+            home_id
+           
         )
 
         away_form = get_team_form(
-            away_id,
-            venue="away"
+            away_id
+            
         )
         if not home_form or not away_form:
             return None
@@ -1518,6 +1518,8 @@ def analyze_prematch_match(match):
 
         if (
             home_score >= 80
+            and
+            home_odds_ok
             and
             home_form["unbeaten_pct"] >= 60
             and
