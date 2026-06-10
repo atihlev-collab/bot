@@ -1785,7 +1785,7 @@ async def send_prematch_signal(
     market,
 
     confidence,
-    probability
+    probability, 
     odds_text
 
 ):
