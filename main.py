@@ -829,9 +829,9 @@ def get_team_form(team_id):
         points = wins * 3
         form_pct = round((points / 15) * 100, 2)
 
-         unbeaten = wins + draws
+        unbeaten = wins + draws
 
-         unbeaten_pct = round(
+        unbeaten_pct = round(
              (unbeaten / total) * 100,
              2
         )
