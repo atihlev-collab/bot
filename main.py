@@ -1884,11 +1884,11 @@ def prematch_loop():
             fixture_id
         )
 
-     print(
-         "MATCH ODDS:",
-         fixture_id,
-         match_odds
-     )
+        print(
+            "MATCH ODDS:",
+            fixture_id,
+            match_odds
+        )
         country = match["league"]["country"]
         league = match["league"]["name"]
 
