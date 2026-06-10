@@ -1479,18 +1479,18 @@ def analyze_prematch_match(match):
 
         if match_odds:
 
-        if (
-            match_odds[0] is not None
-        ):
+            if (
+                match_odds[0] is not None
+            ):
 
-            edge = value_edge(
-                min(95, home_score),
-                match_odds[0]
-            )
+                edge = value_edge(
+                    min(95, home_score),
+                    match_odds[0]
+                )
 
-            if edge >= 15:
+                if edge >= 15:
 
-                home_value = True
+                    home_value = True
 
         if (
             home_score >= 72
@@ -1595,18 +1595,18 @@ def analyze_prematch_match(match):
         away_value = False
 
         if match_odds:
-        if (
-             match_odds[2] is not None
-        ):
+            if (
+                match_odds[2] is not None
+            ):
 
-             edge = value_edge(
-                 min(95, away_score),
-                 match_odds[2]
-             )
+                edge = value_edge(
+                    min(95, away_score),
+                    match_odds[2]
+                )
 
-             if edge >= 15:
+                if edge >= 15:
 
-                 away_value = True
+                    away_value = True
 
         if (
             away_score >= 72
