@@ -2197,7 +2197,7 @@ def prematch_loop():
             fixture_id
         )
 
-       print(
+        print(
            "MATCH ODDS:",
            fixture_id,
            match_odds
