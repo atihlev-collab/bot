@@ -1329,8 +1329,13 @@ def confidence_from_score(score):
     if score >= 80:
         return 80
 
-    return 0
+    if score >= 75:
+        return 75
 
+    if score >= 70:
+        return 70
+
+    return 65
 # =========================================================
 # PREMATCH ANALYSIS
 # =========================================================
@@ -1879,6 +1884,11 @@ def prematch_loop():
             fixture_id
         )
 
+     print(
+         "MATCH ODDS:",
+         fixture_id,
+         match_odds
+     )
         country = match["league"]["country"]
         league = match["league"]["name"]
 
