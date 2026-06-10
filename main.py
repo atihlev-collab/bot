@@ -145,6 +145,23 @@ def init_database():
     )
 
     """)
+ cursor.execute("""
+
+CREATE TABLE IF NOT EXISTS odds_history (
+
+    fixture_id INTEGER PRIMARY KEY,
+
+    home_odd REAL,
+
+    draw_odd REAL,
+
+    away_odd REAL,
+
+    updated_at TEXT
+
+)
+
+""")
 
     conn.commit()
     conn.close()
@@ -2194,10 +2211,25 @@ def prematch_loop():
         )
 
         print(
-            "MATCH ODDS:",
-            fixture_id,
-            match_odds
+                  match_odds = get_match_odds(
+            fixture_id
         )
+
+        home_drop = False
+        away_drop = False
+
+        if match_odds:
+
+            home_drop, away_drop = odds_drop_check(
+
+                fixture_id,
+
+                match_odds[0],
+                match_odds[1],
+                match_odds[2]
+
+            )
+
         country = match["league"]["country"]
         league = match["league"]["name"]
 
