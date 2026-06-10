@@ -1607,9 +1607,9 @@ def analyze_prematch_match(match):
             and
             home_form["avg_conceded"] >= 1.2
         ):
-        home_value = False
+            home_value = False
 
-        if match_odds:
+            if match_odds:
 
             if (
                 match_odds[0] >= 2.20
