@@ -1498,7 +1498,7 @@ def analyze_prematch_match(match):
                     home_value = True
 
         if (
-            home_score >= 72
+            home_score >= 80
             and
             home_form["unbeaten_pct"] >= 60
             and
@@ -1614,7 +1614,7 @@ def analyze_prematch_match(match):
                     away_value = True
 
         if (
-            away_score >= 72
+            away_score >= 80
             and
             away_form["unbeaten_pct"] >= 60
             and
