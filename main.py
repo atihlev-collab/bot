@@ -1852,7 +1852,183 @@ TOP5 MODEL PICK
 # =========================================================
 # PREMATCH LOOP
 # =========================================================
+def prematch_loop():
 
+    print("PREMATCH SCAN START")
+
+    matches = get_upcoming_matches()
+
+    print(
+        f"Matches found: {len(matches)}"
+    )
+
+    all_signals = []
+
+    for match in matches:
+
+        signals = analyze_prematch_match(
+            match
+        )
+
+        if not signals:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        match_odds = get_match_odds(
+            fixture_id
+        )
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        fixture_time = datetime.fromisoformat(
+            match["fixture"]["date"].replace(
+                "Z",
+                "+00:00"
+            )
+        ).astimezone(TZ)
+
+        match_date = fixture_time.strftime(
+            "%d.%m.%Y"
+        )
+
+        kickoff_time = fixture_time.strftime(
+            "%H:%M"
+        )
+
+        for market, confidence, probability in signals:
+
+            odds_text = "-"
+
+            if match_odds:
+
+                if (
+                    "HOME WIN" in market
+                    and
+                    match_odds[0] is not None
+                ):
+
+                    odds_text = str(
+                        match_odds[0]
+                    )
+
+                elif (
+                    "AWAY WIN" in market
+                    and
+                    match_odds[2] is not None
+                ):
+
+                    odds_text = str(
+                        match_odds[2]
+                    )
+
+                elif (
+                    "BTTS" in market
+                ):
+
+                    odds_text = "BTTS"
+
+                elif (
+                    "OVER" in market
+                ):
+
+                    odds_text = "OVER"
+
+            all_signals.append(
+
+                (
+                    probability,
+                    fixture_id,
+
+                    match_date,
+                    kickoff_time,
+
+                    country,
+                    league,
+
+                    home,
+                    away,
+
+                    market,
+                    confidence,
+                    odds_text
+                )
+
+            )
+
+    all_signals.sort(
+        reverse=True,
+        key=lambda x: x[0]
+    )
+
+    top_signals = all_signals
+
+    for (
+        probability,
+        fixture_id,
+
+        match_date,
+        kickoff_time,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+        confidence,
+        odds_text
+    ) in top_signals:
+
+        key = f"{fixture_id}"
+
+        if key in sent_prematch:
+
+            if (
+                time.time()
+                -
+                sent_prematch[key]
+            ) < 86400:
+
+                continue
+
+        sent_prematch[key] = time.time()
+
+        print(
+            market,
+            confidence,
+            probability
+        )
+
+        asyncio.run(
+
+            send_prematch_signal(
+
+                fixture_id,
+
+                match_date,
+                kickoff_time,
+
+                country,
+                league,
+
+                home,
+                away,
+
+                market,
+
+                confidence,
+                probability,
+                odds_text
+
+            )
+
+        )
 
 
 # =========================================================
