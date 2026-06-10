@@ -1880,7 +1880,7 @@ def prematch_loop():
         home_odd = match_odds[0]
         away_odd = match_odds[2]
 
-     if home_odd is not None and away_odd is not None:
+        if home_odd is not None and away_odd is not None:
 
         odds_text = (
             f"H:{home_odd} | A:{away_odd}"
