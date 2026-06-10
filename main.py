@@ -2256,14 +2256,17 @@ def prematch_loop():
                         match_odds[0]
                     )
 
+                    if home_drop:
+
+                        drop_text = home_drop_text
                 elif (
                     "AWAY WIN" in market
                     and
-                    match_odds[2] is not None
+                    match_odds[0] is not None
                 ):
 
                     odds_text = str(
-                        match_odds[2]
+                        match_odds[0]
                     )
 
                 elif (
@@ -2365,7 +2368,8 @@ def prematch_loop():
 
                 confidence,
                 probability,
-                odds_text
+                odds_text,
+                drop_text 
 
             )
 
