@@ -1025,6 +1025,161 @@ def analyze_live_match(match):
 # TEAM FORM
 # =========================================================
 
+def get_team_form(team_id, venue=None):
+
+    try:
+
+        r = requests.get(
+
+            f"{BASE_URL}/fixtures",
+
+            headers=HEADERS,
+
+            params={
+                "team": team_id,
+                "last": 10
+            },
+
+            timeout=20
+
+        ).json()
+
+        games = r.get(
+            "response",
+            []
+        )
+
+        if not games:
+            return None
+
+        filtered_games = []
+
+        for g in games:
+
+            home_id = g["teams"]["home"]["id"]
+
+            if venue == "home":
+
+                if home_id == team_id:
+                    filtered_games.append(g)
+
+            elif venue == "away":
+
+                if home_id != team_id:
+                    filtered_games.append(g)
+
+            else:
+
+                filtered_games.append(g)
+
+        games = filtered_games[:5]
+
+        if len(games) < 3:
+            return None
+
+        scored = 0
+        conceded = 0
+
+        wins = 0
+        losses = 0
+        draws = 0
+
+        over25 = 0
+        btts = 0
+
+        for g in games:
+
+            home_id = g["teams"]["home"]["id"]
+
+            gh = g["goals"]["home"] or 0
+            ga = g["goals"]["away"] or 0
+
+            if team_id == home_id:
+
+                team_goals = gh
+                opp_goals = ga
+
+            else:
+
+                team_goals = ga
+                opp_goals = gh
+
+            scored += team_goals
+            conceded += opp_goals
+
+            if team_goals > opp_goals:
+                wins += 1
+
+            elif team_goals < opp_goals:
+                losses += 1
+
+            else:
+                draws += 1
+
+            if (gh + ga) >= 3:
+                over25 += 1
+
+            if gh > 0 and ga > 0:
+                btts += 1
+
+        total = len(games)
+
+        points = wins * 3
+
+        form_pct = round(
+            (points / (total * 3)) * 100,
+            2
+        )
+
+        unbeaten = wins + draws
+
+        unbeaten_pct = round(
+            (unbeaten / total) * 100,
+            2
+        )
+
+        return {
+
+            "avg_scored":
+                round(scored / total, 2),
+
+            "total_scored":
+                scored,
+
+            "avg_conceded":
+                round(conceded / total, 2),
+
+            "wins":
+                wins,
+
+            "losses":
+                losses,
+
+            "draws":
+                draws,
+
+            "unbeaten":
+                unbeaten,
+
+            "unbeaten_pct":
+                unbeaten_pct,
+
+            "over25":
+                over25,
+
+            "btts":
+                btts,
+
+            "played":
+                total,
+
+            "form_pct":
+                form_pct
+        }
+
+    except:
+
+        return None
 
 # =========================================================
 # POISSON
@@ -1482,21 +1637,21 @@ def analyze_prematch_match(match):
         away_id = match["teams"]["away"]["id"]
 
         home_form = get_team_form(
-            home_id
-           
+            home_id,
+            venue="home"
         )
 
         away_form = get_team_form(
-            away_id
-            
+            away_id,
+            venue="away"
         )
         if not home_form or not away_form:
             return None
 
         if (
-            home_form["played"] < 5
+            home_form["played"] < 3
             or
-            away_form["played"] < 5
+            away_form["played"] < 3
         ):
             return None
 
