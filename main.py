@@ -1620,10 +1620,41 @@ def analyze_prematch_match(match):
                     home_value = True
          
 
+         away_value = False
+
+         if match_odds:
+
+             if (
+                 match_odds[2] >= 2.50
+                 and
+                 away_score >= 90
+             ):
+
+                 away_value = True
             signals.append(
 
                 (
-                    "✈️ AWAY WIN",
+                    (
+    "💎 VALUE AWAY WIN"
+    if away_value
+    else
+    "✈️ AWAY WIN",
+
+    confidence_from_score(
+        min(
+            95,
+            away_score
+        )
+    ),
+
+    min(
+        95,
+        round(
+            away_score,
+            1
+        )
+    )
+),
                     confidence_from_score(
                         min(
                             95,
