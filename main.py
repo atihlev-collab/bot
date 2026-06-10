@@ -225,6 +225,37 @@ def get_statistics(fixture_id):
         return []
 
 # =========================================================
+# ODDS
+# =========================================================
+
+def get_odds(fixture_id):
+
+    try:
+
+        r = requests.get(
+
+            f"{BASE_URL}/odds",
+
+            headers=HEADERS,
+
+            params={
+                "fixture": fixture_id
+            },
+
+            timeout=20
+
+        ).json()
+
+        return r.get(
+            "response",
+            []
+        )
+
+    except:
+
+        return []
+
+# =========================================================
 # EXTRACT STAT
 # =========================================================
 
