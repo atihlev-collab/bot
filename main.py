@@ -1882,9 +1882,9 @@ def prematch_loop():
 
         if home_odd is not None and away_odd is not None:
 
-        odds_text = (
-            f"H:{home_odd} | A:{away_odd}"
-        )
+            odds_text = (
+                f"H:{home_odd} | A:{away_odd}"
+            )
         country = match["league"]["country"]
         league = match["league"]["name"]
 
