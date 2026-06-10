@@ -1611,11 +1611,11 @@ def analyze_prematch_match(match):
 
             if match_odds:
 
-            if (
-                match_odds[0] >= 2.20
-                and
-                home_score >= 90
-            ):
+                if (
+                    match_odds[0] >= 2.20
+                    and
+                    home_score >= 90
+                ):
 
                 home_value = True
          
