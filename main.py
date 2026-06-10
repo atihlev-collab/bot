@@ -1852,6 +1852,13 @@ def prematch_loop():
         match_odds = get_match_odds(
             fixture_id
         )
+
+        if match_odds:
+
+            print(
+                "MATCH ODDS:",
+                match_odds
+        )
         country = match["league"]["country"]
         league = match["league"]["name"]
 
