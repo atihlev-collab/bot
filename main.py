@@ -2262,13 +2262,16 @@ def prematch_loop():
                 elif (
                     "AWAY WIN" in market
                     and
-                    match_odds[0] is not None
+                    match_odds[2] is not None
                 ):
 
                     odds_text = str(
-                        match_odds[0]
+                        match_odds[2]
                     )
 
+                    if away_drop:
+
+                        drop_text = away_drop_text
                 elif (
                     "BTTS" in market
                 ):
