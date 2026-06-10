@@ -392,6 +392,9 @@ def odds_drop_check(
         drop_home = False
         drop_away = False
 
+        home_drop_text = ""
+        away_drop_text = ""
+
         if row:
 
             old_home = row[0]
@@ -406,6 +409,9 @@ def odds_drop_check(
             ):
 
                 drop_home = True
+                home_drop_text = (
+                    f"{old_home} → {home_odd}"
+                )
 
             if (
                 old_away
@@ -416,6 +422,9 @@ def odds_drop_check(
             ):
 
                 drop_away = True
+                away_drop_text = (
+                    f"{old_away} → {away_odd}"
+                )
 
             cur.execute(
 
@@ -487,8 +496,13 @@ def odds_drop_check(
         conn.close()
 
         return (
+         
             drop_home,
-            drop_away
+            drop_away,
+         
+            home_drop_text,
+            away_drop_text
+
         )
 
     except:
@@ -1575,7 +1589,14 @@ def analyze_prematch_match(match):
 
         if match_odds:
 
-            home_drop, away_drop = odds_drop_check(
+            (
+                home_drop,
+                away_drop,
+
+                home_drop_text,
+                away_drop_text
+
+            ) = odds_drop_check(
 
                 fixture_id,
 
@@ -1711,7 +1732,11 @@ def analyze_prematch_match(match):
         )
 
         if home_drop:
+         
              home_score += 5
+         
+             home_drop_text = home_drop_text
+
         home_edge = (
             home_form["wins"]
             -
@@ -1843,6 +1868,8 @@ def analyze_prematch_match(match):
         )
 
         if away_drop:
+
+            drop_text = away_drop_text
 
             away_score += 5
          
@@ -2074,7 +2101,8 @@ async def send_prematch_signal(
 
     confidence,
     probability, 
-    odds_text
+    odds_text,
+    drop_text
 
 ):
 
@@ -2097,6 +2125,9 @@ async def send_prematch_signal(
 
 💰 Odds:
 {odds_text}
+
+📉 Odds Drop:
+{drop_text}
 
 💎 Confidence:
 {confidence}%
@@ -2191,6 +2222,7 @@ def prematch_loop():
         for market, confidence, probability in signals:
 
             odds_text = "-"
+            drop_text = "-"
 
             if match_odds:
 
@@ -2243,7 +2275,8 @@ def prematch_loop():
 
                     market,
                     confidence,
-                    odds_text
+                    odds_text,
+                    drop_text 
                 )
 
             )
