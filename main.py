@@ -1941,7 +1941,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    top_signals = all_signals[:5]
+    top_signals = all_signals
 
     for (
         probability,
