@@ -1714,8 +1714,11 @@ def analyze_prematch_match(match):
 
                     home_value = True
                  
-        home_odds_ok = True
+        if home_drop:
 
+            home_value = True
+
+        home_odds_ok = True
         if match_odds and match_odds[0] is not None:
 
             home_odds_ok = (
@@ -1839,6 +1842,10 @@ def analyze_prematch_match(match):
                 if edge >= 15:
 
                     away_value = True
+
+        if away_drop:
+
+            away_value = True
 
         away_odds_ok = True
 
@@ -2071,6 +2078,8 @@ TOP 5 PICK
 
 📋 Filter:
 TOP5 MODEL PICK
+
+{"📉 ODDS DROP" if "VALUE" in market else ""}
 """
 
     await send_telegram(message)
