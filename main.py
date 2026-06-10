@@ -92,7 +92,62 @@ sent_prematch = {}
 # DATABASE
 # =========================================================
 
+def init_database():
 
+    conn = sqlite3.connect(
+        "v3_ai.db"
+    )
+
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS signals (
+
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+        fixture_id INTEGER,
+
+        country TEXT,
+        league TEXT,
+
+        home_team TEXT,
+        away_team TEXT,
+
+        market TEXT,
+
+        odd REAL,
+
+        confidence REAL,
+
+        result TEXT,
+
+        created_at TEXT
+
+    )
+
+    """)
+
+    cursor.execute("""
+
+    CREATE TABLE IF NOT EXISTS odds_history (
+
+        fixture_id INTEGER PRIMARY KEY,
+
+        home_odd REAL,
+
+        draw_odd REAL,
+
+        away_odd REAL,
+
+        updated_at TEXT
+
+    )
+
+    """)
+
+    conn.commit()
+    conn.close()
 
 # =========================================================
 # TELEGRAM
