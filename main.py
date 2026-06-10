@@ -1620,7 +1620,7 @@ def analyze_prematch_match(match):
                     home_value = True
          
 
-         away_value = False
+                    away_value = False
 
          if match_odds:
 
