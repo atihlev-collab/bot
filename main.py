@@ -1496,6 +1496,13 @@ def analyze_prematch_match(match):
                 if edge >= 15:
 
                     home_value = True
+                         home_odds_ok = True
+
+        if match_odds and match_odds[0] is not None:
+
+            home_odds_ok = (
+                match_odds[0] >= 1.35
+            )
 
         if (
             home_score >= 80
@@ -1611,7 +1618,16 @@ def analyze_prematch_match(match):
 
                 if edge >= 15:
 
-                    away_value = True
+                    home_value = True
+
+        home_odds_ok = True
+
+        if match_odds and match_odds[0] is not None:
+
+            home_odds_ok = (
+                match_odds[0] >= 1.35
+            )
+
 
         if (
             away_score >= 80
