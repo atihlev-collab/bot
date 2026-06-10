@@ -1619,19 +1619,21 @@ def analyze_prematch_match(match):
 
                 if edge >= 15:
 
-                    home_value = True
+                    away_value = True
 
-        home_odds_ok = True
+        away_odds_ok = True
 
-        if match_odds and match_odds[0] is not None:
+        if match_odds and match_odds[2] is not None:
 
-            home_odds_ok = (
-                match_odds[0] >= 1.35
+            away_odds_ok = (
+                match_odds[2] >= 1.35
             )
 
 
         if (
             away_score >= 80
+            and
+            away_odds_ok
             and
             away_form["unbeaten_pct"] >= 60
             and
