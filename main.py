@@ -1622,7 +1622,7 @@ def analyze_prematch_match(match):
 
                     away_value = False
 
-         if match_odds:
+             if match_odds:
 
              if (
                  match_odds[2] >= 2.50
