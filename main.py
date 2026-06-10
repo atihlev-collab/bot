@@ -1739,8 +1739,7 @@ def analyze_prematch_match(match):
         if home_drop:
          
              home_score += 5
-         
-             home_drop_text = home_drop_text
+                   
 
         home_edge = (
             home_form["wins"]
@@ -2202,7 +2201,7 @@ def prematch_loop():
            "MATCH ODDS:",
            fixture_id,
            match_odds
-      )
+       )
 
         home_drop = False
         away_drop = False
@@ -2323,7 +2322,8 @@ def prematch_loop():
 
         market,
         confidence,
-        odds_text
+        odds_text,
+        drop_text
     ) in top_signals:
 
         key = f"{fixture_id}"
