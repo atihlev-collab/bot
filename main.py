@@ -1617,7 +1617,7 @@ def analyze_prematch_match(match):
                     home_score >= 90
                 ):
 
-                home_value = True
+                    home_value = True
          
 
             signals.append(
