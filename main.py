@@ -1340,6 +1340,9 @@ def analyze_prematch_match(match):
     try:
 
         fixture_id = match["fixture"]["id"]
+        match_odds = get_match_odds(
+            fixture_id
+        )
 
         country = match["league"]["country"]
         league = match["league"]["name"]
@@ -1477,7 +1480,7 @@ def analyze_prematch_match(match):
         if match_odds:
 
             if (
-                match_odds[0]
+                match_odds[0] is not None
                 and
                 match_odds[0] >= 2.20
                 and
@@ -1590,7 +1593,7 @@ def analyze_prematch_match(match):
         if match_odds:
 
             if (
-                match_odds[2]
+                match_odds[2] is not None
                 and
                 match_odds[2] >= 2.50
                 and
@@ -1783,6 +1786,7 @@ async def send_prematch_signal(
 
     confidence,
     probability
+    odds_text
 
 ):
 
