@@ -1775,6 +1775,15 @@ def prematch_loop():
             continue
 
         fixture_id = match["fixture"]["id"]
+        odds = get_odds(
+            fixture_id
+        )
+
+        print(
+            "ODDS CHECK:",
+            fixture_id,
+            len(odds)
+        )
 
         country = match["league"]["country"]
         league = match["league"]["name"]
