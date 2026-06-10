@@ -1779,11 +1779,14 @@ def prematch_loop():
             fixture_id
         )
 
-        print(
-            "ODDS CHECK:",
-            fixture_id,
-            len(odds)
-        )
+       if odds:
+
+           print(
+               "ODDS DATA:",
+               odds[0]
+           )
+
+           break
 
         country = match["league"]["country"]
         league = match["league"]["name"]
