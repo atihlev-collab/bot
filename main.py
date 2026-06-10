@@ -787,6 +787,7 @@ def get_team_form(team_id):
 
         over25 = 0
         btts = 0
+        draws = 0
 
         for g in games:
 
@@ -813,6 +814,9 @@ def get_team_form(team_id):
 
             elif team_goals < opp_goals:
                 losses += 1
+
+            else:
+                draws += 1
 
             if (gh + ga) >= 3:
                 over25 += 1
@@ -841,6 +845,9 @@ def get_team_form(team_id):
 
             "losses":
                 losses,
+
+            "draws":
+                draws,
 
             "over25":
                 over25,
