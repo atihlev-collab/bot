@@ -1344,15 +1344,7 @@ def analyze_prematch_match(match):
             away_form["wins"]
         )
 
-        goal_edge = (
-
-            home_form["total_scored"]
-
-            -
-
-            away_form["total_scored"]
-
-        )
+        
 
         scoring_edge = (
 
@@ -1381,8 +1373,6 @@ def analyze_prematch_match(match):
             home_edge >= 2
             and
             form_gap >= 15
-            and
-            goal_edge >= 3
             and
             home_form["avg_scored"] >= 1.4
             and
@@ -1462,15 +1452,7 @@ def analyze_prematch_match(match):
             home_form["wins"]
         )
 
-        away_goal_edge = (
-
-           away_form["total_scored"]
-
-           -
-
-           home_form["total_scored"]
-
-      )
+        
 
         away_gap = (
 
@@ -1490,8 +1472,6 @@ def analyze_prematch_match(match):
             away_edge >= 2
             and
             away_gap >= 15
-            and
-            away_goal_edge >= 3
             and
             away_form["avg_scored"] >= 1.4
             and
