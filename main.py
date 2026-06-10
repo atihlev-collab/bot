@@ -1507,6 +1507,9 @@ def analyze_prematch_match(match):
             signals.append(
 
                 (
+                    "💎 VALUE HOME WIN"
+                    if home_value
+                    else
                     "🏆 HOME WIN",
                     confidence_from_score(
                         min(
@@ -1604,6 +1607,18 @@ def analyze_prematch_match(match):
             and
             home_form["avg_conceded"] >= 1.2
         ):
+        home_value = False
+
+        if match_odds:
+
+            if (
+                match_odds[0] >= 2.20
+                and
+                home_score >= 90
+            ):
+
+                home_value = True
+         
 
             signals.append(
 
@@ -1853,12 +1868,7 @@ def prematch_loop():
             fixture_id
         )
 
-        if match_odds:
-
-            print(
-                "MATCH ODDS:",
-                match_odds
-        )
+        
         country = match["league"]["country"]
         league = match["league"]["name"]
 
