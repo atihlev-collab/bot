@@ -1991,7 +1991,8 @@ def prematch_loop():
                 market,
 
                 confidence,
-                probability
+                probability, 
+                odds_text
 
             )
 
