@@ -59,6 +59,8 @@ BLOCKED_WORDS = [
     "olympic", 
     "reserve",
     "reserves"
+    "academy",
+    "amateur"
 ]
 
 BAD_COUNTRIES = [
@@ -70,8 +72,11 @@ BAD_COUNTRIES = [
 
     "Russia",
     "Belarus",
-    "Israel"
-
+    "Israel",
+    "Nicaragua",
+    "Guatemala",
+    "Honduras",
+    "El Salvador"
 ]
 
 
@@ -1419,9 +1424,15 @@ def analyze_prematch_match(match):
         home_id = match["teams"]["home"]["id"]
         away_id = match["teams"]["away"]["id"]
 
-        home_form = get_team_form(home_id)
-        away_form = get_team_form(away_id)
+        home_form = get_team_form(
+            home_id,
+            venue="home"
+        )
 
+        away_form = get_team_form(
+            away_id,
+            venue="away"
+        )
         if not home_form or not away_form:
             return None
 
