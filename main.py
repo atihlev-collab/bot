@@ -1904,7 +1904,41 @@ def prematch_loop():
 
         for market, confidence, probability in signals:
 
-        
+        odds_text = "-"
+
+        if match_odds:
+
+            if (
+                "HOME WIN" in market
+                and
+                match_odds[0] is not None
+            ):
+
+                odds_text = str(
+                    match_odds[0]
+                )
+
+            elif (
+                "AWAY WIN" in market
+                and
+                match_odds[2] is not None
+            ):
+
+                odds_text = str(
+                   match_odds[2]
+                )
+
+            elif (
+                "BTTS" in market
+    ):
+
+        odds_text = "BTTS"
+
+    elif (
+        "OVER" in market
+    ):
+
+        odds_text = "OVER"
 
             all_signals.append(
 
