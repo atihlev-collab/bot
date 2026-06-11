@@ -294,21 +294,21 @@ def get_match_odds(fixture_id):
     try:
 
        print(
-            "GET ODDS FOR:",
-            fixture_id
-        )
+           "GET ODDS FOR:",
+           fixture_id
+       )
 
-        odds = get_odds(
-            fixture_id
-        )
+       odds = get_odds(
+           fixture_id
+       )
 
-        if not odds:
-            return None
+       if not odds:
+           return None
 
-        bookmakers = odds[0].get(
-            "bookmakers",
-            []
-        )
+       bookmakers = odds[0].get(
+           "bookmakers",
+           []
+       )
 
         if not bookmakers:
             return None
