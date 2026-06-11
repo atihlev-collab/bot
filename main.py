@@ -2492,6 +2492,10 @@ def prematch_loop():
             probability
         )
 
+        print("DEBUG MARKET =", market)
+        print("DEBUG MATCH_ODDS =", match_odds)
+        print("DEBUG ODDS_TEXT =", odds_text)
+
         send_prematch_signal(
 
             fixture_id,
