@@ -152,7 +152,25 @@ def init_database():
     conn.commit()
     conn.close()
 
+# =========================================================
+# TELEGRAM
+# =========================================================
 
+def send_telegram(message):
+
+    try:
+
+        asyncio.run(
+            bot.send_message(
+                chat_id=CHAT_ID,
+                text=message
+            )
+        )
+
+    except Exception as e:
+
+        print("TELEGRAM ERROR")
+        print(repr(e))
 
 # =========================================================
 # FILTERS
@@ -2117,7 +2135,7 @@ def analyze_prematch_match(match):
 # SEND PREMATCH SIGNAL
 # =========================================================
 
-async def send_prematch_signal(
+def send_prematch_signal(
 
     fixture_id,
 
@@ -2177,7 +2195,7 @@ TOP5 MODEL PICK
 {"📉 ODDS DROP" if drop_text != "-" else ""}
 """
 
-    await send_telegram(message)
+    send_telegram(message)
 
     save_signal(
 
@@ -2391,11 +2409,27 @@ def prematch_loop():
             probability
         )
 
-        asyncio.run(
+        send_prematch_signal(
 
-            send_prematch_signal(
+            fixture_id,
 
-                fixture_id,
+            match_date,
+            kickoff_time,
+          
+            country,
+            league,
+
+            home,
+            away,
+
+            market,
+
+            confidence,
+            probability,
+            odds_text,
+            drop_text
+
+        )
 
                 match_date,
                 kickoff_time,
@@ -2514,11 +2548,13 @@ def live_loop():
                 "Corner Kicks"
             )
 
-        asyncio.run(
-
             send_telegram(
 
                 f"""
+                ....
+                """
+            )
+         
 🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
