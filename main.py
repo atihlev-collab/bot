@@ -1134,7 +1134,7 @@ def get_team_form(team_id, venue=None):
 
                 filtered_games.append(g)
 
-        games = filtered_games[:5]
+        games = filtered_games
 
         if len(games) < 3:
             return None
