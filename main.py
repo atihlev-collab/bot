@@ -152,25 +152,7 @@ def init_database():
     conn.commit()
     conn.close()
 
-# =========================================================
-# TELEGRAM
-# =========================================================
 
-def send_telegram(message):
-
-    try:
-
-        asyncio.run(
-            bot.send_message(
-                chat_id=CHAT_ID,
-                text=message
-            )
-        )
-
-    except Exception as e:
-
-        print("TELEGRAM ERROR")
-        print(repr(e))
 
 # =========================================================
 # FILTERS
