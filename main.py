@@ -285,7 +285,117 @@ def get_odds(fixture_id):
 
         return []
 
+# =========================================================
+# MATCH ODDS
+# =========================================================
 
+def get_match_odds(fixture_id):
+
+    try:
+
+        odds = get_odds(
+            fixture_id
+        )
+
+        if not odds:
+            return None
+
+        bookmakers = odds[0].get(
+            "bookmakers",
+            []
+        )
+
+        if not bookmakers:
+            return None
+
+        bets = bookmakers[0].get(
+            "bets",
+            []
+        )
+
+        for bet in bets:
+
+            print(
+                "BET NAME =",
+                bet.get("name")
+            )
+
+            if bet.get("name") in [
+                "Match Winner",
+                "1X2",
+                "Winner"
+            ]:
+
+                home_odd = None
+                draw_odd = None
+                away_odd = None
+
+                for value in bet.get(
+                    "values",
+                    []
+                ):
+
+                    print(
+                        "VALUE =",
+                        value
+                    )
+
+                    if value["value"] == "Home":
+
+                        home_odd = float(
+                            value["odd"]
+                        )
+
+                    elif value["value"] == "Draw":
+
+                        draw_odd = float(
+                            value["odd"]
+                        )
+
+                    elif value["value"] == "Away":
+
+                        away_odd = float(
+                            value["odd"]
+                        )
+
+                print(
+                    "ODDS FOUND:",
+                    home_odd,
+                    draw_odd,
+                    away_odd
+                )
+
+                if (
+                    home_odd is not None
+                    and
+                    draw_odd is not None
+                    and
+                    away_odd is not None
+                ):
+
+                    return (
+                        home_odd,
+                        draw_odd,
+                        away_odd
+                    )
+
+                print(
+                    "INCOMPLETE ODDS:",
+                    home_odd,
+                    draw_odd,
+                    away_odd
+                )
+
+        return None
+
+    except Exception as e:
+
+        print(
+            "GET MATCH ODDS ERROR:",
+            repr(e)
+        )
+
+        return None
 
 
 # =========================================================
