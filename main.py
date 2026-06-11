@@ -1829,11 +1829,11 @@ def analyze_prematch_match(match):
             and
             home_form["unbeaten_pct"] >= 60
             and
-            home_form["wins"] >= 4
+            home_form["wins"] >= 3
             and
             home_edge >= 2
             and
-            form_gap >= 20
+            form_gap >= 15
             and
             home_form["avg_scored"] >= 1.6
             and
@@ -1966,11 +1966,11 @@ def analyze_prematch_match(match):
             and
             away_form["unbeaten_pct"] >= 60
             and
-            away_form["wins"] >= 4
+            away_form["wins"] >= 3
             and
             away_edge >= 2
             and
-            away_gap >= 20
+            away_gap >= 15
             and
             away_form["avg_scored"] >= 1.6
             and
