@@ -2431,25 +2431,25 @@ def prematch_loop():
 
         )
 
-                match_date,
-                kickoff_time,
+             match_date,
+             kickoff_time,
 
-                country,
-                league,
+             country,
+             league,
 
-                home,
-                away,
+             home,
+             away,
 
-                market,
+             market,
 
-                confidence,
-                probability,
-                odds_text,
-                drop_text 
+             confidence,
+             probability,
+             odds_text,
+             drop_text 
 
-            )
+             )
 
-        )
+         )
 
 
 # =========================================================
