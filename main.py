@@ -2493,7 +2493,7 @@ def live_loop():
         away_pressure = 0
 
         home_shots = 0
-        away_shots = 0
+        away_shots = 0 
 
         home_corners = 0
         away_corners = 0
@@ -2530,11 +2530,7 @@ def live_loop():
 
             send_telegram(
 
-                f"""
-                ....
-                """
-            )
-         
+    f"""
 🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
@@ -2560,6 +2556,8 @@ def live_loop():
 🎯 Goal Probability:
 {goal_probability}%
 """
+
+)
 
             )
 
