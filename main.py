@@ -356,7 +356,183 @@ def get_match_odds(fixture_id):
 
         return None
 
+# =========================================================
+# ODDS DROP
+# =========================================================
 
+def odds_drop_check(
+
+    fixture_id,
+    home_odd,
+    draw_odd,
+    away_odd
+
+):
+
+    try:
+
+        conn = sqlite3.connect(
+            "v3_ai.db"
+        )
+
+        cur = conn.cursor()
+
+        cur.execute(
+
+            """
+            SELECT
+
+                home_odd,
+                draw_odd,
+                away_odd
+
+            FROM odds_history
+
+            WHERE fixture_id = ?
+            """,
+
+            (fixture_id,)
+        )
+
+        row = cur.fetchone()
+
+        drop_home = False
+        drop_away = False
+
+        home_drop_text = ""
+        away_drop_text = ""
+
+        if row:
+
+            old_home = row[0]
+            old_away = row[2]
+
+            if (
+                old_home
+                and
+                home_odd
+            ):
+
+                drop_percent = (
+                    (old_home - home_odd)
+                    / old_home
+                ) * 100
+
+                if 5 <= drop_percent <= 25:
+
+                    drop_home = True
+
+                    home_drop_text = (
+                        f"{old_home} → {home_odd}"
+                    )
+
+            if (
+                old_away
+                and
+                away_odd
+            ):
+
+                drop_percent = (
+                    (old_away - away_odd)
+                    / old_away
+                ) * 100
+
+                if 5 <= drop_percent <= 25:
+
+                    drop_away = True
+
+                    away_drop_text = (
+                        f"{old_away} → {away_odd}"
+                    )
+
+            cur.execute(
+
+                """
+                UPDATE odds_history
+
+                SET
+
+                home_odd = ?,
+                draw_odd = ?,
+                away_odd = ?,
+                updated_at = ?
+
+                WHERE fixture_id = ?
+                """,
+
+                (
+
+                    home_odd,
+                    draw_odd,
+                    away_odd,
+
+                    datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
+
+                    fixture_id
+
+                )
+
+            )
+
+        else:
+
+            cur.execute(
+
+                """
+                INSERT INTO odds_history (
+
+                    fixture_id,
+
+                    home_odd,
+                    draw_odd,
+                    away_odd,
+
+                    updated_at
+
+                )
+
+                VALUES (?,?,?,?,?)
+                """,
+
+                (
+
+                    fixture_id,
+
+                    home_odd,
+                    draw_odd,
+                    away_odd,
+
+                    datetime.now().strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+
+                )
+
+            )
+
+        conn.commit()
+        conn.close()
+
+        return (
+
+            drop_home,
+            drop_away,
+
+            home_drop_text,
+            away_drop_text
+
+        )
+
+    except:
+
+        return (
+            False,
+            False,
+            "",
+            ""
+        )
 
 # =========================================================
 # EXTRACT STAT
