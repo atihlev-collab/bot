@@ -838,9 +838,9 @@ def analyze_live_match(match):
             venue="home"
         )
 
-       away_form = get_team_form(
-           match["teams"]["away"]["id"],
-           venue="away"
+        away_form = get_team_form(
+            match["teams"]["away"]["id"],
+            venue="away"
        )
 
        if home_form:
