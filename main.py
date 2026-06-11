@@ -817,6 +817,17 @@ def analyze_live_match(match):
             away_stats
         )
 
+     
+       if home_red > away_red:
+
+           home_pressure -= 20
+           away_pressure += 10
+
+        if away_red > home_red:
+
+           away_pressure -= 20
+           home_pressure += 10
+         
         if home_red > away_red:
 
             home_pressure -= 20
@@ -1028,16 +1039,10 @@ def analyze_live_match(match):
 
             )
 
-        market = "🎯 NEXT GOAL HOME"
+         market = "🎯 NEXT GOAL HOME"
 
         if away_pressure > home_pressure:
-            market = "🎯 NEXT GOAL AWAY"
-
-        if home_red > away_red:
-            market = "🎯 NEXT GOAL AWAY"
-
-        if away_red > home_red:
-            market = "🎯 NEXT GOAL HOME"
+           market = "🎯 NEXT GOAL AWAY"
 
        
         confidence = min(
