@@ -823,12 +823,12 @@ def analyze_live_match(match):
           venue="home"
        )
 
-       away_form = get_team_form(
+        away_form = get_team_form(
           match["teams"]["away"]["id"],
          venue="away"
        )
 
-       if home_form:
+        if home_form:
               home_pressure += min(
                   10,
                   int(home_form["form_pct"] / 10)
