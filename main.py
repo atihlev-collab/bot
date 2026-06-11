@@ -860,7 +860,7 @@ def analyze_live_match(match):
         if minute < 20:
             return None
 
-        if minute > 84:
+        if minute > 75:
             return None
 
        
@@ -913,9 +913,6 @@ def analyze_live_match(match):
                   
 
         if total >= 6:
-            return None
-
-        if total == 0 and minute > 65:
             return None
 
         if dominance < 20:
@@ -1532,9 +1529,7 @@ def calculate_final_score(
 
     return round(score, 2)
 
-# =========================================================
-# CONFIDENCE
-# =========================================================
+
 
 # =========================================================
 # CONFIDENCE
