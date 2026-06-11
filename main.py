@@ -407,31 +407,43 @@ def odds_drop_check(
             old_home = row[0]
             old_away = row[2]
 
-            if (
-                old_home
-                and
-                home_odd
-                and
-                ((old_home - home_odd) / old_home) >= 0.05
-            ):
+        if (
+            old_home
+            and
+            home_odd
+        ):
+
+            drop_percent = (
+                (old_home - home_odd)
+                / old_home
+            ) * 100
+
+            if 5 <= drop_percent <= 25:
 
                 drop_home = True
-                home_drop_text = (
-                    f"{old_home} → {home_odd}"
-            )
 
-            if (
-                old_away
-                and
-                away_odd
-                and
-                ((old_away - away_odd) / old_away) >= 0.05
-            ):
+                    home_drop_text = (
+                        f"{old_home} → {home_odd}"
+                    )
 
-                drop_away = True
-                away_drop_text = (
-                    f"{old_away} → {away_odd}"
-            )
+          if (
+              old_away
+              and
+              away_odd
+          ):
+
+              drop_percent = (
+                  (old_away - away_odd)
+                  / old_away
+              ) * 100
+
+              if 5 <= drop_percent <= 25:
+
+                  drop_away = True
+
+                  away_drop_text = (
+                     f"{old_away} → {away_odd}"
+               )
 
             cur.execute(
 
@@ -817,6 +829,42 @@ def analyze_live_match(match):
         away_pressure = calculate_pressure(
             away_stats
         )
+
+        # FORM BONUS
+
+        home_form = get_team_form(
+            match["teams"]["home"]["id"],
+            venue="home"
+        )
+
+       away_form = get_team_form(
+           match["teams"]["away"]["id"],
+           venue="away"
+       )
+
+       if home_form:
+
+           home_pressure += min(
+               10,
+               round(home_form["form_pct"] / 10)
+       )
+
+       if away_form:
+
+           away_pressure += min(
+           10,
+           round(away_form["form_pct"] / 10)
+       )
+
+       home_pressure = min(
+           home_pressure,
+          100
+       )
+
+away_pressure = min(
+    away_pressure,
+    100
+)
 
         home_form = get_team_form(
            match["teams"]["home"]["id"],
