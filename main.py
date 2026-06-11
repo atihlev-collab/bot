@@ -160,17 +160,17 @@ def send_telegram(message):
 
     try:
 
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        loop.run_until_complete(
-            bot.send_message(
-                chat_id=CHAT_ID,
-                text=message
-            )
+        r = requests.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": CHAT_ID,
+                "text": message
+            },
+            timeout=20
         )
 
-        loop.close()
+        print("TELEGRAM STATUS:", r.status_code)
+        print(r.text)
 
     except Exception as e:
 
