@@ -2245,9 +2245,19 @@ def prematch_loop():
         home_drop = False
         away_drop = False
 
+        home_drop_text = ""
+        away_drop_text = ""
+
         if match_odds:
 
-            home_drop, away_drop = odds_drop_check(
+            (
+                home_drop,
+                away_drop,
+
+                home_drop_text,
+                away_drop_text
+
+            ) = odds_drop_check(
 
                 fixture_id,
 
