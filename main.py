@@ -2556,13 +2556,8 @@ def live_loop():
 🎯 Goal Probability:
 {goal_probability}%
 """
-
-)
-
-            )
-
-        )
-
+)          
+         
 if __name__ == "__main__":
 
     print("MAIN V3 STARTED")
