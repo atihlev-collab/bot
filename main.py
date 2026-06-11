@@ -1124,6 +1124,10 @@ def analyze_live_match(match):
                 90
 
             )
+         # NEXT GOAL ONLY UNTIL 75'
+
+         if minute > 75:
+             return None
 
         market = "🎯 NEXT GOAL HOME"
 
