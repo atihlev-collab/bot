@@ -981,14 +981,16 @@ def analyze_live_match(match):
             and
             minute <= 84
             and
-            home_pressure >= 80
+            max(
+                home_pressure,
+                away_pressure
+         ) >= 80
             and
-            away_pressure >= 80
-            and
-            home_shots_on >= 4
-            and
-            away_shots_on >= 4
-        ):
+            max(
+                home_shots_on,
+                away_shots_on
+         ) >= 4
+     ):
 
             return (
 
