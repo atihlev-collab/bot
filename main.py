@@ -402,54 +402,7 @@ def odds_drop_check(
         home_drop_text = ""
         away_drop_text = ""
 
-        if row:
-
-            old_home = row[0]
-            old_away = row[2]
-
-        if (
-            old_home
-            and
-            home_odd
-        ):
-
-            drop_percent = (
-                (old_home - home_odd)
-                / old_home
-            ) * 100
-
-            if 5 <= drop_percent <= 25:
-
-                drop_home = True
-
-                    home_drop_text = (
-                        f"{old_home} → {home_odd}"
-                    )
-
-          if (
-              old_away
-              and
-              away_odd
-          ):
-
-              drop_percent = (
-                  (old_away - away_odd)
-                  / old_away
-              ) * 100
-
-              if 5 <= drop_percent <= 25:
-
-                  drop_away = True
-
-                  away_drop_text = (
-                     f"{old_away} → {away_odd}"
-               )
-
-            cur.execute(
-
-                """
-                UPDATE odds_history
-
+  
                 SET
 
                 home_odd = ?,
