@@ -822,9 +822,9 @@ def analyze_live_match(match):
             home_pressure -= 20
             away_pressure += 10
 
-         home_xg = extract(
-             home_stats,
-             "Expected Goals"
+        home_xg = extract(
+            home_stats,
+            "Expected Goals"
         )
 
         away_xg = extract(
