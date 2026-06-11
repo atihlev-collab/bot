@@ -2186,7 +2186,7 @@ TOP 5 PICK
 📋 Filter:
 TOP5 MODEL PICK
 
-{"📉 ODDS DROP" if "VALUE" in market else ""}
+{"📉 ODDS DROP" if drop_text != "-" else ""}
 """
 
     await send_telegram(message)
