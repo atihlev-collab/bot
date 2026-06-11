@@ -169,8 +169,7 @@ def send_telegram(message):
             timeout=20
         )
 
-        print("TELEGRAM STATUS:", r.status_code)
-        print(r.text)
+        
 
     except Exception as e:
 
