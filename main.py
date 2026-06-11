@@ -2377,10 +2377,8 @@ def prematch_loop():
         print(
            "MATCH ODDS:",
            fixture_id,
-           match_odds,    
-           home,
-           "vs",
-          away
+           match_odds    
+          
        )
 
         home_drop = False
