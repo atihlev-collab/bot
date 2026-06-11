@@ -852,36 +852,36 @@ def analyze_live_match(match):
 
         if away_form:
 
-           away_pressure += min(
-           10,
-           round(away_form["form_pct"] / 10)
+            away_pressure += min(
+            10,
+            round(away_form["form_pct"] / 10)
        )
 
         home_pressure = min(
-           home_pressure,
-          100
+            home_pressure,
+            100
        )
 
-away_pressure = min(
-    away_pressure,
-    100
-)
+        away_pressure = min(
+            away_pressure,
+            100
+       )
 
         home_form = get_team_form(
-           match["teams"]["home"]["id"],
-          venue="home"
+            match["teams"]["home"]["id"],
+            venue="home"
        )
 
         away_form = get_team_form(
-          match["teams"]["away"]["id"],
-         venue="away"
+            match["teams"]["away"]["id"],
+            venue="away"
        )
 
         if home_form:
-              home_pressure += min(
-                  10,
-                  int(home_form["form_pct"] / 10)
-              )
+            home_pressure += min(
+                10,
+                int(home_form["form_pct"] / 10)
+            )
 
         if away_form:
                away_pressure += min(
