@@ -799,6 +799,16 @@ def analyze_live_match(match):
         home_stats = stats[0]
         away_stats = stats[1]
 
+        home_red = extract(
+            home_stats,
+            "Red Cards"
+        )
+
+        away_red = extract(
+            away_stats,
+            "Red Cards"
+        )
+
         home_pressure = calculate_pressure(
             home_stats
         )
@@ -806,6 +816,34 @@ def analyze_live_match(match):
         away_pressure = calculate_pressure(
             away_stats
         )
+
+        if home_red > away_red:
+
+            home_pressure -= 20
+            away_pressure += 10
+
+         home_xg = extract(
+             home_stats,
+             "Expected Goals"
+        )
+
+        away_xg = extract(
+            away_stats,
+            "Expected Goals"
+        )
+
+        if home_xg >= 1.0:
+
+            home_pressure += 8
+
+        if away_xg >= 1.0:
+
+            away_pressure += 8
+
+        if away_red > home_red:
+
+            away_pressure -= 20
+            home_pressure += 10
 
         home_shots_on = extract(
             home_stats,
@@ -992,6 +1030,12 @@ def analyze_live_match(match):
 
         if away_pressure > home_pressure:
             market = "🎯 NEXT GOAL AWAY"
+
+        if home_red > away_red:
+            market = "🎯 NEXT GOAL AWAY"
+
+        if away_red > home_red:
+            market = "🎯 NEXT GOAL HOME"
 
        
         confidence = min(
