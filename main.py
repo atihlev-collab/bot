@@ -333,6 +333,8 @@ def get_match_odds(fixture_id):
                     []
                 ):
 
+                    print("VALUE =", value)
+
                     if value["value"] == "Home":
                         home_odd = float(
                             value["odd"]
