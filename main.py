@@ -818,7 +818,7 @@ def analyze_live_match(match):
         )
 
      
-       if home_red > away_red:
+        if home_red > away_red:
 
            home_pressure -= 20
            away_pressure += 10
@@ -976,13 +976,13 @@ def analyze_live_match(match):
         if max(
             home_total_shots,
             away_total_shots
-        ) < 6:
+        ) < 5:
             return None
 
         if max(
             home_pressure,
             away_pressure
-        ) < 70:
+        ) < 65:
             return None
 
              # GOAL BEFORE FT
@@ -995,7 +995,7 @@ def analyze_live_match(match):
             max(
                 home_pressure,
                 away_pressure
-         ) >= 80
+         ) >= 75
             and
             max(
                 home_shots_on,
@@ -1017,17 +1017,17 @@ def analyze_live_match(match):
         if (
             minute <= 70
             and
-            home_pressure >= 75
+            home_pressure >= 70
             and
-            away_pressure >= 75
+            away_pressure >= 70
             and
-            home_shots_on >= 4
+            home_shots_on >= 3
             and
-            away_shots_on >= 4
+            away_shots_on >= 3
             and
-            home_corners >= 4
+            home_corners >= 3
             and
-            away_corners >= 4
+            away_corners >= 3
         ):
 
             return (
