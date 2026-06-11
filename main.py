@@ -412,26 +412,26 @@ def odds_drop_check(
                 and
                 home_odd
                 and
-                home_odd < old_home
+                ((old_home - home_odd) / old_home) >= 0.05
             ):
 
                 drop_home = True
                 home_drop_text = (
                     f"{old_home} → {home_odd}"
-                )
+            )
 
             if (
                 old_away
                 and
                 away_odd
                 and
-                away_odd < old_away
+                ((old_away - away_odd) / old_away) >= 0.05
             ):
 
                 drop_away = True
                 away_drop_text = (
                     f"{old_away} → {away_odd}"
-                )
+            )
 
             cur.execute(
 
@@ -591,10 +591,7 @@ def calculate_pressure(team):
         "Dangerous Attacks"
     )
 
-    if shots_on == 0:
-        return 0
-
-    if total_shots < 4:
+    if shots_on == 0 and attacks < 35:
         return 0
 
  
@@ -821,6 +818,27 @@ def analyze_live_match(match):
             away_stats
         )
 
+        home_form = get_team_form(
+           match["teams"]["home"]["id"],
+          venue="home"
+       )
+
+       away_form = get_team_form(
+          match["teams"]["away"]["id"],
+         venue="away"
+       )
+
+       if home_form:
+              home_pressure += min(
+                  10,
+                  int(home_form["form_pct"] / 10)
+              )
+
+        if away_form:
+               away_pressure += min(
+                   10,
+                   int(away_form["form_pct"] / 10)
+             )
      
         if home_red > away_red:
 
@@ -1573,13 +1591,13 @@ def calculate_final_score(
 
     score = (
 
-        form_score * 0.30 +
+        form_score * 0.40 +
 
-        poisson_score * 0.30 +
+        poisson_score * 0.35 +
 
-        value_score * 0.25 +
+        value_score * 0.20 +
 
-        league_bonus * 0.15
+        league_bonus * 0.05
 
     )
 
@@ -2373,7 +2391,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    top_signals = all_signals[:3]
+    top_signals = all_signals[:5]
     for (
         probability,
         fixture_id,
@@ -2393,7 +2411,7 @@ def prematch_loop():
         drop_text
     ) in top_signals:
 
-        key = f"{fixture_id}"
+        key = f"{fixture_id}_{market}"
 
         if key in sent_prematch:
 
