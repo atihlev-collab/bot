@@ -316,9 +316,13 @@ def get_match_odds(fixture_id):
 
         for bet in bets:
 
-            if bet.get(
-                "name"
-            ) == "Match Winner":
+           print("BET NAME =", bet.get("name"))
+
+           if bet.get("name") in [
+               "Match Winner",
+               "1X2",
+               "Winner"
+          ]:
 
                 home_odd = None
                 draw_odd = None
