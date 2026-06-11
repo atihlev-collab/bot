@@ -1827,9 +1827,29 @@ def analyze_prematch_match(match):
             away_form
         )
 
+        # FORM COLLAPSE BONUS
+
+        if (
+            away_form["losses"] >= 5
+            or
+            away_form["form_pct"] <= 35
+        ):
+
+           home_score += 8
+
+        # SUPER FORM BONUS
+
+        if (
+            home_form["form_pct"] >= 80
+            and
+            home_form["wins"] >= 6
+        ):
+
+            home_score += 5
+
         if home_drop:
          
-             home_score += 5
+            home_score += 5
                    
 
         home_edge = (
@@ -1869,7 +1889,7 @@ def analyze_prematch_match(match):
         if match_odds and match_odds[0] is not None:
 
             home_odds_ok = (
-                match_odds[0] >= 1.35
+                1.45 <= match_odds[0] <= 4.50
             )
 
         if (
@@ -1962,6 +1982,27 @@ def analyze_prematch_match(match):
 
         )
 
+      # FORM COLLAPSE BONUS
+
+      if (
+          home_form["losses"] >= 5
+          or
+          home_form["form_pct"] <= 35
+      ):
+
+          away_score += 8
+
+      # SUPER FORM BONUS
+
+      if (
+          away_form["form_pct"] >= 80
+          and
+          away_form["wins"] >= 6
+      ):
+
+          away_score += 5
+
+
         if away_drop:
 
             drop_text = away_drop_text
@@ -2005,7 +2046,7 @@ def analyze_prematch_match(match):
         if match_odds and match_odds[2] is not None:
 
             away_odds_ok = (
-                match_odds[2] >= 1.35
+               1.55 <= match_odds[2] <= 5.50
             )
 
 
