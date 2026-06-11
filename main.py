@@ -1073,7 +1073,7 @@ def analyze_live_match(match):
 
         # GOAL BEFORE FT
 
-       if (
+        if (
             minute >= 75
             and
             minute <= 84
