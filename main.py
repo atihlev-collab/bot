@@ -872,11 +872,6 @@ def analyze_live_match(match):
            home_pressure -= 20
            away_pressure += 10
 
-        if away_red > home_red:
-
-           away_pressure -= 20
-           home_pressure += 10
-
         home_xg = extract(
             home_stats,
             "Expected Goals"
@@ -953,7 +948,7 @@ def analyze_live_match(match):
         if minute < 20:
             return None
 
-        if minute > 75:
+        if minute > 84:
             return None
 
        
