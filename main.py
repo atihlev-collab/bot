@@ -1839,46 +1839,7 @@ def analyze_prematch_match(match):
 
         # HOME WIN
 
-        home_score = home_win_score(
-            home_form,
-            away_form
-        )
-
-        # FORM COLLAPSE BONUS
-
-        if (
-            away_form["losses"] >= 5
-            or
-            away_form["form_pct"] <= 35
-        ):
-
-            home_score += 8
-
-        # SUPER FORM BONUS
-
-        if (
-            home_form["form_pct"] >= 80
-            and
-            home_form["wins"] >= 6
-        ):
-
-            home_score += 5
-
-        if home_drop:
-
-            home_score += 5
-
-        home_edge = (
-            home_form["wins"]
-            -
-            away_form["wins"]
-        )
-
-        form_gap = (
-            home_form["form_pct"]
-            -
-            away_form["form_pct"]
-        )
+        
 
         home_value = False
 
@@ -1957,89 +1918,7 @@ def analyze_prematch_match(match):
                     )
                 )
 
-            )
 
-        # AWAY WIN
-
-        away_score = (
-
-            (
-                away_form["total_scored"]
-                -
-                home_form["total_scored"]
-            ) * 1
-
-            +
-
-            (
-                home_form["losses"]
-                -
-                away_form["losses"]
-            ) * 3
-
-            +
-
-            (
-                away_form["form_pct"]
-                -
-                home_form["form_pct"]
-            )
-
-            +
-
-            (
-                away_form["avg_scored"]
-                -
-                home_form["avg_scored"]
-            ) * 8
-
-            +
-
-            (
-                home_form["avg_conceded"]
-                -
-                away_form["avg_conceded"]
-            ) * 5  
-
-        )
-
-        # FORM COLLAPSE BONUS
-
-        if (
-            home_form["losses"] >= 5
-            or
-            home_form["form_pct"] <= 35
-        ):
-
-            away_score += 8
-
-        # SUPER FORM BONUS
-
-        if (
-            away_form["form_pct"] >= 80
-            and
-            away_form["wins"] >= 6
-        ):
-
-            away_score += 5
-
-        if away_drop:
-
-            drop_text = away_drop_text
-
-            away_score += 5
-
-        away_edge = (
-            away_form["wins"]
-            -
-            home_form["wins"]
-        )
-
-        away_gap = (
-            away_form["form_pct"]
-            -
-            home_form["form_pct"]
-        )
 
         away_value = False
       
