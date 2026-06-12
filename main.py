@@ -995,7 +995,7 @@ def analyze_live_match(match):
         if minute < 20:
             return None
 
-        if minute > 84:
+        if minute > 80:
             return None
 
        
