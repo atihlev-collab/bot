@@ -1882,61 +1882,7 @@ def analyze_prematch_match(match):
 
         home_value = False
 
-        if match_odds:
-
-            if (
-                match_odds[0] is not None
-            ):
-
-                edge = value_edge(
-                    min(95, home_score),
-                    match_odds[0]
-                )
-
-                if edge >= 10:
-
-                    home_value = True
-
-        if home_drop:
-
-            home_value = True
-
-        home_odds_ok = True
-
-        if (
-            match_odds
-            and
-            match_odds[0] is not None
-        ):
-
-            home_odds_ok = (
-                1.45 <= match_odds[0] <= 4.50
-            )
-
-        if (
-            home_score >= 80
-            and
-            home_odds_ok
-            and
-            home_form["unbeaten_pct"] >= 60
-            and
-            home_form["wins"] >= 3
-            and
-            home_edge >= 2
-            and
-            form_gap >= 15
-            and
-            home_form["avg_scored"] >= 1.6
-            and
-            home_form["avg_conceded"] <= 1.3
-            and
-            away_form["avg_conceded"] >= 1.2
-        ):
-
-            signals.append(
-
-                (
-                    "💎 VALUE HOME WIN"
+                   
                     if home_value
                     else
                     "🏆 HOME WIN",
