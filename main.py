@@ -1699,6 +1699,13 @@ def analyze_prematch_match(match):
         if not match_odds:
             return None
 
+       if (
+           match_odds[0] is None
+           or
+           match_odds[2] is None
+       ):
+           return None
+
         home_drop = False
         away_drop = False
 
