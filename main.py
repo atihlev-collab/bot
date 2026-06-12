@@ -1999,11 +1999,7 @@ def analyze_prematch_match(match):
                 home_form["avg_conceded"]
                 -
                 away_form["avg_conceded"]
-            ) * 5
-
-            score += (
-                away_form["avg_conceded"]
-            ) * 3
+            ) * 5  
 
         )
 
