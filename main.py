@@ -1077,9 +1077,9 @@ def analyze_live_match(match):
         if (
             minute <= 70
             and
-            home_pressure >= 70
+            home_pressure >= 65
             and
-            away_pressure >= 70
+            away_pressure >= 65
             and
             home_shots_on >= 3
             and
