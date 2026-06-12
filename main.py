@@ -1050,10 +1050,10 @@ def analyze_live_match(match):
         if total >= 6:
             return None
 
-        if dominance < 20:
+        if dominance < 25:
             return None
 
-        if shots_diff < 2:
+        if shots_diff < 3:
             return None
 
 
@@ -1066,7 +1066,7 @@ def analyze_live_match(match):
         if max(
             home_pressure,
             away_pressure
-        ) < 65:
+        ) < 70:
             return None
 
         
@@ -1695,6 +1695,8 @@ def analyze_prematch_match(match):
         match_odds = get_match_odds(
             fixture_id
         )
+        if not match_odds:
+            return None
 
         home_drop = False
         away_drop = False
@@ -1998,6 +2000,10 @@ def analyze_prematch_match(match):
                 -
                 away_form["avg_conceded"]
             ) * 5
+
+            score += (
+                away_form["avg_conceded"]
+            ) * 3
 
         )
 
