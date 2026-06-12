@@ -2118,7 +2118,7 @@ def analyze_prematch_match(match):
                     )
                 )
 
-
+            )
 
         away_value = False
       
