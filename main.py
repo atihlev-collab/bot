@@ -1699,7 +1699,7 @@ def analyze_prematch_match(match):
         if not match_odds:
             return None
 
-       if (
+        if (
            match_odds[0] is None
            or
            match_odds[2] is None
