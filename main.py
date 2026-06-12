@@ -1056,8 +1056,6 @@ def analyze_live_match(match):
         if shots_diff < 2:
             return None
 
-        if corners_diff < 1:
-            return None
 
         if max(
             home_total_shots,
@@ -1071,32 +1069,7 @@ def analyze_live_match(match):
         ) < 65:
             return None
 
-        # GOAL BEFORE FT
-
-        if (
-            minute >= 75
-            and
-            minute <= 84
-            and
-            max(
-                home_pressure,
-                away_pressure
-            ) >= 75
-            and
-            max(
-                home_shots_on,
-                away_shots_on
-            ) >= 4
-        ):
-
-            return (
-
-                "🥅 GOAL BEFORE FT",
-                85,
-                minute,
-                85
-
-            )
+        
 
         # OVER 1.5 REMAINING GOALS
 
@@ -1110,10 +1083,7 @@ def analyze_live_match(match):
             home_shots_on >= 3
             and
             away_shots_on >= 3
-            and
-            home_corners >= 3
-            and
-            away_corners >= 3
+            
         ):
 
             return (
@@ -1125,9 +1095,9 @@ def analyze_live_match(match):
 
             )
 
-        # NEXT GOAL ONLY UNTIL 75'
+        # NEXT GOAL ONLY UNTIL 80'
 
-        if minute > 75:
+        if minute > 80:
 
             return None
 
@@ -1156,7 +1126,7 @@ def analyze_live_match(match):
 
         goal_probability += shots_diff * 3
 
-        goal_probability += corners_diff * 2
+        
 
         goal_probability = min(
             95,
