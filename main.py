@@ -1135,9 +1135,13 @@ def analyze_live_match(match):
             max(
                 55,
                 goal_probability
+             
             )
         )
-        result = {
+     
+        if goal_probability < 80:
+            return None
+      
         return (
 
             market,
@@ -1309,17 +1313,22 @@ def get_team_form(team_id, venue=None):
             "btts":
                 btts,
 
+        result = {
+         
             "played":
                 total,
 
             "form_pct":
                 form_pct
         }
+  
         team_form_cache[cache_key] = (
             time.time(),
             result
         )
+  
         return result
+  
     except:
 
         return None
