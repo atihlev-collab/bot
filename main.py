@@ -88,6 +88,7 @@ BAD_COUNTRIES = [
 sent_live = {}
 
 sent_prematch = {}
+team_form_cache = {}
 
 # =========================================================
 # DATABASE
@@ -769,7 +770,7 @@ def get_upcoming_matches():
                     fixture_time - now
                 ).total_seconds() / 3600
 
-                if 0 <= hours_left <= 12:
+                if 0 <= hours_left <= 6:
 
                     matches.append(
                         match
@@ -1136,7 +1137,7 @@ def analyze_live_match(match):
                 goal_probability
             )
         )
-
+        result = {
         return (
 
             market,
@@ -1156,7 +1157,16 @@ def analyze_live_match(match):
 
 def get_team_form(team_id, venue=None):
 
-    try:
+ cache_key = f"{team_id}_{venue}"
+
+ if cache_key in team_form_cache:
+
+    cache_time, data = team_form_cache[cache_key]
+
+    if time.time() - cache_time < 21600:
+        return data
+
+ try:
 
         r = requests.get(
 
@@ -1267,7 +1277,7 @@ def get_team_form(team_id, venue=None):
             2
         )
 
-        return {
+        result = {
 
             "avg_scored":
                 round(scored / total, 2),
@@ -1305,7 +1315,11 @@ def get_team_form(team_id, venue=None):
             "form_pct":
                 form_pct
         }
-
+        team_form_cache[cache_key] = (
+            time.time(),
+            result
+        )
+        return result
     except:
 
         return None
