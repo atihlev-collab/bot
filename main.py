@@ -2126,14 +2126,12 @@ def analyze_prematch_match(match):
                     match_odds[0]
                 )
 
-                if edge >= 12:
-
-                    market = "💎 SUPER VALUE HOME WIN"
+                if edge >= 12:   
+                 
+                    home_value = True
 
                 elif edge >= 7:
-
-                   market = "💎 VALUE HOME WIN"
-
+                  
                     home_value = True
 
         if home_drop:
