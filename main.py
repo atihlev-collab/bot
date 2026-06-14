@@ -1180,7 +1180,7 @@ def analyze_live_match(match):
             )
         )
      
-        if goal_probability < 80:
+        if goal_probability < 75:
             return None
       
         return (
