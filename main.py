@@ -904,21 +904,21 @@ def analyze_live_match(match):
             away_pressure += min(
             15,
             round(away_form["form_pct"] / 8)
-       )
+        )
 
         home_pressure = min(
             home_pressure,
             100
-       )
+        )
 
         away_pressure = min(
             away_pressure,
             100
-       )
+        )
 
-         if home_form and home_form["avg_scored"] < 1.0:
+        if home_form and home_form["avg_scored"] < 1.0:
 
-             home_pressure -= 8
+            home_pressure -= 8
 
         if away_form and away_form["avg_scored"] < 1.0:
 
@@ -926,8 +926,8 @@ def analyze_live_match(match):
      
         if home_red > away_red:
 
-           home_pressure -= 25
-           away_pressure += 15
+            home_pressure -= 25
+            away_pressure += 15
 
         home_xg = extract(
             home_stats,
