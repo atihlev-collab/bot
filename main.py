@@ -2130,7 +2130,7 @@ def analyze_prematch_match(match):
 
                     market = "💎 SUPER VALUE HOME WIN"
 
-               elif edge >= 7:
+                elif edge >= 7:
 
                    market = "💎 VALUE HOME WIN"
 
@@ -2139,8 +2139,7 @@ def analyze_prematch_match(match):
         if home_drop:
 
             home_value = True
-
-        home_score += 5  
+            home_score += 5  
 
         home_odds_ok = True
 
@@ -2298,7 +2297,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over_prob >= 72
+            over_prob >= 70
             and
             over_conf >= 80
             and
@@ -2352,7 +2351,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 70
+            btts_prob >= 63
             and
             btts_conf >= 80
             and
