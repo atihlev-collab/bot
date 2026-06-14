@@ -2114,17 +2114,17 @@ def analyze_prematch_match(match):
             home_form["form_pct"]
         )
              
-       away_super_value = False
-       away_value = False
+        away_super_value = False
+        away_value = False
 
-      if match_odds:
-          if (
-              match_odds[2] is not None
-      ):
+        if match_odds:
+            if (
+                match_odds[2] is not None
+       ):
 
-             edge = value_edge(
-                 min(95, away_score),
-                 match_odds[2]
+              edge = value_edge(
+                  min(95, away_score),
+                  match_odds[2]
              )
 
              if edge >= 15:
