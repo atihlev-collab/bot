@@ -2023,9 +2023,8 @@ def analyze_prematch_match(match):
 
                     confidence_from_score(
                         min(
-                            95,
-                            round(
-                                home_score                             
+                            95,                        
+                            home_score                             
                         )
                     ),
 
