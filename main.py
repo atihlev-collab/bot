@@ -1971,7 +1971,8 @@ def analyze_prematch_match(match):
         if home_drop:
 
             home_value = True
-
+            home_score += 5
+         
         home_odds_ok = True
 
         if (
@@ -2125,13 +2126,21 @@ def analyze_prematch_match(match):
                     match_odds[0]
                 )
 
-                if edge >= 7:
+                if edge >= 12:
+
+                    market = "💎 SUPER VALUE HOME WIN"
+
+               elif edge >= 7:
+
+                   market = "💎 VALUE HOME WIN"
 
                     home_value = True
 
         if home_drop:
 
             home_value = True
+
+        home_score += 5  
 
         home_odds_ok = True
 
@@ -2211,7 +2220,7 @@ def analyze_prematch_match(match):
         if away_drop:
 
             away_value = True
-
+            away_score += 5
         away_odds_ok = True
 
         if match_odds and match_odds[2] is not None:
