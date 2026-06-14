@@ -939,21 +939,21 @@ def analyze_live_match(match):
             "Expected Goals"
         )
 
-        if home_xg >= 1.5:
+        if home_xg >= 1.3:
 
-            home_pressure += 12
+            home_pressure += 10
 
-        elif home_xg >= 1.0:
+        elif home_xg >= 0.9:
 
-            home_pressure += 8
+            home_pressure += 5
 
-        if away_xg >= 1.5:
+        if away_xg >= 1.3:
 
-            away_pressure += 12
+            away_pressure += 10
 
-        elif away_xg >= 1.0:
+        elif away_xg >= 0.9:
 
-           away_pressure += 8
+           away_pressure += 5
 
         if away_red > home_red:
 
@@ -1093,7 +1093,7 @@ def analyze_live_match(match):
         if dominance < 20:
             return None
 
-        if shots_diff < 3:
+        if shots_diff < 2:
             return None
 
 
@@ -2626,7 +2626,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    top_signals = all_signals[:5]
+    top_signals = all_signals[:3]
     for (
         probability,
         fixture_id,
