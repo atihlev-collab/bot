@@ -709,8 +709,8 @@ def calculate_pressure(team):
     if attacks >= 35:
         pressure += 15
 
-    if attacks >= 50:
-        pressure += 20
+    if attacks >= 70:
+        pressure += 10
 
     return min(
         pressure,
@@ -918,8 +918,8 @@ def analyze_live_match(match):
      
         if home_red > away_red:
 
-           home_pressure -= 20
-           away_pressure += 10
+           home_pressure -= 25
+           away_pressure += 15
 
         home_xg = extract(
             home_stats,
@@ -972,6 +972,12 @@ def analyze_live_match(match):
             "Total Shots"
         )
 
+        if home_shots_on >= 6:
+            home_pressure += 5
+
+        if away_shots_on >= 6:
+            away_pressure += 5
+        
         home_corners = extract(
             home_stats,
             "Corner Kicks"
@@ -1090,10 +1096,13 @@ def analyze_live_match(match):
             and
             away_pressure >= 60
             and
-            home_shots_on >= 3
+            home_shots_on >= 2
             and
-            away_shots_on >= 3
-            
+            away_shots_on >= 2
+            and              
+            home_corners >= 2
+            and
+            away_corners >= 2
         ):
 
             return (
