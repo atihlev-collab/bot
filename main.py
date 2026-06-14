@@ -1052,7 +1052,7 @@ def analyze_live_match(match):
         if total >= 6:
             return None
 
-        if dominance < 25:
+        if dominance < 20:
             return None
 
         if shots_diff < 3:
@@ -1068,7 +1068,7 @@ def analyze_live_match(match):
         if max(
             home_pressure,
             away_pressure
-        ) < 70:
+        ) < 65:
             return None
 
         
@@ -1078,9 +1078,9 @@ def analyze_live_match(match):
         if (
             minute <= 70
             and
-            home_pressure >= 65
+            home_pressure >= 60
             and
-            away_pressure >= 65
+            away_pressure >= 60
             and
             home_shots_on >= 3
             and
@@ -1944,7 +1944,7 @@ def analyze_prematch_match(match):
             )
 
         if (
-            home_score >= 80
+            home_score >= 78
             and
             home_odds_ok
             and
@@ -2105,7 +2105,7 @@ def analyze_prematch_match(match):
             )
 
         if (
-            home_score >= 80
+            home_score >= 78
             and
             home_odds_ok
             and
@@ -2181,7 +2181,7 @@ def analyze_prematch_match(match):
 
 
         if (
-            away_score >= 80
+            away_score >= 78
             and
             away_odds_ok
             and
@@ -2250,7 +2250,7 @@ def analyze_prematch_match(match):
         if (
             over_prob >= 72
             and
-            over_conf >= 85
+            over_conf >= 80
             and
             home_form["avg_scored"] >= 1.2
             and
@@ -2304,7 +2304,7 @@ def analyze_prematch_match(match):
         if (
             btts_prob >= 70
             and
-            btts_conf >= 85
+            btts_conf >= 80
             and
             home_form["avg_scored"] >= 1.2
             and
