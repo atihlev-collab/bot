@@ -2038,8 +2038,6 @@ def analyze_prematch_match(match):
                     )
                 )
 
-            )
-
         # AWAY WIN
 
         away_score = (
