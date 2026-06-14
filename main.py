@@ -2621,7 +2621,95 @@ def prematch_loop():
 
             )
 
-  
+      all_signals.sort(
+        reverse=True,
+        key=lambda x: x[0]
+    )
+
+    special_signals = [
+
+        s for s in all_signals
+
+        if (
+            "VALUE" in s[8]
+            or
+            s[11] != "-"
+        )
+
+    ]
+
+    top_signals = all_signals[:3]
+
+    for s in special_signals:
+
+        if s not in top_signals:
+
+            top_signals.append(s)
+
+    for (
+        probability,
+        fixture_id,
+
+        match_date,
+        kickoff_time,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+        confidence,
+        odds_text,
+        drop_text
+
+    ) in top_signals:
+
+        key = f"{fixture_id}_{market}"
+
+        if key in sent_prematch:
+
+            if (
+                time.time()
+                -
+                sent_prematch[key]
+            ) < 86400:
+
+                continue
+
+        sent_prematch[key] = time.time()
+
+        print(
+            market,
+            confidence,
+            probability
+        )
+
+        print("DEBUG MARKET =", market)
+        print("DEBUG ODDS_TEXT =", odds_text)
+
+        send_prematch_signal(
+
+            fixture_id,
+
+            match_date,
+            kickoff_time,
+
+            country,
+            league,
+
+            home,
+            away,
+
+            market,
+
+            confidence,
+            probability,
+            odds_text,
+            drop_text
+
+        )
 
 # =========================================================
 # LIVE LOOP
