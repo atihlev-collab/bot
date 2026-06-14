@@ -2009,9 +2009,12 @@ def analyze_prematch_match(match):
 
                 (
                     "💎 VALUE HOME WIN"
+                    if home_super_value
+                    else
+                   "💎 VALUE HOME WIN"
                     if home_value
                     else
-                    "🏆 HOME WIN",
+                   "🏆 HOME WIN",
 
                     confidence_from_score(
                         min(
@@ -2110,109 +2113,27 @@ def analyze_prematch_match(match):
             -
             home_form["form_pct"]
         )
+             
+       away_super_value = False
+       away_value = False
 
-        
+      if match_odds:
+          if (
+              match_odds[2] is not None
+      ):
 
-        home_value = False
+             edge = value_edge(
+                 min(95, away_score),
+                 match_odds[2]
+             )
 
-        if match_odds:
+             if edge >= 15:
 
-            if (
-                match_odds[0] is not None
-            ):
+                 away_super_value = True
 
-                edge = value_edge(
-                    min(95, home_score),
-                    match_odds[0]
-                )
+             elif edge >= 10:
 
-                if edge >= 12:   
-                 
-                    home_value = True
-
-                elif edge >= 7:
-                  
-                    home_value = True
-
-        if home_drop:
-
-            home_value = True
-            home_score += 5  
-
-        home_odds_ok = True
-
-        if (
-            match_odds
-            and
-            match_odds[0] is not None
-        ):
-
-            home_odds_ok = (
-                1.45 <= match_odds[0] <= 4.50
-            )
-
-        if (
-            home_score >= 78
-            and
-            home_odds_ok
-            and
-            home_form["unbeaten_pct"] >= 60
-            and
-            home_form["wins"] >= 3
-            and
-            home_edge >= 2
-            and
-            form_gap >= 15
-            and
-            home_form["avg_scored"] >= 1.6
-            and
-            home_form["avg_conceded"] <= 1.3
-            and
-            away_form["avg_conceded"] >= 1.2
-        ):
-
-            signals.append(
-
-                (
-                    "💎 VALUE HOME WIN"
-                    if home_value
-                    else
-                    "🏆 HOME WIN",
-
-                    confidence_from_score(
-                        min(
-                            95,
-                            home_score
-                        )
-                    ),
-
-                    min(
-                        95,
-                        round(
-                            home_score,
-                            1
-                        )
-                    )
-                )
-
-            )
-
-        away_value = False
-      
-
-        if match_odds:
-            if (
-                match_odds[2] is not None
-            ):
-
-                edge = value_edge(
-                    min(95, away_score),
-                    match_odds[2]
-                )
-
-                if edge >= 7:
-
-                    away_value = True
+                 away_value = True
 
         if away_drop:
 
@@ -2250,11 +2171,14 @@ def analyze_prematch_match(match):
             signals.append(
 
                 (
-                    "💎 VALUE AWAY WIN"
+                    "🔥 SUPER VALUE AWAY WIN"
+                    if away_super_value
+                    else
+                   "💎 VALUE AWAY WIN"
                     if away_value
                     else
                     "✈️ AWAY WIN",
-
+                 
                     confidence_from_score(
                         min(
                             95,
