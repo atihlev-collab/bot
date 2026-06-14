@@ -1951,6 +1951,7 @@ def analyze_prematch_match(match):
             away_form["form_pct"]
         )
 
+        home_super_value = False
         home_value = False
 
         if match_odds:
@@ -1964,7 +1965,11 @@ def analyze_prematch_match(match):
                     match_odds[0]
                 )
 
-                if edge >= 10:
+                if edge >= 15:
+                 
+                    home_super_value = True
+
+                elif edge >= 10:
 
                     home_value = True
 
@@ -2008,7 +2013,7 @@ def analyze_prematch_match(match):
             signals.append(
 
                 (
-                    "💎 VALUE HOME WIN"
+                   "🔥 SUPER VALUE HOME WIN"
                     if home_super_value
                     else
                    "💎 VALUE HOME WIN"
@@ -2016,6 +2021,7 @@ def analyze_prematch_match(match):
                     else
                    "🏆 HOME WIN",
 
+                 )
                     confidence_from_score(
                         min(
                             95,
