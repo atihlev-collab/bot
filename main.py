@@ -931,21 +931,21 @@ def analyze_live_match(match):
             "Expected Goals"
         )
 
-       if home_xg >= 1.5:
+        if home_xg >= 1.5:
 
-           home_pressure += 12
+            home_pressure += 12
 
-       elif home_xg >= 1.0:
+        elif home_xg >= 1.0:
 
-           home_pressure += 8
+            home_pressure += 8
 
-       if away_xg >= 1.5:
+        if away_xg >= 1.5:
 
-          away_pressure += 12
+            away_pressure += 12
 
-       elif away_xg >= 1.0:
+        elif away_xg >= 1.0:
 
-          away_pressure += 8
+           away_pressure += 8
 
         if away_red > home_red:
 
