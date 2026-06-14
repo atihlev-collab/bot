@@ -467,7 +467,7 @@ def odds_drop_check(
                     / old_home
                 ) * 100
 
-                if 5 <= drop_percent <= 25:
+                if 4 <= drop_percent <= 25:
 
                     drop_home = True
 
@@ -486,7 +486,7 @@ def odds_drop_check(
                     / old_away
                 ) * 100
 
-                if 5 <= drop_percent <= 25:
+                if 4 <= drop_percent <= 25:
 
                     drop_away = True
 
@@ -957,8 +957,8 @@ def analyze_live_match(match):
 
         if away_red > home_red:
 
-            away_pressure -= 20
-            home_pressure += 10
+            away_pressure -= 25
+            home_pressure += 15
 
         home_shots_on = extract(
             home_stats,
@@ -2125,7 +2125,7 @@ def analyze_prematch_match(match):
                     match_odds[0]
                 )
 
-                if edge >= 10:
+                if edge >= 7:
 
                     home_value = True
 
@@ -2204,7 +2204,7 @@ def analyze_prematch_match(match):
                     match_odds[2]
                 )
 
-                if edge >= 10:
+                if edge >= 7:
 
                     away_value = True
 
@@ -2621,77 +2621,7 @@ def prematch_loop():
 
             )
 
-    all_signals.sort(
-        reverse=True,
-        key=lambda x: x[0]
-    )
-
-    top_signals = all_signals[:3]
-    for (
-        probability,
-        fixture_id,
-
-        match_date,
-        kickoff_time,
-
-        country,
-        league,
-
-        home,
-        away,
-
-        market,
-        confidence,
-        odds_text,
-        drop_text
-    ) in top_signals:
-
-        key = f"{fixture_id}_{market}"
-
-        if key in sent_prematch:
-
-            if (
-                time.time()
-                -
-                sent_prematch[key]
-            ) < 86400:
-
-                continue
-
-        sent_prematch[key] = time.time()
-
-        print(
-            market,
-            confidence,
-            probability
-        )
-
-        print("DEBUG MARKET =", market)
-        print("DEBUG MATCH_ODDS =", match_odds)
-        print("DEBUG ODDS_TEXT =", odds_text)
-
-        send_prematch_signal(
-
-            fixture_id,
-
-            match_date,
-            kickoff_time,
-
-            country,
-            league,
-
-            home,
-            away,
-
-            market,
-
-            confidence,
-            probability,
-            odds_text,
-            drop_text
-
-       )
-
+  
 
 # =========================================================
 # LIVE LOOP
