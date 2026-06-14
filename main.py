@@ -1180,7 +1180,7 @@ def analyze_live_match(match):
             )
         )
      
-        if goal_probability < 75:
+        if goal_probability < 79:
             return None
       
         return (
@@ -1931,13 +1931,11 @@ def analyze_prematch_match(match):
             home_form["form_pct"] >= 80
             and
             home_form["wins"] >= 6
-        ):
-
-            home_score += 5
+        ):   
 
         if home_drop:
 
-            home_score += 5
+            home_score += 
 
         home_edge = (
             home_form["wins"]
@@ -2105,6 +2103,7 @@ def analyze_prematch_match(match):
 
         if away_drop:
 
+            away_value = True
             away_score += 5
 
         away_edge = (
