@@ -2021,7 +2021,6 @@ def analyze_prematch_match(match):
                     else
                    "🏆 HOME WIN",
 
-                 )
                     confidence_from_score(
                         min(
                             95,
@@ -2030,14 +2029,15 @@ def analyze_prematch_match(match):
                     ),
 
                     min(
-                        95,
-                        round(
+                        95,                   
                             home_score,
                             1
                         )
                     )
                 )
-
+ 
+            )
+     
         # AWAY WIN
 
         away_score = (
