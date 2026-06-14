@@ -970,6 +970,22 @@ def analyze_live_match(match):
             "Shots on Goal"
         )
 
+          if home_shots_on == 0:
+
+              home_pressure -= 15
+
+         if away_shots_on == 0:
+
+             away_pressure -= 15
+
+        if home_shots_on == 0:
+
+            away_pressure += 5
+
+       if away_shots_on == 0:
+
+           home_pressure += 5
+          
         home_total_shots = extract(
             home_stats,
             "Total Shots"
@@ -994,7 +1010,7 @@ def analyze_live_match(match):
         away_corners = extract(
             away_stats,
             "Corner Kicks"
-        )
+        )   
 
         shots_diff = abs(
             home_shots_on -
