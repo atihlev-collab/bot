@@ -2025,13 +2025,13 @@ def analyze_prematch_match(match):
                         min(
                             95,
                             round(
-                                home_score
-                                1
+                                home_score                             
                         )
                     ),
 
                     min(
-                        95,                   
+                        95,  
+                        round(
                             home_score,
                             1
                         )
