@@ -859,21 +859,6 @@ def analyze_live_match(fixture):
             if word in text:
                 return None
 
-        fixture_id = match["fixture"]["id"]
-
-        fixture_id = match["fixture"]["id"]
-    
-        # НОВ КЕШ БЛОК ЗА NEXT GOAL (Вмъкни го тук)
-        home_goals = match.get("goals", {}).get("home", 0) or 0
-        away_goals = match.get("goals", {}).get("away", 0) or 0
-        current_goals = home_goals + away_goals
-        signal_key = f"{fixture_id}_{current_goals}"
-    
-        if signal_key in sent_live:
-            return None
-
-        sent_live[signal_key] = True
-
         stats = get_statistics(
             fixture_id
         )
@@ -905,12 +890,12 @@ def analyze_live_match(fixture):
         # FORM BONUS
 
         home_form = get_team_form(
-            match["teams"]["home"]["id"],
+            fixture["teams"]["home"]["id"],
             venue="home"
         )
 
         away_form = get_team_form(
-            match["teams"]["away"]["id"],
+            fixture["teams"]["away"]["id"],
             venue="away"
         )
 
