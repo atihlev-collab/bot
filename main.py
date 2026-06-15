@@ -1963,16 +1963,24 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None
             ):
 
-                edge = value_edge(
-                    min(95, home_score),
-                    match_odds[0]
-                )
+        predicted_prob = min(
+            85,
+            max(
+                55,
+                home_score * 0.8
+            )
+        )
 
-                if edge >= 15:
+        edge = value_edge(
+            predicted_prob,
+            match_odds[0]
+        )
+
+                if edge >= 20:
                  
                     home_super_value = True
 
-                elif edge >= 10:
+                elif edge >= 12:
 
                     home_value = True
 
