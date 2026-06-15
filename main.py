@@ -2134,10 +2134,7 @@ def analyze_prematch_match(match):
 
                    away_value = True
 
-        if away_drop:
-
-            away_value = True
-            away_score += 5
+     
         away_odds_ok = True
 
         if match_odds and match_odds[2] is not None:
