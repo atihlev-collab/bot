@@ -939,7 +939,7 @@ def analyze_live_match(match):
             "Expected Goals"
         )
 
-        if home_xg >= 1.3:
+        if home_xg >= 1.0:
 
             home_pressure += 10
 
@@ -1999,7 +1999,7 @@ def analyze_prematch_match(match):
             and
             form_gap >= 15
             and
-            home_form["avg_scored"] >= 1.6
+            home_form["avg_scored"] >= 1.5
             and
             home_form["avg_conceded"] <= 1.3
             and
@@ -2164,7 +2164,7 @@ def analyze_prematch_match(match):
             and
             away_gap >= 15
             and
-            away_form["avg_scored"] >= 1.6
+            away_form["avg_scored"] >= 1.5
             and
             away_form["avg_conceded"] <= 1.3
             and
