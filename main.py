@@ -2100,7 +2100,7 @@ def analyze_prematch_match(match):
             away_form["wins"] >= 6
         ):
 
-            away_score += 
+            away_score += 5
  
         away_edge = (
             away_form["wins"]
