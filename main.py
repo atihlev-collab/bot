@@ -872,6 +872,8 @@ def analyze_live_match(fixture):
         if signal_key in sent_live:
             return None
 
+        sent_live[signal_key] = True
+
         stats = get_statistics(
             fixture_id
         )
