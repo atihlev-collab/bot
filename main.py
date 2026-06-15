@@ -2006,10 +2006,7 @@ def analyze_prematch_match(match):
 
             signals.append(
 
-                (                  
-                   "💎 VALUE HOME WIN"
-                    if home_value
-                    else
+                (                                   
                    "🏆 HOME WIN",
 
                     confidence_from_score(
@@ -2163,10 +2160,7 @@ def analyze_prematch_match(match):
 
             signals.append(
 
-                (                 
-                   "💎 VALUE AWAY WIN"
-                    if away_value
-                    else
+                (                                 
                     "✈️ AWAY WIN",
                  
                     confidence_from_score(
@@ -2532,6 +2526,8 @@ def prematch_loop():
                     away_drop_text
                  )
              )
+
+   
      
         for market, confidence, probability in signals:
 
