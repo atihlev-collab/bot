@@ -805,10 +805,6 @@ def analyze_live_match(fixture):
         away_goals = fixture["goals"].get("away", 0) or 0
         current_goals = home_goals + away_goals
         
-        # НОВА ДИНАМИЧНА ПРОВЕРКА: Позволява сигнали при нов резултат
-        signal_key = f"{fixture_id}_{current_goals}"
-        if signal_key in sent_live:
-            return
 
         home_team = fixture["teams"]["home"]["name"]
         away_team = fixture["teams"]["away"]["name"]
