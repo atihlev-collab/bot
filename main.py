@@ -1035,7 +1035,7 @@ def analyze_live_match(fixture):
             away_pressure
         )
 
-        minute = match["fixture"]["status"]["elapsed"]
+        minute = fixture["fixture"]["status"]["elapsed"]
 
         if not minute:
             return None
@@ -1101,7 +1101,7 @@ def analyze_live_match(fixture):
         if dominance < 15:
             return None
 
-        if shots_diff < 2:
+        if shots_diff < 1:
             return None
 
 
@@ -1995,7 +1995,7 @@ def analyze_prematch_match(match):
             )
 
         if (
-            home_score >= 78
+            home_score >= 75
             and
             home_odds_ok
             and
@@ -2160,7 +2160,7 @@ def analyze_prematch_match(match):
 
 
         if (
-            away_score >= 78
+            away_score >= 75
             and
             away_odds_ok
             and
