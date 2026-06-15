@@ -2203,13 +2203,13 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over_prob >= 70
+            over_prob >= 65
             and
-            over_conf >= 80
+            over_conf >= 75
             and
-            home_form["avg_scored"] >= 1.2
+            home_form["avg_scored"] >= 1.0
             and
-            away_form["avg_scored"] >= 1.0
+            away_form["avg_scored"] >= 0.9
             and
             home_form["avg_conceded"] >= 1.0
             and
@@ -2219,7 +2219,7 @@ def analyze_prematch_match(match):
                 home_form["over25"]
                 +
                 away_form["over25"]
-            ) >= 5
+            ) >= 4
         ):
 
             signals.append(
