@@ -1910,10 +1910,7 @@ def analyze_prematch_match(match):
         )
 
         signals = []
-        print("CHECKING:", home, "vs", away)
-     
-        print(home_form)
-        print(away_form)
+        
                 # HOME WIN
 
         home_score = home_win_score(
@@ -2103,13 +2100,8 @@ def analyze_prematch_match(match):
             away_form["wins"] >= 6
         ):
 
-            away_score += 5
-
-        if away_drop:
-
-            away_value = True
-            away_score += 5
-
+            away_score += 
+ 
         away_edge = (
             away_form["wins"]
             -
@@ -2124,6 +2116,11 @@ def analyze_prematch_match(match):
              
         away_super_value = False
         away_value = False
+
+        if away_drop:
+
+            away_value = True
+            away_score += 5
 
         if match_odds:
          
@@ -2309,7 +2306,7 @@ def analyze_prematch_match(match):
             )
 
             print("CHECKING:", home, "vs", away)
-            print("SIGNALS =", signals)
+            
          
             signals.sort(
             reverse=True,
