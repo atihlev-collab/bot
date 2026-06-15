@@ -797,12 +797,21 @@ def get_upcoming_matches():
 # LIVE ANALYSIS
 # =========================================================
 
-def analyze_live_match(match):
-
+def analyze_live_match(fixture):
     try:
+        fixture_id = fixture["fixture"]["id"]
+        
+        home_goals = fixture["goals"].get("home", 0) or 0
+        away_goals = fixture["goals"].get("away", 0) or 0
+        current_goals = home_goals + away_goals
+        
+        # НОВА ДИНАМИЧНА ПРОВЕРКА: Позволява сигнали при нов резултат
+        signal_key = f"{fixture_id}_{current_goals}"
+        if signal_key in sent_live:
+            return
 
-        home_team = match["teams"]["home"]["name"]
-        away_team = match["teams"]["away"]["name"]
+        # ... (надолу кодът ви си продължава без промяна) ...
+
 
         banned = [
 
@@ -851,6 +860,17 @@ def analyze_live_match(match):
                 return None
 
         fixture_id = match["fixture"]["id"]
+
+        fixture_id = match["fixture"]["id"]
+    
+        # НОВ КЕШ БЛОК ЗА NEXT GOAL (Вмъкни го тук)
+        home_goals = match.get("goals", {}).get("home", 0) or 0
+        away_goals = match.get("goals", {}).get("away", 0) or 0
+        current_goals = home_goals + away_goals
+        signal_key = f"{fixture_id}_{current_goals}"
+    
+        if signal_key in sent_live:
+            return None
 
         stats = get_statistics(
             fixture_id
@@ -947,7 +967,7 @@ def analyze_live_match(match):
 
             home_pressure += 5
 
-        if away_xg >= 1.3:
+        if away_xg >= 1.0:
 
             away_pressure += 10
 
