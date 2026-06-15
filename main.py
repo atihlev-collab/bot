@@ -1915,6 +1915,7 @@ def analyze_prematch_match(match):
         )
 
         signals = []
+        print("CHECKING:", home, "vs", away)
      
         print(home_form)
         print(away_form)
@@ -2311,8 +2312,11 @@ def analyze_prematch_match(match):
                 )
 
             )
+
+            print("CHECKING:", home, "vs", away)
+            print("SIGNALS =", signals)
          
-        signals.sort(
+            signals.sort(
             reverse=True,
             key=lambda x: x[2]
         )
