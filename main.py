@@ -1915,7 +1915,9 @@ def analyze_prematch_match(match):
         )
 
         signals = []
-
+     
+        print(home_form)
+        print(away_form)
                 # HOME WIN
 
         home_score = home_win_score(
@@ -2005,7 +2007,7 @@ def analyze_prematch_match(match):
             and
             home_edge >= 2
             and
-            form_gap >= 15
+            form_gap >= 10
             and
             home_form["avg_scored"] >= 1.5
             and
@@ -2170,7 +2172,7 @@ def analyze_prematch_match(match):
             and
             away_edge >= 2
             and
-            away_gap >= 15
+            away_gap >= 10
             and
             away_form["avg_scored"] >= 1.5
             and
