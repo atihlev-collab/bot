@@ -810,7 +810,8 @@ def analyze_live_match(fixture):
         if signal_key in sent_live:
             return
 
-        # ... (надолу кодът ви си продължава без промяна) ...
+        home_team = fixture["teams"]["home"]["name"]
+        away_team = fixture["teams"]["away"]["name"]
 
 
         banned = [
@@ -1047,8 +1048,8 @@ def analyze_live_match(fixture):
 
        
 
-        home = match["goals"]["home"] or 0
-        away = match["goals"]["away"] or 0
+        home = fixture["goals"]["home"] or 0
+        away = fixture["goals"]["away"] or 0
 
         total = home + away
 
@@ -1097,7 +1098,7 @@ def analyze_live_match(fixture):
         if total >= 6:
             return None
 
-        if dominance < 20:
+        if dominance < 15:
             return None
 
         if shots_diff < 2:
