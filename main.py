@@ -2257,13 +2257,13 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 63
+            btts_prob >= 60
             and
-            btts_conf >= 80
+            btts_conf >= 75
             and
-            home_form["avg_scored"] >= 1.2
+            home_form["avg_scored"] >= 1.0
             and
-            away_form["avg_scored"] >= 1.0
+            away_form["avg_scored"] >= 0.9
             and
             home_form["btts"] >= 2
             and
