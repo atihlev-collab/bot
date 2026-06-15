@@ -1970,12 +1970,7 @@ def analyze_prematch_match(match):
 
                 elif edge >= 10:
 
-                    home_value = True
-
-        if home_drop:
-
-            home_value = True
-            home_score += 5
+                    home_value = True       
          
         home_odds_ok = True
 
@@ -2116,11 +2111,6 @@ def analyze_prematch_match(match):
              
         away_super_value = False
         away_value = False
-
-        if away_drop:
-
-            away_value = True
-            away_score += 5
 
         if match_odds:
          
@@ -2492,6 +2482,63 @@ def prematch_loop():
             "%H:%M"
         )
 
+        # ==========================================
+        # ODDS DROP HOME
+        # ==========================================
+
+        if home_drop:
+
+            all_signals.append(
+
+                (
+                    999,
+                    fixture_id,
+
+                    match_date,
+                    kickoff_time,
+
+                    country,
+                    league,
+
+                    home,
+                    away,
+                 
+                    "📉 ODDS DROP HOME",
+                    90,
+                    str(match_odds[0]),
+                    home_drop_text
+                )
+
+            )
+
+        # ==========================================
+        # ODDS DROP AWAY
+        # ==========================================
+
+        if away_drop:
+
+            all_signals.append(
+
+                (
+                    999,
+                    fixture_id,
+
+                    match_date,
+                    kickoff_time,
+
+                    country,
+                    league,
+
+                    home,
+                    away,
+
+                    "📉 ODDS DROP AWAY",
+                    90,
+                    str(match_odds[2]),
+                    away_drop_text
+                 )
+             )
+     
         for market, confidence, probability in signals:
 
             odds_text = "-"
