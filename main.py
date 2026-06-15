@@ -804,10 +804,6 @@ def analyze_live_match(fixture):
         away_goals = fixture["goals"].get("away", 0) or 0
         current_goals = home_goals + away_goals
         
-        # НОВА ДИНАМИЧНА ПРОВЕРКА: Позволява сигнали при нов резултат
-        signal_key = f"{fixture_id}_{current_goals}"
-        if signal_key in sent_live:
-            return
 
         home_team = fixture["teams"]["home"]["name"]
         away_team = fixture["teams"]["away"]["name"]
@@ -1094,7 +1090,7 @@ def analyze_live_match(fixture):
                 )            
                   
 
-        if total >= 6:
+        if total >= 7:
             return None
 
         if dominance < 15:
@@ -1993,7 +1989,7 @@ def analyze_prematch_match(match):
         ):
 
             home_odds_ok = (
-                1.45 <= match_odds[0] <= 4.50
+                1.45 <= match_odds[0] <= 2.30
             )
 
         if (
@@ -2157,7 +2153,7 @@ def analyze_prematch_match(match):
         if match_odds and match_odds[2] is not None:
 
             away_odds_ok = (
-               1.55 <= match_odds[2] <= 5.50
+               1.55 <= match_odds[2] <= 3.00
             )
 
 
