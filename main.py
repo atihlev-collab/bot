@@ -2006,10 +2006,7 @@ def analyze_prematch_match(match):
 
             signals.append(
 
-                (
-                   "🔥 SUPER VALUE HOME WIN"
-                    if home_super_value
-                    else
+                (                  
                    "💎 VALUE HOME WIN"
                     if home_value
                     else
@@ -2166,10 +2163,7 @@ def analyze_prematch_match(match):
 
             signals.append(
 
-                (
-                    "🔥 SUPER VALUE AWAY WIN"
-                    if away_super_value
-                    else
+                (                 
                    "💎 VALUE AWAY WIN"
                     if away_value
                     else
