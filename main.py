@@ -1357,6 +1357,13 @@ def get_team_form(team_id, venue=None):
             2                                   
         )   
 
+        momentum = round(             
+            recent_form_pct           
+            -                         
+            form_pct,                 
+            2                          
+        )                            
+
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
@@ -1390,6 +1397,9 @@ def get_team_form(team_id, venue=None):
         )                     
 
         result = {
+
+            "momentum":           
+                momentum,       
 
             "avg_scored":
                 round(scored / total, 2),
@@ -1623,7 +1633,13 @@ def home_win_score(
         home_form["recent_form_pct"]    
         -                               
         away_form["recent_form_pct"]   
-    ) * 0.5     
+    ) * 0.5    
+
+    score += (                     
+        home_form["momentum"]       
+        -                           
+        away_form["momentum"]   
+    ) * 0.4                        
 
     score += (
         home_form["unbeaten_pct"]
@@ -2095,24 +2111,24 @@ def analyze_prematch_match(match):
         
                 # HOME WIN
 
-        home_score = home_win_score(
-            home_form,
-            away_form
-        )
-
-        home_score += (            
-            home_strength            
-            -                       
-            away_strength            
-        ) * 0.25                    
-
-        home_strength = team_strength(     
-            home_form                      
-        )                                 
+        home_strength = team_strength(      
+            home_form                     
+        )                                  
 
         away_strength = team_strength(     
-            away_form                      
+            away_form                       
+        )                                 
+
+        home_score = home_win_score(       
+            home_form,                     
+            away_form                       
         )                                  
+
+        home_score += (                     
+            home_strength                  
+            -                              
+            away_strength                  
+        ) * 0.25                                
 
                 
         # FORM COLLAPSE BONUS
@@ -2275,6 +2291,14 @@ def analyze_prematch_match(match):
                 -                                
                 home_form["recent_form_pct"]     
             ) * 0.5   
+
+            +
+
+            (
+                away_form["momentum"]      
+                -                          
+                home_form["momentum"]      
+            ) * 0.4                         
 
             +
          
