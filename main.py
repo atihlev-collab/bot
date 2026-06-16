@@ -2279,8 +2279,20 @@ def analyze_prematch_match(match):
             over_final
         )
 
+        print(                          
+            "OVER DETAILS:",            
+            home,                       
+            away,                       
+            over_prob,                  
+            over_conf,                   
+            home_form["avg_scored"],    
+            away_form["avg_scored"],    
+            home_form["avg_conceded"],   
+            away_form["avg_conceded"]    
+        )                                
+
         if (
-            over_prob >= 65
+            over_prob >= 60
             and
             over_conf >= 70
             and
