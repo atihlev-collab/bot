@@ -1745,7 +1745,75 @@ def team_strength(
     return round(              
         score,                    
         2                        
-    )                            
+    )         
+
+# =========================================================
+# H2H SCORE
+# =========================================================
+
+def h2h_score(                        
+
+    home_id,                           
+    away_id                            
+
+):                                     
+
+    try:                               
+
+        r = requests.get(             
+
+            f"{BASE_URL}/fixtures/headtohead",
+
+            headers=HEADERS,
+
+            params={                   
+
+                "h2h":                 
+                    f"{home_id}-{away_id}",
+
+                "last": 5             
+
+            },
+
+            timeout=20                
+
+        ).json()                     
+
+        games = r.get(                
+            "response",
+            []
+        )
+
+        score = 0                     
+
+        for g in games:               
+
+            gh = g["goals"]["home"] or 0      
+            ga = g["goals"]["away"] or 0     
+
+            hid = g["teams"]["home"]["id"]    
+
+            if hid == home_id:        
+
+                if gh > ga:         
+                    score += 1       
+
+                elif gh < ga:         
+                    score -= 1       
+
+            else:                    
+
+                if ga > gh:           
+                    score += 1        
+
+                elif ga < gh:        
+                    score -= 1        
+
+        return score                 
+
+    except:                           
+
+        return 0                     
 
     
 # =========================================================
