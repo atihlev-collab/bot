@@ -1035,7 +1035,7 @@ def analyze_live_match(fixture):
         if not minute:
             return None
 
-        if minute < 20:
+        if minute < 15:
             return None
 
         if minute > 80:
@@ -1162,7 +1162,7 @@ def analyze_live_match(fixture):
             ) - 75
         ) * 2
 
-        goal_probability += shots_diff * 3
+        goal_probability += shots_diff * 4
 
         
 
