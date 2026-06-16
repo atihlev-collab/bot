@@ -1825,40 +1825,13 @@ def calculate_final_score(
 
 def confidence_from_score(score):
 
-    if score >= 95:
-        return 95
-
-    elif score >= 92:
-        return 92
-
-    elif score >= 90:
-        return 90
-
-    elif score >= 88:
-        return 88
-
-    elif score >= 85:
-        return 85
-
-    elif score >= 82:
-        return 82
-
-    elif score >= 80:
-        return 80
-
-    elif score >= 77:
-        return 77
-
-    elif score >= 75:
-        return 75
-
-    elif score >= 72:
-        return 72
-
-    elif score >= 70:
-        return 70
-
-    return 65
+    return max(                       
+        50,                           
+        min(                          
+            95,                        
+            round(score)              
+        )                             
+    )                                 
 # =========================================================
 # PREMATCH ANALYSIS
 # =========================================================
