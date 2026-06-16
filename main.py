@@ -2302,7 +2302,7 @@ def analyze_prematch_match(match):
      
         return signals
 
-        except Exception as e:
+    except Exception as e:
          
             print("PREMATCH ERROR =", repr(e))
 
