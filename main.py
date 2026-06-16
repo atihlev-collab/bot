@@ -2465,13 +2465,13 @@ def analyze_prematch_match(match):
 
            )
 
-         away_score += (              
-            away_strength           
-            -                       
-            home_strength            
-        ) * 0.25     
+              away_score += (              
+              away_strength           
+              -                       
+              home_strength            
+           ) * 0.25     
 
-        away_score -= h2h * 2       
+              away_score -= h2h * 2       
        
         
         # FORM COLLAPSE BONUS
