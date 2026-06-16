@@ -1587,7 +1587,7 @@ def home_win_score(
         away_form["losses"]
         -
         home_form["losses"]
-    ) * 3
+    ) * 2
 
     score += (
         home_form["form_pct"]
@@ -1599,7 +1599,13 @@ def home_win_score(
         home_form["recent_form_pct"]    
         -                               
         away_form["recent_form_pct"]   
-    ) * 0.5                            
+    ) * 0.5     
+
+    score += (
+        home_form["unbeaten_pct"]
+        -
+        away_form["unbeaten_pct"]
+    ) * 0.2
 
     score += (
         home_form["avg_scored"]
@@ -1619,11 +1625,11 @@ def home_win_score(
         home_form["avg_conceded"]
     ) * 5
 
-    score += (                                # 4
-        away_form["recent_avg_conceded"]      # 8
-        -                                     # 8
-        home_form["recent_avg_conceded"]      # 8
-    ) * 4                                     # 4
+    score += (                              
+        away_form["recent_avg_conceded"]     
+        -                                   
+        home_form["recent_avg_conceded"]      
+    ) * 4                                     
 
     return round(score, 2)
     
@@ -2142,9 +2148,7 @@ def analyze_prematch_match(match):
             and
             recent_gap >= 10
             and
-            home_form["recent_form_pct"] >= 60                                                
-            and
-            away_form["recent_form_pct"] >= 70     
+            home_form["recent_form_pct"] >= 60                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
             and
@@ -2212,7 +2216,15 @@ def analyze_prematch_match(match):
                 away_form["recent_form_pct"]    
                 -                                
                 home_form["recent_form_pct"]     
-            ) * 0.5                             
+            ) * 0.5   
+
+            +
+         
+            (
+               away_form["unbeaten_pct"]
+               -
+               home_form["unbeaten_pct"]
+            ) * 0.2
 
             +
 
@@ -2322,7 +2334,7 @@ def analyze_prematch_match(match):
 
 
         if (
-            away_score >= 35
+            away_score >= 40
             and
             away_odds_ok
             and
