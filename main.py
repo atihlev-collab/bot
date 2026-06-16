@@ -1274,7 +1274,7 @@ def get_team_form(team_id, venue=None):
         wins = 0
         losses = 0
         draws = 0
-
+        clean_sheets = 0         
         over25 = 0
         btts = 0
 
@@ -1297,6 +1297,9 @@ def get_team_form(team_id, venue=None):
 
             scored += team_goals
             conceded += opp_goals
+
+             if opp_goals == 0:       
+                 clean_sheets += 1     
 
             if team_goals > opp_goals:
                 wins += 1
@@ -1390,6 +1393,11 @@ def get_team_form(team_id, venue=None):
             2
         )
 
+        clean_sheet_pct = round(     
+            (clean_sheets / total) * 100, 
+            2                        
+        )                            
+
         goal_diff = (            
             scored              
             -               
@@ -1397,6 +1405,9 @@ def get_team_form(team_id, venue=None):
         )                     
 
         result = {
+
+            "clean_sheet_pct":       # 12
+                clean_sheet_pct,     # 16
 
             "momentum":           
                 momentum,       
@@ -1689,7 +1700,9 @@ def team_strength(
 
     score += form["recent_form_pct"] * 0.25     
 
-    score += form["unbeaten_pct"] * 0.10         
+    score += form["unbeaten_pct"] * 0.10     
+
+    score += form["clean_sheet_pct"] * 0.08  
 
     score += form["avg_scored"] * 10             
 
