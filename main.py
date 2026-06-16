@@ -1436,7 +1436,7 @@ def get_team_form(team_id, venue=None):
             "recent_form_pct":
                 recent_form_pct
 
-           "recent_avg_scored":
+            "recent_avg_scored":
                 recent_avg_scored,
 
             "recent_avg_conceded":
