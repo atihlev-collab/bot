@@ -1346,11 +1346,11 @@ def get_team_form(team_id, venue=None):
 
             elif team_goals == opp_goals:      
 
-                recent_points += 1      
+               recent_points += 1      
 
             if (gh + ga) >= 3:        
 
-                recent_over25 += 1     
+               recent_over25 += 1     
 
         recent_form_pct = round(                
             (recent_points / 15) * 100,        
