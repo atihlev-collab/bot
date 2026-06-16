@@ -2249,6 +2249,15 @@ def analyze_prematch_match(match):
 
             )
 
+     
+        print(
+            "OVER CHECK:",
+            home,
+            away,
+            over_prob,
+            home_form["over25"],
+            away_form["over25"]
+        )
         # OVER 2.5
 
         over_league = league_score(
@@ -2302,6 +2311,15 @@ def analyze_prematch_match(match):
                 )
 
             )
+         
+        print(
+            "BTTS CHECK:",
+            home,
+            away,
+            btts_prob,
+            home_form["btts"],
+            away_form["btts"]
+        )
 
         # BTTS
 
