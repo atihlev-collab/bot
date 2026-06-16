@@ -1515,16 +1515,22 @@ def calculate_form_score(
 
 ):
     
-    score = 0
+    score = 0                            
+ 
+score += home_form["form_pct"] * 0.4    
+score += away_form["form_pct"] * 0.4    
 
-    score += home_form["form_pct"] * 0.5
-    score += away_form["form_pct"] * 0.5
+score += (
+    home_form["recent_form_pct"]         
+    +
+    away_form["recent_form_pct"]        
+) * 0.3                                            
 
-    score += (
-        home_form["over25"]
-        +
-        away_form["over25"]
-    ) * 2
+    score += (                          
+        home_form["over25"]            
+        +                                
+        away_form["over25"]             
+    ) * 2                            
 
     score += (
         home_form["btts"]
@@ -2097,6 +2103,10 @@ def analyze_prematch_match(match):
             and
             recent_gap >= 10
             and
+            home_form["recent_form_pct"] >= 60                                                
+            and
+            away_form["recent_form_pct"] >= 60     
+            and                                   
             home_form["avg_scored"] >= 1.5
             and
             home_form["avg_conceded"] <= 1.3
