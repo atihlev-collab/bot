@@ -1309,6 +1309,40 @@ def get_team_form(team_id, venue=None):
             if gh > 0 and ga > 0:
                 btts += 1
 
+        recent_games = games[:5]        
+
+        recent_points = 0                
+
+        for g in recent_games:          
+
+            home_id = g["teams"]["home"]["id"]  
+
+            gh = g["goals"]["home"] or 0        
+            ga = g["goals"]["away"] or 0        
+
+            if team_id == home_id:              
+
+                team_goals = gh                
+                opp_goals = ga                  
+
+            else:                             
+
+                team_goals = ga                 
+                opp_goals = gh                  
+             
+            if team_goals > opp_goals:          
+
+                recent_points += 3             
+
+            elif team_goals == opp_goals:      
+
+                recent_points += 1             
+
+        recent_form_pct = round(                
+            (recent_points / 15) * 100,        
+            2                                   
+        )                                      
+
         total = len(games)
 
         points = wins * 3
@@ -1361,7 +1395,10 @@ def get_team_form(team_id, venue=None):
                 total,
 
             "form_pct":
-                form_pct
+                form_pct,
+         
+            "recent_form_pct":
+                recent_form_pct
         }
 
         team_form_cache[cache_key] = (
@@ -1947,11 +1984,17 @@ def analyze_prematch_match(match):
             away_form["wins"]
         )
 
-        form_gap = (
-            home_form["form_pct"]
+        form_gap = (                         
+            home_form["form_pct"]             
             -
-            away_form["form_pct"]
-        )
+            away_form["form_pct"]             
+        )                                     
+
+        recent_gap = (                        
+            home_form["recent_form_pct"]      
+            -
+            away_form["recent_form_pct"]      
+        )                                     
 
         home_super_value = False
         home_value = False
@@ -2000,6 +2043,8 @@ def analyze_prematch_match(match):
             home_edge >= 2
             and
             form_gap >= 10
+            and
+            recent_gap >= 10
             and
             home_form["avg_scored"] >= 1.5
             and
@@ -2110,6 +2155,12 @@ def analyze_prematch_match(match):
             -
             home_form["form_pct"]
         )
+
+        recent_away_gap = (                   
+            away_form["recent_form_pct"]       
+            -
+            home_form["recent_form_pct"]    
+        )                                     
              
         away_super_value = False
         away_value = False
@@ -2155,6 +2206,8 @@ def analyze_prematch_match(match):
             away_edge >= 2
             and
             away_gap >= 10
+            and
+            recent_away_gap >= 10
             and
             away_form["avg_scored"] >= 1.5
             and
