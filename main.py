@@ -1908,8 +1908,17 @@ def analyze_prematch_match(match):
             home_form,
             away_form
         )
+        
 
         signals = []
+
+        print(
+            "FORM:",
+            home,
+            away,
+            home_form["form_pct"],
+            away_form["form_pct"]
+        )
         print("ANALYZE:", home, "vs", away)
         
                 # HOME WIN
@@ -1984,6 +1993,15 @@ def analyze_prematch_match(match):
             home_odds_ok = (
                 1.45 <= match_odds[0] <= 2.30
             )
+
+        print(                  
+            "HOME CHECK:",      
+            home,               
+            home_score,         
+            home_edge,          
+            form_gap,           
+            home_form["wins"]   
+        )                       
 
         if (
             home_score >= 75
