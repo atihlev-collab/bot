@@ -1508,40 +1508,40 @@ def poisson_btts(home_attack, away_attack):
 # FORM SCORE
 # =========================================================
 
-def calculate_form_score(
+def calculate_form_score(           
 
-    home_form,
-    away_form
+    home_form,                      
+    away_form                       
 
-):
+):                                  
     
-    score = 0                            
- 
-score += home_form["form_pct"] * 0.4    
-score += away_form["form_pct"] * 0.4    
+    score = 0                       
 
-score += (
-    home_form["recent_form_pct"]         
-    +
-    away_form["recent_form_pct"]        
-) * 0.3                                            
+    score += home_form["form_pct"] * 0.4     
+    score += away_form["form_pct"] * 0.4    
 
-    score += (                          
-        home_form["over25"]            
-        +                                
-        away_form["over25"]             
+    score += (                       
+        home_form["recent_form_pct"]  
+        +                            
+        away_form["recent_form_pct"]  
+    ) * 0.3                           
+
+    score += (                      
+        home_form["over25"]         
+        +                            
+        away_form["over25"]           
     ) * 2                            
 
-    score += (
-        home_form["btts"]
-        +
-        away_form["btts"]
-    ) * 2
+    score += (                        
+        home_form["btts"]           
+        +                           
+        away_form["btts"]           
+    ) * 2                            
 
-    return min(
-        100,
-        round(score, 2)
-    )
+    return min(                      
+        100,                          
+        round(score, 2)              
+    )                                
     
 # =========================================================
 # HOME WIN SCORE
