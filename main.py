@@ -2287,7 +2287,7 @@ def analyze_prematch_match(match):
             print("CHECKING:", home, "vs", away)
             
          
-        signals.sort(
+         signals.sort(
             reverse=True,
             key=lambda x: x[2]
         )
@@ -2303,16 +2303,13 @@ def analyze_prematch_match(match):
         return signals
 
     except Exception as e:
-         
-            print("PREMATCH ERROR =", repr(e))
+                           
+        print(
+            "PREMATCH ERROR:",
+            repr(e)
+        )
 
-           return None
-           print(
-               "PREMATCH ERROR:",
-                repr(e)
-           )
-
-           return None
+        return None
         
 # =========================================================
 # SEND PREMATCH SIGNAL
