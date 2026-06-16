@@ -2009,15 +2009,15 @@ def analyze_prematch_match(match):
         )                       
 
         if (
-            home_score >= 55
+            home_score >= 25
             and
             home_odds_ok
             and
             home_form["unbeaten_pct"] >= 60
             and
-            home_form["wins"] >= 3
+            home_form["wins"] >= 2
             and
-            home_edge >= 2
+            home_edge >= 1
             and
             form_gap >= 10
             and
@@ -2169,15 +2169,15 @@ def analyze_prematch_match(match):
 
 
         if (
-            away_score >= 55
+            away_score >= 25
             and
             away_odds_ok
             and
             away_form["unbeaten_pct"] >= 60
             and
-            away_form["wins"] >= 3
+            away_form["wins"] >= 2
             and
-            away_edge >= 2
+            away_edge >= 1
             and
             away_gap >= 10
             and
