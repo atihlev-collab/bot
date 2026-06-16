@@ -1910,6 +1910,7 @@ def analyze_prematch_match(match):
         )
 
         signals = []
+        print("ANALYZE:", home, "vs", away)
         
                 # HOME WIN
 
@@ -2292,12 +2293,14 @@ def analyze_prematch_match(match):
         )
 
         signals = signals[:2]
-
+        print("RETURN SIGNALS:", home, away, len(signals))
         return signals
 
-    except Exception as e:
+        except Exception as e:
+            print("PREMATCH ERROR =", repr(e))
 
-        print(
+           return None
+           print(
             "PREMATCH ERROR:",
             str(e)
         )
