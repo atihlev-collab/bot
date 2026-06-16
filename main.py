@@ -1932,17 +1932,29 @@ def analyze_prematch_match(match):
             away                
         )                       
 
-        over_prob = poisson_over25(
+        home_attack = (                             
+            home_form["avg_scored"]                 
+            +                                        
+            away_form["avg_conceded"]                
+        ) / 2                                       
 
-            home_form["avg_scored"],
-            away_form["avg_scored"]
+        away_attack = (                              
+            away_form["avg_scored"]                 
+            +                                        
+            home_form["avg_conceded"]                
+        ) / 2                                        
 
-        )
+        over_prob = poisson_over25(                
+
+            home_attack,                             
+            away_attack                              
+
+        )                                           
 
         btts_prob = poisson_btts(
 
-            home_form["avg_scored"],
-            away_form["avg_scored"]
+            home_form["avg_scored"],                  
+            away_form["avg_scored"]                   
 
         )
 
