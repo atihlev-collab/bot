@@ -1309,18 +1309,14 @@ def get_team_form(team_id, venue=None):
             if gh > 0 and ga > 0:
                 btts += 1
 
-        recent_games = games[:5]    
-        recent_over25 = 0              
+        recent_games = games[:5]      
 
-        recent_points = 0                
-
-        for g in recent_games:     
-        recent_points = 0 
+        recent_points = 0             
         recent_over25 = 0             
 
         for g in recent_games:        
 
-            home_id = g["teams"]["home"]["id"]  
+            home_id = g["teams"]["home"]["id"]   
 
             gh = g["goals"]["home"] or 0        
             ga = g["goals"]["away"] or 0        
