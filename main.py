@@ -1912,14 +1912,6 @@ def analyze_prematch_match(match):
 
         signals = []
 
-        print(
-            "FORM:",
-            home,
-            away,
-            home_form["form_pct"],
-            away_form["form_pct"]
-        )
-        print("ANALYZE:", home, "vs", away)
         
                 # HOME WIN
 
@@ -1928,11 +1920,7 @@ def analyze_prematch_match(match):
             away_form
         )
 
-        print(                 
-            "RAW HOME SCORE:", 
-            home,              
-            home_score        
-        )                      
+                
         # FORM COLLAPSE BONUS
 
         if (
@@ -1999,14 +1987,6 @@ def analyze_prematch_match(match):
                 1.45 <= match_odds[0] <= 2.10
             )
 
-        print(                  
-            "HOME CHECK:",      
-            home,               
-            home_score,         
-            home_edge,          
-            form_gap,           
-            home_form["wins"]   
-        )                       
 
         if (
             home_score >= 35
@@ -2094,12 +2074,7 @@ def analyze_prematch_match(match):
             ) * 5
 
         )
-
-        print(                
-            "RAW AWAY SCORE:", 
-            away,              
-            away_score         
-        )                      
+       
         
         # FORM COLLAPSE BONUS
 
