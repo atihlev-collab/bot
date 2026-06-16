@@ -2417,14 +2417,14 @@ def analyze_prematch_match(match):
             btts_final
         )
 
-        print(                               # 8
-            "BTTS SCORE:",                   # 12
-            home,                            # 12
-            away,                            # 12
-            btts_prob,                       # 12
-            btts_final,                      # 12          
-            btts_conf                        # 12
-        )                                    # 8
+        print(                             
+            "BTTS SCORE:",                 
+            home,                           
+            away,                           
+            btts_prob,                     
+            btts_final,                      
+            btts_conf                     
+        )                                    
 
         if (
             btts_prob >= 65
@@ -2917,7 +2917,7 @@ def live_loop():
 
         goal_probability = signal[3]
 
-        confidence = signal[1]
+        probability = signal[2]
 
         stats = get_statistics(
             fixture_id
