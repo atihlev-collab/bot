@@ -2287,12 +2287,13 @@ def analyze_prematch_match(match):
             print("CHECKING:", home, "vs", away)
             
          
-         signals.sort(
+        signals.sort(
             reverse=True,
             key=lambda x: x[2]
         )
 
         signals = signals[:2]
+     
         print(
             "RETURN SIGNALS:", 
             home, 
