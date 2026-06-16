@@ -1325,7 +1325,8 @@ def get_team_form(team_id, venue=None):
         recent_points = 0             
         recent_over25 = 0    
         recent_scored = 0            
-        recent_conceded = 0         
+        recent_conceded = 0
+        recent_goal_diff = 0       
 
         for g in recent_games:        
 
@@ -1345,7 +1346,13 @@ def get_team_form(team_id, venue=None):
                 opp_goals = gh 
 
             recent_scored += team_goals     
-            recent_conceded += opp_goals    
+            recent_conceded += opp_goals
+
+            recent_goal_diff += (      
+                team_goals             
+                -                      
+                opp_goals              
+            )                         
              
             if team_goals > opp_goals:          
 
@@ -1432,6 +1439,9 @@ def get_team_form(team_id, venue=None):
 
             "goal_diff":
                 goal_diff,
+
+            "recent_goal_diff":        
+                recent_goal_diff,      
 
             "avg_conceded":
                 round(conceded / total, 2),
@@ -1638,7 +1648,13 @@ def home_win_score(
         home_form["goal_diff"]
         -
         away_form["goal_diff"]
-) * 0.5
+    ) * 0.5
+
+    score += (                          
+        home_form["recent_goal_diff"]   
+        -                              
+        away_form["recent_goal_diff"]  
+    ) * 0.7                            
 
     score += (
         away_form["losses"]
@@ -2288,10 +2304,18 @@ def analyze_prematch_match(match):
            +
          
            (
-               away_form["goal_diff"]
-               -
-               home_form["goal_diff"]
+                away_form["goal_diff"]
+                -
+                home_form["goal_diff"]
             ) * 0.5
+
+            +
+
+            (
+                away_form["recent_goal_diff"]  
+                -                               
+                home_form["recent_goal_diff"]  
+            ) * 0.7                            
 
             +
 
