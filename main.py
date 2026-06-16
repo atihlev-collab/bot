@@ -1607,11 +1607,23 @@ def home_win_score(
         away_form["avg_scored"]
     ) * 8
 
+    score += (                               
+        home_form["recent_avg_scored"]       
+        -                                    
+        away_form["recent_avg_scored"]        
+    ) * 6                                   
+
     score += (
         away_form["avg_conceded"]
         -
         home_form["avg_conceded"]
     ) * 5
+
+    score += (                                # 4
+        away_form["recent_avg_conceded"]      # 8
+        -                                     # 8
+        home_form["recent_avg_conceded"]      # 8
+    ) * 4                                     # 4
 
     return round(score, 2)
     
@@ -2114,7 +2126,7 @@ def analyze_prematch_match(match):
 
 
         if (
-            home_score >= 35
+            home_score >= 40
             and
             home_odds_ok
             and
@@ -2132,13 +2144,17 @@ def analyze_prematch_match(match):
             and
             home_form["recent_form_pct"] >= 60                                                
             and
-            away_form["recent_form_pct"] >= 60     
+            away_form["recent_form_pct"] >= 70     
             and                                   
             home_form["avg_scored"] >= 1.5
+            and
+            home_form["recent_avg_scored"] >= 1.5
             and
             home_form["avg_conceded"] <= 1.3
             and
             away_form["avg_conceded"] >= 1.2
+            and
+            away_form["recent_avg_conceded"] >= 1.2
         ):
 
             signals.append(
@@ -2193,10 +2209,10 @@ def analyze_prematch_match(match):
             +
 
             (
-                away_form["recent_form_pct"]      # 12
-                -                                # 12
-                home_form["recent_form_pct"]      # 12
-            ) * 0.5                              # 12
+                away_form["recent_form_pct"]    
+                -                                
+                home_form["recent_form_pct"]     
+            ) * 0.5                             
 
             +
 
@@ -2207,14 +2223,29 @@ def analyze_prematch_match(match):
             ) * 8
 
             +
+         
+           (
+               away_form["recent_avg_scored"]       
+               -                                    
+               home_form["recent_avg_scored"]        
+            ) * 6                                     
+
+            +
 
             (
-                home_form["avg_conceded"]
-                -
-                away_form["avg_conceded"]
+               home_form["avg_conceded"]
+               -
+               away_form["avg_conceded"]
             ) * 5
 
-        )
+           +
+           (
+              home_form["recent_avg_conceded"]      
+              -                                   
+              away_form["recent_avg_conceded"]    
+           ) * 4                                     
+
+           )
        
         
         # FORM COLLAPSE BONUS
@@ -2308,10 +2339,14 @@ def analyze_prematch_match(match):
             recent_away_gap >= 10
             and
             away_form["avg_scored"] >= 1.5
+            and                                   
+            away_form["recent_avg_scored"] >= 1.5 
             and
             away_form["avg_conceded"] <= 1.3
             and
             home_form["avg_conceded"] >= 1.2
+            and                                   
+            home_form["recent_avg_conceded"] >= 1.2 
         ):
 
             signals.append(
