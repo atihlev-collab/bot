@@ -1400,14 +1400,20 @@ def get_team_form(team_id, venue=None):
             "unbeaten_pct":
                 unbeaten_pct,
 
-            "over25":
-                over25,
+            "over25":                   
+                over25,                 
 
-            "btts":
-                btts,
+            "over25_pct":               
+                round(                   
+                    (over25 / total) * 100, 
+                    2                   
+                ),                      
 
-            "played":
-                total,
+            "btts":                     
+                btts,                    
+
+            "played":                   
+                total,                  
 
             "form_pct":
                 form_pct,
@@ -2310,6 +2316,14 @@ def analyze_prematch_match(match):
             over_final
         )
 
+        print(                                 
+             "OVER SCORE:",                  
+             home,                            
+             away,                             
+             over_prob,                       
+             over_final,                      
+             over_conf                         
+        )                                    
         print(                          
             "OVER DETAILS:",            
             home,                       
@@ -2332,14 +2346,18 @@ def analyze_prematch_match(match):
             away_form["avg_scored"] >= 0.9
             and
             home_form["avg_conceded"] >= 1.0
-            and
-            away_form["avg_conceded"] >= 1.0
-            and
-            (
-                home_form["over25"]
-                +
-                away_form["over25"]
-            ) >= 4
+            and                                            
+            away_form["avg_conceded"] >= 1.0 
+            and                         
+            home_form["over25_pct"] >= 50 
+            and                         
+            away_form["over25_pct"] >= 50 
+            and                         
+            (                           
+                home_form["over25"]      
+                +                       
+                away_form["over25"]   
+            ) >= 4                       
         ):
 
             signals.append(
@@ -2384,6 +2402,15 @@ def analyze_prematch_match(match):
         btts_conf = confidence_from_score(
             btts_final
         )
+
+        print(                               # 8
+            "BTTS SCORE:",                   # 12
+            home,                            # 12
+            away,                            # 12
+            btts_prob,                       # 12
+            btts_final,                      # 12          
+            btts_conf                        # 12
+        )                                    # 8
 
         if (
             btts_prob >= 60
