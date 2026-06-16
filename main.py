@@ -2134,28 +2134,21 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
         ):
 
-            signals.append(
+           signals.append(                    
 
-                (                                   
-                   "🏆 HOME WIN",
+            (                               
+                "🏆 HOME WIN",            
 
-                    confidence_from_score(
-                        min(
-                            95,                        
-                            home_score                             
-                        )
-                    ),
-
-                    min(
-                        95,  
-                        round(
-                            home_score,
-                            1
-                        )
-                    )
-                )
- 
-            )
+                confidence_from_score(    
+                    home_score              
+                ),                          
+        
+                round(                      
+                    home_score,             
+                    1                       
+                )                           
+            )                             
+        )                                   
      
         # AWAY WIN
 
@@ -2334,28 +2327,21 @@ def analyze_prematch_match(match):
             home_form["recent_avg_conceded"] >= 1.2 
         ):
 
-            signals.append(
+            signals.append(                     
 
-                (                                 
-                    "✈️ AWAY WIN",
-                 
-                    confidence_from_score(
-                        min(
-                            95,
-                            away_score
-                        )
-                    ),
-
-                    min(
-                        95,
-                        round(
-                            away_score,
-                            1
-                        )
-                    )
-                )
-
-            )
+            (                              
+                "✈️ AWAY WIN",              
+        
+                confidence_from_score(      
+                    away_score            
+                ),                         
+        
+                round(                      
+                    away_score,             
+                    1                     
+                )                           
+            )                              
+        )                                  
 
      
         print(
