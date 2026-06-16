@@ -2002,12 +2002,24 @@ def analyze_prematch_match(match):
 
         )                                           
 
-        btts_prob = poisson_btts(
-
-            home_form["avg_scored"],                  
-            away_form["avg_scored"]                   
-
-        )
+        btts_home_attack = (                
+            home_form["avg_scored"]          
+            +                                
+            away_form["avg_conceded"]       
+        ) / 2                              
+        
+        btts_away_attack = (                 
+            away_form["avg_scored"]         
+            +                                
+            home_form["avg_conceded"]        
+        ) / 2                               
+        
+        btts_prob = poisson_btts(           
+        
+            btts_home_attack,               
+            btts_away_attack                 
+        
+        )                                   
 
         form_score = calculate_form_score(
             home_form,
