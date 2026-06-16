@@ -1309,11 +1309,16 @@ def get_team_form(team_id, venue=None):
             if gh > 0 and ga > 0:
                 btts += 1
 
-        recent_games = games[:5]        
+        recent_games = games[:5]    
+        recent_over25 = 0              
 
         recent_points = 0                
 
-        for g in recent_games:          
+        for g in recent_games:     
+        recent_points = 0              # 8
+        recent_over25 = 0              # 8
+
+        for g in recent_games:         # 8
 
             home_id = g["teams"]["home"]["id"]  
 
@@ -1336,7 +1341,11 @@ def get_team_form(team_id, venue=None):
 
             elif team_goals == opp_goals:      
 
-                recent_points += 1             
+                recent_points += 1      
+
+            if (gh + ga) >= 3:         # 12
+
+                recent_over25 += 1     # 16
 
         recent_form_pct = round(                
             (recent_points / 15) * 100,        
@@ -1358,6 +1367,12 @@ def get_team_form(team_id, venue=None):
             (unbeaten / total) * 100,
             2
         )
+
+        goal_diff = (            
+            scored              
+            -               
+            conceded            
+        )                     
 
         result = {
 
@@ -2060,9 +2075,11 @@ def analyze_prematch_match(match):
             and
             home_form["unbeaten_pct"] >= 60
             and
-            home_form["wins"] >= 2
-            and
-            home_edge >= 2
+            home_form["wins"] >= 2     
+            and                        
+            home_form["draws"] <= 4    
+            and                         
+            home_edge >= 2            
             and
             form_gap >= 10
             and
@@ -2223,9 +2240,11 @@ def analyze_prematch_match(match):
             and
             away_form["unbeaten_pct"] >= 60
             and
-            away_form["wins"] >= 2
-            and
-            away_edge >= 2
+            away_form["wins"] >= 2      
+            and                         
+            away_form["draws"] <= 4     
+            and                        
+            away_edge >= 2             
             and
             away_gap >= 10
             and
