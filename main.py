@@ -1926,6 +1926,11 @@ def analyze_prematch_match(match):
             home_form["avg_scored"] < 1.0
         ):
             return None
+        print(                 
+            "OVER ANALYZE:",    
+            home,               
+            away                
+        )                       
 
         over_prob = poisson_over25(
 
@@ -1946,7 +1951,12 @@ def analyze_prematch_match(match):
             away_form
         )
         
-
+        print(                  
+            "SIGNALS START:",  
+            home,              
+            away               
+        )                       
+     
         signals = []
 
         
