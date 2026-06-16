@@ -1315,10 +1315,10 @@ def get_team_form(team_id, venue=None):
         recent_points = 0                
 
         for g in recent_games:     
-        recent_points = 0              # 8
-        recent_over25 = 0              # 8
+        recent_points = 0 
+        recent_over25 = 0             
 
-        for g in recent_games:         # 8
+        for g in recent_games:        
 
             home_id = g["teams"]["home"]["id"]  
 
