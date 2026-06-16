@@ -1360,7 +1360,7 @@ def get_team_form(team_id, venue=None):
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
-)                                # 8
+)                                
 
         recent_avg_conceded = round(     
             recent_conceded / len(recent_games),
@@ -1434,7 +1434,7 @@ def get_team_form(team_id, venue=None):
                 form_pct,
          
             "recent_form_pct":
-                recent_form_pct
+                recent_form_pct,
 
             "recent_avg_scored":
                 recent_avg_scored,
