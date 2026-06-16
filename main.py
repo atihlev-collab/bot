@@ -1508,7 +1508,7 @@ def home_win_score(
         home_form["form_pct"]
         -
         away_form["form_pct"]
-    )* 0.6
+    )
 
     score += (
         home_form["avg_scored"]
@@ -1948,7 +1948,7 @@ def analyze_prematch_match(match):
             home_form["form_pct"]
             -
             away_form["form_pct"]
-        )* 0.6
+        )
 
         home_super_value = False
         home_value = False
@@ -2051,7 +2051,7 @@ def analyze_prematch_match(match):
                 away_form["form_pct"]
                 -
                 home_form["form_pct"]
-            ) * 0.6
+            ) 
 
             +
 
@@ -2104,7 +2104,7 @@ def analyze_prematch_match(match):
             away_form["form_pct"]
             -
             home_form["form_pct"]
-        )* 0.6
+        )
              
         away_super_value = False
         away_value = False
