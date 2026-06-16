@@ -1997,7 +1997,7 @@ def analyze_prematch_match(match):
             and
             home_form["wins"] >= 2
             and
-            home_edge >= 1
+            home_edge >= 2
             and
             form_gap >= 10
             and
@@ -2152,7 +2152,7 @@ def analyze_prematch_match(match):
             and
             away_form["wins"] >= 2
             and
-            away_edge >= 1
+            away_edge >= 2
             and
             away_gap >= 10
             and
