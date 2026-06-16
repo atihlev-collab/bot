@@ -1397,6 +1397,9 @@ def get_team_form(team_id, venue=None):
             "total_scored":
                 scored,
 
+            "goal_diff":
+                goal_diff,
+
             "avg_conceded":
                 round(conceded / total, 2),
 
@@ -1597,6 +1600,12 @@ def home_win_score(
         -
         away_form["total_scored"]
     ) * 1
+
+    score += (
+        home_form["goal_diff"]
+        -
+        away_form["goal_diff"]
+) * 0.5
 
     score += (
         away_form["losses"]
@@ -2234,6 +2243,14 @@ def analyze_prematch_match(match):
                 -
                 home_form["total_scored"]
             ) * 1
+
+           +
+         
+           (
+               away_form["goal_diff"]
+               -
+               home_form["goal_diff"]
+            ) * 0.5
 
             +
 
