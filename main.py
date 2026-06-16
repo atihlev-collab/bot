@@ -1441,6 +1441,9 @@ def get_team_form(team_id, venue=None):
 
             "recent_avg_conceded":
                 recent_avg_conceded,
+
+            "recent_over25":
+                recent_over25,
         }
 
         team_form_cache[cache_key] = (
@@ -2504,7 +2507,14 @@ def analyze_prematch_match(match):
                 home_form["over25"]      
                 +                       
                 away_form["over25"]   
-            ) >= 4                       
+            ) >= 4     
+
+         and
+         (
+               home_form["recent_over25"]
+               +
+               away_form["recent_over25"]
+        ) >= 4
         ):
 
             signals.append(
