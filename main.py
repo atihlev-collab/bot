@@ -9,7 +9,7 @@ import asyncio
 import threading
 import time
 import logging
- 
+
  
 
 from scipy.stats import poisson
@@ -2521,8 +2521,8 @@ def send_prematch_signal(
 📊 Market:
 {market}
 
-📈 Rating:
-{probability}
+🎯 Probability:
+{probability}%
 
 💰 Odds:
 {odds_text}
@@ -2916,9 +2916,7 @@ def live_loop():
         minute = signal[2]
 
         goal_probability = signal[3]
-
-        probability = signal[2]
-
+        
         stats = get_statistics(
             fixture_id
         )
