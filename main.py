@@ -2351,7 +2351,7 @@ def analyze_prematch_match(match):
         )                                
 
         if (
-            over_prob >= 60
+            over_prob >= 65
             and
             over_conf >= 65
             and
@@ -2427,7 +2427,7 @@ def analyze_prematch_match(match):
         )                                    # 8
 
         if (
-            btts_prob >= 60
+            btts_prob >= 65
             and
             btts_conf >= 65
             and
