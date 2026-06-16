@@ -1316,7 +1316,9 @@ def get_team_form(team_id, venue=None):
         recent_games = games[:5]      
 
         recent_points = 0             
-        recent_over25 = 0             
+        recent_over25 = 0    
+        recent_scored = 0            
+        recent_conceded = 0         
 
         for g in recent_games:        
 
@@ -1333,7 +1335,10 @@ def get_team_form(team_id, venue=None):
             else:                             
 
                 team_goals = ga                 
-                opp_goals = gh                  
+                opp_goals = gh 
+
+            recent_scored += team_goals     
+            recent_conceded += opp_goals    
              
             if team_goals > opp_goals:          
 
@@ -1343,14 +1348,24 @@ def get_team_form(team_id, venue=None):
 
                 recent_points += 1      
 
-            if (gh + ga) >= 3:         # 12
+            if (gh + ga) >= 3:        
 
-                recent_over25 += 1     # 16
+                recent_over25 += 1     
 
         recent_form_pct = round(                
             (recent_points / 15) * 100,        
             2                                   
-        )                                      
+        )   
+
+        recent_avg_scored = round(     
+            recent_scored / len(recent_games),
+            2
+)                                # 8
+
+        recent_avg_conceded = round(     
+            recent_conceded / len(recent_games),
+            2
+)                                
 
         total = len(games)
 
@@ -1420,6 +1435,12 @@ def get_team_form(team_id, venue=None):
          
             "recent_form_pct":
                 recent_form_pct
+
+           "recent_avg_scored":
+                recent_avg_scored,
+
+            "recent_avg_conceded":
+                recent_avg_conceded,
         }
 
         team_form_cache[cache_key] = (
@@ -1975,7 +1996,13 @@ def analyze_prematch_match(match):
             away_form["avg_scored"]                 
             +                                        
             home_form["avg_conceded"]                
-        ) / 2                                        
+        ) / 2  
+
+        expected_goals = (               
+            home_attack                 
+            +                              
+            away_attack                    
+        )                                
 
         over_prob = poisson_over25(                
 
@@ -2364,6 +2391,8 @@ def analyze_prematch_match(match):
             over_prob >= 65
             and
             over_conf >= 65
+            and                           
+            expected_goals >= 2.8         
             and
             home_form["avg_scored"] >= 1.0
             and
@@ -2440,6 +2469,8 @@ def analyze_prematch_match(match):
             btts_prob >= 65
             and
             btts_conf >= 65
+            and                          
+            expected_goals >= 2.6         
             and
             home_form["avg_scored"] >= 1.0
             and
