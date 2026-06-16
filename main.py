@@ -1274,7 +1274,8 @@ def get_team_form(team_id, venue=None):
         wins = 0
         losses = 0
         draws = 0
-        clean_sheets = 0         
+        clean_sheets = 0  
+        scored_games = 0         
         over25 = 0
         btts = 0
 
@@ -1297,6 +1298,9 @@ def get_team_form(team_id, venue=None):
 
             scored += team_goals
             conceded += opp_goals
+
+            if team_goals > 0:       
+                scored_games += 1     
 
             if opp_goals == 0:       
                 clean_sheets += 1     
@@ -1396,6 +1400,11 @@ def get_team_form(team_id, venue=None):
         clean_sheet_pct = round(     
             (clean_sheets / total) * 100, 
             2                        
+        )      
+
+        scored_pct = round(           
+            (scored_games / total) * 100, 
+            2                        
         )                            
 
         goal_diff = (            
@@ -1406,8 +1415,11 @@ def get_team_form(team_id, venue=None):
 
         result = {
 
-            "clean_sheet_pct":       # 12
-                clean_sheet_pct,     # 16
+            "scored_pct":           
+                 scored_pct,       
+
+            "clean_sheet_pct":      
+                clean_sheet_pct,    
 
             "momentum":           
                 momentum,       
@@ -2647,6 +2659,10 @@ def analyze_prematch_match(match):
             home_form["btts"] >= 2
             and
             away_form["btts"] >= 2
+            and                                
+            home_form["scored_pct"] >= 70      
+            and                              
+            away_form["scored_pct"] >= 70     
             and                                   
             home_form["recent_avg_conceded"] >= 0.8
             and                                   
