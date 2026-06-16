@@ -1551,13 +1551,25 @@ def calculate_form_score(
         home_form["over25"]         
         +                            
         away_form["over25"]           
-    ) * 2                            
+    ) * 2  
+
+    score += (                           
+        home_form["over25_pct"]         
+        +                                
+        away_form["over25_pct"]         
+    ) * 0.1                             
 
     score += (                        
         home_form["btts"]           
         +                           
         away_form["btts"]           
-    ) * 2                            
+    ) * 2     
+
+    score += (                           
+        home_form["recent_avg_scored"]   
+        +                                
+        away_form["recent_avg_scored"]   
+    ) * 2                                
 
     return min(                      
         100,                          
