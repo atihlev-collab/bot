@@ -2397,10 +2397,18 @@ def analyze_prematch_match(match):
             home_form["avg_scored"] >= 1.0
             and
             away_form["avg_scored"] >= 0.9
+            and                              
+            home_form["recent_avg_scored"] >= 1.2  
+            and                              
+            away_form["recent_avg_scored"] >= 1.0  
             and
             home_form["avg_conceded"] >= 1.0
             and                                            
             away_form["avg_conceded"] >= 1.0 
+            and                                  
+            home_form["recent_avg_conceded"] >= 1.0 
+            and                                    
+            away_form["recent_avg_conceded"] >= 1.0 
             and                         
             home_form["over25_pct"] >= 50 
             and                         
@@ -2475,10 +2483,18 @@ def analyze_prematch_match(match):
             home_form["avg_scored"] >= 1.0
             and
             away_form["avg_scored"] >= 0.9
+            and                              
+            home_form["recent_avg_scored"] >= 1.0  
+            and                               
+            away_form["recent_avg_scored"] >= 1.0  
             and
             home_form["btts"] >= 2
             and
             away_form["btts"] >= 2
+            and                                   
+            home_form["recent_avg_conceded"] >= 0.8
+            and                                   
+            away_form["recent_avg_conceded"] >= 0.8
         ):
 
             signals.append(
