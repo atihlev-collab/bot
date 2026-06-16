@@ -2400,12 +2400,14 @@ def analyze_prematch_match(match):
             "⚽ OVER 2.5"
         )
 
+        over_value = expected_goals * 10     
+
         over_final = calculate_final_score(
 
             form_score,
             over_prob,
 
-            10,
+            over_value,
             over_league
 
         )
@@ -2497,12 +2499,18 @@ def analyze_prematch_match(match):
             "💎 BTTS"
         )
 
+        btts_value = (                    
+            home_form["recent_avg_scored"] 
+            +                              
+            away_form["recent_avg_scored"]        
+        ) * 5                            
+
         btts_final = calculate_final_score(
 
             form_score,
             btts_prob,
 
-            10,
+            btts_value,
             btts_league
 
         )
