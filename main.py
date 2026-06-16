@@ -2463,13 +2463,13 @@ def analyze_prematch_match(match):
               away_form["recent_avg_conceded"]    
            ) * 4                                     
 
-           )
+                 )
 
               away_score += (              
-              away_strength           
-              -                       
-              home_strength            
-           ) * 0.25     
+                  away_strength           
+                  -                       
+                  home_strength            
+              ) * 0.25     
 
               away_score -= h2h * 2       
        
