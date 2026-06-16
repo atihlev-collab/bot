@@ -2210,7 +2210,7 @@ def analyze_prematch_match(match):
         if (
             over_prob >= 65
             and
-            over_conf >= 75
+            over_conf >= 70
             and
             home_form["avg_scored"] >= 1.0
             and
@@ -2264,7 +2264,7 @@ def analyze_prematch_match(match):
         if (
             btts_prob >= 60
             and
-            btts_conf >= 75
+            btts_conf >= 70
             and
             home_form["avg_scored"] >= 1.0
             and
