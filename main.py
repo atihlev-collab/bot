@@ -1369,14 +1369,7 @@ def get_team_form(team_id, venue=None):
         recent_form_pct = round(                
             (recent_points / 15) * 100,        
             2                                   
-        )   
-
-        momentum = round(             
-            recent_form_pct           
-            -                         
-            form_pct,                 
-            2                          
-        )                            
+        )            
 
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
@@ -1394,6 +1387,13 @@ def get_team_form(team_id, venue=None):
 
         form_pct = round(
             (points / (total * 3)) * 100,
+            2
+        )
+
+        momentum = round(
+            recent_form_pct
+            -
+            form_pct,
             2
         )
 
@@ -2226,7 +2226,12 @@ def analyze_prematch_match(match):
 
         away_strength = team_strength(     
             away_form                       
-        )                                 
+        )     
+
+        h2h = h2h_score(             
+            home_id,                   
+            away_id                   
+        )                            
 
         home_score = home_win_score(       
             home_form,                     
@@ -2237,7 +2242,9 @@ def analyze_prematch_match(match):
             home_strength                  
             -                              
             away_strength                  
-        ) * 0.25                                
+        ) * 0.25      
+
+        home_score += h2h * 2        
 
                 
         # FORM COLLAPSE BONUS
@@ -2458,11 +2465,13 @@ def analyze_prematch_match(match):
 
            )
 
-        away_score += (              
+         away_score += (              
             away_strength           
             -                       
             home_strength            
-        ) * 0.25                   
+        ) * 0.25     
+
+        away_score -= h2h * 2       
        
         
         # FORM COLLAPSE BONUS
