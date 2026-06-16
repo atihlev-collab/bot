@@ -1928,6 +1928,11 @@ def analyze_prematch_match(match):
             away_form
         )
 
+        print(                 
+            "RAW HOME SCORE:", 
+            home,              
+            home_score        
+        )                      
         # FORM COLLAPSE BONUS
 
         if (
@@ -2004,7 +2009,7 @@ def analyze_prematch_match(match):
         )                       
 
         if (
-            home_score >= 75
+            home_score >= 55
             and
             home_odds_ok
             and
@@ -2090,6 +2095,12 @@ def analyze_prematch_match(match):
 
         )
 
+        print(                
+            "RAW AWAY SCORE:", 
+            away,              
+            away_score         
+        )                      
+        
         # FORM COLLAPSE BONUS
 
         if (
@@ -2158,7 +2169,7 @@ def analyze_prematch_match(match):
 
 
         if (
-            away_score >= 75
+            away_score >= 55
             and
             away_odds_ok
             and
