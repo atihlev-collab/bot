@@ -1644,6 +1644,40 @@ def home_win_score(
     ) * 4                                     
 
     return round(score, 2)
+
+# =========================================================
+# TEAM STRENGTH
+# =========================================================
+
+def team_strength(                    
+
+    form                            
+
+):                                  
+
+    score = 0                        
+
+    score += form["form_pct"] * 0.25            
+
+    score += form["recent_form_pct"] * 0.25     
+
+    score += form["unbeaten_pct"] * 0.10         
+
+    score += form["avg_scored"] * 10             
+
+    score += form["recent_avg_scored"] * 12      
+
+    score += form["over25_pct"] * 0.08          
+
+    score -= form["avg_conceded"] * 8           
+
+    score -= form["recent_avg_conceded"] * 10    
+
+    return round(              
+        score,                    
+        2                        
+    )                            
+
     
 # =========================================================
 # LEAGUE WEIGHT
@@ -2054,6 +2088,20 @@ def analyze_prematch_match(match):
             away_form
         )
 
+        home_score += (            
+            home_strength            
+            -                       
+            away_strength            
+        ) * 0.25                    
+
+        home_strength = team_strength(     
+            home_form                      
+        )                                 
+
+        away_strength = team_strength(     
+            away_form                      
+        )                                  
+
                 
         # FORM COLLAPSE BONUS
 
@@ -2248,6 +2296,12 @@ def analyze_prematch_match(match):
            ) * 4                                     
 
            )
+
+        away_score += (              
+            away_strength           
+            -                       
+            home_strength            
+        ) * 0.25                   
        
         
         # FORM COLLAPSE BONUS
