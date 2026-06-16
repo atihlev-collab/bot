@@ -1295,8 +1295,8 @@ def get_team_form(team_id, venue=None):
                 team_goals = ga
                 opp_goals = gh
 
-            scored += team_goals
-            conceded += opp_goals
+              scored += team_goals
+              conceded += opp_goals
 
              if opp_goals == 0:       
                  clean_sheets += 1     
