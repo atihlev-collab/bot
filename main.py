@@ -2473,15 +2473,7 @@ def analyze_prematch_match(match):
                     min(95, home_score),  
                     match_odds[0]        
                 )                                           
-        
-                print(                       
-                    "HOME PROB:",              
-                    home,                     
-                    away,                      
-                    home_probability,         
-                    match_odds[0],            
-                    edge                       
-                )                             
+                                      
         
                 if edge >= 8:                
         
@@ -2493,19 +2485,7 @@ def analyze_prematch_match(match):
         
                     home_value = True         
         
-                    home_score += 3        
-
-                print(                       
-                    "HOME PROB:",              
-                    home,                     
-                    away,                      
-                    "PROB=",                   
-                    home_probability,          
-                    "ODD=",                    
-                    match_odds[0],            
-                    "EDGE=",                   
-                    edge                       
-                )                              
+                    home_score += 3                                    
         
         
         if (                                   
@@ -2787,17 +2767,7 @@ def analyze_prematch_match(match):
                 edge = value_edge(        
                     min(95, away_score),   
                     match_odds[2]         
-               )                                 
-
-               print(                    
-                   "AWAY PROB:",         
-                   home,                
-                   away,                 
-                   away_probability,    
-                   match_odds[2],       
-                   edge                  
-               )                        
-
+               )                                                   
 
                if edge >= 8:                 
 
