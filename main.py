@@ -1350,9 +1350,13 @@ def get_team_form(team_id, venue=None):
         recent_over25 = 0    
         recent_scored = 0            
         recent_conceded = 0
-        recent_goal_diff = 0       
+        recent_goal_diff = 0  
+        weights = [5, 4, 3, 2, 1]
 
-        for g in recent_games:        
+        weighted_points = 0
+        max_weight_points = 0
+
+        for i, g in enumerate(recent_games):        
 
             home_id = g["teams"]["home"]["id"]   
 
@@ -1378,24 +1382,49 @@ def get_team_form(team_id, venue=None):
                 team_goals             
                 -                      
                 opp_goals              
-            )                         
+            )       
+
+            weight = weights[i]
+
+            max_weight_points += (
+                weight * 3
+            )
              
-            if team_goals > opp_goals:          
+         if team_goals > opp_goals: 
 
-                recent_points += 3             
-
-            elif team_goals == opp_goals:      
-
-               recent_points += 1      
+             recent_points += (     
+                 3                  
+                 *                   
+                 weight             
+             )                      
+         
+         elif team_goals == opp_goals: 
+         
+             recent_points += (     
+                 1                  
+                 *                 
+                 weight              
+             )                      
 
             if (gh + ga) >= 3:        
 
                recent_over25 += 1     
 
-        recent_form_pct = round(                
-            (recent_points / 15) * 100,        
-            2                                   
-        )            
+        recent_form_pct = round(    
+
+            (                      
+
+                recent_points      
+
+                /                   
+
+                max_weight_points  
+
+            ) * 100,               
+
+            2                       
+
+        )                          
 
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
