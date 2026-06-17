@@ -2511,13 +2511,13 @@ def analyze_prematch_match(match):
                     edge                       
                 )                             
         
-                if edge >= 15:                
+                if edge >= 8:                
         
                     home_super_value = True   
         
                     home_score += 6          
         
-                elif edge >= 10:               
+                elif edge >= 4:               
         
                     home_value = True         
         
@@ -2868,13 +2868,13 @@ def analyze_prematch_match(match):
                )                        
 
 
-               if edge >= 15:                 
+               if edge >= 8:                 
 
                    away_super_value = True    
                
                    away_score += 6           
                
-               elif edge >= 10:               
+               elif edge >= 4:               
                
                    away_value = True         
                
