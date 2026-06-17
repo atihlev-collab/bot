@@ -1284,6 +1284,11 @@ def get_team_form(team_id, venue=None):
         wins = 0
         losses = 0
         draws = 0
+        home_wins = 0        
+        away_wins = 0       
+
+        home_games = 0       
+        away_games = 0        
         clean_sheets = 0  
         scored_games = 0         
         over25 = 0
@@ -1315,8 +1320,17 @@ def get_team_form(team_id, venue=None):
             if opp_goals == 0:       
                 clean_sheets += 1     
 
-            if team_goals > opp_goals:
-                wins += 1
+            if team_goals > opp_goals:  
+
+                wins += 1              
+
+                if home:                
+
+                    home_wins += 1      
+
+                else:                  
+
+                    away_wins += 1      
 
             elif team_goals < opp_goals:
                 losses += 1
@@ -1348,12 +1362,14 @@ def get_team_form(team_id, venue=None):
             if team_id == home_id:              
 
                 team_goals = gh                
-                opp_goals = ga                  
+                opp_goals = ga     
+                home_games += 1       
 
             else:                             
 
                 team_goals = ga                 
                 opp_goals = gh 
+                away_games += 1         
 
             recent_scored += team_goals     
             recent_conceded += opp_goals
@@ -1432,6 +1448,18 @@ def get_team_form(team_id, venue=None):
 
         result = {
 
+            "home_wins":           
+                home_wins,          
+
+            "away_wins":           
+                away_wins,          
+
+            "home_games":          
+                home_games,         
+
+            "away_games":          
+                away_games,        
+         
             "scored_pct":           
                  scored_pct,       
 
@@ -2295,6 +2323,20 @@ def analyze_prematch_match(match):
 
         home_score += h2h * 2    
 
+        if home_form["home_games"] > 0:    
+
+            home_score += (                
+
+                (
+                    home_form["home_wins"]  
+                    /
+                    home_form["home_games"]
+                )
+
+                * 10                       
+
+            )                               
+
         if match_odds:                   
 
             home_edge_score = odds_score( 
@@ -2552,7 +2594,21 @@ def analyze_prematch_match(match):
             home_strength           
         ) * 0.25                    
 
-        away_score -= h2h * 2       
+        away_score -= h2h * 2     
+
+        if away_form["away_games"] > 0:   
+
+            away_score += (               
+
+                (
+                    away_form["away_wins"] 
+                    /
+                    away_form["away_games"] 
+                )
+
+                * 10                       
+
+            )                            
 
         if match_odds:                    
 
