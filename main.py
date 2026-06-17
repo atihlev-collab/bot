@@ -1517,7 +1517,7 @@ def get_team_form(team_id, venue=None):
 
         )                                 
 
-        result = {
+        result = {                   
 
             "home_wins":           
                 home_wins,          
@@ -1549,9 +1549,9 @@ def get_team_form(team_id, venue=None):
             "goal_diff":
                 goal_diff,
 
-            "opponent_strength":           # 12
+            "opponent_strength":          
 
-                opponent_strength,         # 16
+                opponent_strength,        
 
             "recent_goal_diff":        
                 recent_goal_diff,      
@@ -1842,7 +1842,9 @@ def team_strength(
 
     score += form["form_pct"] * 0.25            
 
-    score += form["recent_form_pct"] * 0.25     
+    score += form["recent_form_pct"] * 0.25  
+
+    score += form["momentum"] * 0.20         
 
     score += form["unbeaten_pct"] * 0.10     
 
@@ -1850,7 +1852,11 @@ def team_strength(
 
     score += form["avg_scored"] * 10             
 
-    score += form["recent_avg_scored"] * 12      
+    score += form["recent_avg_scored"] * 12 
+
+    score += form["goal_diff"] * 0.30        
+
+    score += form["recent_goal_diff"] * 0.50 
 
     score += form["over25_pct"] * 0.08          
 
