@@ -2419,15 +2419,13 @@ def analyze_prematch_match(match):
                  
                     home_super_value = True  
 
+                    home_score += 8      
+
                 elif edge >= 10:         
 
-                    home_value = True    
+                    home_value = True   
 
-                elif edge >= 10:
-
-                    home_value = True       
-         
-        home_odds_ok = True
+                    home_score += 4      
 
         if (
             match_odds
@@ -2688,20 +2686,17 @@ def analyze_prematch_match(match):
               )
 
 
-               if edge >= 15:           
+               if edge >= 15:            
 
                    away_super_value = True  
 
                    away_score += 8       
 
-               elif edge >= 10:          
+               elif edge >= 10:        
 
                    away_value = True     
+
                    away_score += 4      
-
-               elif edge >= 10:
-
-                   away_value = True
 
      
         away_odds_ok = True
