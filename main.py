@@ -1356,39 +1356,6 @@ def get_team_form(team_id, venue=None):
         weighted_points = 0
         max_weight_points = 0
 
-        for i, g in enumerate(recent_games):        
-
-            home_id = g["teams"]["home"]["id"]   
-
-            gh = g["goals"]["home"] or 0        
-            ga = g["goals"]["away"] or 0        
-
-            if team_id == home_id:              
-
-                team_goals = gh                
-                opp_goals = ga     
-                home_games += 1       
-
-            else:                             
-
-                team_goals = ga                 
-                opp_goals = gh 
-                away_games += 1         
-
-            recent_scored += team_goals     
-            recent_conceded += opp_goals
-
-            recent_goal_diff += (      
-                team_goals             
-                -                      
-                opp_goals              
-            )       
-
-            weight = weights[i]
-
-            max_weight_points += (
-                weight * 3
-            )
              
         for i, g in enumerate(recent_games):    
 
