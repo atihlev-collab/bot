@@ -2298,7 +2298,7 @@ def analyze_prematch_match(match):
             home_score += (                
                 home_edge_score           
                 *                          
-                0.5                       
+                0.2                       
             )                              
 
                 
@@ -2464,7 +2464,7 @@ def analyze_prematch_match(match):
                 home_form["losses"]
                 -
                 away_form["losses"]
-            ) * 3
+            ) * 2
 
             +
 
@@ -2472,7 +2472,7 @@ def analyze_prematch_match(match):
                 away_form["form_pct"]
                 -
                 home_form["form_pct"]
-            ) 
+            ) * 0.4
 
             +
 
@@ -2480,7 +2480,7 @@ def analyze_prematch_match(match):
                 away_form["recent_form_pct"]    
                 -                                
                 home_form["recent_form_pct"]     
-            ) * 0.5   
+            ) * 0.3   
 
             +
 
@@ -2496,7 +2496,7 @@ def analyze_prematch_match(match):
                away_form["unbeaten_pct"]
                -
                home_form["unbeaten_pct"]
-            ) * 0.2
+            ) * 0.1
 
             +
 
@@ -2549,7 +2549,7 @@ def analyze_prematch_match(match):
             away_score += (                 
                 away_edge_score            
                 *                          
-                0.5                      
+                0.2                      
             )                               
        
         
