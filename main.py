@@ -2521,7 +2521,19 @@ def analyze_prematch_match(match):
         
                     home_value = True         
         
-                    home_score += 3            
+                    home_score += 3        
+
+                print(                       
+                    "HOME PROB:",              
+                    home,                     
+                    away,                      
+                    "PROB=",                   
+                    home_probability,          
+                    "ODD=",                    
+                    match_odds[0],            
+                    "EDGE=",                   
+                    edge                       
+                )                              
         
         
         if (                                   
@@ -2721,9 +2733,21 @@ def analyze_prematch_match(match):
         if match_odds:                    
 
             away_edge_score = odds_score( 
-                min(95, away_score),      
+                away_probability,      
                 match_odds[2]            
-            )                                          
+            )      
+
+               print(                       
+                   "AWAY PROB:",              
+                   home,                     
+                   away,                      
+                   "PROB=",                   
+                   away_probability,         
+                   "ODD=",                    
+                   match_odds[2],            
+                   "EDGE=",                   
+                   edge                      
+               )                              
 
             away_score += (             
                 away_edge_score          
@@ -2780,6 +2804,49 @@ def analyze_prematch_match(match):
         away_super_value = False
         away_value = False
 
+
+        total_strength = (           
+
+            max(1, home_score + 50)   
+
+            +                         
+
+            max(1, away_score + 50)   
+
+        )                            
+
+        home_probability = round(     
+
+            (                         
+
+                max(1, home_score + 50)  
+
+                /                         
+
+                total_strength            
+
+            ) * 100,                      
+
+            1                             
+
+        )                                
+
+        away_probability = round(     
+
+            (                         
+
+                max(1, away_score + 50)   
+
+                /                        
+
+                total_strength            
+
+            ) * 100,                      
+
+            1                             
+
+        )                                 
+
         if match_odds:
          
             if (
@@ -2801,17 +2868,17 @@ def analyze_prematch_match(match):
                )                        
 
 
-               if edge >= 15:           
+               if edge >= 15:                 
 
-                   away_super_value = True   
-
-                   away_score += 6         
-
-               elif edge >= 10:          
-
+                   away_super_value = True    
+               
+                   away_score += 6           
+               
+               elif edge >= 10:               
+               
                    away_value = True         
-
-                   away_score += 3            
+               
+                   away_score += 3                   
 
      
         away_odds_ok = True
