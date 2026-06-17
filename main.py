@@ -1314,6 +1314,18 @@ def get_team_form(team_id, venue=None):
             scored += team_goals
             conceded += opp_goals
 
+            opponent_points += (     
+
+                opp_goals            
+
+                *                    
+
+                3                    
+
+            )                       
+
+            opponent_games += 1     
+
             if team_goals > 0:       
                 scored_games += 1     
 
@@ -1351,6 +1363,8 @@ def get_team_form(team_id, venue=None):
         recent_scored = 0            
         recent_conceded = 0
         recent_goal_diff = 0  
+        opponent_points = 0      
+        opponent_games = 0    
         weights = [5, 4, 3, 2, 1]
 
         
@@ -1489,7 +1503,19 @@ def get_team_form(team_id, venue=None):
             scored              
             -               
             conceded            
-        )                     
+        )       
+
+        opponent_strength = round(          
+
+            opponent_points               
+
+            /
+
+            max(1, opponent_games),       
+
+            2                            
+
+        )                                 
 
         result = {
 
@@ -1522,6 +1548,10 @@ def get_team_form(team_id, venue=None):
 
             "goal_diff":
                 goal_diff,
+
+            "opponent_strength":           # 12
+
+                opponent_strength,         # 16
 
             "recent_goal_diff":        
                 recent_goal_diff,      
@@ -2794,7 +2824,7 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 4     
             and                        
-            away_edge >= 2             
+            away_edge >= 1             
             and
             away_gap >= 10
             and
