@@ -2458,29 +2458,72 @@ def analyze_prematch_match(match):
         home_super_value = False
         home_value = False
 
+
+        # WIN PROBABILITY MODEL        
+
+        total_strength = (            
+            max(1, home_score + 50)   
+            +                         
+            max(1, away_score + 50)   
+        )                             
+
+        home_probability = round(     
+
+            (                       
+                max(1, home_score + 50)  
+                /                        
+                total_strength           
+            ) * 100,                      
+
+            1                             
+
+        )                                
+
+        away_probability = round(    
+
+            (                         
+                max(1, away_score + 50)   
+                /                         
+                total_strength           
+            ) * 100,                      
+
+            1                             
+
+        )                                
+
         if match_odds:
 
             if (
                 match_odds[0] is not None
             ):
 
-                edge = value_edge(
-                    min(95, home_score),
-                    match_odds[0]
-                )
+                edge = value_edge(      
+                    home_probability,     
+                    match_odds[0]        
+                )                         
+
+                print(                   
+                    "HOME PROB:",         
+                    home,                
+                    away,                 
+                    home_probability,    
+                    match_odds[0],        
+                    edge                 
+                )                        
 
 
-                if edge >= 15:           
-                 
-                    home_super_value = True  
+                          
+               if edge >= 15:           
 
-                    home_score += 8      
+                   home_super_value = True  
 
-                elif edge >= 10:         
+                   home_score += 6          
 
-                    home_value = True   
+               elif edge >= 10:          
 
-                    home_score += 4      
+                   home_value = True         
+
+                   home_score += 3           
 
         if (
             match_odds
@@ -2743,24 +2786,33 @@ def analyze_prematch_match(match):
             if (
                 match_odds[2] is not None
             ):
+                                           
+               edge = value_edge(        
+                   away_probability,     
+                   match_odds[2]         
+               )                        
 
-               edge = value_edge(
-                   min(95, away_score),
-                   match_odds[2]
-              )
+               print(                    
+                   "AWAY PROB:",         
+                   home,                
+                   away,                 
+                   away_probability,    
+                   match_odds[2],       
+                   edge                  
+               )                        
 
 
-               if edge >= 15:            
+               if edge >= 15:           
 
-                   away_super_value = True  
+                   away_super_value = True   
 
-                   away_score += 8       
+                   away_score += 6         
 
-               elif edge >= 10:        
+               elif edge >= 10:          
 
-                   away_value = True     
+                   away_value = True         
 
-                   away_score += 4      
+                   away_score += 3            
 
      
         away_odds_ok = True
