@@ -1320,17 +1320,17 @@ def get_team_form(team_id, venue=None):
             if opp_goals == 0:       
                 clean_sheets += 1     
 
-            if team_goals > opp_goals:  
+            if team_goals > opp_goals:     
 
-                wins += 1              
-
-                if home:                
-
-                    home_wins += 1      
-
-                else:                  
-
-                    away_wins += 1      
+                wins += 1                 
+            
+                if team_id == home_id:      
+            
+                    home_wins += 1         
+            
+                else:                       
+            
+                    away_wins += 1         
 
             elif team_goals < opp_goals:
                 losses += 1
@@ -2333,7 +2333,7 @@ def analyze_prematch_match(match):
                     home_form["home_games"]
                 )
 
-                * 10                       
+                * 3                       
 
             )                               
 
@@ -2606,7 +2606,7 @@ def analyze_prematch_match(match):
                     away_form["away_games"] 
                 )
 
-                * 10                       
+                * 3                       
 
             )                            
 
