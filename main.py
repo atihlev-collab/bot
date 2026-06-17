@@ -2461,35 +2461,7 @@ def analyze_prematch_match(match):
 
         # WIN PROBABILITY MODEL        
 
-        total_strength = (            
-            max(1, home_score + 50)   
-            +                         
-            max(1, away_score + 50)   
-        )                             
-
-        home_probability = round(     
-
-            (                       
-                max(1, home_score + 50)  
-                /                        
-                total_strength           
-            ) * 100,                      
-
-            1                             
-
-        )                                
-
-        away_probability = round(    
-
-            (                         
-                max(1, away_score + 50)   
-                /                         
-                total_strength           
-            ) * 100,                      
-
-            1                             
-
-        )                                
+                 
 
         if match_odds:                         
 
@@ -2497,10 +2469,10 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None      
             ):                                
         
-                edge = value_edge(             
-                    home_probability,          
-                    match_odds[0]             
-                )                             
+                edge = value_edge(        
+                    min(95, home_score),  
+                    match_odds[0]        
+                )                                           
         
                 print(                       
                     "HOME PROB:",              
@@ -2805,58 +2777,17 @@ def analyze_prematch_match(match):
         away_value = False
 
 
-        total_strength = (           
-
-            max(1, home_score + 50)   
-
-            +                         
-
-            max(1, away_score + 50)   
-
-        )                            
-
-        home_probability = round(     
-
-            (                         
-
-                max(1, home_score + 50)  
-
-                /                         
-
-                total_strength            
-
-            ) * 100,                      
-
-            1                             
-
-        )                                
-
-        away_probability = round(     
-
-            (                         
-
-                max(1, away_score + 50)   
-
-                /                        
-
-                total_strength            
-
-            ) * 100,                      
-
-            1                             
-
-        )                                 
-
+        
         if match_odds:
          
             if (
                 match_odds[2] is not None
             ):
                                            
-               edge = value_edge(        
-                   away_probability,     
-                   match_odds[2]         
-               )                        
+                edge = value_edge(        
+                    min(95, away_score),   
+                    match_odds[2]         
+               )                                 
 
                print(                    
                    "AWAY PROB:",         
