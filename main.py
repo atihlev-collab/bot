@@ -2737,17 +2737,17 @@ def analyze_prematch_match(match):
                 match_odds[2]            
             )      
 
-               print(                       
-                   "AWAY PROB:",              
-                   home,                     
-                   away,                      
-                   "PROB=",                   
-                   away_probability,         
-                   "ODD=",                    
-                   match_odds[2],            
-                   "EDGE=",                   
-                   edge                      
-               )                              
+            print(                       
+                "AWAY PROB:",              
+                home,                     
+                away,                      
+                "PROB=",                   
+                away_probability,         
+                "ODD=",                    
+                match_odds[2],            
+                "EDGE=",                   
+                edge                      
+            )                              
 
             away_score += (             
                 away_edge_score          
