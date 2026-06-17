@@ -3557,7 +3557,7 @@ def live_loop():
 🚩 Corners:
 {home_corners} - {away_corners}
 
-💎 Confidence: {confidence}%
+💎 Confidence: {signal[1]}%
 
 🎯 Goal Probability:
 {goal_probability}%
