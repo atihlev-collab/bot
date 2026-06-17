@@ -2377,13 +2377,14 @@ def analyze_prematch_match(match):
                        home_score              
                    ),                          
            
-                   min(                        
-                       95,                     
-                       round(                 
-                           home_score,        
-                           1                  
-                       )                     
-                   )                           
+                   round(                    
+                       (                    
+                           100              
+                           /                
+                           match_odds[0]     
+                       ),                    
+                       1                    
+                   )                             
            
                )                              
            )                                          
@@ -2615,14 +2616,18 @@ def analyze_prematch_match(match):
                     away_score            
                 ),                         
         
-                round(                      
-                    away_score,             
-                    1                     
-                )                           
-            )                              
-        )                                  
-
-     
+                    round(                
+                        (                  
+                            100            
+                            /              
+                            match_odds[2]  
+                        ),                 
+                        1                  
+                   )                                  
+              
+               )                                  
+            )  
+             
         print(
             "OVER CHECK:",
             home,
