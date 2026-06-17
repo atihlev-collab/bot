@@ -2491,49 +2491,48 @@ def analyze_prematch_match(match):
 
         )                                
 
-        if match_odds:
+        if match_odds:                         
 
-            if (
-                match_odds[0] is not None
-            ):
-
-                edge = value_edge(      
-                    home_probability,     
-                    match_odds[0]        
-                )                         
-
-                print(                   
-                    "HOME PROB:",         
-                    home,                
-                    away,                 
-                    home_probability,    
-                    match_odds[0],        
-                    edge                 
-                )                        
-
-
-                          
-               if edge >= 15:           
-
-                   home_super_value = True  
-
-                   home_score += 6          
-
-               elif edge >= 10:          
-
-                   home_value = True         
-
-                   home_score += 3           
-
-        if (
-            match_odds
-            and
-            match_odds[0] is not None
-        ):
-
-            home_odds_ok = (
-                1.45 <= match_odds[0] <= 2.30
-            )
+            if (                              
+                match_odds[0] is not None      
+            ):                                
+        
+                edge = value_edge(             
+                    home_probability,          
+                    match_odds[0]             
+                )                             
+        
+                print(                       
+                    "HOME PROB:",              
+                    home,                     
+                    away,                      
+                    home_probability,         
+                    match_odds[0],            
+                    edge                       
+                )                             
+        
+                if edge >= 15:                
+        
+                    home_super_value = True   
+        
+                    home_score += 6          
+        
+                elif edge >= 10:               
+        
+                    home_value = True         
+        
+                    home_score += 3            
+        
+        
+        if (                                   
+            match_odds                        
+            and                               
+            match_odds[0] is not None          
+        ):                                     
+        
+            home_odds_ok = (                   
+                1.45 <= match_odds[0] <= 2.30  
+            )                                  
 
 
         print(
