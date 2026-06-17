@@ -1411,23 +1411,49 @@ def get_team_form(team_id, venue=None):
 
             if (gh + ga) >= 3:                
 
-                recent_over25 += 1                                 
+                recent_over25 += 1                                          
 
-            if (gh + ga) >= 3:        
+        recent_form_pct = round(            
 
-               recent_over25 += 1     
+            (                               
 
-        recent_form_pct = round(    
-        print(
-            "RECENT FORM:",
-            recent_points,
-            max_weight_points,
-            recent_form_pct
-        )
+                recent_points              
 
-            (                      
+                /                          
 
-                recent_points      
+                max_weight_points           
+
+            ) * 100,                       
+
+            2                             
+
+        ) if max_weight_points > 0 else 0         
+
+            (                               
+
+                recent_points               
+
+                /                         
+
+                max_weight_points           
+
+            ) * 100,                       
+
+            2                              
+
+        )                                   
+
+        print(                            
+
+            "RECENT FORM:",               
+
+            recent_points,                  
+
+            max_weight_points,              
+
+            recent_form_pct                
+
+        )                                 
 
                 /                   
 
