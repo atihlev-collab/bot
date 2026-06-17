@@ -1826,28 +1826,36 @@ def h2h_score(
 
         score = 0                     
 
-        for g in games:               
+        for i, g in enumerate(games):        
 
             gh = g["goals"]["home"] or 0      
             ga = g["goals"]["away"] or 0     
+
+            hid = g["teams"]["home"]["id"]   
+
+            weight = 2 if i < 3 else 1           
 
             hid = g["teams"]["home"]["id"]    
 
             if hid == home_id:        
 
-                if gh > ga:         
-                    score += 1       
+                if gh > ga:           
+
+                    score += weight   
 
                 elif gh < ga:         
-                    score -= 1       
 
-            else:                    
+                    score -= weight    
 
-                if ga > gh:           
-                    score += 1        
+            else:                   
 
-                elif ga < gh:        
-                    score -= 1        
+                if ga > gh:          
+
+                    score += weight  
+
+                elif ga < gh:         
+
+                    score -= weight       
 
         return score                 
 
