@@ -2412,9 +2412,9 @@ def analyze_prematch_match(match):
                 0.5                       
             )      
 
-        if home_drop:      # 8
+        if home_drop:      
 
-            home_score += 5   # 12
+            home_score += 5   
 
                 
         # FORM COLLAPSE BONUS
@@ -2689,9 +2689,9 @@ def analyze_prematch_match(match):
                 0.5                      
             )           
 
-        if away_drop:      # 8
+        if away_drop:    
 
-            away_score += 5   # 12
+            away_score += 5   
        
         
         # FORM COLLAPSE BONUS
