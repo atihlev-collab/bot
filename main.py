@@ -1833,29 +1833,36 @@ def h2h_score(
 
 def odds_score(               
 
-    probability,             
+    probability,              
     odd                       
 
-):                            
+):                           
 
     try:                      
 
-        implied = (          
-            100              
-            /                 
+        implied = (           
+            100               
+            /                
             odd              
         )                     
 
-        return round(        
-            probability       
-            -               
-            implied,         
-            2              
+        edge = (              
+            probability      
+            -                 
+            implied           
         )                   
 
-    except:               
+        return max(           
+            -20,              
+            min(              
+                20,           
+                edge          
+            )                 
+        )                     
 
-        return 0           
+    except:                  
+
+        return 0            
 
     
 # =========================================================
@@ -2293,18 +2300,12 @@ def analyze_prematch_match(match):
             home_edge_score = odds_score( 
                 min(95, home_score),      
                 match_odds[0]            
-            )                            
-
-            print(                        
-                "HOME EDGE:",            
-                home,                    
-                home_edge_score          
-            )                            
+            )                                          
 
             home_score += (              
                 home_edge_score           
                 *                        
-                0.2                       
+                0.1                       
             )                                     
 
                 
@@ -2550,18 +2551,12 @@ def analyze_prematch_match(match):
             away_edge_score = odds_score( 
                 min(95, away_score),      
                 match_odds[2]            
-            )                            
-
-            print(                      
-                "AWAY EDGE:",             
-                away,                    
-                away_edge_score          
-            )                            
+            )                                          
 
             away_score += (             
                 away_edge_score          
                 *                        
-                0.2                      
+                0.1                      
             )                                    
        
         
