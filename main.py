@@ -2349,7 +2349,7 @@ def analyze_prematch_match(match):
                     home_form["home_games"]
                 )
 
-                * 3                       
+                * 5                       
 
             )                               
 
@@ -2363,7 +2363,7 @@ def analyze_prematch_match(match):
             home_score += (              
                 home_edge_score           
                 *                        
-                0.1                       
+                0.5                       
             )                                     
 
                 
@@ -2508,7 +2508,7 @@ def analyze_prematch_match(match):
                 away_form["total_scored"]
                 -
                 home_form["total_scored"]
-            ) * 1
+            ) * 0.5
 
            +
          
@@ -2606,6 +2606,11 @@ def analyze_prematch_match(match):
         ) * 0.25                    
 
         away_score -= h2h * 2     
+        if h2h <= -4:
+             away_score += 4
+
+        elif h2h <= -2:
+             away_score += 2
 
         if away_form["away_games"] > 0:   
 
@@ -2617,7 +2622,7 @@ def analyze_prematch_match(match):
                     away_form["away_games"] 
                 )
 
-                * 3                       
+                * 5                       
 
             )                            
 
@@ -2631,7 +2636,7 @@ def analyze_prematch_match(match):
             away_score += (             
                 away_edge_score          
                 *                        
-                0.1                      
+                0.5                      
             )                                    
        
         
