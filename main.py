@@ -3073,6 +3073,13 @@ def prematch_loop():
    
      
         for market, confidence, probability in signals:
+         
+        print(                 
+            "DEBUG SIGNAL:",   
+            market,           
+            confidence,       
+            probability        
+        )                    
 
             odds_text = "-"
             drop_text = "-"
