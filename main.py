@@ -1353,7 +1353,7 @@ def get_team_form(team_id, venue=None):
         recent_goal_diff = 0  
         weights = [5, 4, 3, 2, 1]
 
-        weighted_points = 0
+        
         max_weight_points = 0
 
              
@@ -1418,6 +1418,12 @@ def get_team_form(team_id, venue=None):
                recent_over25 += 1     
 
         recent_form_pct = round(    
+        print(
+            "RECENT FORM:",
+            recent_points,
+            max_weight_points,
+            recent_form_pct
+        )
 
             (                      
 
