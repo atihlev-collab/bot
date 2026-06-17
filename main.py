@@ -2332,6 +2332,12 @@ def analyze_prematch_match(match):
             )
 
 
+        print(
+            "HOME SCORE:",
+            home,
+            away,
+            home_score
+        )
         if (
             home_score >= 40
             and
@@ -2362,21 +2368,25 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
         ):
 
-           signals.append(                    
+        signals.append(                    
 
-            (                               
-                "🏆 HOME WIN",            
-
-                confidence_from_score(    
+            (                              
+                "🏆 HOME WIN",             
+        
+                confidence_from_score(      
                     home_score              
                 ),                          
         
-                round(                      
-                    home_score,             
-                    1                       
+                min(                        
+                    95,                     
+                    round(                 
+                        home_score,        
+                        1                  
+                    )                     
                 )                           
-            )                             
-        )                                   
+        
+            )                              
+        )                                          
      
         # AWAY WIN
 
@@ -2558,6 +2568,15 @@ def analyze_prematch_match(match):
                1.55 <= match_odds[2] <= 2.60
             )
 
+        print(                    
+            "AWAY SCORE:",        
+            home,                 
+            away,                
+            away_score,           
+            away_strength,       
+            home_strength,       
+            h2h                   
+        )                         
 
         if (
             away_score >= 40
