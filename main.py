@@ -1825,7 +1825,37 @@ def h2h_score(
 
     except:                           
 
-        return 0                     
+        return 0     
+
+# =========================================================
+# ODDS SCORE
+# =========================================================
+
+def odds_score(               
+
+    probability,             
+    odd                       
+
+):                            
+
+    try:                      
+
+        implied = (          
+            100              
+            /                 
+            odd              
+        )                     
+
+        return round(        
+            probability       
+            -               
+            implied,         
+            2              
+        )                   
+
+    except:               
+
+        return 0           
 
     
 # =========================================================
@@ -2256,7 +2286,20 @@ def analyze_prematch_match(match):
             away_strength                  
         ) * 0.25      
 
-        home_score += h2h * 2        
+        home_score += h2h * 2    
+
+        if match_odds:                  
+
+            home_edge_score = odds_score(   
+                min(95, home_score),        
+                match_odds[0]               
+            )                              
+
+            home_score += (                
+                home_edge_score           
+                *                          
+                0.5                       
+            )                              
 
                 
         # FORM COLLAPSE BONUS
@@ -2494,7 +2537,20 @@ def analyze_prematch_match(match):
             home_strength           
         ) * 0.25                    
 
-        away_score -= h2h * 2         
+        away_score -= h2h * 2       
+
+        if match_odds:                 
+
+            away_edge_score = odds_score(   
+                min(95, away_score),       
+                match_odds[2]               
+            )                            
+
+            away_score += (                 
+                away_edge_score            
+                *                          
+                0.5                      
+            )                               
        
         
         # FORM COLLAPSE BONUS
