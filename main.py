@@ -919,11 +919,11 @@ def analyze_live_match(fixture):
             100
         )
 
-        if home_form and home_form["avg_scored"] < 1.0:
+        if home_form and home_form["avg_scored"] < 0.9:
 
             home_pressure -= 8
 
-        if away_form and away_form["avg_scored"] < 1.0:
+        if away_form and away_form["avg_scored"] < 0.9:
 
             away_pressure -= 8
      
@@ -975,11 +975,11 @@ def analyze_live_match(fixture):
 
         if home_shots_on == 0:
 
-            home_pressure -= 15
+            home_pressure -= 10
 
         if away_shots_on == 0:
 
-            away_pressure -= 15
+            away_pressure -= 10
 
         if home_shots_on == 0:
 
@@ -1159,7 +1159,7 @@ def analyze_live_match(fixture):
             max(
                 home_pressure,
                 away_pressure
-            ) - 75
+            ) - 70
         ) * 2
 
         goal_probability += shots_diff * 4
@@ -1197,7 +1197,7 @@ def analyze_live_match(fixture):
             away_total_shots        
         )                            
      
-        if goal_probability < 70:
+        if goal_probability < 65:
             return None
       
         return (
