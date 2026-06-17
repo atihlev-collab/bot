@@ -2489,7 +2489,7 @@ def analyze_prematch_match(match):
         ):
 
             home_odds_ok = (
-                1.45 <= match_odds[0] <= 2.10
+                1.45 <= match_odds[0] <= 2.30
             )
 
 
@@ -2768,9 +2768,11 @@ def analyze_prematch_match(match):
         if match_odds and match_odds[2] is not None:
 
             away_odds_ok = (
-               1.55 <= match_odds[2] <= 2.60
+              
+                1.55 <= match_odds[2] <= 2.60
+            
             )
-
+         
         print(                    
             "AWAY SCORE:",        
             home,                 
