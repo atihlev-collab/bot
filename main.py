@@ -1574,56 +1574,58 @@ def poisson_btts(home_attack, away_attack):
         2
     )
 
-# =========================================================
 # FORM SCORE
 # =========================================================
 
-def calculate_form_score(           
+def calculate_form_score(            
 
-    home_form,                      
-    away_form                       
+    home_form,                       
+    away_form                        
 
-):                                  
-    
+):                                   
+
     score = 0                       
 
-    score += home_form["form_pct"] * 0.4     
-    score += away_form["form_pct"] * 0.4    
-
-    score += (                       
-        home_form["recent_form_pct"]  
+    score += (                      
+        home_form["form_pct"]        
         +                            
-        away_form["recent_form_pct"]  
-    ) * 0.3                           
+        away_form["form_pct"]        
+    ) * 0.20                        
 
     score += (                      
-        home_form["over25"]         
-        +                            
-        away_form["over25"]           
-    ) * 2  
+        home_form["recent_form_pct"] 
+        +
+        away_form["recent_form_pct"]
+    ) * 0.25                         
 
-    score += (                           
-        home_form["over25_pct"]         
-        +                                
-        away_form["over25_pct"]         
-    ) * 0.1                             
+    score += (                      
+        home_form["over25_pct"]     
+        +                           
+        away_form["over25_pct"]      
+    ) * 0.15                        
 
-    score += (                        
-        home_form["btts"]           
+    score += (                       
+        home_form["btts"]            
         +                           
         away_form["btts"]           
-    ) * 2     
+    ) * 1.5                         
 
-    score += (                           
-        home_form["recent_avg_scored"]   
-        +                                
-        away_form["recent_avg_scored"]   
-    ) * 2                                
+    score += (                      
+        home_form["recent_avg_scored"] 
+        +                             
+        away_form["recent_avg_scored"] 
+    ) * 8                             
+
+    score += (                     
+        home_form["scored_pct"]     
+        +                           
+        away_form["scored_pct"]      
+    ) * 0.10                       
 
     return min(                      
-        100,                          
-        round(score, 2)              
-    )                                
+        100,                        
+        round(score, 2)             
+    )                              
     
 # =========================================================
 # HOME WIN SCORE
@@ -1988,11 +1990,11 @@ def calculate_final_score(
 
     score = (
 
-        form_score * 0.40 +
+        form_score * 0.25 +
 
-        poisson_score * 0.35 +
+        poisson_score * 0.55 +
 
-        value_score * 0.20 +
+        value_score * 0.15 +
 
         league_bonus * 0.05
 
