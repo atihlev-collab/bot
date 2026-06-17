@@ -1413,48 +1413,33 @@ def get_team_form(team_id, venue=None):
 
                 recent_over25 += 1                                          
 
-        recent_form_pct = round(            
+         recent_form_pct = round(            
 
-            (                               
+            (                              
 
-                recent_points              
-
-                /                          
-
-                max_weight_points           
-
-            ) * 100,                       
-
-            2                             
-
-        ) if max_weight_points > 0 else 0         
-
-            (                               
-
-                recent_points               
+                recent_points             
 
                 /                         
 
-                max_weight_points           
+                max_weight_points          
 
-            ) * 100,                       
+            ) * 100,                        
 
             2                              
 
-        )                                   
+        ) if max_weight_points > 0 else 0  
 
         print(                            
 
-            "RECENT FORM:",               
+            "RECENT FORM:",                 
 
             recent_points,                  
 
-            max_weight_points,              
+            max_weight_points,             
 
-            recent_form_pct                
+            recent_form_pct               
 
         )                                 
-
                 /                   
 
                 max_weight_points  
