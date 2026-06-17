@@ -1682,7 +1682,7 @@ def home_win_score(
         home_form["total_scored"]
         -
         away_form["total_scored"]
-    ) * 0.3
+    ) * 0.5
 
     score += (
         home_form["goal_diff"]
@@ -2364,7 +2364,11 @@ def analyze_prematch_match(match):
                 home_edge_score           
                 *                        
                 0.5                       
-            )                                     
+            )      
+
+        if home_drop:      # 8
+
+            home_score += 5   # 12
 
                 
         # FORM COLLAPSE BONUS
@@ -2637,7 +2641,11 @@ def analyze_prematch_match(match):
                 away_edge_score          
                 *                        
                 0.5                      
-            )                                    
+            )           
+
+        if away_drop:      # 8
+
+            away_score += 5   # 12
        
         
         # FORM COLLAPSE BONUS
