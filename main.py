@@ -1413,7 +1413,7 @@ def get_team_form(team_id, venue=None):
 
                 recent_over25 += 1                                          
 
-         recent_form_pct = round(            
+        recent_form_pct = round(            
 
             (                              
 
@@ -1440,15 +1440,7 @@ def get_team_form(team_id, venue=None):
             recent_form_pct               
 
         )                                 
-                /                   
-
-                max_weight_points  
-
-            ) * 100,               
-
-            2                       
-
-        )                          
+               
 
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
