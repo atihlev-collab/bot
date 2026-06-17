@@ -2288,23 +2288,24 @@ def analyze_prematch_match(match):
 
         home_score += h2h * 2    
 
-        if match_odds:                  
+        if match_odds:                   
 
-            home_edge_score = odds_score(  
-            print(
-                "HOME EDGE:",
-                home,
-                home_edge_score
-            )
-                min(95, home_score),        
-                match_odds[0]               
-            )                              
+            home_edge_score = odds_score( 
+                min(95, home_score),      
+                match_odds[0]            
+            )                            
 
-            home_score += (                
+            print(                        
+                "HOME EDGE:",            
+                home,                    
+                home_edge_score          
+            )                            
+
+            home_score += (              
                 home_edge_score           
-                *                          
+                *                        
                 0.2                       
-            )                              
+            )                                     
 
                 
         # FORM COLLAPSE BONUS
@@ -2544,23 +2545,24 @@ def analyze_prematch_match(match):
 
         away_score -= h2h * 2       
 
-        if match_odds:                 
+        if match_odds:                    
 
-            away_edge_score = odds_score(  
-            print(
-                "AWAY EDGE:",
-                away,
-                away_edge_score
-            )
-                min(95, away_score),       
-                match_odds[2]               
+            away_edge_score = odds_score( 
+                min(95, away_score),      
+                match_odds[2]            
             )                            
 
-            away_score += (                 
-                away_edge_score            
-                *                          
+            print(                      
+                "AWAY EDGE:",             
+                away,                    
+                away_edge_score          
+            )                            
+
+            away_score += (             
+                away_edge_score          
+                *                        
                 0.2                      
-            )                               
+            )                                    
        
         
         # FORM COLLAPSE BONUS
