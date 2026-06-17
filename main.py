@@ -2329,7 +2329,15 @@ def analyze_prematch_match(match):
             away_strength                  
         ) * 0.25      
 
-        home_score += h2h * 2    
+        home_score += h2h * 2  
+
+        if h2h >= 4:          
+
+            home_score += 4   
+
+        elif h2h >= 2:       
+
+            home_score += 2   
 
         if home_form["home_games"] > 0:    
 
@@ -2411,9 +2419,6 @@ def analyze_prematch_match(match):
                     match_odds[0]
                 )
 
-                if edge >= 15:
-                 
-                    home_super_value = True
 
                 if edge >= 15:           
                  
