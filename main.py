@@ -2513,9 +2513,9 @@ def analyze_prematch_match(match):
             and
             form_gap >= 10
             and
-            recent_gap >= 10
+            recent_gap >= 5
             and
-            home_form["recent_form_pct"] >= 60                                                              
+            home_form["recent_form_pct"] >= 55                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
             and
