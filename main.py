@@ -1093,14 +1093,14 @@ def analyze_live_match(fixture):
         if total >= 7:
             return None
 
-        if dominance < 8:
+        if dominance < 5:
             return None        
                        
         if (                      
             home_total_shots       
             +                      
             away_total_shots        
-        ) < 8:                     
+        ) < 6:                     
 
             return None            
 
@@ -1185,9 +1185,19 @@ def analyze_live_match(fixture):
             away_pressure,         
             shots_diff              
         )                          
-                       
+
+        print(                        
+            "NEXT GOAL CHECK:",       
+            home_team,               
+            away_team,                
+            minute,                  
+            goal_probability,         
+            dominance,                
+            home_total_shots,         
+            away_total_shots        
+        )                            
      
-        if goal_probability < 75:
+        if goal_probability < 70:
             return None
       
         return (
