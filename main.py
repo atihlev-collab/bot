@@ -1656,7 +1656,8 @@ def poisson_btts(home_attack, away_attack):
         prob * 100,
         2
     )
-
+ 
+# =========================================================
 # FORM SCORE
 # =========================================================
 
@@ -2795,7 +2796,7 @@ def analyze_prematch_match(match):
             and
             away_gap >= 10
             and
-            recent_away_gap >= 10
+            recent_away_gap >= 5
             and
             away_form["avg_scored"] >= 1.5
             and                                   
