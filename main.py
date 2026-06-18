@@ -925,7 +925,25 @@ def analyze_live_match(fixture):
 
         if away_form and away_form["avg_scored"] < 0.9:
 
-            away_pressure -= 8
+        away_pressure -= 8
+
+        if (                              
+            away_form                     
+            and                            
+            away_form["avg_conceded"] >= 1.5   
+        ):                                
+
+            home_pressure += 5             
+
+
+        if (                               
+            home_form                     
+            and                            
+            home_form["avg_conceded"] >= 1.5  
+        ):                                 
+
+            away_pressure += 5             
+         
      
         if home_red > away_red:
 
