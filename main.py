@@ -2840,9 +2840,9 @@ def analyze_prematch_match(match):
 
         )       
 
-         if home_probability >= 75:     
+        if home_probability >= 75:     
 
-             home_score += 6            
+            home_score += 6            
 
         elif home_probability >= 68:    
 
