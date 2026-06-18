@@ -925,7 +925,7 @@ def analyze_live_match(fixture):
 
         if away_form and away_form["avg_scored"] < 0.9:
 
-        away_pressure -= 8
+            away_pressure -= 8
 
         if (                              
             away_form                     
