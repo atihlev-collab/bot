@@ -2868,14 +2868,6 @@ def analyze_prematch_match(match):
 
         )       
 
-
-        print(
-           "PROB GAP:",
-           home,
-           away,
-           probability_gap
-        )
-
         if (                          
             home_probability >= 75    
             and                       
