@@ -2857,13 +2857,21 @@ def analyze_prematch_match(match):
             home_score += 3            
 
 
-        if away_probability >= 75:     
+        if (                          
+            away_probability >= 75     
+            and                        
+            away_score >= 40           
+        ):                            
 
-            away_score += 6             
+            away_score += 6           
 
-        elif away_probability >= 68:    
+        elif (                        
+            away_probability >= 68     
+            and                        
+            away_score >= 30           
+        ):                             
 
-            away_score += 3    
+            away_score += 3            
 
 
         probability_gap = (          
