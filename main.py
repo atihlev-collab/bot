@@ -2545,6 +2545,14 @@ def analyze_prematch_match(match):
             home_score
         )
 
+        print(
+            "HOME FILTER:",
+            home,
+            away,
+            home_score,
+            home_probability
+        )
+
                  
          
         if (
