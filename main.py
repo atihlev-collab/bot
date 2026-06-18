@@ -2507,6 +2507,19 @@ def analyze_prematch_match(match):
             away,
             home_score
         )
+
+        print(                       
+            "HOME FILTER:",          
+            home,                   
+            away,                    
+            home_score,             
+            home_probability,       
+            home_odds_ok,           
+            home_edge,               
+            home_gap,               
+            recent_gap             
+        )                            
+         
         if (
             home_score >= 30
             and
