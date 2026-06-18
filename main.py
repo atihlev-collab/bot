@@ -670,10 +670,10 @@ def calculate_pressure(team):
     # shots on target
 
     if shots_on >= 3:
-        pressure += 15
+        pressure += 18
 
     if shots_on >= 5:
-        pressure += 20
+        pressure += 18
 
     if shots_on >= 7:
         pressure += 25
@@ -702,14 +702,14 @@ def calculate_pressure(team):
 
     # dangerous attacks
 
-    if attacks >= 20:
-        pressure += 10
+    if attacks >= 15:
+        pressure += 18
+
+    if attacks >= 25:
+        pressure += 18
 
     if attacks >= 35:
-        pressure += 15
-
-    if attacks >= 70:
-        pressure += 10
+        pressure += 12
 
     return min(
         pressure,
