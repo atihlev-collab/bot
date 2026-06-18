@@ -2441,6 +2441,12 @@ def analyze_prematch_match(match):
             home_form["form_pct"] >= 80
             and
             home_form["wins"] >= 6
+
+        if (                               
+            home_form["recent_wins"] >= 4  
+        ):                                 
+
+            home_score += 4                
         ):   
 
            home_score += 5
@@ -2866,6 +2872,14 @@ def analyze_prematch_match(match):
             away_probability          
 
         )       
+
+
+        print(
+           "PROB GAP:",
+           home,
+           away,
+           probability_gap
+        )
 
         if (                          
             home_probability >= 75    
