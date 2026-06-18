@@ -10,7 +10,7 @@ import threading
 import time
 import logging
 
-       
+
 
 from scipy.stats import poisson
 from datetime import datetime, timedelta
@@ -2543,17 +2543,7 @@ def analyze_prematch_match(match):
             home,
             away,
             home_score
-        )
-
-        print(
-            "HOME FILTER:",
-            home,
-            away,
-            home_score,
-            home_probability
-        )
-
-                 
+        )                 
          
         if (
             home_score >= 30
