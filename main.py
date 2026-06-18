@@ -1111,9 +1111,9 @@ def analyze_live_match(fixture):
         if (
             minute <= 70
             and
-            home_pressure >= 60
+            home_pressure >= 55
             and
-            away_pressure >= 60
+            away_pressure >= 55
             and
             home_shots_on >= 2
             and
