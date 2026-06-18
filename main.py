@@ -2443,7 +2443,17 @@ def analyze_prematch_match(match):
             home_form["wins"] >= 6
         ):   
 
-            home_score += 5       
+            home_score += 5     
+
+
+        if (                               
+            home_form.get(                 
+                "recent_wins",              
+                0                            
+            ) >= 4                           
+        ):                                  
+
+            home_score += 4                
            
 
         home_edge = (
@@ -2733,6 +2743,15 @@ def analyze_prematch_match(match):
         ):
 
             away_score += 5
+
+        if (                                
+            away_form.get(                   
+                "recent_wins",              
+                0                            
+            ) >= 4                          
+        ):                                  
+
+            away_score += 4                 
  
         away_edge = (
 
