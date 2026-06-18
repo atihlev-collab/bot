@@ -3281,7 +3281,12 @@ def analyze_prematch_match(match):
 
             ) / 2                     
 
-        )                            
+        )             
+
+        print(
+            "SIGNAL:",
+            signals
+        )
 
         signals = signals[:2]        
          
