@@ -2838,7 +2838,24 @@ def analyze_prematch_match(match):
 
             away_probability          
 
-        )                           
+        )       
+
+         if home_probability >= 75:     
+
+             home_score += 6            
+
+        elif home_probability >= 68:    
+
+            home_score += 3             
+
+
+        if away_probability >= 75:     
+
+            away_score += 6             
+
+        elif away_probability >= 68:    
+
+            away_score += 3             
 
         if (
             away_score >= 30
