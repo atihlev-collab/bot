@@ -2461,7 +2461,15 @@ def analyze_prematch_match(match):
             home_form["recent_form_pct"]      
             -
             away_form["recent_form_pct"]      
-        )                                     
+        )       
+
+        if recent_gap >= 25:     
+
+            home_score += 4      
+
+        elif recent_gap >= 15:   
+
+            home_score += 2      
 
         home_super_value = False
         home_value = False
@@ -2744,7 +2752,15 @@ def analyze_prematch_match(match):
             away_form["recent_form_pct"]       
             -
             home_form["recent_form_pct"]    
-        )                                     
+        )               
+
+        if recent_away_gap >= 25:     
+
+            away_score += 4           
+
+        elif recent_away_gap >= 15:   
+
+            away_score += 2           
              
         away_super_value = False
         away_value = False
