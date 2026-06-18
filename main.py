@@ -2443,15 +2443,7 @@ def analyze_prematch_match(match):
             home_form["wins"] >= 6
         ):   
 
-            home_score += 5
-             
-        if (                               
-            home_form["recent_wins"] >= 4  
-        ):                                 
-
-            home_score += 4                
-  
-
+            home_score += 5       
            
 
         home_edge = (
