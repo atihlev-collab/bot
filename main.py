@@ -2779,9 +2779,66 @@ def analyze_prematch_match(match):
             away,                
             away_score,           
             away_strength,       
-            home_strength,       
+            home_strength,        
             h2h                   
-        )                         
+        )          
+
+
+        total_strength = (           
+
+            max(1, home_score + 100)  
+
+            +                        
+
+            max(1, away_score + 100)  
+
+        )                            
+
+        home_probability = round(    
+
+            (
+
+                max(1, home_score + 100)   
+
+                /
+
+                total_strength            
+
+            ) * 100,
+
+            1
+
+        )                            
+
+        away_probability = round(     
+
+            (
+
+                max(1, away_score + 100)  
+
+                /
+
+                total_strength            
+
+            ) * 100,
+
+            1
+
+        )                             
+
+        print(                        
+
+            "PROB:",                  
+
+            home,                   
+
+            away,                     
+
+            home_probability,         
+
+            away_probability          
+
+        )                           
 
         if (
             away_score >= 30
