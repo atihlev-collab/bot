@@ -2402,7 +2402,7 @@ def analyze_prematch_match(match):
         if match_odds:                   
 
             home_edge_score = odds_score( 
-                home_probability,      
+                min(95, home_score),      
                 match_odds[0]            
             )                                          
 
@@ -2679,7 +2679,7 @@ def analyze_prematch_match(match):
         if match_odds:                    
 
             away_edge_score = odds_score( 
-               away_probability,     
+                min(95, away_score),     
                 match_odds[2]            
             )                                          
 
