@@ -1184,7 +1184,15 @@ def analyze_live_match(fixture):
             home_pressure,         
             away_pressure,         
             shots_diff              
-        )                          
+        )             
+
+        print(
+          "PRESSURE:",
+          home_team,
+          away_team,
+          home_pressure,
+          away_pressure
+     )
 
         print(                        
             "NEXT GOAL CHECK:",       
