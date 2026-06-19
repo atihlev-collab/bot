@@ -1111,8 +1111,9 @@ def analyze_live_match(fixture):
         if total >= 7:
             return None
 
-        if dominance < 5:
-            return None        
+        if dominance < 10:     
+
+            return None            
                        
         if (                      
             home_total_shots       
@@ -1383,7 +1384,7 @@ def analyze_live_match(fixture):
                 home_pressure,
                 away_pressure
             ) - 70
-        ) * 2
+        ) * 1.5
 
         goal_probability += shots_diff * 3
 
@@ -1422,6 +1423,10 @@ def analyze_live_match(fixture):
             )
         )
 
+        if goal_probability < 70:  
+
+            return None             
+
         print(                     
             "LIVE PROB:",         
             home_team,             
@@ -1458,7 +1463,7 @@ def analyze_live_match(fixture):
             away_total_shots        
         )                            
      
-        if goal_probability < 60:
+        if goal_probability < 70:
             return None
       
         return (
