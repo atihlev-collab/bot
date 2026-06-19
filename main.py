@@ -411,19 +411,19 @@ def get_match_odds(fixture_id):
                 away_odd
             )
 
-                if (
-                    home_odd is not None
-                    and
-                    draw_odd is not None
-                    and
-                    away_odd is not None
-                ):
+            if (
+                home_odd is not None
+                and
+                draw_odd is not None
+                and
+                away_odd is not None
+            ):
 
-                    return (
-                        home_odd,
-                        draw_odd,
-                        away_odd
-                    )
+                return (
+                    home_odd,
+                    draw_odd,
+                    away_odd
+                )
 
                 print(
                     "INCOMPLETE ODDS:",
