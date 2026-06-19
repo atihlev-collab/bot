@@ -3498,6 +3498,73 @@ def analyze_prematch_match(match):
             )
 
             print("CHECKING:", home, "vs", away)
+
+
+        # UNDER 2.5                  
+
+        under_prob = (                
+
+            100                       
+
+            -                         
+
+            over_prob                  
+
+        )                             
+
+        if (                          
+
+            over_prob <= 50            
+
+            and                        
+
+            expected_goals <= 2.4      
+
+            and                        
+
+            home_form["avg_scored"] <= 1.4      
+
+            and                       
+
+            away_form["avg_scored"] <= 1.4      
+
+            and                        
+
+            home_form["avg_conceded"] <= 1.3    
+
+            and                        
+
+            away_form["avg_conceded"] <= 1.3    
+
+            and                       
+
+            home_form["over25_pct"] <= 50      
+
+            and                       
+
+            away_form["over25_pct"] <= 50       
+
+        ):                            
+
+            signals.append(            
+
+                (                      
+
+                    "🛡 UNDER 2.5",    
+
+                    confidence_from_score(70), 
+
+                    round(             
+
+                        under_prob,    
+
+                        1              
+
+                    )                  
+
+                )                      
+
+            )                          
             
          
         signals.sort(                 
@@ -4064,6 +4131,14 @@ def live_loop():
 📈 Form:
 {home_form["form_pct"] if home_form else 0}% -
 {away_form["form_pct"] if away_form else 0}%   
+
+⚽ Avg Scored:
+{home_form["avg_scored"] if home_form else 0} -
+{away_form["avg_scored"] if away_form else 0}   
+
+🛡 Avg Conceded:
+{home_form["avg_conceded"] if home_form else 0} -
+{away_form["avg_conceded"] if away_form else 0}   
 
 ⚽ xG:
 {home_xg} - {away_xg}
