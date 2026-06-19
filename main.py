@@ -1306,7 +1306,14 @@ def analyze_live_match(fixture):
 
                 corner_probability      
 
-            )                  
+            )          
+
+        print(
+            "PASSED CORNERS BLOCK:",
+            home_team,
+            away_team,
+            minute
+        )
 
 
                 # LATE GOAL                   
