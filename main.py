@@ -2440,7 +2440,7 @@ def analyze_prematch_match(match):
 
         if home_drop:      
 
-            home_score += 5   
+            home_score += 6   
 
                 
         # FORM COLLAPSE BONUS
@@ -2451,7 +2451,7 @@ def analyze_prematch_match(match):
             away_form["form_pct"] <= 35
         ):
 
-            home_score += 8
+            home_score += 10
 
         # SUPER FORM BONUS
 
@@ -2737,7 +2737,7 @@ def analyze_prematch_match(match):
 
         if away_drop:    
 
-            away_score += 5   
+            away_score += 6  
        
         
         # FORM COLLAPSE BONUS
@@ -2748,7 +2748,7 @@ def analyze_prematch_match(match):
             home_form["form_pct"] <= 35
         ):
 
-            away_score += 8
+            away_score += 10
 
         # SUPER FORM BONUS
 
