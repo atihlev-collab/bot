@@ -322,6 +322,24 @@ def get_match_odds(fixture_id):
 
         for bet in bets:
 
+
+            if bet.get("name") in [     
+                "Both Teams To Score",  
+                "BTTS"                   
+            ]:                          
+
+                for value in bet.get(    
+                    "values",            
+                    []                   
+                ):                      
+
+                    if value["value"] == "Yes":   
+
+                        print(                    
+                            "BTTS ODD =",         
+                            value["odd"]          
+                        )                        
+
             print(
                 "BET NAME =",
                 bet.get("name")
