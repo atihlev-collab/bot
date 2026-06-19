@@ -1486,7 +1486,7 @@ def analyze_live_match(fixture):
 # TEAM FORM
 # =========================================================
 
-def get_team_form(team_id, venue=None):  #0
+def get_team_form(team_id, venue=None): 
 
     cache_key = f"{team_id}_{venue}"
 
