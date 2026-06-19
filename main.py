@@ -404,12 +404,12 @@ def get_match_odds(fixture_id):
             )                        
                
 
-                print(
-                    "ODDS FOUND:",
-                    home_odd,
-                    draw_odd,
-                    away_odd
-                )
+            print(
+                "ODDS FOUND:",
+                home_odd,
+                draw_odd,
+                away_odd
+            )
 
                 if (
                     home_odd is not None
