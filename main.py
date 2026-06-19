@@ -1080,7 +1080,7 @@ def analyze_live_match(fixture):
         if minute < 15:
             return None
 
-        if minute > 75:
+        if minute > 90:
             return None
 
        
@@ -1387,6 +1387,13 @@ def analyze_live_match(fixture):
 
             return None
 
+        print(
+            "BEFORE NEXT GOAL:",
+            home_team,
+            away_team,
+            minute
+        )
+
         market = "🎯 NEXT GOAL HOME"
 
         if away_pressure > home_pressure:
@@ -1479,7 +1486,14 @@ def analyze_live_match(fixture):
             dominance,                
             home_total_shots,         
             away_total_shots        
-        )                            
+        )     
+
+        print(
+            "GOAL PROB FINAL:",
+            home_team,
+            away_team,
+            goal_probability
+        )
      
         if goal_probability < 70:
             return None
