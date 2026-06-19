@@ -327,6 +327,11 @@ def get_match_odds(fixture_id):
                 bet.get("name")
             )
 
+            print(
+                "VALUES =",
+                bet.get("values")
+            )
+
             if bet.get("name") in [
                 "Match Winner",
                 "1X2",
