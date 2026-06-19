@@ -3917,51 +3917,47 @@ def prematch_loop():
             odds_text = "-"
             drop_text = "-"
 
-            if match_odds:
+            if match_odds:                  
 
-                if (
-                    "HOME WIN" in market
-                    and
-                    match_odds[0] is not None
-                ):
+                if (                          
+                    "HOME WIN" in market      
+                    and                       
+                    match_odds[0] is not None 
+                ):                           
 
-                    odds_text = str(
-                        match_odds[0]
-                    )
+                    odds_text = str(        
+                        match_odds[0]        
+                    )                         
 
-                    if home_drop:
+                    if home_drop:             
 
-                        drop_text = home_drop_text
+                        drop_text = home_drop_text  
 
-                elif (
-                    "AWAY WIN" in market
-                    and
-                    match_odds[2] is not None
-                ):
+                elif (                        
+                    "AWAY WIN" in market      
+                    and                      
+                    match_odds[2] is not None 
+                ):                            
 
-                    odds_text = str(
-                        match_odds[2]
-                    )
+                    odds_text = str(         
+                        match_odds[2]         
+                    )                         
 
-                    if away_drop:
+                    if away_drop:            
 
-                        drop_text = away_drop_text
+                        drop_text = away_drop_text  
 
-                elif (                
-                    "BTTS" in market   
-                ):                     
+                elif (                       
+                    "BTTS" in market          
+                ):                            
 
-                    odds_text = str(  
-                        match_odds[0]  
-                    )                 
+                    odds_text = "-"           
 
-                elif (                 
-                    "OVER" in market   
-                ):                     
+                elif (                        
+                    "OVER" in market         
+                ):                           
 
-                    odds_text = str(   
-                        match_odds[0]  
-                    )                  
+                    odds_text = "-"          
 
 
             all_signals.append(
