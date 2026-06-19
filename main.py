@@ -1387,6 +1387,30 @@ def analyze_live_match(fixture):
 
         goal_probability += shots_diff * 3
 
+        goal_probability += min(   
+
+            10,                     
+
+            (                       
+
+                home_corners        
+
+                +                   
+
+                away_corners        
+
+            )                       
+
+        )                          
+
+        if home_xg >= 1.0:     
+
+            goal_probability += 5   
+
+        if away_xg >= 1.0:     
+
+            goal_probability += 5   
+
         
 
         goal_probability = min(
@@ -1408,6 +1432,12 @@ def analyze_live_match(fixture):
             away_pressure,         
             shots_diff              
         )             
+
+        print(
+            "XG:",
+            home_xg,
+            away_xg
+        )
 
         print(
           "PRESSURE:",
@@ -4019,6 +4049,9 @@ def live_loop():
 
 🚩 Corners:
 {home_corners} - {away_corners}
+
+⚽ xG:
+{home_xg} - {away_xg}
 
 💎 Confidence: {signal[1]}%
 
