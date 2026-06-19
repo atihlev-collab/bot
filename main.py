@@ -1327,7 +1327,7 @@ def analyze_live_match(fixture):
 
                 away_pressure          
 
-            ) >= 80                    
+            ) >= 75                    
 
             and                       
 
@@ -1339,7 +1339,7 @@ def analyze_live_match(fixture):
 
                 away_total_shots      
 
-            ) >= 12                   
+            ) >= 10                   
 
             and                        
 
