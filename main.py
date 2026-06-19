@@ -1475,7 +1475,11 @@ def analyze_live_match(fixture):
 
                 90                    
 
-            )                          
+            )       
+            
+        except:
+
+            return None
         
 
     
