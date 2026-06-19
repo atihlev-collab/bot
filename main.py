@@ -312,6 +312,15 @@ def get_match_odds(fixture_id):
             []
         )
 
+        if len(bookmakers) < 3:     
+
+            print(                  
+                "WEAK MARKET:",     
+                fixture_id          
+            )                     
+
+            return None             
+
         if not bookmakers:
             return None
 
@@ -339,17 +348,8 @@ def get_match_odds(fixture_id):
                             "BTTS ODD =",         
                             value["odd"]          
                         )                        
-
-            print(
-                "BET NAME =",
-                bet.get("name")
-            )                 
-
-            print(
-                "VALUES =",
-                bet.get("values")
-            )
-
+         
+                              
             if bet.get("name") in [
                 "Match Winner",
                 "1X2",
@@ -4045,10 +4045,11 @@ def prematch_loop():
             market,
             confidence,
             probability
-        )
+        )      
 
-        print("DEBUG MARKET =", market)
-        print("DEBUG ODDS_TEXT =", odds_text)
+        if odds_text == "-":    
+
+            continue             
 
         send_prematch_signal(
 
