@@ -1154,20 +1154,7 @@ def analyze_live_match(fixture):
                 )            
                   
 
-        if total >= 7:
-            return None
-
-        if dominance < 10:     
-
-            return None            
-                       
-        if (                      
-            home_total_shots       
-            +                      
-            away_total_shots        
-        ) < 5:                     
-
-            return None            
+         
 
         print(
             "OVER15 CHECK:",
@@ -1269,7 +1256,17 @@ def analyze_live_match(fixture):
 
         )                                  
 
-        
+        if total >= 7:
+            return None
+
+        if dominance < 5:
+            return None
+
+        if (
+            home_total_shots +
+            away_total_shots
+        ) < 5:
+            return None
         
 
         # OVER 1.5 REMAINING GOALS
@@ -1298,6 +1295,8 @@ def analyze_live_match(fixture):
                 90
 
             )
+
+        
 
         # OVER 1.5 NEXT CORNERS          
 
