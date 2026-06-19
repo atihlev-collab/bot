@@ -1160,6 +1160,96 @@ def analyze_live_match(fixture):
             away_corners
         )
 
+
+        # NEXT GOAL ONLY UNTIL            
+
+        if minute > 75:                    
+
+            return None                    
+
+        market = "🎯 NEXT GOAL HOME"       
+
+        if away_pressure > home_pressure:  
+
+            market = "🎯 NEXT GOAL AWAY"   
+
+        confidence = min(                  
+            95,                            
+            max(                           
+                home_pressure,             
+                away_pressure              
+            )                              
+        )                                 
+
+        goal_probability = 50             
+
+        goal_probability += (              
+            max(                           
+                home_pressure,            
+                away_pressure              
+            ) - 70                        
+        ) * 1.5                           
+
+        goal_probability += shots_diff * 3
+
+        if (                               
+
+            home_corners                   
+            +                              
+            away_corners                   
+
+        ) >= 6:                            
+
+            goal_probability += 3          
+
+        if home_xg >= 1.0:                
+
+            goal_probability += 5          
+
+        if away_xg >= 1.0:                 
+
+            goal_probability += 5          
+
+        goal_probability = min(     
+            95,                      
+            max(                     
+                55,                  
+                goal_probability     
+            )                       
+        )                            
+
+        print(                       
+            "GOAL PROB =",           
+            goal_probability         
+        )                           
+
+        if goal_probability < 70:    
+
+            return None                       
+
+        print(                             
+            "LIVE PROB:",                  
+            home_team,                     
+            away_team,                     
+            minute,                        
+            goal_probability,              
+            home_pressure,                
+            away_pressure,                 
+            shots_diff                     
+        )                                  
+
+        return (                           
+
+            market,                        
+            confidence,                    
+            minute,                        
+            goal_probability               
+
+        )                                  
+
+        
+        
+
         # OVER 1.5 REMAINING GOALS
 
         if (
@@ -1388,144 +1478,7 @@ def analyze_live_match(fixture):
             )                          
         
 
-        # NEXT GOAL ONLY UNTIL 
-
-        if minute > 75:
-
-            return None
-
-        print(
-            "BEFORE NEXT GOAL:",
-            home_team,
-            away_team,
-            minute
-        )
-
-
-        print(
-            "NEXT GOAL REACHED",
-            home_team,
-            away_team,
-            minute
-        )
-
-        market = "🎯 NEXT GOAL HOME"
-
-        if away_pressure > home_pressure:
-
-            market = "🎯 NEXT GOAL AWAY"
-
-        confidence = min(
-            95,
-            max(
-                home_pressure,
-                away_pressure
-            )
-        )
-
-        goal_probability = 50
-
-        goal_probability += (
-            max(
-                home_pressure,
-                away_pressure
-            ) - 70
-        ) * 1.5
-
-        goal_probability += shots_diff * 3
-
-        if (                     
-
-            home_corners         
-            +
-            away_corners         
-
-        ) >= 6:                  
-
-            goal_probability += 3 
-            
-        if home_xg >= 1.0:     
-
-            goal_probability += 5   
-
-        if away_xg >= 1.0:     
-
-            goal_probability += 5   
-
-        
-
-        goal_probability = min(
-            95,
-            max(
-                55,
-                goal_probability
-             
-            )
-        )
-
-        if goal_probability < 70:  
-
-            return None             
-
-        print(                     
-            "LIVE PROB:",         
-            home_team,             
-            away_team,              
-            minute,                
-            goal_probability,       
-            home_pressure,         
-            away_pressure,         
-            shots_diff              
-        )             
-
-        print(
-            "XG:",
-            home_xg,
-            away_xg
-        )
-
-        print(
-          "PRESSURE:",
-          home_team,
-          away_team,
-          home_pressure,
-          away_pressure
-     )
-
-        print(                        
-            "NEXT GOAL CHECK:",       
-            home_team,               
-            away_team,                
-            minute,                  
-            goal_probability,         
-            dominance,                
-            home_total_shots,         
-            away_total_shots        
-        )     
-
-        print(
-            "GOAL PROB FINAL:",
-            home_team,
-            away_team,
-            goal_probability
-        )
-     
-        if goal_probability < 70:
-            return None
-      
-        return (
-
-            market,
-            confidence,
-            minute,
-            goal_probability
-
-        )
-
-    except:
-
-        return None
-
+    
 # =========================================================
 # TEAM FORM
 # =========================================================
