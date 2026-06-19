@@ -4007,6 +4007,17 @@ def live_loop():
                 stats[1]
             )
 
+
+            home_form = get_team_form(     
+                match["teams"]["home"]["id"],
+                venue="home"              
+            )                            
+
+            away_form = get_team_form(     
+                match["teams"]["away"]["id"],
+                venue="away"              
+            )                             
+
             home_shots = extract(
                 stats[0],
                 "Shots on Goal"
@@ -4049,6 +4060,10 @@ def live_loop():
 
 🚩 Corners:
 {home_corners} - {away_corners}
+
+📈 Form:
+{home_form["form_pct"] if home_form else 0}% -
+{away_form["form_pct"] if away_form else 0}%   
 
 ⚽ xG:
 {home_xg} - {away_xg}
