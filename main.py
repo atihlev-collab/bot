@@ -883,8 +883,19 @@ def analyze_live_match(fixture):
             fixture_id
         )
 
-        if len(stats) < 2:
-            return None
+        stats = get_statistics(    
+            fixture_id               
+        )                           
+
+        print(                       
+            "LIVE STATS:",          
+            fixture_id,              
+            len(stats)               
+        )                           
+
+        if len(stats) < 2:           
+
+            return None              
 
         home_stats = stats[0]
         away_stats = stats[1]
