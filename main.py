@@ -1401,6 +1401,14 @@ def analyze_live_match(fixture):
             minute
         )
 
+
+        print(
+            "NEXT GOAL REACHED",
+            home_team,
+            away_team,
+            minute
+        )
+
         market = "🎯 NEXT GOAL HOME"
 
         if away_pressure > home_pressure:
