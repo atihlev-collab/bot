@@ -4047,9 +4047,7 @@ def prematch_loop():
             probability
         )      
 
-        if odds_text == "-":    
-
-            continue             
+             
 
         send_prematch_signal(
 
