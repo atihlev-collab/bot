@@ -344,14 +344,7 @@ def get_match_odds(fixture_id):
                 "BET NAME =",
                 bet.get("name")
             )
-
-
-            send_telegram(     
-                str(           
-                    bet.get(    
-                        "name"  
-                    )           
-                )               
+               
             )                   
 
             print(
