@@ -893,7 +893,7 @@ def analyze_live_match(fixture):
             len(stats)               
         )                           
 
-        if len(stats) < 2:           
+        if len(stats)  == 0:           
 
             return None              
 
@@ -1232,7 +1232,7 @@ def analyze_live_match(fixture):
             goal_probability         
         )                           
 
-        if goal_probability < 70:    
+        if goal_probability < 65:    
 
             return None                       
 
