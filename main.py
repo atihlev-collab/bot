@@ -3947,17 +3947,22 @@ def prematch_loop():
 
                         drop_text = away_drop_text
 
-                elif (          
-                    "BTTS" in market  
-                ):             
+                elif (                
+                    "BTTS" in market   
+                ):                     
 
-                    odds_text = "-"   
+                    odds_text = str(  
+                        match_odds[0]  
+                    )                 
 
-                elif (          
+                elif (                 
                     "OVER" in market   
-                ):            
+                ):                     
 
-                    odds_text = "-"    
+                    odds_text = str(   
+                        match_odds[0]  
+                    )                  
+
 
             all_signals.append(
 
