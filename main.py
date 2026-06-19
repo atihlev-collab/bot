@@ -1056,7 +1056,7 @@ def analyze_live_match(fixture):
         if minute < 15:
             return None
 
-        if minute > 80:
+        if minute > 75:
             return None
 
        
@@ -1270,12 +1270,71 @@ def analyze_live_match(fixture):
 
                 corner_probability      
 
-            )                           
+            )                  
+
+
+                # LATE GOAL                   
+
+        if (                           
+
+            minute >= 75               
+
+            and                       
+
+            minute <= 90               
+
+            and                        
+
+            max(                       
+
+                home_pressure,        
+
+                away_pressure          
+
+            ) >= 85                    
+
+            and                       
+
+            (                          
+
+                home_total_shots       
+
+                +                      
+
+                away_total_shots      
+
+            ) >= 15                   
+
+            and                        
+
+            (                          
+
+                home_corners           
+
+                +                      
+
+                away_corners          
+
+            ) >= 8                    
+
+        ):                            
+
+            return (                   
+
+                "🔥 LATE GOAL",        
+
+                90,                   
+
+                minute,               
+
+                90                    
+
+            )                          
         
 
-        # NEXT GOAL ONLY UNTIL 80'
+        # NEXT GOAL ONLY UNTIL 
 
-        if minute > 80:
+        if minute > 75:
 
             return None
 
@@ -2656,7 +2715,7 @@ def analyze_prematch_match(match):
         ):
 
             home_odds_ok = (
-                1.45 <= match_odds[0] <= 2.30
+                1.50 <= match_odds[0] <= 2.80
             )
 
 
@@ -2954,7 +3013,7 @@ def analyze_prematch_match(match):
 
             away_odds_ok = (
               
-                1.55 <= match_odds[2] <= 2.60
+                1.50 <= match_odds[2] <= 2.80
             
             )
          
