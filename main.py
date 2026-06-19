@@ -1412,22 +1412,16 @@ def analyze_live_match(fixture):
 
         goal_probability += shots_diff * 3
 
-        goal_probability += min(   
+        if (                     
 
-            10,                     
+            home_corners         
+            +
+            away_corners         
 
-            (                       
+        ) >= 6:                  
 
-                home_corners        
-
-                +                   
-
-                away_corners        
-
-            )                       
-
-        )                          
-
+            goal_probability += 3 
+            
         if home_xg >= 1.0:     
 
             goal_probability += 5   
