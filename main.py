@@ -345,6 +345,15 @@ def get_match_odds(fixture_id):
                 bet.get("name")
             )
 
+
+            send_telegram(     
+                str(           
+                    bet.get(    
+                        "name"  
+                    )           
+                )               
+            )                   
+
             print(
                 "VALUES =",
                 bet.get("values")
@@ -387,6 +396,13 @@ def get_match_odds(fixture_id):
                         away_odd = float(
                             value["odd"]
                         )
+                        
+            send_telegram(            
+
+                f"BET={bet.get('name')} VALUES={bet.get('values')}"   
+
+            )                        
+               
 
                 print(
                     "ODDS FOUND:",
