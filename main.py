@@ -1085,11 +1085,22 @@ def analyze_live_match(fixture):
 
         minute = fixture["fixture"]["status"]["elapsed"]
 
+        print(
+            "LIVE MINUTE:",
+            fixture_id,
+            minute
+        )
+
         if not minute:
             return None
 
         if minute < 15:
             return None
+
+        print(
+            "PASSED MINUTE:",
+            fixture_id
+        )
 
         if minute > 90:
             return None
