@@ -3564,6 +3564,67 @@ def analyze_prematch_match(match):
 
                 )                      
 
+            )       
+
+
+        # OVER 3.5                     
+
+        if (                          
+
+            over_prob >= 75            
+
+            and                        
+
+            expected_goals >= 3.4     
+
+            and                        
+
+            home_form["avg_scored"] >= 1.5      
+
+            and                        
+
+            away_form["avg_scored"] >= 1.3     
+
+            and                        
+
+            home_form["over25_pct"] >= 60       
+
+            and                        
+
+            away_form["over25_pct"] >= 60      
+
+            and                        
+
+            (                          
+
+                home_form["recent_over25"]      
+
+                +                     
+
+                away_form["recent_over25"]      
+
+            ) >= 5                     
+
+        ):                             
+
+            signals.append(            
+
+                (                      
+
+                    "🚀 OVER 3.5",     
+
+                    over_conf,        
+
+                    round(            
+
+                        over_prob,     
+
+                        1             
+
+                    )                  
+
+                )                      
+
             )                          
             
          
