@@ -1465,29 +1465,28 @@ def analyze_live_match(fixture):
 
         ):                            
 
-            return (                   
+        return (                   
 
-                "🔥 LATE GOAL",        
+            "🔥 LATE GOAL",        
 
-                90,                   
+            90,                     
 
-                minute,               
+            minute,                 
 
-                90                    
+            90                     
 
-            )       
-            
-        except:
+        )                          
 
-            return None
-        
+    except:                         
 
-    
+        return None                 
+
+
 # =========================================================
 # TEAM FORM
 # =========================================================
 
-def get_team_form(team_id, venue=None):
+def get_team_form(team_id, venue=None):  #0
 
     cache_key = f"{team_id}_{venue}"
 
