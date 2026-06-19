@@ -1111,7 +1111,7 @@ def analyze_live_match(fixture):
         if total >= 7:
             return None
 
-        if dominance < 3:
+        if dominance < 5:
             return None        
                        
         if (                      
@@ -1122,24 +1122,35 @@ def analyze_live_match(fixture):
 
             return None            
 
-        
+        print(
+            "OVER15 CHECK:",
+            home_team,
+            away_team,
+            minute,
+            home_pressure,
+            away_pressure,
+            home_shots_on,
+            away_shots_on,
+            home_corners,
+            away_corners
+        )
 
         # OVER 1.5 REMAINING GOALS
 
         if (
             minute <= 70
             and
-            home_pressure >= 55
+            home_pressure >= 50
             and
-            away_pressure >= 55
+            away_pressure >= 50
             and
             home_shots_on >= 2
             and
             away_shots_on >= 2
             and              
-            home_corners >= 2
+            home_corners >= 1
             and
-            away_corners >= 2
+            away_corners >= 1
         ):
 
             return (
@@ -1374,7 +1385,7 @@ def analyze_live_match(fixture):
             ) - 70
         ) * 2
 
-        goal_probability += shots_diff * 4
+        goal_probability += shots_diff * 3
 
         
 
