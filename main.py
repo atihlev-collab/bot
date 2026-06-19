@@ -1465,7 +1465,7 @@ def analyze_live_match(fixture):
 
         ):                            
 
-        return (                   
+            return (                   
 
             "🔥 LATE GOAL",        
 
