@@ -343,9 +343,7 @@ def get_match_odds(fixture_id):
             print(
                 "BET NAME =",
                 bet.get("name")
-            )
-               
-            )                   
+            )                 
 
             print(
                 "VALUES =",
