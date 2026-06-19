@@ -1199,7 +1199,18 @@ def analyze_live_match(fixture):
 
             )                          
 
-        )                               
+        )        
+
+
+        print(
+            "CORNER CHECK:",
+            home_team,
+            away_team,
+            minute,
+            corner_probability,
+            home_corners,
+            away_corners
+        )
 
         if (                           
 
