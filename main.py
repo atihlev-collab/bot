@@ -1151,6 +1151,117 @@ def analyze_live_match(fixture):
 
             )
 
+        # OVER 1.5 NEXT CORNERS          
+
+        corner_probability = 50        
+
+        corner_probability += (        
+
+            max(                        
+
+                home_pressure,         
+
+                away_pressure           
+
+            ) - 70                      
+
+        ) * 2                           
+
+        corner_probability += (         
+
+            home_corners               
+
+            +                          
+
+            away_corners                
+
+        )                               
+
+        corner_probability += (         
+
+            shots_diff                  
+
+            *                           
+
+            2                          
+
+        )                               
+
+        corner_probability = min(       
+
+            95,                        
+
+            max(                        
+
+                50,                    
+
+                corner_probability      
+
+            )                          
+
+        )                               
+
+        if (                           
+
+            minute >= 60               
+
+            and                        
+
+            minute <= 88               
+
+            and                        
+
+            (                         
+
+                home_corners          
+
+                +                       
+
+                away_corners           
+
+            ) >= 6                      
+
+            and                       
+
+            (                          
+
+                home_total_shots        
+
+                +                       
+
+                away_total_shots      
+
+            ) >= 12                     
+
+            and                        
+
+            max(                       
+
+                home_pressure,         
+
+                away_pressure           
+
+            ) >= 70                    
+
+            and                         
+
+            corner_probability >= 75    
+
+        ):                             
+
+            return (                    
+
+                "🚩 OVER 1.5 NEXT CORNERS",   
+
+                corner_probability,     
+
+                minute,                
+
+                corner_probability      
+
+            )                           
+        
+
         # NEXT GOAL ONLY UNTIL 80'
 
         if minute > 80:
