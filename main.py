@@ -3723,8 +3723,8 @@ def send_prematch_signal(
 🌍 {country}
 🏟 {league}
 
-📊 Market:
-{market}
+🔥📊 Market:
+{market}🔥
 
 🎯 Probability:
 {probability}%
@@ -4185,14 +4185,14 @@ def live_loop():
 🏆 {home} vs {away}
 
 🌍 {country}
-🏟 {league
+🏟 {league}
 
 📊 Score:
 {match["goals"]["home"] or 0} - {match["goals"]["away"] or 0}
 
 ⏱ Minute: {minute}
 
-{signal[0]}
+🔥{signal[0]}🔥
 
 📈 Form:
 {home_form["form_pct"] if home_form else 0}% -
