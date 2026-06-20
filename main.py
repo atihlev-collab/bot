@@ -2788,26 +2788,7 @@ def analyze_prematch_match(match):
                     home_super_value = True    
                 
                     home_score += 8            
-                
-                    signals.append(            
-                
-                        (                       
-                
-                            "💰 VALUE HOME",    
-                
-                            90,                 
-                
-                            round(             
-                
-                                edge,          
-                
-                                1              
-                
-                            ),                  
-                
-                        )                       
-                
-                    )                           
+                           
                 
                 elif edge >= 10:                
                 
