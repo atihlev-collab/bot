@@ -4198,21 +4198,7 @@ def live_loop():
                 "Corner Kicks"
             )        
 
-            home_xg = extract(          
-
-                stats[0],              
-
-                "Expected Goals"        
-
-            )                           
-
-            away_xg = extract(         
-
-                stats[1],               
-
-                "Expected Goals"        
-
-            )                           
+             
         
             country = match["league"]["country"]     
             league = match["league"]["name"]         
