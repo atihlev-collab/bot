@@ -4217,12 +4217,12 @@ def live_loop():
                 "Corner Kicks"
             )           
         
-country = match["league"]["country"]     
-league = match["league"]["name"]         
-
-send_telegram(                           
-
-    f"""
+            country = match["league"]["country"]     
+            league = match["league"]["name"]         
+            
+            send_telegram(                           
+            
+                f"""
 🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
