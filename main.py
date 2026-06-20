@@ -4215,9 +4215,7 @@ def live_loop():
             away_corners = extract(
                 stats[1],
                 "Corner Kicks"
-            )
-
-            send_telegram(
+            )           
         
 country = match["league"]["country"]     
 league = match["league"]["name"]         
