@@ -523,12 +523,12 @@ def odds_drop_check(
                     / old_away
                 ) * 100
 
-               print(
-                   "AWAY DROP CHECK:",
-                   fixture_id,
-                   old_away,
-                   away_odd,
-                   round(drop_percent, 2)
+                print(
+                    "AWAY DROP CHECK:",
+                    fixture_id,
+                    old_away,
+                    away_odd,
+                    round(drop_percent, 2)
                 )
 
                 if 2 <= drop_percent <= 25:
