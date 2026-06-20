@@ -4135,6 +4135,9 @@ def live_loop():
 
         home_corners = 0
         away_corners = 0
+        
+        home_xg = 0            
+        away_xg = 0            
 
         if len(stats) >= 2:
 
