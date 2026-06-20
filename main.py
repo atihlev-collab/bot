@@ -3081,69 +3081,62 @@ def analyze_prematch_match(match):
         away_super_value = False
         away_value = False
 
-        if match_odds:
-         
-            if (
+        if match_odds:                 
+
+            if (                        
+        
                 match_odds[2] is not None
-            ):
+        
+            ):                         
+        
+                edge = value_edge(      
+        
+                    min(                
+        
+                        95,            
+        
+                        away_score      
+        
+                    ),                  
+        
+                    match_odds[2]      
+        
+                )                      
+        
+                if edge >= 15:          
+        
+                    away_super_value = True   
+        
+                    away_score += 8           
+        
+                elif edge >= 10:       
+        
+                    away_value = True   
+        
+                    away_score += 4     
+        
+        away_odds_ok = True             
+    
+        if (                            
 
-               edge = value_edge(
-                   min(95, away_score),
-                   match_odds[2]
-              )
+            match_odds                  
 
+            and                         
 
-                if edge >= 15:                
+            match_odds[2] is not None   
 
-                    away_super_value = True     
-                
-                    away_score += 8             
-                
-                    signals.append(             
-                
-                        (                       
-                
-                            "💰 VALUE AWAY",    
-                
-                            90,                
-                
-                            round(             
-                
-                                edge,           
-                
-                                1              
-                
-                            )                   
-                
-                        )                      
-                
-                    )                           
-                
-                elif edge >= 10:               
-                
-                    away_value = True           
-                
-                    away_score += 4             
-                     
-        away_odds_ok = True
-
-        if match_odds and match_odds[2] is not None:
-
-            away_odds_ok = (
-              
-                1.50 <= match_odds[2] <= 2.80
-            
-            )
+        ):                             
          
-        print(                    
-            "AWAY SCORE:",        
-            home,                 
-            away,                
-            away_score,           
-            away_strength,       
-            home_strength,        
-            h2h                   
-        )          
+            print(  
+                
+                "AWAY SCORE:",        
+                home,                 
+                away,                
+                away_score,           
+                away_strength,       
+                home_strength,        
+                h2h                   
+            )          
 
 
         total_strength = (           
