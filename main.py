@@ -496,13 +496,7 @@ def odds_drop_check(
                     / old_home
                 ) * 100
 
-                print(
-                    "DROP CHECK:",
-                    fixture_id,
-                    old_home,
-                    home_odd,
-                    round(drop_percent, 2)
-                )
+              
 
                 if 4 <= drop_percent <= 25:
 
@@ -523,13 +517,7 @@ def odds_drop_check(
                     / old_away
                 ) * 100
 
-                print(
-                    "AWAY DROP CHECK:",
-                    fixture_id,
-                    old_away,
-                    away_odd,
-                    round(drop_percent, 2)
-                )
+               
 
                 if 2 <= drop_percent <= 25:
 
