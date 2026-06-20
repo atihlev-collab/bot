@@ -3806,6 +3806,9 @@ def prematch_loop():
             match_odds
         )
 
+        if not match_odds:
+            continue
+
         home_drop = False
         away_drop = False
 
