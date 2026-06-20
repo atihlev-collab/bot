@@ -3732,20 +3732,8 @@ def send_prematch_signal(
 💰 Odds:
 {odds_text}
 
-📉 Odds Drop:
-{drop_text}
-
 💎 Confidence:
 {confidence}%
-
-⭐ Rating Class:
-{"ELITE" if probability >= 95 else "STRONG"}
-
-🏅 Model Rank:
-TOP 5 PICK
-
-📋 Filter:
-TOP5 MODEL PICK
 
 {"📉 ODDS DROP" if drop_text != "-" else ""}
 """
@@ -4196,21 +4184,15 @@ def live_loop():
 
 🏆 {home} vs {away}
 
+🌍 {country}
+🏟 {league
+
 📊 Score:
 {match["goals"]["home"] or 0} - {match["goals"]["away"] or 0}
 
 ⏱ Minute: {minute}
 
 {signal[0]}
-
-🔥 Home Pressure: {home_pressure}
-🔥 Away Pressure: {away_pressure}
-
-🎯 Shots On Target:
-{home_shots} - {away_shots}
-
-🚩 Corners:
-{home_corners} - {away_corners}
 
 📈 Form:
 {home_form["form_pct"] if home_form else 0}% -
