@@ -2783,36 +2783,38 @@ def analyze_prematch_match(match):
                 )
 
 
-                if edge >= 15:           
-                 
-                    home_super_value = True  
+                if edge >= 15:                 
 
-                    home_score += 8      
-
-            signals.append(            
-
-                (                       
-        
-                    "💰 VALUE HOME",    
-        
-                    90,                
-        
-                    round(              
-                        edge,          
-                        1               
-                    )                  
-        
-                )                      
-        
-            )                           
+                    home_super_value = True    
                 
-
-                elif edge >= 10:         
-
-                    home_value = True   
-
-                    home_score += 4      
-
+                    home_score += 8            
+                
+                    signals.append(            
+                
+                        (                       
+                
+                            "💰 VALUE HOME",    
+                
+                            90,                 
+                
+                            round(             
+                
+                                edge,          
+                
+                                1              
+                
+                            ),                  
+                
+                        )                       
+                
+                    )                           
+                
+                elif edge >= 10:                
+                
+                    home_value = True         
+                
+                    home_score += 4             
+                    
         if (
             match_odds
             and
