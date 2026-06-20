@@ -1102,6 +1102,72 @@ def analyze_live_match(fixture):
             away_pressure
         )
 
+        best_pressure = max(         
+
+            home_pressure,          
+
+            away_pressure            
+
+        )                             
+
+        best_xg = max(                
+
+            home_xg,                  
+
+            away_xg                   
+
+        )                             
+
+        minimum_pressure = 60         
+
+        if minute >= 60:              
+
+            minimum_pressure = 65     
+
+        if (                         
+
+            best_pressure             
+
+            <                         
+
+            minimum_pressure          
+
+        ):                            
+
+            return None               
+
+        if dominance < 12:            
+
+            return None               
+
+        if best_xg < 1.3:             
+
+            return None               
+
+        if (                         
+            max(                      
+
+                home_shots_on,        
+
+                away_shots_on         
+
+            )                         
+
+            < 4                       
+
+        ):                            
+
+            return None               
+
+        if minute < 35:               
+
+            return None               
+
+        if total >= 5:                
+
+            return None               
+        
+
         minute = fixture["fixture"]["status"]["elapsed"]
 
         print(
@@ -1170,9 +1236,99 @@ def analyze_live_match(fixture):
                     minute,
                     90
 
-                )            
-                  
+                )         
 
+
+        if dominance >= 15:          
+
+            confidence = min(         
+
+                best_pressure,        
+                90                    
+
+            )                         
+
+            if (                      
+
+                home_pressure         
+
+                >                     
+
+                away_pressure         
+
+            ):                        
+
+                return (              
+
+                    "🎯 NEXT GOAL HOME",  
+
+                    confidence,       
+
+                    minute,           
+
+                    confidence        
+
+                )                     
+
+            else:                     
+
+                return (              
+
+                    "🎯 NEXT GOAL AWAY",  
+
+                    confidence,       
+
+                    minute,           
+
+                    confidence        
+
+                )                     
+                  
+        if dominance >= 15:           
+
+            confidence = min(         
+
+                best_pressure,        
+
+                90                    
+
+            )                         
+
+            if (                      
+
+                home_pressure         
+
+                >                     
+
+                away_pressure         
+
+            ):                        
+
+                return (              
+
+                    "🎯 NEXT GOAL HOME",  
+
+                    confidence,       
+
+                    minute,           
+
+                    confidence        
+
+                )                     
+
+            else:                     
+
+                return (              
+
+                    "🎯 NEXT GOAL AWAY",  
+
+                    confidence,       
+
+                    minute,           
+
+                    confidence        
+
+                )                      
          
 
         print(
@@ -1193,9 +1349,9 @@ def analyze_live_match(fixture):
         if (
             minute <= 70
             and
-            home_pressure >= 50
+            home_pressure >= 45
             and
-            away_pressure >= 50
+            away_pressure >= 45
             and
             home_shots_on >= 2
             and
@@ -1296,7 +1452,7 @@ def analyze_live_match(fixture):
 
                 away_corners           
 
-            ) >= 6                      
+            ) >= 5                      
 
             and                       
 
@@ -1308,7 +1464,7 @@ def analyze_live_match(fixture):
 
                 away_total_shots      
 
-            ) >= 12                     
+            ) >= 8                    
 
             and                        
 
@@ -1318,7 +1474,7 @@ def analyze_live_match(fixture):
 
                 away_pressure           
 
-            ) >= 70                    
+            ) >= 65                    
 
             and                         
 
@@ -1364,7 +1520,7 @@ def analyze_live_match(fixture):
 
                 away_pressure          
 
-            ) >= 75                    
+            ) >= 68                    
 
             and                       
 
