@@ -496,6 +496,14 @@ def odds_drop_check(
                     / old_home
                 ) * 100
 
+                print(
+                    "DROP CHECK:",
+                    fixture_id,
+                    old_home,
+                    home_odd,
+                    round(drop_percent, 2)
+                )
+
                 if 4 <= drop_percent <= 25:
 
                     drop_home = True
@@ -3805,6 +3813,10 @@ def prematch_loop():
 
         fixture_id = match["fixture"]["id"]
 
+        if not match_odds:              
+
+            continue                   
+
         match_odds = get_match_odds(
             fixture_id
         )
@@ -4196,7 +4208,23 @@ def live_loop():
             away_corners = extract(
                 stats[1],
                 "Corner Kicks"
-            )           
+            )        
+
+            home_xg = extract(          
+
+                stats[0],              
+
+                "Expected Goals"        
+
+            )                           
+
+            away_xg = extract(         
+
+                stats[1],               
+
+                "Expected Goals"        
+
+            )                           
         
             country = match["league"]["country"]     
             league = match["league"]["name"]         
