@@ -246,6 +246,12 @@ def get_statistics(fixture_id):
 
         ).json()
 
+        print(
+            "STATS RAW:",
+            fixture_id,
+            r
+        )
+        
         return r.get(
             "response",
             []
