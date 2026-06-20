@@ -3093,37 +3093,38 @@ def analyze_prematch_match(match):
               )
 
 
-               if edge >= 15:            
+                if edge >= 15:                
 
-                   away_super_value = True  
-
-                   away_score += 8       
-
-
-            signals.append(             
-                (                      
-        
-                    "💰 VALUE AWAY",   
-        
-                    90,                
-        
-                    round(             
-                        edge,          
-                        1               
-                    )                   
-        
-                )                     
-        
-            )                          
+                    away_super_value = True     
                 
-
-               elif edge >= 10:        
-
-                   away_value = True     
-
-                   away_score += 4      
-
-     
+                    away_score += 8             
+                
+                    signals.append(             
+                
+                        (                       
+                
+                            "💰 VALUE AWAY",    
+                
+                            90,                
+                
+                            round(             
+                
+                                edge,           
+                
+                                1              
+                
+                            )                   
+                
+                        )                      
+                
+                    )                           
+                
+                elif edge >= 10:               
+                
+                    away_value = True           
+                
+                    away_score += 4             
+                     
         away_odds_ok = True
 
         if match_odds and match_odds[2] is not None:
