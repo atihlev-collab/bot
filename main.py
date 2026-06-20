@@ -2789,6 +2789,24 @@ def analyze_prematch_match(match):
 
                     home_score += 8      
 
+            signals.append(            
+
+                (                       
+        
+                    "💰 VALUE HOME",    
+        
+                    90,                
+        
+                    round(              
+                        edge,          
+                        1               
+                    )                  
+        
+                )                      
+        
+            )                           
+                
+
                 elif edge >= 10:         
 
                     home_value = True   
@@ -3078,6 +3096,24 @@ def analyze_prematch_match(match):
                    away_super_value = True  
 
                    away_score += 8       
+
+
+            signals.append(             
+                (                      
+        
+                    "💰 VALUE AWAY",   
+        
+                    90,                
+        
+                    round(             
+                        edge,          
+                        1               
+                    )                   
+        
+                )                     
+        
+            )                          
+                
 
                elif edge >= 10:        
 
@@ -4186,6 +4222,11 @@ def live_loop():
             )
 
             send_telegram(
+        
+country = match["league"]["country"]     
+league = match["league"]["name"]         
+
+send_telegram(                           
 
     f"""
 🔥 LIVE SIGNAL
