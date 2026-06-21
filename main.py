@@ -147,7 +147,7 @@ def init_database():
 
     """)
 
-    cursor.execute("""                 #4
+    cursor.execute("""                 
 
         CREATE TABLE IF NOT EXISTS prematch_results ( 
     
