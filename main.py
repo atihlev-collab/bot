@@ -2661,7 +2661,14 @@ def analyze_prematch_match(match):
         home_score = home_win_score(       
             home_form,                     
             away_form                       
-        )                                  
+        )       
+
+        print(
+            "BASE HOME SCORE:",
+            home,
+            away,
+            home_score
+        )
 
         home_score += (                     
             home_strength                  
