@@ -1381,7 +1381,7 @@ def analyze_live_match(fixture):
 
             and                         
 
-            corner_probability >= 70    
+            corner_probability >= 65    
 
         ):                             
 
@@ -1423,7 +1423,7 @@ def analyze_live_match(fixture):
 
                 away_pressure          
 
-            ) >= 68                    
+            ) >= 60                    
 
             and                       
 
@@ -1435,7 +1435,7 @@ def analyze_live_match(fixture):
 
                 away_total_shots      
 
-            ) >= 10                   
+            ) >= 8                   
 
             and                        
 
