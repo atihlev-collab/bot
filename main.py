@@ -3651,35 +3651,43 @@ def analyze_prematch_match(match):
 
         if (                          
 
-            over_prob <= 50            
+            over_prob <= 45            
 
             and                        
 
-            expected_goals <= 2.4      
+            expected_goals <= 2.2      
 
             and                        
 
-            home_form["avg_scored"] <= 1.4      
+            home_form["avg_scored"] <= 1.2      
 
             and                       
 
-            away_form["avg_scored"] <= 1.4      
+            away_form["avg_scored"] <= 1.2      
+
+            and       
+
+            home_form["recent_avg_scored"] <= 1.3
+            
+            and
+            
+            away_form["recent_avg_scored"] <= 1.3
+
+            and
+
+            home_form["avg_conceded"] <= 1.2    
 
             and                        
 
-            home_form["avg_conceded"] <= 1.3    
-
-            and                        
-
-            away_form["avg_conceded"] <= 1.3    
+            away_form["avg_conceded"] <= 1.2    
 
             and                       
 
-            home_form["over25_pct"] <= 50      
+            home_form["over25_pct"] <= 45      
 
             and                       
 
-            away_form["over25_pct"] <= 50       
+            away_form["over25_pct"] <= 45       
 
         ):                            
 
