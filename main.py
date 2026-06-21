@@ -1251,6 +1251,91 @@ def analyze_live_match(fixture):
             away_corners
         )       
 
+
+                # NORMAL NEXT GOAL
+
+        if (                              
+
+            minute > 40                  
+
+            and
+
+            minute < 75                     
+
+            and
+
+            max(                           
+
+                home_pressure,            
+
+                away_pressure              
+
+            ) >= 65                        
+
+            and
+
+            max(                            
+
+                home_shots_on,              
+
+                away_shots_on              
+
+            ) >= 4                         
+
+        ):                                  
+
+            if home_pressure > away_pressure:    
+
+                return (                        
+
+                    "🎯 NEXT GOAL HOME",         
+
+                    min(                         
+
+                        95,                      
+
+                        home_pressure           
+
+                    ),                          
+
+                    minute,                     
+
+                    min(                       
+
+                        95,                     
+
+                        home_pressure            
+
+                    )                           
+
+                )                                
+
+            elif away_pressure > home_pressure:  
+
+                return (                         
+
+                    "🎯 NEXT GOAL AWAY",         
+
+                    min(                        
+
+                        95,                      
+
+                        away_pressure            
+
+                    ),                           
+
+                    minute,                     
+
+                    min(                        
+
+                        95,                      
+
+                        away_pressure           
+
+                    )                           
+
+                )                                
+
         # OVER 1.5 REMAINING GOALS
 
         if (
