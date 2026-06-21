@@ -1113,7 +1113,7 @@ def analyze_live_match(fixture):
         if not minute:
             return None
 
-        if minute < 15:
+        if minute < 25:
             return None
 
         print(
@@ -1121,7 +1121,7 @@ def analyze_live_match(fixture):
             fixture_id
         )
 
-        if minute > 90:
+        if minute > 75:
             return None
 
 
