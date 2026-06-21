@@ -952,8 +952,8 @@ def analyze_live_match(fixture):
         if home_form:
 
            home_pressure += min(
-               15,
-               round(home_form["form_pct"] / 8)
+               12,
+               round(home_form["form_pct"] / 10)
         )
 
         if away_form:
@@ -1014,11 +1014,11 @@ def analyze_live_match(fixture):
             "Expected Goals"
         )
 
-        if home_xg >= 1.0:
+        if home_xg >= 0.8:
 
-            home_pressure += 10
+            home_pressure += 5
 
-        elif home_xg >= 0.9:
+        elif home_xg >= 1.2:
 
             home_pressure += 5
 
@@ -1045,8 +1045,8 @@ def analyze_live_match(fixture):
             "Shots on Goal"
         )
 
-        if home_shots_on == 0:
-
+        if minute >= 35 and home_shots_on == 0:
+  
             home_pressure -= 10
 
         if away_shots_on == 0:
