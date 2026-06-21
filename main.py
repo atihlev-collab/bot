@@ -3119,7 +3119,23 @@ def analyze_prematch_match(match):
                 away_strength,       
                 home_strength,        
                 h2h                   
-            )          
+            )     
+
+       home_score = max(           
+            5,                       
+            min(                      
+                home_score,           
+                80                    
+            )                         
+        )                              
+        
+        away_score = max(             
+            5,                         
+            min(                       
+                away_score,            
+                80                     
+            )                         
+        )                                        
 
 
         total_strength = (              
