@@ -3318,29 +3318,29 @@ def analyze_prematch_match(match):
             home_form["recent_avg_conceded"] >= 1.2 
         ):
 
-        signals.append(                    
-
-            (                               
-        
-                "✈️ AWAY WIN",             
-        
-                confidence_from_score(      
-        
-                    away_score              
-        
-                ),                          
-        
-                round(                      
-        
-                    away_probability,       
-        
-                    1                       
-        
-                )                           
-        
-            )                               
-        
-        )                                   
+            signals.append(                    
+    
+                (                               
+            
+                    "✈️ AWAY WIN",             
+            
+                    confidence_from_score(      
+            
+                        away_score              
+            
+                    ),                          
+            
+                    round(                      
+            
+                        away_probability,       
+            
+                        1                       
+            
+                    )                           
+            
+                )                               
+            
+            )                                   
                      
         print(
             "OVER CHECK:",
