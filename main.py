@@ -3918,7 +3918,20 @@ def prematch_loop():
 
    
      
-        for market, confidence, probability in signals:
+        for signal in signals:                   
+        
+            market = signal[0]                    
+        
+            confidence = signal[1]                
+        
+            probability = signal[2]               
+        
+            if len(signal) > 3:                  
+        
+                drop_text = signal[3]             
+        
+            else:                                 
+                drop_text = "-"                                                      
          
             print(                 
                 "DEBUG SIGNAL:",   
@@ -3928,7 +3941,7 @@ def prematch_loop():
             )                    
 
             odds_text = "-"
-            drop_text = "-"
+          
 
             if match_odds:                  
 
