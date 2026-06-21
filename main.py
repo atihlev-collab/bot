@@ -2898,11 +2898,11 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
         ):
 
-            print(
-                "HOME SIGNAL:",
-                home_score,
-                home_probability
-            )
+        print(
+            "HOME SIGNAL:",
+            home_score,
+            home_probability
+        )
 
            signals.append(                    
 
@@ -3383,11 +3383,11 @@ def analyze_prematch_match(match):
             home_form["recent_avg_conceded"] >= 1.2 
         ):
 
-            print(
-                "AWAY SIGNAL:",
-                away_score,
-                away_probability
-            )
+        print(
+            "AWAY SIGNAL:",
+            away_score,
+            away_probability
+        )
 
             signals.append(                     
 
