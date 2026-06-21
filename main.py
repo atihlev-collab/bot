@@ -2836,29 +2836,30 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
         ):
 
-           signals.append(                    
+        signals.append(                   
 
-               (                              
-                   "🏆 HOME WIN",             
-           
-                   confidence_from_score(      
-                       home_score              
-                   ),                          
-           
-                   round(
-                       home_probability,
-                       1                    
-                    ),     
-                   
-                    round(
-                        edge,
-                        1    
-                                       
-                   )                             
-           
-               )                              
-           )                                          
-     
+            (                              
+        
+                "🏆 HOME WIN",              
+        
+                confidence_from_score(      
+        
+                    home_score              
+        
+                ),                          
+        
+                round(                      
+        
+                    home_probability,       
+        
+                    1                      
+        
+                )                          
+        
+            )                               
+        
+        )                                                      
+             
         # AWAY WIN
 
         away_score = (
@@ -3317,28 +3318,30 @@ def analyze_prematch_match(match):
             home_form["recent_avg_conceded"] >= 1.2 
         ):
 
-            signals.append(                     
-    
-                (                              
-                    "✈️ AWAY WIN",              
-            
-                    confidence_from_score(      
-                        away_score            
-                    ),                         
+        signals.append(                    
+
+            (                               
         
-                    round(                
-                        away_probability,
-                        1
-                    ),   
-                    
-                    round(
-                        edge,
-                        1    
-                   )                                  
-              
-               )                                  
-            )  
-             
+                "✈️ AWAY WIN",             
+        
+                confidence_from_score(      
+        
+                    away_score              
+        
+                ),                          
+        
+                round(                      
+        
+                    away_probability,       
+        
+                    1                       
+        
+                )                           
+        
+            )                               
+        
+        )                                   
+                     
         print(
             "OVER CHECK:",
             home,
@@ -3924,8 +3927,10 @@ def prematch_loop():
         
             confidence = signal[1]                
         
-            probability = signal[2]               
-        
+            probability = signal[2]   
+
+            drop_text = "-"                 
+                    
             if len(signal) > 3:                  
         
                 drop_text = signal[3]             
