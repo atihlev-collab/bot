@@ -1100,73 +1100,7 @@ def analyze_live_match(fixture):
         dominance = abs(
             home_pressure -
             away_pressure
-        )
-
-        best_pressure = max(         
-
-            home_pressure,          
-
-            away_pressure            
-
-        )                             
-
-        best_xg = max(                
-
-            home_xg,                  
-
-            away_xg                   
-
-        )                             
-
-        minimum_pressure = 60         
-
-        if minute >= 60:              
-
-            minimum_pressure = 65     
-
-        if (                         
-
-            best_pressure             
-
-            <                         
-
-            minimum_pressure          
-
-        ):                            
-
-            return None               
-
-        if dominance < 12:            
-
-            return None               
-
-        if best_xg < 1.3:             
-
-            return None               
-
-        if (                         
-            max(                      
-
-                home_shots_on,        
-
-                away_shots_on         
-
-            )                         
-
-            < 4                       
-
-        ):                            
-
-            return None               
-
-        if minute < 35:               
-
-            return None               
-
-        if total >= 5:                
-
-            return None               
-        
+        )             
 
         minute = fixture["fixture"]["status"]["elapsed"]
 
@@ -1190,7 +1124,68 @@ def analyze_live_match(fixture):
         if minute > 90:
             return None
 
-       
+
+        best_pressure = max(         
+
+            home_pressure,            
+
+            away_pressure             
+
+        )                            
+
+        minimum_pressure = 50        
+
+        if minute >= 60:             
+
+            minimum_pressure = 54     
+
+        if minute >= 70:             
+
+            minimum_pressure = 57     
+
+        if (                         
+
+            best_pressure             
+
+            <                         
+
+            minimum_pressure         
+
+        ):                            
+
+            return None               
+
+        if dominance < 7:            
+
+            return None               
+
+        min_shots = 4               
+
+        if minute >= 60:              
+
+            min_shots = 5             
+
+        if minute >= 70:            
+
+            min_shots = 6            
+
+        if (                         
+
+            max(                     
+
+                home_shots_on,        
+
+                away_shots_on        
+
+            )                        
+
+            <                        
+
+            min_shots                 
+
+        ):                           
+
+            return None               
 
         home = fixture["goals"]["home"] or 0
         away = fixture["goals"]["away"] or 0
@@ -1237,99 +1232,7 @@ def analyze_live_match(fixture):
                     90
 
                 )         
-
-
-        if dominance >= 15:          
-
-            confidence = min(         
-
-                best_pressure,        
-                90                    
-
-            )                         
-
-            if (                      
-
-                home_pressure         
-
-                >                     
-
-                away_pressure         
-
-            ):                        
-
-                return (              
-
-                    "🎯 NEXT GOAL HOME",  
-
-                    confidence,       
-
-                    minute,           
-
-                    confidence        
-
-                )                     
-
-            else:                     
-
-                return (              
-
-                    "🎯 NEXT GOAL AWAY",  
-
-                    confidence,       
-
-                    minute,           
-
-                    confidence        
-
-                )                     
-                  
-        if dominance >= 15:           
-
-            confidence = min(         
-
-                best_pressure,        
-
-                90                    
-
-            )                         
-
-            if (                      
-
-                home_pressure         
-
-                >                     
-
-                away_pressure         
-
-            ):                        
-
-                return (              
-
-                    "🎯 NEXT GOAL HOME",  
-
-                    confidence,       
-
-                    minute,           
-
-                    confidence        
-
-                )                     
-
-            else:                     
-
-                return (              
-
-                    "🎯 NEXT GOAL AWAY",  
-
-                    confidence,       
-
-                    minute,           
-
-                    confidence        
-
-                )                      
-         
+                   
 
         print(
             "OVER15 CHECK:",
