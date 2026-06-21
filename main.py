@@ -2732,11 +2732,11 @@ def analyze_prematch_match(match):
             away_strength                  
         ) * 0.25      
 
-        home_score += h2h * 2  
+        home_score += h2h  
 
         if h2h >= 4:          
 
-            home_score += 4   
+            home_score += 2  
 
         elif h2h >= 2:       
 
@@ -2869,7 +2869,9 @@ def analyze_prematch_match(match):
         )                 
          
         if (
-            home_score >= 30
+            home_score >= 35
+            and
+            home_probability >= 60
             and
             home_odds_ok
             and
@@ -3148,13 +3150,13 @@ def analyze_prematch_match(match):
         
                     away_super_value = True   
         
-                    away_score += 8           
+                    away_score += 5           
         
                 elif edge >= 10:       
         
                     away_value = True   
         
-                    away_score += 4     
+                    away_score += 3     
         
         away_odds_ok = True             
     
@@ -3353,10 +3355,41 @@ def analyze_prematch_match(match):
 
             home_score -= 4          
 
-            away_score -= 4           
+            away_score -= 4     
+
+        home_score = min(     
+
+            80,              
+
+            max(              
+
+                -80,          
+
+                home_score    
+
+            )                 
+
+        )                    
+
+
+        away_score = min(     
+
+            80,              
+
+            max(              
+
+                -80,        
+
+                away_score    
+
+            )                 
+
+        )                   
          
         if (
-            away_score >= 30
+            away_score >= 35
+            and
+            away_probability >= 60
             and
             away_odds_ok
             and
