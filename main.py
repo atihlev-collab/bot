@@ -2904,9 +2904,9 @@ def analyze_prematch_match(match):
                 home_probability
             )
 
-           signals.append(                    
+            signals.append(                    
 
-               (                              
+                (                              
                    "🏆 HOME WIN",             
            
                    confidence_from_score(      
