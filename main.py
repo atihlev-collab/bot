@@ -2836,29 +2836,29 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
         ):
 
-        signals.append(                   
-
-            (                              
-        
-                "🏆 HOME WIN",              
-        
-                confidence_from_score(      
-        
-                    home_score              
-        
-                ),                          
-        
-                round(                      
-        
-                    home_probability,       
-        
-                    1                      
-        
-                )                          
-        
-            )                               
-        
-        )                                                      
+            signals.append(                   
+    
+                (                              
+            
+                    "🏆 HOME WIN",              
+            
+                    confidence_from_score(      
+            
+                        home_score              
+            
+                    ),                          
+            
+                    round(                      
+            
+                        home_probability,       
+            
+                        1                      
+            
+                    )                          
+            
+                )                               
+            
+            )                                                      
              
         # AWAY WIN
 
