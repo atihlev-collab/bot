@@ -4284,20 +4284,8 @@ def live_loop():
 
 🔥{signal[0]}🔥
 
-📈 Form:
-{home_form["form_pct"] if home_form else 0}% -
-{away_form["form_pct"] if away_form else 0}%   
-
-⚽ Avg Scored:
-{home_form["avg_scored"] if home_form else 0} -
-{away_form["avg_scored"] if away_form else 0}   
-
-🛡 Avg Conceded:
-{home_form["avg_conceded"] if home_form else 0} -
-{away_form["avg_conceded"] if away_form else 0}   
-
-⚽ xG:
-{home_xg} - {away_xg}
+💰 Odds:
+{odds_text}
 
 💎 Confidence: {signal[1]}%
 
