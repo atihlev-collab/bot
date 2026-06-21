@@ -147,7 +147,33 @@ def init_database():
 
     """)
 
+    cursor.execute("""                 #4
 
+        CREATE TABLE IF NOT EXISTS prematch_results ( 
+    
+            id INTEGER PRIMARY KEY AUTOINCREMENT,      
+    
+            fixture_id INTEGER,                         
+    
+            home_team TEXT,                             
+    
+            away_team TEXT,                             
+    
+            market TEXT,                                
+    
+            probability REAL,                          
+    
+            confidence REAL,                            
+    
+            odd REAL,                                  
+    
+            result TEXT DEFAULT 'PENDING',             
+    
+            created_at TEXT                            
+    
+        )                                               
+    
+        """)                                           
 
 
     conn.commit()
@@ -2756,7 +2782,8 @@ def analyze_prematch_match(match):
                    
                 
                 elif edge >= 10:                
-                
+
+                    
                     home_value = True         
                 
                     home_score += 4             
@@ -2818,13 +2845,15 @@ def analyze_prematch_match(match):
                        home_score              
                    ),                          
            
-                   round(                    
-                       (                    
-                           100              
-                           /                
-                           match_odds[0]     
-                       ),                    
+                   round(
+                       home_probability,
                        1                    
+                    ),     
+                   
+                    round(
+                        edge,
+                        1    
+                                       
                    )                             
            
                )                              
@@ -3289,21 +3318,22 @@ def analyze_prematch_match(match):
         ):
 
             signals.append(                     
-
-            (                              
-                "✈️ AWAY WIN",              
-        
-                confidence_from_score(      
-                    away_score            
-                ),                         
+    
+                (                              
+                    "✈️ AWAY WIN",              
+            
+                    confidence_from_score(      
+                        away_score            
+                    ),                         
         
                     round(                
-                        (                  
-                            100            
-                            /              
-                            match_odds[2]  
-                        ),                 
-                        1                  
+                        away_probability,
+                        1
+                    ),   
+                    
+                    round(
+                        edge,
+                        1    
                    )                                  
               
                )                                  
