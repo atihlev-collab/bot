@@ -1165,34 +1165,40 @@ def analyze_live_match(fixture):
 
         if minute >= 70:            
 
-            min_shots = 6            
+            min_shots = 5            
+     
 
-        if (                         
+        home = fixture["goals"]["home"] or 0     
+        away = fixture["goals"]["away"] or 0     
 
-            max(                     
+        total = home + away                      
 
-                home_shots_on,        
+        if total >= 5:                            
+            min_shots -= 1                        
 
-                away_shots_on        
+        if (                                     
 
-            )                        
+            max(                                  
 
-            <                        
+                home_shots_on,                   
 
-            min_shots                 
+                away_shots_on                    
 
-        ):                           
+            )                                    
 
-            return None               
+            <                                     
 
-        home = fixture["goals"]["home"] or 0
-        away = fixture["goals"]["away"] or 0
+            min_shots                            
 
-        total = home + away
+        ):                                       
 
-        goal_diff = abs(
-            home - away
-        )
+            return None                           
+
+        goal_diff = abs(                         
+
+            home - away                           
+
+        )                                         
 
         # FAST GOALS OVERRIDE
 
