@@ -4264,12 +4264,38 @@ def live_loop():
                 "Corner Kicks"
             )           
         
-            country = match["league"]["country"]     
-            league = match["league"]["name"]         
-            
-            send_telegram(                           
-            
-                f"""
+        country = match["league"]["country"]      
+        league = match["league"]["name"]         
+
+        odds_text = "-"                          
+
+        match_odds = get_match_odds(              
+
+            fixture_id                           
+
+        )                                         
+
+        if match_odds:                           
+
+            if "HOME" in signal[0]:              
+
+                odds_text = str(                  
+
+                    match_odds[0]                 
+
+                )                               
+
+            elif "AWAY" in signal[0]:             
+
+                odds_text = str(                  
+
+                    match_odds[2]                 
+
+                )                               
+
+        send_telegram(                            
+
+            f"""                                
 🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
