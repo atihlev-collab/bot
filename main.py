@@ -837,6 +837,8 @@ def get_upcoming_matches():
 def analyze_live_match(fixture):
     try:
         fixture_id = fixture["fixture"]["id"]
+
+        minute = fixture["fixture"]["status"]["elapsed"]
         
         home_goals = fixture["goals"].get("home", 0) or 0
         away_goals = fixture["goals"].get("away", 0) or 0
@@ -896,10 +898,7 @@ def analyze_live_match(fixture):
         stats = get_statistics(
             fixture_id
         )
-
-        stats = get_statistics(    
-            fixture_id               
-        )                           
+         
 
         print(                       
             "LIVE STATS:",          
@@ -907,7 +906,7 @@ def analyze_live_match(fixture):
             len(stats)               
         )                           
 
-        if len(stats) == 0:
+        if len(stats) < 2:
 
             print(
                 "NO STATS:",
@@ -1014,19 +1013,19 @@ def analyze_live_match(fixture):
             "Expected Goals"
         )
 
-        if home_xg >= 0.8:
+        if home_xg >= 1.2:
+
+            home_pressure += 10
+
+        elif home_xg >= 0.8:
 
             home_pressure += 5
 
-        elif home_xg >= 1.2:
-
-            home_pressure += 5
-
-        if away_xg >= 1.0:
+        if away_xg >= 1.2:
 
             away_pressure += 10
 
-        elif away_xg >= 0.9:
+        elif away_xg >= 0.8:
 
            away_pressure += 5
 
@@ -1102,7 +1101,6 @@ def analyze_live_match(fixture):
             away_pressure
         )             
 
-        minute = fixture["fixture"]["status"]["elapsed"]
 
         print(
             "LIVE MINUTE:",
