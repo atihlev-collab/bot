@@ -3085,7 +3085,12 @@ def analyze_prematch_match(match):
 
             home_score        
 
-        )                    
+        )   
+
+        print(
+            "AFTER COLLAPSE+DEFENSE:",
+            home_score
+        )
 
         home_edge = (
             home_form["wins"]
@@ -3116,6 +3121,11 @@ def analyze_prematch_match(match):
             -
             away_form["form_pct"]             
         )         
+
+        print(
+            "AFTER WIN EDGE:",
+            home_score
+        )
 
         # MOMENTUM BONUS               
 
@@ -3571,7 +3581,11 @@ def analyze_prematch_match(match):
         if away_drop:    
 
             away_score += 4  
-       
+
+        print(
+            "AFTER HOME DROP:",
+            home_score
+        )
         
         # FORM COLLAPSE BONUS
 
