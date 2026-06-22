@@ -2704,7 +2704,9 @@ def analyze_prematch_match(match):
         )                       
      
         signals = []
-
+        
+        home_odds_ok = False
+        away_odds_ok = False
         
                 # HOME WIN
 
@@ -2900,8 +2902,7 @@ def analyze_prematch_match(match):
 
             print(
                 "HOME SIGNAL:",
-                home_score,
-                home_probability
+                home_score                
             )
 
             signals.append(                    
@@ -3424,8 +3425,7 @@ def analyze_prematch_match(match):
 
             print(
                 "AWAY SIGNAL:",
-                away_score,
-                away_probability
+                away_score           
             )
 
             signals.append(                     
