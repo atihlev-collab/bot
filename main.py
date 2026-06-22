@@ -4457,7 +4457,7 @@ def send_prematch_signal(
 
     )
 
-     print(
+    print(
         "SIGNAL SAVED:",
         fixture_id,
         market,
