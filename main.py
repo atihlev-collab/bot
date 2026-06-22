@@ -2981,6 +2981,24 @@ def analyze_prematch_match(match):
             away_form["wins"]
         )
 
+        # WIN EDGE BONUS                
+
+        if (                             
+
+            home_edge >= 4               
+
+        ):                               
+
+            home_score += 3             
+
+        elif (                           
+
+            home_edge >= 2              
+
+        ):                              
+
+            home_score += 1              
+
         form_gap = (                         
             home_form["form_pct"]             
             -
@@ -3018,7 +3036,26 @@ def analyze_prematch_match(match):
 
         elif recent_gap >= 15:   
 
-            home_score += 2      
+            home_score += 2    
+
+
+        # RECENT GOAL DIFF BONUS         
+
+        if (                            
+
+            home_form["recent_goal_diff"] >= 6   
+
+        ):                               
+
+            home_score += 4              
+
+        elif (                          
+
+            home_form["recent_goal_diff"] >= 3   
+
+        ):                              
+
+            home_score += 2             
 
         home_super_value = False
         home_value = False
@@ -3355,6 +3392,25 @@ def analyze_prematch_match(match):
             home_form["wins"]
         )
 
+
+        # WIN EDGE BONUS                 
+
+        if (                            
+
+            away_edge >= 4               
+
+        ):                              
+
+            away_score += 3             
+
+        elif (                          
+
+            away_edge >= 2               
+
+        ):                               
+
+            away_score += 1             
+
         away_gap = (
             away_form["form_pct"]
             -
@@ -3392,7 +3448,25 @@ def analyze_prematch_match(match):
 
         elif recent_away_gap >= 15:   
 
-            away_score += 2           
+            away_score += 2        
+
+        # RECENT GOAL DIFF BONUS         
+
+        if (                             
+
+            away_form["recent_goal_diff"] >= 6  
+
+        ):                              
+
+            away_score += 4             
+
+        elif (                           
+
+            away_form["recent_goal_diff"] >= 3  
+
+        ):                              
+
+            away_score += 2             
              
         away_super_value = False
         away_value = False
