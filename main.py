@@ -3134,10 +3134,13 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None
             ):
 
-                edge = value_edge(
-                    min(95, home_score),
-                    match_odds[0]
-                )
+                edge = value_edge(     
+                    
+                    home_probability,        
+
+                    match_odds[0]           
+
+                )                          
 
                 print(
                     "HOME VALUE EDGE:",
@@ -3616,19 +3619,13 @@ def analyze_prematch_match(match):
         
             ):                         
         
-                edge = value_edge(      
-        
-                    min(                
-        
-                        95,            
-        
-                        away_score      
-        
-                    ),                  
-        
-                    match_odds[2]      
-        
-                )                      
+                edge = value_edge(         
+
+                    away_probability,        
+
+                    match_odds[2]            
+
+                )                            
         
                 if edge >= 15:          
         
