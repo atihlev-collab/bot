@@ -4457,6 +4457,13 @@ def send_prematch_signal(
 
     )
 
+     print(
+        "SIGNAL SAVED:",
+        fixture_id,
+        market,
+        confidence
+    )
+
 # =========================================================
 # PREMATCH LOOP
 # =========================================================
