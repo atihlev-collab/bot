@@ -3313,33 +3313,37 @@ def analyze_prematch_match(match):
 
             away_score += 10
 
-        # SUPER FORM BONUS
+               # SUPER FORM BONUS             
 
-        if (
-            away_form["form_pct"] >= 80
-            and
-            away_form["wins"] >= 6
-        ):
+        if (                          
 
-        # DEFENSIVE BONUS              
+            away_form["form_pct"] >= 80 
 
-        if (                              
+            and                         
+
+            away_form["wins"] >= 6      
+
+        ):                              
+
+            away_score += 5             
+
+        # DEFENSIVE BONUS             
+
+        if (                           
 
             away_form["clean_sheet_pct"] >= 50  
 
-        ):                               
+        ):                             
 
-            away_score += 3              
+            away_score += 3            
 
-        elif (                           
+        elif (                        
 
             away_form["clean_sheet_pct"] >= 35  
 
-        ):                                
+        ):                              
 
-            away_score += 1              
-
-            away_score += 5
+            away_score += 1            
          
  
         away_edge = (
