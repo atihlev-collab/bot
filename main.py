@@ -2680,18 +2680,73 @@ def analyze_prematch_match(match):
 
         ) * 0.20                             
 
-        expected_goals = (               
+        expected_goals = (         
+            
             home_attack                 
             +                              
             away_attack                    
-        )                                
+        )            
 
-        over_prob = poisson_over25(                
+
+        # HOT ATTACK BONUS                
+
+        if (                               
+
+            home_form["recent_avg_scored"] 
+
+            >=                             
+
+            home_form["avg_scored"] + 0.5  
+
+        ):                                
+
+            expected_goals += 0.15        
+
+        if (                               
+
+            away_form["recent_avg_scored"]
+
+            >=                            
+
+            away_form["avg_scored"] + 0.5 
+
+        ):                                
+
+            expected_goals += 0.15         
+
+        over_prob = poisson_over25(    
 
             home_attack,                             
             away_attack                              
 
-        )                                           
+        )       
+
+
+        # HIGH SCORING FORM BONUS        
+
+        if (                              
+
+            home_form["recent_avg_scored"] 
+
+            >= 2.0                        
+
+            and                           
+
+            away_form["recent_avg_scored"]
+
+            >= 1.5                         
+
+        ):                               
+
+            over_prob += 3                 
+
+        over_prob = min(                  
+
+            95,                           
+
+            over_prob                     
+
+        )                                
 
         btts_home_attack = (                
             home_form["avg_scored"]          
@@ -2868,6 +2923,25 @@ def analyze_prematch_match(match):
             -
             away_form["recent_form_pct"]      
         )       
+
+
+        # RECENT FORM EXPLOSION BONUS     
+
+        if (                             
+
+            recent_gap >= 35               
+
+        ):                                 
+
+            home_score += 5                
+
+        elif (                            
+
+            recent_gap >= 20               
+
+        ):                                
+
+            home_score += 3                
 
         if recent_gap >= 25:     
 
@@ -3200,7 +3274,26 @@ def analyze_prematch_match(match):
             away_form["recent_form_pct"]       
             -
             home_form["recent_form_pct"]    
-        )               
+        )      
+
+
+        # RECENT FORM EXPLOSION BONUS      
+
+        if (                               
+
+            recent_away_gap >= 35          
+
+        ):                                 
+
+            away_score += 5               
+
+        elif (                            
+
+            recent_away_gap >= 20          
+
+        ):                                 
+
+            away_score += 3               
 
         if recent_away_gap >= 25:     
 
