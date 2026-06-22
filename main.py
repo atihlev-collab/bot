@@ -2841,6 +2841,25 @@ def analyze_prematch_match(match):
             away_form                       
         )     
 
+          
+
+        h2h = h2h_score(             
+            home_id,                   
+            away_id                   
+        )                            
+
+        home_score = home_win_score(       
+            home_form,                     
+            away_form                       
+        )                                  
+
+        home_score += (                     
+            home_strength                  
+            -                              
+            away_strength                  
+        ) * 0.25      
+
+
         # STRENGTH GAP BONUS            
 
         strength_gap = (               
@@ -2867,23 +2886,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            home_score += 2      
-
-        h2h = h2h_score(             
-            home_id,                   
-            away_id                   
-        )                            
-
-        home_score = home_win_score(       
-            home_form,                     
-            away_form                       
-        )                                  
-
-        home_score += (                     
-            home_strength                  
-            -                              
-            away_strength                  
-        ) * 0.25      
+            home_score += 2    
 
         home_score += h2h  
                  
