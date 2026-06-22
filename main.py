@@ -2857,7 +2857,19 @@ def analyze_prematch_match(match):
             home_strength                  
             -                              
             away_strength                  
-        ) * 0.25      
+        ) * 0.25     
+
+        print(                     
+
+            "HOME BASE SCORE:",      
+
+            home,                    
+
+            away,                   
+
+            home_score              
+
+        )                            
 
 
         # STRENGTH GAP BONUS            
@@ -3134,13 +3146,13 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None
             ):
 
-                edge = value_edge(     
-                    
-                    home_probability,        
+                edge = value_edge(              
 
-                    match_odds[0]           
-
-                )                          
+                    min(95, home_score),        
+                
+                    match_odds[0]               
+                
+                )                                       
 
                 print(
                     "HOME VALUE EDGE:",
@@ -3355,7 +3367,19 @@ def analyze_prematch_match(match):
             away_strength            
             -                        
             home_strength           
-        ) * 0.25                    
+        ) * 0.25       
+
+        print(                      
+
+            "AWAY BASE SCORE:",      
+
+            home,                    
+
+            away,                   
+
+            away_score              
+
+        )                           
 
         away_score -= h2h * 2    
 
@@ -3619,13 +3643,13 @@ def analyze_prematch_match(match):
         
             ):                         
         
-                edge = value_edge(         
+                edge = value_edge(                
 
-                    away_probability,        
-
-                    match_odds[2]            
-
-                )                            
+                    min(95, away_score),         
+                
+                    match_odds[2]                 
+                
+                )                                          
         
                 if edge >= 15:          
         
