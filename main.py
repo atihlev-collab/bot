@@ -2735,6 +2735,40 @@ def analyze_prematch_match(match):
         ) * 0.25      
 
         home_score += h2h  
+                 
+        # HOME VENUE BONUS                
+
+        if (                              
+        
+            home_form["home_games"] >= 3   
+        
+        ):                                
+        
+            home_home_winrate = (          
+        
+                home_form["home_wins"]    
+        
+                /                        
+        
+                home_form["home_games"]    
+        
+            ) * 100                       
+        
+            if (                           
+        
+                home_home_winrate >= 70   
+        
+            ):                            
+        
+                home_score += 5           
+        
+            elif (                        
+        
+                home_home_winrate >= 55    
+        
+            ):                            
+        
+                home_score += 3          
 
         if h2h >= 4:          
 
