@@ -2722,6 +2722,29 @@ def analyze_prematch_match(match):
         )       
 
 
+        # BOTH DEFENCES WEAK BONUS         
+
+        if (                              
+
+            home_form["avg_conceded"] >= 1.5  
+
+            and                            
+
+            away_form["avg_conceded"] >= 1.5 
+
+        ):                                
+
+            over_prob += 4                
+
+        over_prob = min(                  
+
+            95,                           
+
+            over_prob                     
+
+        )                                
+
+
         # HIGH SCORING FORM BONUS        
 
         if (                              
@@ -2765,7 +2788,30 @@ def analyze_prematch_match(match):
             btts_home_attack,               
             btts_away_attack                 
         
-        )                                   
+        )   
+
+
+        # BTTS MOMENTUM BONUS              
+
+        if (                              
+
+            home_form["recent_avg_scored"] >= 1.5  
+
+            and                            
+
+            away_form["recent_avg_scored"] >= 1.2  
+
+        ):                                
+
+            btts_prob += 3                
+
+        btts_prob = min(                  
+
+            95,                           
+
+            btts_prob                     
+
+        )                                
 
         form_score = calculate_form_score(
             home_form,
@@ -3835,10 +3881,21 @@ def analyze_prematch_match(match):
             home_form["recent_avg_scored"] >= 1.0  
             and                               
             away_form["recent_avg_scored"] >= 1.0  
-            and
-            home_form["btts"] >= 2
-            and
-            away_form["btts"] >= 2
+            and                             
+
+            (
+                home_form["btts"]          
+                /
+                home_form["played"]          
+            ) >= 0.50                        
+
+            and                             
+
+            (
+                away_form["btts"]            
+                /
+                away_form["played"]         
+            ) >= 0.50                        
             and                                
             home_form["scored_pct"] >= 70      
             and                              
