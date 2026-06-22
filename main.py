@@ -2959,6 +2959,13 @@ def analyze_prematch_match(match):
                 0.5                       
             )      
 
+        print(
+            "HOME EDGE SCORE:",
+            home,
+            away,
+            home_edge_score
+        )
+
         if home_drop:      
 
             home_score += 4   
@@ -3130,6 +3137,13 @@ def analyze_prematch_match(match):
                 edge = value_edge(
                     min(95, home_score),
                     match_odds[0]
+                )
+
+                print(
+                    "HOME VALUE EDGE:",
+                    home,
+                    away,
+                    edge
                 )
 
 
@@ -3402,13 +3416,27 @@ def analyze_prematch_match(match):
             away_edge_score = odds_score( 
                 min(95, away_score),     
                 match_odds[2]            
-            )                                          
+            )        
+
+                print(
+                    "AWAY VALUE EDGE:",
+                    home,
+                    away,
+                    edge
+                )
 
             away_score += (             
                 away_edge_score          
                 *                        
                 0.5                      
-            )           
+            )       
+
+        print(
+            "AWAY EDGE SCORE:",
+            home,
+            away,
+            away_edge_score
+        )
 
         if away_drop:    
 
