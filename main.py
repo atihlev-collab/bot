@@ -2871,6 +2871,8 @@ def analyze_prematch_match(match):
         if (
             home_score >= 35
             and
+            score_gap >= 10
+            and
             home_odds_ok
             and
             home_form["unbeaten_pct"] >= 60
@@ -3382,10 +3384,22 @@ def analyze_prematch_match(match):
 
             )                 
 
-        )                   
+        )     
+
+        score_gap = abs(     
+
+            home_score        
+
+            -                 
+
+            away_score        
+
+        )                     
          
         if (
             away_score >= 35
+            and
+            score_gap >= 10
             and
             away_odds_ok
             and
