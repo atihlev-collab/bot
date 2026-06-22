@@ -3418,12 +3418,18 @@ def analyze_prematch_match(match):
                 match_odds[2]            
             )        
 
-                print(
-                    "AWAY VALUE EDGE:",
-                    home,
-                    away,
-                    edge
-                )
+            print(                     
+
+                "AWAY EDGE SCORE:",      
+        
+                home,                     
+        
+                away,                     
+        
+                away_edge_score           
+        
+            )                            
+
 
             away_score += (             
                 away_edge_score          
