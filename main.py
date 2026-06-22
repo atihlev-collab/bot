@@ -3011,7 +3011,7 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 2            
             and
-            form_gap >= 15
+            form_gap >= 12
             and
             recent_gap >= 5
             and
@@ -3576,7 +3576,46 @@ def analyze_prematch_match(match):
 
             away_score        
 
-        )                     
+        )      
+
+
+        # DOMINANCE BONUS                
+
+        if (                             
+
+            score_gap >= 35               
+
+        ):                               
+
+            if (                         
+
+                home_score > away_score  
+
+            ):                            
+
+                home_score += 4          
+
+            else:                         
+
+                away_score += 4          
+
+        elif (                           
+
+            score_gap >= 25               
+
+        ):                               
+
+            if (                         
+
+                home_score > away_score   
+
+            ):                            
+
+                home_score += 2          
+
+            else:                        
+
+                away_score += 2          
          
         if (
             away_score >= 35          
@@ -3591,7 +3630,7 @@ def analyze_prematch_match(match):
             and                        
             away_edge >= 2             
             and
-            away_gap >= 15
+            away_gap >= 12
             and
             recent_away_gap >= 5
             and
