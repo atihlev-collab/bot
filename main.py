@@ -2941,34 +2941,38 @@ def analyze_prematch_match(match):
 
             home_score += 10
 
-        # SUPER FORM BONUS
+        # SUPER FORM BONUS                
 
-        if (
-            home_form["form_pct"] >= 80
-            and
-            home_form["wins"] >= 6
-        ):   
+        if (                             
+
+            home_form["form_pct"] >= 80   
+
+            and                          
+
+            home_form["wins"] >= 6       
+
+        ):                               
+
+            home_score += 5               
 
 
         # DEFENSIVE BONUS                
 
         if (                             
 
-            home_form["clean_sheet_pct"] >= 50   
+            home_form["clean_sheet_pct"] >= 50  
 
         ):                               
 
-            home_score += 3              
+            home_score += 3               
 
-        elif (                            
+        elif (                           
 
             home_form["clean_sheet_pct"] >= 35   
 
-        ):                               
+        ):                              
 
-            home_score += 1             
-
-            home_score += 5                   
+            home_score += 1                     
            
 
         home_edge = (
