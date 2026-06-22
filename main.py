@@ -2151,7 +2151,25 @@ def home_win_score(
         away_form["recent_avg_conceded"]     
         -                                   
         home_form["recent_avg_conceded"]      
-    ) * 4                                     
+    ) * 4           
+
+    print(                       
+
+        "SCORE PARTS:",          
+
+        home_form["total_scored"] - away_form["total_scored"],     
+
+        home_form["goal_diff"] - away_form["goal_diff"],           
+
+        home_form["recent_goal_diff"] - away_form["recent_goal_diff"], 
+
+        home_form["form_pct"] - away_form["form_pct"],             
+
+        home_form["recent_form_pct"] - away_form["recent_form_pct"], 
+
+        home_form["momentum"] - away_form["momentum"]               
+
+    )                         
 
     return round(score, 2)
 
