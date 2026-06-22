@@ -3596,26 +3596,33 @@ def analyze_prematch_match(match):
             away_score += 2           
                               
 
-        if probability_gap >= 40:   
+        if probability_gap >= 40:     
 
-            if home_probability > away_probability:  
+            if (                      
 
-                home_score += 6      
+                home_probability > away_probability   
 
-            else:                    
+            ):                        
 
-                away_score += 4       
+                home_score += 3        
 
+            else:                      
 
-        elif probability_gap >= 25: 
+                away_score += 3        
 
-            if home_probability > away_probability:  
+        elif probability_gap >= 25:    
 
-                home_score += 2       
+            if (                       
 
-            else:                     
+                home_probability > away_probability   
 
-                away_score += 2       
+            ):                        
+
+                home_score += 1        
+
+            else:                      
+
+                away_score += 1        
 
 
         if (                         
@@ -3628,7 +3635,26 @@ def analyze_prematch_match(match):
 
             home_score -= 4          
 
-            away_score -= 4     
+            away_score -= 4    
+
+
+        # EXTREME MOMENTUM BONUS         
+
+        if (                             
+
+            home_form["momentum"] >= 25   
+
+        ):                                
+
+            home_score += 3              
+
+        if (                             
+
+            away_form["momentum"] >= 25   
+
+        ):                               
+
+            away_score += 3               
 
         home_score = min(     
 
