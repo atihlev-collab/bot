@@ -2949,6 +2949,25 @@ def analyze_prematch_match(match):
             home_form["wins"] >= 6
         ):   
 
+
+        # DEFENSIVE BONUS                
+
+        if (                             
+
+            home_form["clean_sheet_pct"] >= 50   
+
+        ):                               
+
+            home_score += 3              
+
+        elif (                            
+
+            home_form["clean_sheet_pct"] >= 35   
+
+        ):                               
+
+            home_score += 1             
+
             home_score += 5                   
            
 
@@ -3297,6 +3316,24 @@ def analyze_prematch_match(match):
             and
             away_form["wins"] >= 6
         ):
+
+        # DEFENSIVE BONUS              
+
+        if (                              
+
+            away_form["clean_sheet_pct"] >= 50  
+
+        ):                               
+
+            away_score += 3              
+
+        elif (                           
+
+            away_form["clean_sheet_pct"] >= 35  
+
+        ):                                
+
+            away_score += 1              
 
             away_score += 5
          
@@ -3786,6 +3823,10 @@ def analyze_prematch_match(match):
             home_form["avg_conceded"] >= 1.0
             and                                            
             away_form["avg_conceded"] >= 1.0 
+            and                           
+            home_form["clean_sheet_pct"] <= 45  
+            and                          
+            away_form["clean_sheet_pct"] <= 45   
             and                                  
             home_form["recent_avg_conceded"] >= 1.0 
             and                                    
@@ -3965,6 +4006,14 @@ def analyze_prematch_match(match):
             and                        
 
             away_form["avg_conceded"] <= 1.2    
+
+            and                          
+
+            home_form["clean_sheet_pct"] >= 35  
+
+            and                           
+
+            away_form["clean_sheet_pct"] >= 35   
 
             and                       
 
