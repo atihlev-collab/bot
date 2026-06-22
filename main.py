@@ -3167,7 +3167,9 @@ def analyze_prematch_match(match):
             and
             home_form["unbeaten_pct"] >= 60
             and
-            home_form["wins"] >= 2     
+            home_form["wins"] >= 2  
+            and                         
+            home_form["losses"] <= 3      
             and                        
             home_form["draws"] <= 4    
             and                         
@@ -3192,6 +3194,8 @@ def analyze_prematch_match(match):
             ) >= 0.30                    
             and
             home_form["recent_avg_scored"] >= 1.5
+            and                           
+            home_form["recent_goal_diff"] >= 2   
             and
             home_form["avg_conceded"] <= 1.3
             and
@@ -3927,7 +3931,9 @@ def analyze_prematch_match(match):
             and
             away_form["unbeaten_pct"] >= 60
             and
-            away_form["wins"] >= 2      
+            away_form["wins"] >= 2
+            and                          
+            away_form["losses"] <= 3    
             and                         
             away_form["draws"] <= 4     
             and                        
@@ -3950,6 +3956,8 @@ def analyze_prematch_match(match):
             ) >= 0.30                     
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
+            and                          
+            away_form["recent_goal_diff"] >= 2  
             and
             away_form["avg_conceded"] <= 1.3
             and
@@ -4040,7 +4048,7 @@ def analyze_prematch_match(match):
             and
             over_conf >= 65
             and                           
-            expected_goals >= 2.8         
+            expected_goals >= 2.9         
             and
             home_form["avg_scored"] >= 1.0
             and
@@ -4143,7 +4151,7 @@ def analyze_prematch_match(match):
             and
             btts_conf >= 65
             and                          
-            expected_goals >= 2.6         
+            expected_goals >= 2.7         
             and
             home_form["avg_scored"] >= 1.0
             and
