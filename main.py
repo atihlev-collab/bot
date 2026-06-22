@@ -2936,6 +2936,11 @@ def analyze_prematch_match(match):
             home_score += 2    
 
         home_score += h2h  
+
+        print(
+            "AFTER STRENGTH:",
+            home_score
+        )
                  
         # HOME VENUE BONUS                
 
@@ -3013,9 +3018,22 @@ def analyze_prematch_match(match):
             home_edge_score
         )
 
+        print(            
+
+            "AFTER ODDS:", 
+
+            home_score     
+
+        )                  
+
         if home_drop:      
 
             home_score += 4   
+
+        print(
+            "AFTER VENUE:",
+            home_score
+        )
 
                 
         # FORM COLLAPSE BONUS
@@ -3060,7 +3078,14 @@ def analyze_prematch_match(match):
         ):                              
 
             home_score += 1                     
-           
+
+        print(               
+
+            "AFTER DEFENSE:", 
+
+            home_score        
+
+        )                    
 
         home_edge = (
             home_form["wins"]
@@ -3153,6 +3178,14 @@ def analyze_prematch_match(match):
 
             home_score += 2    
 
+        print(               
+
+            "AFTER RECENT:", 
+
+            home_score      
+
+        )                   
+
 
         # RECENT GOAL DIFF BONUS         
 
@@ -3210,7 +3243,15 @@ def analyze_prematch_match(match):
                     home_value = True         
                 
                     home_score += 4             
-                    
+
+        print(             
+
+            "AFTER VALUE:", 
+
+            home_score      
+
+        )                   
+        
         if (
             match_odds
             and
@@ -3403,6 +3444,8 @@ def analyze_prematch_match(match):
 
            )
 
+        away_score *= 0.4
+
         print(                    
 
             "AWAY RAW SCORE:",     
@@ -3415,7 +3458,7 @@ def analyze_prematch_match(match):
 
         )      
 
-        away_score *= 0.4
+      
         
         away_score += (             
             away_strength            
