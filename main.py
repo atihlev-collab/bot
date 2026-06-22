@@ -2851,7 +2851,31 @@ def analyze_prematch_match(match):
         home_score = home_win_score(       
             home_form,                     
             away_form                       
-        )                                  
+        )         
+
+        print(                   
+
+            "HOME RAW SCORE:",    
+
+            home,                
+
+            away,                 
+
+            home_score           
+
+        )      
+
+        print(                   
+
+            "HOME RAW SCORE:",    
+
+            home,                  
+
+            away,                 
+
+            home_score            
+
+        )                         
 
         home_score += (                     
             home_strength                  
@@ -3363,6 +3387,18 @@ def analyze_prematch_match(match):
 
            )
 
+        print(                    
+
+            "AWAY RAW SCORE:",     
+
+            home,                  
+
+            away,                  
+
+            away_score             
+
+        )                          
+        
         away_score += (             
             away_strength            
             -                        
