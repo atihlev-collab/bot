@@ -2652,13 +2652,33 @@ def analyze_prematch_match(match):
             home_form["avg_scored"]                 
             +                                        
             away_form["avg_conceded"]                
-        ) / 2                                       
+        ) / 2      
+
+        home_attack += (                       
+
+            home_form["recent_avg_scored"]    
+
+            -                                
+
+            home_form["avg_scored"]          
+
+        ) * 0.20                             
 
         away_attack = (                              
             away_form["avg_scored"]                 
             +                                        
             home_form["avg_conceded"]                
         ) / 2  
+
+        away_attack += (                     
+
+            away_form["recent_avg_scored"]     
+
+            -                              
+
+            away_form["avg_scored"]           
+
+        ) * 0.20                             
 
         expected_goals = (               
             home_attack                 
@@ -3065,7 +3085,43 @@ def analyze_prematch_match(match):
             home_strength           
         ) * 0.25                    
 
-        away_score -= h2h * 2     
+        away_score -= h2h * 2    
+
+
+        # AWAY VENUE BONUS             
+
+        if (                           
+
+            away_form["away_games"] >= 3 
+
+        ):                              
+
+            away_away_winrate = (       
+
+                away_form["away_wins"] 
+
+                /                       
+
+                away_form["away_games"] 
+
+            ) * 100                     
+
+            if (                        
+
+                away_away_winrate >= 70 
+
+            ):                          
+
+                away_score += 5         
+
+            elif (                     
+
+                away_away_winrate >= 55 
+
+            ):                          
+
+                away_score += 3         
+        
         if h2h <= -4:
              away_score += 4
 
