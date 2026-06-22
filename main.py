@@ -2892,10 +2892,12 @@ def analyze_prematch_match(match):
             away_strength                  
         ) * 0.25     
 
+        debug_base = home_score
+
         print(                     
 
             "HOME BASE SCORE:",      
-
+                   
             home,                    
 
             away,                   
@@ -3218,7 +3220,12 @@ def analyze_prematch_match(match):
             home_odds_ok = (
                 1.50 <= match_odds[0] <= 2.80
             )
-
+        print(
+            "HOME BONUS TOTAL:",
+            home,
+            away,
+            home_score - debug_base
+        )
 
         print(
             "HOME SCORE:",
