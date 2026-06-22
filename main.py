@@ -2835,6 +2835,12 @@ def analyze_prematch_match(match):
             home_form                     
         )      
 
+             
+
+        away_strength = team_strength(     
+            away_form                       
+        )     
+
         # STRENGTH GAP BONUS            
 
         strength_gap = (               
@@ -2861,11 +2867,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            home_score += 2           
-
-        away_strength = team_strength(     
-            away_form                       
-        )     
+            home_score += 2      
 
         h2h = h2h_score(             
             home_id,                   
