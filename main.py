@@ -2833,7 +2833,35 @@ def analyze_prematch_match(match):
 
         home_strength = team_strength(      
             home_form                     
-        )                                  
+        )      
+
+        # STRENGTH GAP BONUS            
+
+        strength_gap = (               
+
+            home_strength             
+
+            -
+
+            away_strength             
+
+        )                              
+
+        if (                          
+
+            strength_gap >= 20        
+
+        ):                            
+
+            home_score += 4            
+
+        elif (                        
+
+            strength_gap >= 10         
+
+        ):                            
+
+            home_score += 2           
 
         away_strength = team_strength(     
             away_form                       
@@ -3152,6 +3180,16 @@ def analyze_prematch_match(match):
             home_form["recent_form_pct"] >= 55                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
+            and                           
+
+            (
+                home_form["avg_scored"]  
+
+                -
+
+                home_form["avg_conceded"] 
+
+            ) >= 0.30                    
             and
             home_form["recent_avg_scored"] >= 1.5
             and
@@ -3900,6 +3938,16 @@ def analyze_prematch_match(match):
             recent_away_gap >= 5
             and
             away_form["avg_scored"] >= 1.5
+            and                          
+
+            (
+                away_form["avg_scored"]   
+
+                -
+
+                away_form["avg_conceded"]
+
+            ) >= 0.30                     
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
             and
