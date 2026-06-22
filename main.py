@@ -3008,7 +3008,7 @@ def analyze_prematch_match(match):
             home_score += (              
                 home_edge_score           
                 *                        
-                0.5                       
+                0.25                       
             )      
 
         print(
