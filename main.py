@@ -2928,7 +2928,7 @@ def analyze_prematch_match(match):
 
         if home_drop:      
 
-            home_score += 6   
+            home_score += 4   
 
                 
         # FORM COLLAPSE BONUS
@@ -3003,7 +3003,35 @@ def analyze_prematch_match(match):
             home_form["form_pct"]             
             -
             away_form["form_pct"]             
-        )                                     
+        )         
+
+        # MOMENTUM BONUS               
+
+        momentum_gap = (              
+
+            home_form["momentum"]      
+
+            -                         
+
+            away_form["momentum"]     
+
+        )                             
+
+        if (                           
+
+            momentum_gap >= 20         
+
+        ):                             
+
+            home_score += 4           
+
+        elif (                        
+
+            momentum_gap >= 10        
+
+        ):                            
+
+            home_score += 2            
 
         recent_gap = (                        
             home_form["recent_form_pct"]      
@@ -3337,7 +3365,7 @@ def analyze_prematch_match(match):
 
         if away_drop:    
 
-            away_score += 6  
+            away_score += 4  
        
         
         # FORM COLLAPSE BONUS
@@ -3416,6 +3444,34 @@ def analyze_prematch_match(match):
             -
             home_form["form_pct"]
         )
+
+        # MOMENTUM BONUS                
+
+        momentum_gap = (              
+
+            away_form["momentum"]      
+
+            -                         
+
+            home_form["momentum"]      
+
+        )                             
+
+        if (                           
+
+            momentum_gap >= 20         
+
+        ):                            
+
+            away_score += 4           
+
+        elif (                        
+
+            momentum_gap >= 10         
+
+        ):                             
+
+            away_score += 2           
 
         recent_away_gap = (                   
             away_form["recent_form_pct"]       
@@ -3526,7 +3582,25 @@ def analyze_prematch_match(match):
                 away_strength,       
                 home_strength,        
                 h2h                   
-            )          
+            )   
+
+        # PRE PROBABILITY CAP           
+
+        home_score = min(               
+
+            75,                       
+
+            home_score                  
+
+        )                             
+
+        away_score = min(              
+
+            75,                        
+
+            away_score                 
+
+        )                             
 
 
         total_strength = (           
