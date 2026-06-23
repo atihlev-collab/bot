@@ -3339,20 +3339,12 @@ def analyze_prematch_match(match):
                 (                              
                    "🏆 HOME WIN",             
            
-                   confidence_from_score(      
-                       home_score              
-                   ),                          
-           
-                   round(                    
-                       (                    
-                           100              
-                           /                
-                           match_odds[0]     
-                       ),                    
-                       1                    
-                   )                             
-           
-               )                              
+                      
+                   confidence_from_score(home_score),
+                   home_probability                                                                                                                                                                                                                             
+                                    
+                )                             
+                    
            )                                          
      
         # AWAY WIN
