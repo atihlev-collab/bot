@@ -3609,7 +3609,12 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 5             
+            away_score += 5     
+
+        print(
+            "AFTER COLLAPSE:",
+            home_score
+        )
 
         # DEFENSIVE BONUS             
 
