@@ -3145,7 +3145,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            home_score += 4           
+            home_score += 3           
 
         elif (                        
 
@@ -3153,7 +3153,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            home_score += 2            
+            home_score += 1            
 
         recent_gap = (                        
             home_form["recent_form_pct"]      
@@ -3691,7 +3691,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            away_score += 4           
+            away_score += 3           
 
         elif (                        
 
@@ -3699,7 +3699,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            away_score += 2           
+            away_score += 1           
 
         recent_away_gap = (                   
             away_form["recent_form_pct"]       
@@ -3742,7 +3742,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 4             
+            away_score += 3
 
         elif (                           
 
@@ -3750,7 +3750,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 2             
+            away_score += 1             
              
         away_super_value = False
         away_value = False
@@ -3775,13 +3775,13 @@ def analyze_prematch_match(match):
         
                     away_super_value = True   
         
-                    away_score += 5           
+                    away_score += 3           
         
                 elif edge >= 10:       
         
                     away_value = True   
         
-                    away_score += 3     
+                    away_score += 1     
         
         away_odds_ok = True             
     
