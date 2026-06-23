@@ -3288,7 +3288,7 @@ def analyze_prematch_match(match):
         
         
         if (
-            home_score >= 35           
+            home_score >= 45           
             and
             home_odds_ok
             and
@@ -3302,7 +3302,7 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 2            
             and
-            form_gap >= 12
+            form_gap >= 15
             and
             recent_gap >= 5
             and
@@ -3951,7 +3951,7 @@ def analyze_prematch_match(match):
                 away_score += 1          
          
         if (
-            away_score >= 35          
+            away_score >= 45          
             and
             away_odds_ok
             and
@@ -3965,7 +3965,7 @@ def analyze_prematch_match(match):
             and                        
             away_edge >= 2             
             and
-            away_gap >= 12
+            away_gap >= 15
             and
             recent_away_gap >= 5
             and
