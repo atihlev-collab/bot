@@ -3163,30 +3163,30 @@ def analyze_prematch_match(match):
 
 
         # RECENT FORM EXPLOSION BONUS     
+       
+        if (                              
 
-        if (                             
+            recent_gap >= 35            
 
-            recent_gap >= 35               
+        ):                               
 
-        ):                                 
-
-            home_score += 5                
+            home_score += 5              
 
         elif (                            
+            
+            recent_gap >= 25            
 
-            recent_gap >= 20               
+        ):                              
 
-        ):                                
+            home_score += 3              
 
-            home_score += 3                
+        elif (                           
 
-        if recent_gap >= 25:     
+            recent_gap >= 15              
 
-            home_score += 4      
+        ):                             
 
-        elif recent_gap >= 15:   
-
-            home_score += 2    
+            home_score += 1               
 
         print(               
 
@@ -3710,29 +3710,29 @@ def analyze_prematch_match(match):
 
         # RECENT FORM EXPLOSION BONUS      
 
-        if (                               
+        if (                              
 
-            recent_away_gap >= 35          
+            recent_away_gap >= 35        
 
-        ):                                 
+        ):                                
 
-            away_score += 5               
+            away_score += 5              
 
-        elif (                            
+        elif (                           
 
-            recent_away_gap >= 20          
+            recent_away_gap >= 25         
 
-        ):                                 
+        ):                               
 
-            away_score += 3               
+            away_score += 3              
 
-        if recent_away_gap >= 25:     
+        elif (                           
 
-            away_score += 4           
+            recent_away_gap >= 15         
 
-        elif recent_away_gap >= 15:   
+        ):                                
 
-            away_score += 2        
+            away_score += 1              
 
         # RECENT GOAL DIFF BONUS         
 
