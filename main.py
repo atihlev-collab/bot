@@ -3304,12 +3304,20 @@ def analyze_prematch_match(match):
             home_score - debug_base
         )       
 
+        home_score = min(          
+            80,                    
+            max(                  
+                -80,               
+                home_score        
+            )                      
+        )                         
+
         print(
             "HOME SCORE:",
             home,
             away,
             home_score
-        )               
+        )      
         
         if (
             home_score >= 45           
@@ -3965,7 +3973,16 @@ def analyze_prematch_match(match):
 
             else:                        
 
-                away_score += 1          
+                away_score += 1      
+
+
+        away_score = min(         
+            80,                   
+            max(                   
+                -80,               
+                away_score         
+            )                      
+        )                         
          
         if (
             away_score >= 45          
