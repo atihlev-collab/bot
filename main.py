@@ -3850,12 +3850,12 @@ def analyze_prematch_match(match):
 
 
         if (                          
-            home_probability >= 75    
+            home_probability >= 65    
             and                       
-            home_score >= 45          
+            home_score >= 40          
         ):                            
 
-            home_score += 6           
+            home_score += 1           
 
         elif (                         
             home_probability >= 68    
@@ -3863,16 +3863,16 @@ def analyze_prematch_match(match):
             home_score >= 30           
         ):                            
 
-            home_score += 3            
+            home_score += 1            
 
 
         if (                          
-            away_probability >= 75     
+            away_probability >= 65     
             and                        
-            away_score >= 45           
+            away_score >= 40           
         ):                            
 
-            away_score += 6           
+            away_score += 1           
 
         elif (                        
             away_probability >= 68     
@@ -3880,7 +3880,7 @@ def analyze_prematch_match(match):
             away_score >= 30           
         ):                             
 
-            away_score += 3            
+            away_score += 1            
 
 
         # EXTREME MOMENTUM BONUS         
