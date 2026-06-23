@@ -3342,12 +3342,22 @@ def analyze_prematch_match(match):
                    "🏆 HOME WIN",             
            
                       
-                   confidence_from_score(home_score),
-                   home_probability                                                                                                                                                                                                                             
-                                    
-                )                             
-                    
-           )                                          
+                   confidence_from_score(
+                       home_score
+                   ),
+
+                   round(
+                       (
+                           100
+                           /
+                           match_odds[0]
+                       ),
+                       1
+                    )
+
+                )
+
+           )
      
         # AWAY WIN
 
@@ -3973,92 +3983,7 @@ def analyze_prematch_match(match):
         )     
 
 
-        # PRE PROBABILITY CAP           
-
-        home_score = min(               
-
-            75,                       
-
-            home_score                  
-
-        )                             
-
-        away_score = min(              
-
-            75,                        
-
-            away_score                 
-
-        )                             
-
-
-        total_strength = (           
-
-            max(1, home_score + 100)  
-
-            +                        
-
-            max(1, away_score + 100)  
-
-        )                            
-
-        home_probability = round(    
-
-            (
-
-                max(1, home_score + 100)   
-
-                /
-
-                total_strength            
-
-            ) * 100,
-
-            1
-
-        )                            
-
-        away_probability = round(     
-
-            (
-
-                max(1, away_score + 100)  
-
-                /
-
-                total_strength            
-
-            ) * 100,
-
-            1
-
-        )                             
-
-        print(                        
-
-            "PROB:",                  
-
-            home,                   
-
-            away,                     
-
-            home_probability,         
-
-            away_probability          
-
-        )       
-
-        score_gap = abs(     
-
-            home_score        
-
-            -                 
-
-            away_score        
-
-        )      
-
-
+        
         # DOMINANCE BONUS                
 
         if (                             
