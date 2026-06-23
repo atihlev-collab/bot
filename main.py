@@ -2512,15 +2512,41 @@ def calculate_final_score(
 # CONFIDENCE
 # =========================================================
 
-def confidence_from_score(score):
+def confidence_from_score(score):     
 
-    return max(                       
-        50,                           
-        min(                          
-            95,                        
-            round(score)              
-        )                             
-    )                                 
+    if (                              
+
+        score >= 85                    
+
+    ):                                 
+
+        return 90                    
+
+    elif (                           
+
+        score >= 70                    
+
+    ):                                 
+
+        return 80                     
+
+    elif (                            
+
+        score >= 55                    
+
+    ):                                
+
+        return 70                     
+
+    elif (                             
+
+        score >= 40                   
+
+    ):                                 
+
+        return 60                     
+
+    return 50                                     
 # =========================================================
 # PREMATCH ANALYSIS
 # =========================================================
