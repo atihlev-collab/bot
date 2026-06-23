@@ -3916,7 +3916,7 @@ def analyze_prematch_match(match):
 
         if (                             
 
-            score_gap >= 35               
+            score_gap >= 50               
 
         ):                               
 
@@ -3926,15 +3926,15 @@ def analyze_prematch_match(match):
 
             ):                            
 
-                home_score += 4          
+                home_score += 2          
 
             else:                         
 
-                away_score += 4          
+                away_score += 2          
 
         elif (                           
 
-            score_gap >= 25               
+            score_gap >= 35               
 
         ):                               
 
@@ -3944,11 +3944,11 @@ def analyze_prematch_match(match):
 
             ):                            
 
-                home_score += 2          
+                home_score += 1          
 
             else:                        
 
-                away_score += 2          
+                away_score += 1          
          
         if (
             away_score >= 35          
