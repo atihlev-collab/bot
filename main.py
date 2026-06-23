@@ -3572,19 +3572,12 @@ def analyze_prematch_match(match):
             away_score += (             
                 away_edge_score          
                 *                        
-                0.5                      
-            )       
-
-        print(
-            "AWAY EDGE SCORE:",
-            home,
-            away,
-            away_edge_score
-        )
+                0.25                      
+            )            
 
         if away_drop:    
 
-            away_score += 4  
+            away_score += 2  
 
         print(
             "AFTER HOME DROP:",
