@@ -3070,7 +3070,7 @@ def analyze_prematch_match(match):
             away_form["form_pct"] <= 35
         ):
 
-            home_score += 10
+            home_score += 6
 
         # SUPER FORM BONUS                
 
@@ -3084,7 +3084,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 5               
+            home_score += 3               
 
 
         # DEFENSIVE BONUS                
@@ -3095,7 +3095,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 3               
+            home_score += 2               
 
         elif (                           
 
@@ -3624,7 +3624,7 @@ def analyze_prematch_match(match):
             home_form["form_pct"] <= 35
         ):
 
-            away_score += 10
+            away_score += 6
 
                # SUPER FORM BONUS             
 
@@ -3638,7 +3638,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 5     
+            away_score += 3     
 
         print(
             "AFTER COLLAPSE:",
@@ -3653,7 +3653,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            away_score += 3            
+            away_score += 2            
 
         elif (                        
 
