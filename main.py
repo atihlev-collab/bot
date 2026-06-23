@@ -3807,34 +3807,21 @@ def analyze_prematch_match(match):
             )   
 
 
-       home_probability = max(       
+        home_probability = max(    
+            0,                      
+            min(                   
+                100,                
+                50 + home_score     
+            )                      
+        )                          
 
-            0,                         
-
-            min(                      
-
-                100,                  
-
-                50 + home_score       
-
-            )                          
-
-        )                             
-
-
-        away_probability = max(        
-
-            0,                         
-
-            min(                       
-
-                100,                   
-
-                50 + away_score        
-
-            )                        
-
-        )                             
+        away_probability = max(    
+            0,                      
+            min(                   
+                100,                
+                50 + away_score    
+            )                       
+        )                           
 
 
         if (                          
