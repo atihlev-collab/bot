@@ -3806,7 +3806,36 @@ def analyze_prematch_match(match):
                 h2h                   
             )   
 
-        
+
+       home_probability = max(       
+
+            0,                         
+
+            min(                      
+
+                100,                  
+
+                50 + home_score       
+
+            )                          
+
+        )                             
+
+
+        away_probability = max(        
+
+            0,                         
+
+            min(                       
+
+                100,                   
+
+                50 + away_score        
+
+            )                        
+
+        )                             
+
 
         if (                          
             home_probability >= 75    
