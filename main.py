@@ -3842,24 +3842,6 @@ def analyze_prematch_match(match):
             away_score += 3            
 
 
-        probability_gap = (          
-
-            abs(                     
-
-                home_probability     
-
-                -
-
-                away_probability     
-
-            )                       
-
-        )        
-
-
-        
-
-
         # EXTREME MOMENTUM BONUS         
 
         if (                             
