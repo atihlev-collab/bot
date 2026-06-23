@@ -3231,7 +3231,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 4              
+            home_score += 3              
 
         elif (                          
 
@@ -3239,7 +3239,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 2             
+            home_score += 1             
 
         home_super_value = False
         home_value = False
