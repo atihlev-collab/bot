@@ -3054,7 +3054,7 @@ def analyze_prematch_match(match):
 
         if home_drop:      
 
-            home_score += 4   
+            home_score += 2   
 
         print(
             "AFTER VENUE:",
@@ -3846,7 +3846,7 @@ def analyze_prematch_match(match):
         if (                          
             home_probability >= 75    
             and                       
-            home_score >= 40          
+            home_score >= 45          
         ):                            
 
             home_score += 6           
@@ -3863,7 +3863,7 @@ def analyze_prematch_match(match):
         if (                          
             away_probability >= 75     
             and                        
-            away_score >= 40           
+            away_score >= 45           
         ):                            
 
             away_score += 6           
