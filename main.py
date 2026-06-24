@@ -3348,9 +3348,7 @@ def analyze_prematch_match(match):
         if (
             home_score >= 50           
             and
-            home_odds_ok   
-            and
-            match_odds[0] >= 1.40           
+            home_odds_ok                     
             and
             home_form["unbeaten_pct"] >= 60
             and
