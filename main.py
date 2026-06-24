@@ -3320,10 +3320,15 @@ def analyze_prematch_match(match):
         )      
         
         if (
-            home_score >= 45           
+            home_score >= 50           
             and
-            home_odds_ok
+            home_odds_ok          
             and
+            (
+                100
+                /
+                match_odds[0]
+            ) >= 50
             home_form["unbeaten_pct"] >= 60
             and
             home_form["wins"] >= 2  
@@ -3361,6 +3366,8 @@ def analyze_prematch_match(match):
             away_form["avg_conceded"] >= 1.2
             and
             away_form["recent_avg_conceded"] >= 1.2
+            and
+            home_probability >= 70
         ):
 
             print(
@@ -3985,10 +3992,15 @@ def analyze_prematch_match(match):
         )                         
          
         if (
-            away_score >= 45          
+            away_score >= 50          
             and
             away_odds_ok
             and
+            (
+                100
+                /
+                match_odds[2]
+            ) >= 50
             away_form["unbeaten_pct"] >= 60
             and
             away_form["wins"] >= 2
@@ -4024,6 +4036,8 @@ def analyze_prematch_match(match):
             home_form["avg_conceded"] >= 1.2
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
+            and
+            away_probability >= 70
         ):
 
             print(
