@@ -3350,13 +3350,7 @@ def analyze_prematch_match(match):
             and
             home_odds_ok   
             and
-            match_odds[0] >= 1.40
-            and
-            (
-                100
-                /
-                match_odds[0]                
-            ) >= 50
+            match_odds[0] >= 1.40           
             and
             home_form["unbeaten_pct"] >= 60
             and
@@ -4023,13 +4017,7 @@ def analyze_prematch_match(match):
         if (
             away_score >= 50          
             and
-            away_odds_ok
-            and
-            (
-                100
-                /
-                match_odds[2]
-            ) >= 50
+            away_odds_ok          
             and
             away_form["unbeaten_pct"] >= 60
             and
