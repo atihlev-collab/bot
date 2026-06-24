@@ -1336,33 +1336,59 @@ def analyze_live_match(fixture):
 
                 )                                
 
-        # OVER 1.5 REMAINING GOALS
+        # OVER 1.5 REMAINING GOALS     
 
-        if (
-            minute <= 70
-            and
-            home_pressure >= 45
-            and
-            away_pressure >= 45
-            and
-            home_shots_on >= 2
-            and
-            away_shots_on >= 2
-            and              
-            home_corners >= 1
-            and
-            away_corners >= 1
-        ):
+        if (                          
 
-            return (
+            minute <= 70               
 
-                "🚀 OVER 1.5 REMAINING GOALS",
-                90,
-                minute,
-                90
+            and                        
 
-            )
+            max(                       
 
+                home_pressure,          
+
+                away_pressure         
+
+            ) >= 60                    
+
+            and                        
+
+            (                          
+
+                home_shots_on          
+
+                +                      
+
+                away_shots_on           
+
+            ) >= 5                      
+
+            and                        
+
+            (                          
+
+                home_corners           
+
+                +                      
+
+                away_corners            
+
+            ) >= 3                     
+
+        ):                             
+
+            return (                    
+
+                "🚀 OVER 1.5 REMAINING GOALS",  
+
+                90,                    
+
+                minute,                 
+
+                90                      
+
+            )                                         
         
 
         # OVER 1.5 NEXT CORNERS          
@@ -3327,8 +3353,9 @@ def analyze_prematch_match(match):
             (
                 100
                 /
-                match_odds[0]
+                match_odds[0]                
             ) >= 50
+            and
             home_form["unbeaten_pct"] >= 60
             and
             home_form["wins"] >= 2  
