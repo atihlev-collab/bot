@@ -4028,6 +4028,7 @@ def analyze_prematch_match(match):
                 /
                 match_odds[2]
             ) >= 50
+            and
             away_form["unbeaten_pct"] >= 60
             and
             away_form["wins"] >= 2
