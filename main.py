@@ -4207,26 +4207,26 @@ def analyze_prematch_match(match):
         )                                    
 
         if (
-            btts_prob >= 65
+            btts_prob >= 70
             and
-            btts_conf >= 65
+            btts_conf >= 70
             and                          
-            expected_goals >= 2.7         
+            expected_goals >= 3.0         
             and
-            home_form["avg_scored"] >= 1.0
+            home_form["avg_scored"] >= 1.3
             and
-            away_form["avg_scored"] >= 0.9
+            away_form["avg_scored"] >= 1.3
             and                              
-            home_form["recent_avg_scored"] >= 1.0  
+            home_form["recent_avg_scored"] >= 1.3  
             and                               
-            away_form["recent_avg_scored"] >= 1.0  
+            away_form["recent_avg_scored"] >= 1.3  
             and                             
 
             (
                 home_form["btts"]          
                 /
                 home_form["played"]          
-            ) >= 0.50                        
+            ) >= 0.60                        
 
             and                             
 
@@ -4234,7 +4234,7 @@ def analyze_prematch_match(match):
                 away_form["btts"]            
                 /
                 away_form["played"]         
-            ) >= 0.50                        
+            ) >= 0.60                        
             and                                
             home_form["scored_pct"] >= 70      
             and                              
@@ -4243,6 +4243,10 @@ def analyze_prematch_match(match):
             home_form["recent_avg_conceded"] >= 0.8
             and                                   
             away_form["recent_avg_conceded"] >= 0.8
+            and
+            home_form["clean_sheet_pct"] <= 40
+            and
+            away_form["clean_sheet_pct"] <= 40
         ):
 
             signals.append(
