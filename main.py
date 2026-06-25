@@ -3846,7 +3846,11 @@ def analyze_prematch_match(match):
 
             match_odds[2] is not None   
 
-        ):                             
+        ):      
+
+            away_odds_ok = (
+                1.50 <= match_odds[2] <= 3.20
+            )
          
             print(  
                 
@@ -4047,7 +4051,7 @@ def analyze_prematch_match(match):
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
             and                          
-            away_form["recent_goal_diff"] >= 2  
+            away_form["recent_goal_diff"] >= 1  
             and
             away_form["avg_conceded"] <= 1.3
             and
@@ -4142,9 +4146,9 @@ def analyze_prematch_match(match):
             and                           
             expected_goals >= 3.1         
             and
-            home_form["avg_scored"] >= 1.2
+            home_form["avg_scored"] >= 1.5
             and
-            away_form["avg_scored"] >= 1.1
+            away_form["avg_scored"] >= 1.5
             and                              
             home_form["recent_avg_scored"] >= 1.2  
             and                              
