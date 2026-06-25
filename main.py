@@ -4010,7 +4010,23 @@ def analyze_prematch_match(match):
                 -80,               
                 away_score         
             )                      
-        )                         
+        )   
+
+        print(
+            "AWAY FILTERS:",
+            home,
+            away,
+            away_edge,
+            away_gap,
+            recent_away_gap,
+            away_form["avg_scored"],
+            away_form["recent_avg_scored"],
+            away_form["recent_goal_diff"],
+            away_form["avg_conceded"],
+            home_form["avg_conceded"],
+            home_form["recent_avg_conceded"],
+            away_probability
+        )
          
         if (
             away_score >= 50          
