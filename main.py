@@ -1340,7 +1340,7 @@ def analyze_live_match(fixture):
 
         if (                            
 
-            minute <= 70                
+            minute <= 75                
 
             and                        
 
@@ -1350,7 +1350,7 @@ def analyze_live_match(fixture):
 
                 away_pressure           
 
-            ) >= 60                     
+            ) >= 55                     
 
             and                         
 
@@ -1362,7 +1362,7 @@ def analyze_live_match(fixture):
 
                 away_shots_on           
 
-            ) >= 5                      
+            ) >= 4                      
 
             and                         
 
@@ -1538,7 +1538,7 @@ def analyze_live_match(fixture):
 
                 away_pressure          
 
-            ) >= 60                    
+            ) >= 55                    
 
             and                       
 
@@ -1562,7 +1562,7 @@ def analyze_live_match(fixture):
 
                 away_corners          
 
-            ) >= 6
+            ) >= 5
 
 
             and                       
