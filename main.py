@@ -4394,7 +4394,7 @@ def analyze_prematch_match(match):
 
             and                        
 
-            expected_goals >= 4. 0   
+            expected_goals >= 4.0   
 
             and                        
 
