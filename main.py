@@ -4243,15 +4243,27 @@ def analyze_prematch_match(match):
             and                          
             expected_goals >= 3.0         
             and
-            home_form["avg_scored"] >= 1.3
+            home_form["avg_scored"] >= 1.2
             and
-            away_form["avg_scored"] >= 1.3
+            away_form["avg_scored"] >= 1.2
             and                              
-            home_form["recent_avg_scored"] >= 1.3  
+            home_form["recent_avg_scored"] >= 1.2  
             and                               
-            away_form["recent_avg_scored"] >= 1.3  
-            and                             
-
+            away_form["recent_avg_scored"] >= 1.2  
+            and
+            home_form["scored_pct"] >= 75
+            and
+            away_form["scored_pct"] >= 75                      
+            and
+            home_form["recent_goal_diff"] > -3
+            and
+            away_form["recent_goal_diff"] > -3
+            and        
+            min(
+                home_form["recent_avg_scored"],
+                away_form["recent_avg_scored"]
+            ) >= 1.2
+            and
             (
                 home_form["btts"]          
                 /
@@ -4264,11 +4276,7 @@ def analyze_prematch_match(match):
                 away_form["btts"]            
                 /
                 away_form["played"]         
-            ) >= 0.60                        
-            and                                
-            home_form["scored_pct"] >= 70      
-            and                              
-            away_form["scored_pct"] >= 70     
+            ) >= 0.60                               
             and                                   
             home_form["recent_avg_conceded"] >= 0.8
             and                                   
