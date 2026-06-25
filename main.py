@@ -2804,7 +2804,7 @@ def analyze_prematch_match(match):
 
         ):                                
 
-            over_prob += 4                
+            over_prob += 2                
 
         over_prob = min(                  
 
@@ -2831,7 +2831,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            over_prob += 3                 
+            over_prob += 1                 
 
         over_prob = min(                  
 
