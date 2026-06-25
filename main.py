@@ -4134,15 +4134,15 @@ def analyze_prematch_match(match):
         )                                
 
         if (
-            over_prob >= 65
+            over_prob >= 68
             and
-            over_conf >= 65
+            over_conf >= 70
             and                           
-            expected_goals >= 2.9         
+            expected_goals >= 3.1         
             and
-            home_form["avg_scored"] >= 1.0
+            home_form["avg_scored"] >= 1.2
             and
-            away_form["avg_scored"] >= 0.9
+            away_form["avg_scored"] >= 1.1
             and                              
             home_form["recent_avg_scored"] >= 1.2  
             and                              
