@@ -3388,7 +3388,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.2
             and
-            home_probability >= 70
+            home_probability >= 65
         ):
 
             print(
@@ -4053,7 +4053,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 70
+            away_probability >= 65
         ):
 
             print(
