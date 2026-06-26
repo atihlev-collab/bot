@@ -4140,19 +4140,19 @@ def analyze_prematch_match(match):
         )                                
 
         if (
-            over_prob >= 68
+            over_prob >= 70
             and
             over_conf >= 70
             and                           
             expected_goals >= 3.1         
             and
-            home_form["avg_scored"] >= 1.2
+            home_form["avg_scored"] >= 1.3
             and
-            away_form["avg_scored"] >= 1.2
+            away_form["avg_scored"] >= 1.3
             and                              
-            home_form["recent_avg_scored"] >= 1.2  
+            home_form["recent_avg_scored"] >= 1.3  
             and                              
-            away_form["recent_avg_scored"] >= 1.0  
+            away_form["recent_avg_scored"] >= 1.3  
             and
             home_form["avg_conceded"] >= 1.0
             and                                            
@@ -4166,9 +4166,9 @@ def analyze_prematch_match(match):
             and                                    
             away_form["recent_avg_conceded"] >= 1.0 
             and                         
-            home_form["over25_pct"] >= 50 
+            home_form["over25_pct"] >= 55 
             and                         
-            away_form["over25_pct"] >= 50 
+            away_form["over25_pct"] >= 55 
             and                         
             (                           
                 home_form["over25"]      
@@ -4181,7 +4181,7 @@ def analyze_prematch_match(match):
                home_form["recent_over25"]
                +
                away_form["recent_over25"]
-        ) >= 4
+        ) >= 5
         ):
 
             signals.append(
@@ -4400,7 +4400,7 @@ def analyze_prematch_match(match):
 
             and                        
 
-            expected_goals >= 4.0   
+            expected_goals >= 4.2   
 
             and                        
 
@@ -4412,11 +4412,11 @@ def analyze_prematch_match(match):
 
             and                        
 
-            home_form["over25_pct"] >= 65       
+            home_form["over25_pct"] >= 70       
 
             and                        
 
-            away_form["over25_pct"] >= 65      
+            away_form["over25_pct"] >= 70      
 
             and                        
 
