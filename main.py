@@ -3353,6 +3353,8 @@ def analyze_prematch_match(match):
             away,
             home_score
         )      
+
+        home_signal = False
         
         if (
             home_score >= 50           
@@ -3427,6 +3429,8 @@ def analyze_prematch_match(match):
                 )
 
            )
+
+           home_signal = True
      
         # AWAY WIN
 
@@ -4146,7 +4150,9 @@ def analyze_prematch_match(match):
             away_form["avg_scored"],    
             home_form["avg_conceded"],   
             away_form["avg_conceded"]    
-        )                                
+        )      
+
+         over_signal = False
 
         if (
             over_prob >= 70
@@ -4205,6 +4211,8 @@ def analyze_prematch_match(match):
                 )
 
             )
+
+            over_signal = False
          
         print(
             "BTTS CHECK:",
@@ -4403,30 +4411,15 @@ def analyze_prematch_match(match):
         # HOME WIN + OVER 2.5             
 
         if (                              
-        
-            home_score >= 60              
-        
+
+            home_signal
+
             and                           
-        
-            home_probability >= 70        
-        
-            and                          
-        
-            over_prob >= 70               
-        
-            and                           
-        
-            expected_goals >= 3.2        
-        
-            and                          
-        
-            home_form["avg_scored"] >= 1.5   
-        
-            and                          
-        
-            away_form["avg_conceded"] >= 1.2 
-        
+
+            over_signal                    
+
         ):                                
+
         
             signals.append(              
         
