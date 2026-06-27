@@ -3292,11 +3292,20 @@ def analyze_prematch_match(match):
                 )
 
 
+                print(
+                    "HOME VALUE INPUT:",
+                    home,
+                    away,
+                    home_score,
+                    match_odds[0]
+               )
+
+
                 if edge >= 15:                 
 
                     home_super_value = True    
                 
-                    home_score += 8            
+                    home_score += 4            
                 
                    
                 
@@ -3304,7 +3313,7 @@ def analyze_prematch_match(match):
                 
                     home_value = True         
                 
-                    home_score += 4             
+                    home_score += 2             
 
         print(             
 
