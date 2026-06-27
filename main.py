@@ -3430,7 +3430,7 @@ def analyze_prematch_match(match):
 
            )
 
-           home_signal = True
+            home_signal = True
      
         # AWAY WIN
 
