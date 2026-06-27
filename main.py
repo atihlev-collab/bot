@@ -4471,7 +4471,89 @@ def analyze_prematch_match(match):
         
                 )                                 
         
-            )                                     
+            )     
+
+        # AWAY WIN + OVER 2.5              
+
+        if (                               
+
+            away_score >= 60              
+
+            and                            
+
+            away_probability >= 70         
+
+            and                            
+
+            over_prob >= 70                
+
+            and                            
+
+            expected_goals >= 3.2          
+
+            and                           
+
+            away_form["avg_scored"] >= 1.5 
+
+            and                            
+
+            home_form["avg_conceded"] >= 1.2   
+
+        ):                                 
+
+            signals.append(               
+
+                (                         
+
+                    "✈️ AWAY WIN + OVER 2.5",   
+
+                    min(                  
+
+                        95,                
+
+                        int(               
+
+                            (             
+
+                                away_probability    
+
+                                +                  
+
+                                over_prob          
+
+                            )                      
+
+                            /                      
+
+                            2                     
+
+                        )                           
+
+                    ),                              
+
+                    round(                          
+
+                        (                          
+
+                            away_probability        
+
+                            +                       
+
+                            over_prob               
+
+                        )                           
+
+                        /                           
+
+                        2,                         
+
+                        1                           
+
+                    )                              
+
+                )                                   
+
+            )                                       
 
 
         # OVER 3.5                     
