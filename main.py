@@ -4049,7 +4049,57 @@ def analyze_prematch_match(match):
             home_score                
             -                        
             away_score                
-        )                            
+        )        
+
+        # PROBABILITY BALANCE CHECK       
+
+        if (                            
+
+            abs(                          
+
+                home_probability        
+
+                -                        
+
+                away_probability         
+
+            ) < 18                        
+
+        ):                               
+
+            home_score -= 3              
+
+            away_score -= 3              
+
+            print(                      
+
+                "BALANCE CHECK:",        
+
+                home,                    
+
+                away,                     
+
+                home_probability,         
+
+                away_probability,        
+
+                home_score,               
+
+                away_score               
+
+            )                            
+
+        score_gap = abs(                 
+
+            home_score                    
+
+            -                             
+
+            away_score                    
+
+        )                                
+
+        # DOMINANCE BONUS                
 
         
         # DOMINANCE BONUS                
