@@ -3399,7 +3399,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.2
             and
-            home_probability >= 65
+            home_probability >= 68
         ):
 
             print(
@@ -4072,7 +4072,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 65
+            away_probability >= 68
         ):
 
             print(
@@ -4159,7 +4159,7 @@ def analyze_prematch_match(match):
             and
             over_conf >= 70
             and                           
-            expected_goals >= 3.5         
+            expected_goals >= 3.6         
             and
             home_form["avg_scored"] >= 1.4
             and
@@ -4212,7 +4212,7 @@ def analyze_prematch_match(match):
 
             )
 
-            over_signal = False
+           over_signal = True
          
         print(
             "BTTS CHECK:",
@@ -4264,7 +4264,7 @@ def analyze_prematch_match(match):
             and
             btts_conf >= 73
             and                          
-            expected_goals >= 3.2         
+            expected_goals >= 3.5         
             and
             home_form["avg_scored"] >= 1.3
             and
@@ -4491,7 +4491,7 @@ def analyze_prematch_match(match):
 
             and                            
 
-            expected_goals >= 3.2          
+            expected_goals >= 3.3          
 
             and                           
 
