@@ -3567,13 +3567,15 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 3            
             and
-            form_gap >= 15
+            form_gap >= 20
             and
-            recent_gap >= 5
+            recent_gap >= 8
             and
             home_form["recent_form_pct"] >= 60                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
+            and                          
+            momentum_gap >= 8           
             and                           
 
             (
@@ -3593,7 +3595,11 @@ def analyze_prematch_match(match):
 
                 away_form["avg_scored"]   
 
-            ) >= 0.30                     
+            ) >= 0.30   
+            and                          
+            home_form["goal_diff"] >= 8   
+            and                         
+            home_form["clean_sheet_pct"] >= 30   
             and
             home_form["recent_avg_scored"] >= 1.5
             and                           
@@ -4435,9 +4441,11 @@ def analyze_prematch_match(match):
             and                        
             away_edge >= 3             
             and
-            away_gap >= 15
+            away_gap >= 20
+            and                         
+            momentum_gap >= 8           
             and
-            recent_away_gap >= 5
+            recent_away_gap >= 8
             and
             away_form["avg_scored"] >= 1.5
             and                          
@@ -4459,7 +4467,11 @@ def analyze_prematch_match(match):
 
                 away_form["avg_scored"]   
 
-            ) >= 0.30                     
+            ) >= 0.30   
+            and                          
+            away_form["clean_sheet_pct"] >= 30   
+            and                          
+            away_form["goal_diff"] >= 8   
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
             and                          
