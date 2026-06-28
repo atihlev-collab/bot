@@ -3265,7 +3265,41 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 1             
+            home_score += 1        
+
+        # CONTRADICTION CHECK             
+
+        if (                              
+
+            away_form["recent_form_pct"]  
+
+            >
+
+            home_form["recent_form_pct"] + 20   
+
+            and                                 
+
+            away_form["momentum"]              
+
+            >
+
+            home_form["momentum"]              
+
+        ):                               
+
+            home_score -= 4             
+
+            print(                     
+
+                "HOME CONTRADICTION:",  
+
+                home,                   
+
+                away,                  
+
+                home_score            
+
+            )                          
 
         home_super_value = False
         home_value = False
@@ -3818,7 +3852,41 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 1             
+            away_score += 1    
+
+        # CONTRADICTION CHECK            
+
+        if (                             
+
+            home_form["recent_form_pct"] 
+
+            >
+
+            away_form["recent_form_pct"] + 20   
+
+            and                               
+
+            home_form["momentum"]              
+
+            >
+
+            away_form["momentum"]               
+
+        ):                              
+
+            away_score -= 4            
+
+            print(                      
+
+                "AWAY CONTRADICTION:", 
+
+                home,                   
+
+                away,                   
+
+                away_score             
+
+            )                          
              
         away_super_value = False
         away_value = False
