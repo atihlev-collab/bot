@@ -10,7 +10,9 @@ import threading
 import time
 import logging
 
- 
+print("############################")
+print("VERSION TEST 28-06-001")
+print("############################")
 
 from scipy.stats import poisson
 from datetime import datetime, timedelta
