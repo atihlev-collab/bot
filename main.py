@@ -3569,7 +3569,7 @@ def analyze_prematch_match(match):
             and
             form_gap >= 15
             and
-            recent_gap >= 8
+            recent_gap >= 5
             and
             home_form["recent_form_pct"] >= 55                                                              
             and                                   
@@ -4438,7 +4438,7 @@ def analyze_prematch_match(match):
             and
             away_gap >= 15                     
             and
-            recent_away_gap >= 8
+            recent_away_gap >= 5
             and
             away_form["avg_scored"] >= 1.5
             and                          
