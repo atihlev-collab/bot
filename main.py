@@ -1828,14 +1828,7 @@ def get_team_form(team_id, venue=None):
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
-        )        
-
-        attacking_momentum = round(
-            recent_avg_scored
-            -
-            (scored / total),
-            2
-        )
+        )               
 
         recent_avg_conceded = round(     
             recent_conceded / len(recent_games),
