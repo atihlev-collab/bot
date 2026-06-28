@@ -3430,9 +3430,11 @@ def analyze_prematch_match(match):
 
            )
 
-            home_signal = True
+           home_signal = True
      
         # AWAY WIN
+
+        away_signal = False
 
         away_score = (
 
@@ -4100,6 +4102,8 @@ def analyze_prematch_match(match):
               
                )                                  
             )  
+
+            away_signal = True
              
         print(
             "OVER CHECK:",
