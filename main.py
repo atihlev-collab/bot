@@ -3583,7 +3583,17 @@ def analyze_prematch_match(match):
 
                 home_form["avg_conceded"] 
 
-            ) >= 0.30                    
+            ) >= 0.30   
+            and                        
+
+            (
+                home_form["avg_scored"]  
+
+                -
+
+                away_form["avg_scored"]   
+
+            ) >= 0.30                     
             and
             home_form["recent_avg_scored"] >= 1.5
             and                           
@@ -4358,9 +4368,7 @@ def analyze_prematch_match(match):
 
             away_score                    
 
-        )                                
-
-        # DOMINANCE BONUS                
+        )                                                    
 
         
         # DOMINANCE BONUS                
@@ -4440,6 +4448,16 @@ def analyze_prematch_match(match):
                 -
 
                 away_form["avg_conceded"]
+
+            ) >= 0.30      
+            and                        
+
+            (
+                home_form["avg_scored"]   
+
+                -
+
+                away_form["avg_scored"]   
 
             ) >= 0.30                     
             and                                   
