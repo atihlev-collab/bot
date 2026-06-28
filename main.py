@@ -1828,7 +1828,14 @@ def get_team_form(team_id, venue=None):
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
-        )               
+        )        
+
+        attacking_momentum = round(
+            recent_avg_scored
+            -
+            (scored / total),
+            2
+        )
 
         recent_avg_conceded = round(     
             recent_conceded / len(recent_games),
@@ -1849,7 +1856,19 @@ def get_team_form(team_id, venue=None):
             -
             form_pct,
             2
-        )     
+        )
+
+        if attacking_momentum >= 0.5:
+            momentum += 4
+        
+        elif attacking_momentum >= 0.3:
+            momentum += 2
+        
+        elif attacking_momentum <= -0.5:
+            momentum -= 4
+        
+        elif attacking_momentum <= -0.3:
+            momentum -= 2
 
 
         unbeaten = wins + draws
@@ -1873,24 +1892,9 @@ def get_team_form(team_id, venue=None):
             scored              
             -               
             conceded            
-        )            
+        )                     
 
-        win_quality = round(
-
-            goal_diff
-
-            /
-
-            max(1, wins),
-
-            2
-
-        )
-
-        result = {        
-
-            "win_quality":
-                 win_quality,
+        result = {          
 
             "home_wins":           
                 home_wins,          
@@ -3155,32 +3159,6 @@ def analyze_prematch_match(match):
 
         )   
 
-        # WIN QUALITY BONUS             
-
-        if (                             
-
-            home_form["win_quality"] >= 1.8   
-
-        ):                              
-
-            home_score += 3             
-
-        elif (                          
-
-            home_form["win_quality"] <= 0.8   
-
-        ):                              
-
-            home_score -= 2             
-
-        print(                           
-
-            "AFTER WIN QUALITY:",        
-
-            home_score                  
-
-        )                               
-
         print(
             "AFTER COLLAPSE+DEFENSE:",
             home_score
@@ -3264,7 +3242,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 3              
+            home_score += 5              
 
         elif (                            
             
@@ -3272,7 +3250,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 2              
+            home_score += 3              
 
         elif (                           
 
@@ -3929,7 +3907,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            away_score += 2           
+            away_score += 3           
 
         elif (                        
 
@@ -3954,7 +3932,7 @@ def analyze_prematch_match(match):
 
         ):                                
 
-            away_score += 3              
+            away_score += 5              
 
         elif (                           
 
@@ -4260,40 +4238,6 @@ def analyze_prematch_match(match):
                 home_score,               
 
                 away_score               
-
-            )      
-
-        # PROBABILITY GAP PENALTY        
-
-        if (                              
-
-            abs(                          
-
-                home_probability         
-
-                -                        
-
-                away_probability         
-
-            ) < 20                       
-
-        ):                               
-
-            home_score -= 4              
-
-            away_score -= 4               
-
-            print(                       
-
-                "PROBABILITY GAP:",     
-
-                home,                     
-
-                away,                     
-
-                home_probability,         
-
-                away_probability         
 
             )                            
 
@@ -5572,6 +5516,177 @@ if __name__ == "__main__":
         live_loop()
 
         time.sleep(300)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
