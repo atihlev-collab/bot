@@ -4410,15 +4410,27 @@ def analyze_prematch_match(match):
 
         # HOME WIN + OVER 2.5             
 
-        if (                              
+        if (                               
 
-            home_signal
+            home_signal                  
 
-            and                           
+            and                            
 
             over_signal                    
 
-        ):                                
+            and                            
+
+            home_probability >= 72         
+
+            and                           
+
+            over_prob >= 72               
+
+            and                            
+
+            expected_goals >= 3.3          
+
+        ):                                          
 
         
             signals.append(              
@@ -4477,32 +4489,27 @@ def analyze_prematch_match(match):
 
         # AWAY WIN + OVER 2.5              
 
-        if (                               
+        if (                              
 
-            away_score >= 60              
-
-            and                            
-
-            away_probability >= 70         
+            away_signal                    
 
             and                            
 
-            over_prob >= 70                
-
-            and                            
-
-            expected_goals >= 3.3          
+            over_signal                   
 
             and                           
 
-            away_form["avg_scored"] >= 1.5 
+            away_probability >= 72        
 
-            and                            
+            and                           
 
-            home_form["avg_conceded"] >= 1.2   
+            over_prob >= 72                
+
+            and                           
+
+            expected_goals >= 3.3          
 
         ):                                 
-
             signals.append(               
 
                 (                         
