@@ -1856,19 +1856,7 @@ def get_team_form(team_id, venue=None):
             -
             form_pct,
             2
-        )
-
-        if attacking_momentum >= 0.5:
-            momentum += 4
-        
-        elif attacking_momentum >= 0.3:
-            momentum += 2
-        
-        elif attacking_momentum <= -0.5:
-            momentum -= 4
-        
-        elif attacking_momentum <= -0.3:
-            momentum -= 2
+        )     
 
 
         unbeaten = wins + draws
