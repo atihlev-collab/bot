@@ -3299,7 +3299,63 @@ def analyze_prematch_match(match):
 
                 home_score            
 
-            )                          
+            )         
+
+        # CONSISTENCY CHECK              
+
+        consistency = 0                 
+
+        if (                             
+            home_form["form_pct"]        
+            >
+            away_form["form_pct"]        
+        ):                              
+            consistency += 1            
+
+        if (                             
+            home_form["recent_form_pct"]
+            >
+            away_form["recent_form_pct"] 
+        ):                               
+            consistency += 1             
+
+        if (                            
+            home_form["momentum"]        
+            >
+            away_form["momentum"]       
+        ):                               
+            consistency += 1             
+
+        if (                            
+            home_form["goal_diff"]       
+            >
+            away_form["goal_diff"]      
+        ):                               
+            consistency += 1             
+
+        if (                             
+            home_form["recent_goal_diff"] 
+            >
+            away_form["recent_goal_diff"] 
+        ):                              
+            consistency += 1            
+
+        if consistency <= 2:             
+            home_score -= 6              
+
+        elif consistency == 3:           
+            home_score -= 2            
+
+        elif consistency == 5:          
+            home_score += 2              
+
+        print(                          
+            "HOME CONSISTENCY:",         
+            home,                       
+            away,                        
+            consistency,                 
+            home_score                  
+        )                               
 
         home_super_value = False
         home_value = False
