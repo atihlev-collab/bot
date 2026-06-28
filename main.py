@@ -3288,7 +3288,33 @@ def analyze_prematch_match(match):
 
             home_score      
 
-        )                   
+        )         
+
+        # SCORING CONSISTENCY         
+
+        if (                           
+
+            home_form["scored_pct"] < 80  
+
+        ):                             
+
+            home_score -= 4           
+
+        if (                           
+
+            away_form["clean_sheet_pct"] >= 45  
+
+        ):                            
+
+            home_score -= 3            
+
+        print(                         
+
+            "AFTER CONSISTENCY:",     
+
+            home_score                
+
+        )                             
 
 
         # RECENT GOAL DIFF BONUS         
@@ -3527,7 +3553,7 @@ def analyze_prematch_match(match):
         home_signal = False
         
         if (
-            home_score >= 50           
+            home_score >= 55           
             and
             home_odds_ok
             and
@@ -3539,13 +3565,13 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 4    
             and                         
-            home_edge >= 2            
+            home_edge >= 3            
             and
             form_gap >= 15
             and
             recent_gap >= 5
             and
-            home_form["recent_form_pct"] >= 55                                                              
+            home_form["recent_form_pct"] >= 60                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
             and                           
@@ -3990,6 +4016,33 @@ def analyze_prematch_match(match):
 
             away_score += 1    
 
+
+        # SCORING CONSISTENCY         
+
+        if (                           
+
+            away_form["scored_pct"] < 80   
+
+        ):                            
+
+            away_score -= 4            
+
+        if (                          
+
+            home_form["clean_sheet_pct"] >= 45  
+
+        ):                             
+
+            away_score -= 3            
+
+        print(                        
+
+            "AWAY CONSISTENCY:",       
+
+            away_score                 
+
+        )                              
+
         # CONTRADICTION CHECK            
 
         if (                             
@@ -4360,7 +4413,7 @@ def analyze_prematch_match(match):
         
          
         if (
-            away_score >= 50          
+            away_score >= 55          
             and
             away_odds_ok
             and
@@ -4372,7 +4425,7 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 4     
             and                        
-            away_edge >= 2             
+            away_edge >= 3             
             and
             away_gap >= 15
             and
@@ -4392,7 +4445,9 @@ def analyze_prematch_match(match):
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
             and                          
-            away_form["recent_goal_diff"] >= 1  
+            away_form["recent_goal_diff"] >= 2  
+            and                          
+            away_form["recent_form_pct"] >= 60   
             and
             away_form["avg_conceded"] <= 1.3
             and
@@ -4400,7 +4455,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 68
+            away_probability >= 70
         ):
 
             print(
