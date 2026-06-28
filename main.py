@@ -1894,10 +1894,7 @@ def get_team_form(team_id, venue=None):
             conceded            
         )                     
 
-        result = {
-
-            "attacking_momentum":
-                attacking_momentum,
+        result = {          
 
             "home_wins":           
                 home_wins,          
