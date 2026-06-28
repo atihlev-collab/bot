@@ -1828,7 +1828,14 @@ def get_team_form(team_id, venue=None):
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
-)                                
+)        
+
+       attacking_momentum = round(
+              recent_avg_scored
+              -
+              (scored / total),
+              2
+)
 
         recent_avg_conceded = round(     
             recent_conceded / len(recent_games),
@@ -1850,6 +1857,19 @@ def get_team_form(team_id, venue=None):
             form_pct,
             2
         )
+
+        if attacking_momentum >= 0.5:
+            momentum += 4
+        
+        elif attacking_momentum >= 0.3:
+            momentum += 2
+        
+        elif attacking_momentum <= -0.5:
+            momentum -= 4
+        
+        elif attacking_momentum <= -0.3:
+            momentum -= 2
+
 
         unbeaten = wins + draws
 
@@ -1875,6 +1895,9 @@ def get_team_form(team_id, venue=None):
         )                     
 
         result = {
+
+            "attacking_momentum":
+                attacking_momentum,
 
             "home_wins":           
                 home_wins,          
