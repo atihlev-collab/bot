@@ -3355,7 +3355,45 @@ def analyze_prematch_match(match):
             away,                        
             consistency,                 
             home_score                  
-        )                               
+        )             
+
+        # OPPONENT QUALITY               
+
+        if (                            
+
+            away_form["form_pct"] >= 65  
+
+            and                         
+
+            home_form["wins"] >= 3      
+
+        ):                              
+
+            home_score += 2              
+
+        elif (                          
+
+            away_form["form_pct"] <= 35  
+
+            and                          
+
+            home_form["wins"] >= 3      
+
+        ):                              
+
+            home_score -= 2              
+
+        print(                           
+
+            "HOME OPPONENT:",           
+
+            home,                       
+
+            away,                       
+
+            home_score                   
+
+        )                                
 
         home_super_value = False
         home_value = False
@@ -3942,7 +3980,45 @@ def analyze_prematch_match(match):
 
                 away_score             
 
-            )                          
+            )     
+
+        # OPPONENT QUALITY               
+
+        if (                            
+
+            home_form["form_pct"] >= 65  
+
+            and                         
+
+            away_form["wins"] >= 3       
+
+        ):                             
+
+            away_score += 2              
+
+        elif (                          
+
+            home_form["form_pct"] <= 35  
+
+            and                          
+
+            away_form["wins"] >= 3       
+
+        ):                              
+
+            away_score -= 2              
+
+        print(                          
+
+            "AWAY OPPONENT:",            
+
+            home,                       
+
+            away,                        
+
+            away_score                  
+
+        )                                
              
         away_super_value = False
         away_value = False
