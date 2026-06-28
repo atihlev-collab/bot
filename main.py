@@ -1,7 +1,7 @@
-#=========================================================
+#========================================================
 # MAIN V3
 # CLEAN BETTING SYSTEM
-# ========================================================
+# =========================================================
 
 import requests
 import sqlite3
@@ -1828,12 +1828,12 @@ def get_team_form(team_id, venue=None):
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
-        )               
+)                                
 
         recent_avg_conceded = round(     
             recent_conceded / len(recent_games),
             2
-        )                                
+)                                
 
         total = len(games)
 
@@ -1849,8 +1849,7 @@ def get_team_form(team_id, venue=None):
             -
             form_pct,
             2
-        )     
-
+        )
 
         unbeaten = wins + draws
 
@@ -1875,7 +1874,7 @@ def get_team_form(team_id, venue=None):
             conceded            
         )                     
 
-        result = {          
+        result = {
 
             "home_wins":           
                 home_wins,          
@@ -3266,135 +3265,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 1        
-
-        # CONTRADICTION CHECK             
-
-        if (                              
-
-            away_form["recent_form_pct"]  
-
-            >
-
-            home_form["recent_form_pct"] + 20   
-
-            and                                 
-
-            away_form["momentum"]              
-
-            >
-
-            home_form["momentum"]              
-
-        ):                               
-
-            home_score -= 4             
-
-            print(                     
-
-                "HOME CONTRADICTION:",  
-
-                home,                   
-
-                away,                  
-
-                home_score            
-
-            )         
-
-        # CONSISTENCY CHECK              
-
-        consistency = 0                 
-
-        if (                             
-            home_form["form_pct"]        
-            >
-            away_form["form_pct"]        
-        ):                              
-            consistency += 1            
-
-        if (                             
-            home_form["recent_form_pct"]
-            >
-            away_form["recent_form_pct"] 
-        ):                               
-            consistency += 1             
-
-        if (                            
-            home_form["momentum"]        
-            >
-            away_form["momentum"]       
-        ):                               
-            consistency += 1             
-
-        if (                            
-            home_form["goal_diff"]       
-            >
-            away_form["goal_diff"]      
-        ):                               
-            consistency += 1             
-
-        if (                             
-            home_form["recent_goal_diff"] 
-            >
-            away_form["recent_goal_diff"] 
-        ):                              
-            consistency += 1            
-
-        if consistency <= 2:             
-            home_score -= 6              
-
-        elif consistency == 3:           
-            home_score -= 2            
-
-        elif consistency == 5:          
-            home_score += 2              
-
-        print(                          
-            "HOME CONSISTENCY:",         
-            home,                       
-            away,                        
-            consistency,                 
-            home_score                  
-        )             
-
-        # OPPONENT QUALITY               
-
-        if (                            
-
-            away_form["form_pct"] >= 65  
-
-            and                         
-
-            home_form["wins"] >= 3      
-
-        ):                              
-
-            home_score += 2              
-
-        elif (                          
-
-            away_form["form_pct"] <= 35  
-
-            and                          
-
-            home_form["wins"] >= 3      
-
-        ):                              
-
-            home_score -= 2              
-
-        print(                           
-
-            "HOME OPPONENT:",           
-
-            home,                       
-
-            away,                       
-
-            home_score                   
-
-        )                                
+            home_score += 1             
 
         home_super_value = False
         home_value = False
@@ -3482,8 +3353,6 @@ def analyze_prematch_match(match):
             away,
             home_score
         )      
-
-        home_signal = False
         
         if (
             home_score >= 50           
@@ -3528,7 +3397,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.2
             and
-            home_probability >= 72
+            home_probability >= 65
         ):
 
             print(
@@ -3557,13 +3426,9 @@ def analyze_prematch_match(match):
 
                 )
 
-            )
-
-            home_signal = True
+           )
      
         # AWAY WIN
-
-        away_signal = False
 
         away_score = (
 
@@ -3947,79 +3812,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 1    
-
-        # CONTRADICTION CHECK            
-
-        if (                             
-
-            home_form["recent_form_pct"] 
-
-            >
-
-            away_form["recent_form_pct"] + 20   
-
-            and                               
-
-            home_form["momentum"]              
-
-            >
-
-            away_form["momentum"]               
-
-        ):                              
-
-            away_score -= 4            
-
-            print(                      
-
-                "AWAY CONTRADICTION:", 
-
-                home,                   
-
-                away,                   
-
-                away_score             
-
-            )     
-
-        # OPPONENT QUALITY               
-
-        if (                            
-
-            home_form["form_pct"] >= 65  
-
-            and                         
-
-            away_form["wins"] >= 3       
-
-        ):                             
-
-            away_score += 2              
-
-        elif (                          
-
-            home_form["form_pct"] <= 35  
-
-            and                          
-
-            away_form["wins"] >= 3       
-
-        ):                              
-
-            away_score -= 2              
-
-        print(                          
-
-            "AWAY OPPONENT:",            
-
-            home,                       
-
-            away,                        
-
-            away_score                  
-
-        )                                
+            away_score += 1             
              
         away_super_value = False
         away_value = False
@@ -4123,7 +3916,7 @@ def analyze_prematch_match(match):
             away_score += 1           
 
         elif (                        
-            away_probability >= 72     
+            away_probability >= 68     
             and                        
             away_score >= 30           
         ):                             
@@ -4182,57 +3975,7 @@ def analyze_prematch_match(match):
             home_score                
             -                        
             away_score                
-        )        
-
-        # PROBABILITY BALANCE CHECK       
-
-        if (                            
-
-            abs(                          
-
-                home_probability        
-
-                -                        
-
-                away_probability         
-
-            ) < 18                        
-
-        ):                               
-
-            home_score -= 3              
-
-            away_score -= 3              
-
-            print(                      
-
-                "BALANCE CHECK:",        
-
-                home,                    
-
-                away,                     
-
-                home_probability,         
-
-                away_probability,        
-
-                home_score,               
-
-                away_score               
-
-            )                            
-
-        score_gap = abs(                 
-
-            home_score                    
-
-            -                             
-
-            away_score                    
-
-        )                                
-
-        # DOMINANCE BONUS                
+        )                            
 
         
         # DOMINANCE BONUS                
@@ -4325,7 +4068,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 68
+            away_probability >= 65
         ):
 
             print(
@@ -4353,8 +4096,6 @@ def analyze_prematch_match(match):
               
                )                                  
             )  
-
-            away_signal = True
              
         print(
             "OVER CHECK:",
@@ -4405,16 +4146,14 @@ def analyze_prematch_match(match):
             away_form["avg_scored"],    
             home_form["avg_conceded"],   
             away_form["avg_conceded"]    
-        )      
-
-        over_signal = False
+        )                                
 
         if (
-            over_prob >= 72
+            over_prob >= 70
             and
             over_conf >= 70
             and                           
-            expected_goals >= 3.3         
+            expected_goals >= 3.5         
             and
             home_form["avg_scored"] >= 1.4
             and
@@ -4466,8 +4205,6 @@ def analyze_prematch_match(match):
                 )
 
             )
-
-            over_signal = True
          
         print(
             "BTTS CHECK:",
@@ -4515,11 +4252,11 @@ def analyze_prematch_match(match):
         )                                    
 
         if (
-            btts_prob >= 75
+            btts_prob >= 73
             and
             btts_conf >= 73
             and                          
-            expected_goals >= 3.5         
+            expected_goals >= 3.2         
             and
             home_form["avg_scored"] >= 1.3
             and
@@ -4595,7 +4332,7 @@ def analyze_prematch_match(match):
 
         if (                          
 
-            over_prob <= 45            
+            over_prob <= 50            
 
             and                        
 
@@ -4603,23 +4340,15 @@ def analyze_prematch_match(match):
 
             and                        
 
-            home_form["avg_scored"] <= 1.0      
+            home_form["avg_scored"] <= 1.2      
 
             and                       
 
-            away_form["avg_scored"] <= 1.0      
+            away_form["avg_scored"] <= 1.2      
 
             and       
 
             home_form["recent_avg_scored"] <= 1.3
-
-            and
-         
-            home_form["recent_avg_conceded"] <= 1.0
-         
-            and
-         
-            away_form["recent_avg_conceded"] <= 1.0
             
             and
             
@@ -4673,28 +4402,31 @@ def analyze_prematch_match(match):
 
         # HOME WIN + OVER 2.5             
 
-        if (                               
-
-            home_signal                  
-
-            and                            
-
-            over_signal                    
-
-            and                            
-
-            home_probability >= 72         
-
+        if (                              
+        
+            home_score >= 60              
+        
             and                           
-
-            over_prob >= 72               
-
-            and                            
-
-            expected_goals >= 3.3          
-
-        ):                                          
-
+        
+            home_probability >= 70        
+        
+            and                          
+        
+            over_prob >= 70               
+        
+            and                           
+        
+            expected_goals >= 3.2        
+        
+            and                          
+        
+            home_form["avg_scored"] >= 1.5   
+        
+            and                          
+        
+            away_form["avg_conceded"] >= 1.2 
+        
+        ):                                
         
             signals.append(              
         
@@ -4752,27 +4484,32 @@ def analyze_prematch_match(match):
 
         # AWAY WIN + OVER 2.5              
 
-        if (                              
+        if (                               
 
-            away_signal                    
+            away_score >= 60              
 
             and                            
 
-            over_signal                   
+            away_probability >= 70         
+
+            and                            
+
+            over_prob >= 70                
+
+            and                            
+
+            expected_goals >= 3.2          
 
             and                           
 
-            away_probability >= 72        
+            away_form["avg_scored"] >= 1.5 
 
-            and                           
+            and                            
 
-            over_prob >= 72                
-
-            and                           
-
-            expected_goals >= 3.3          
+            home_form["avg_conceded"] >= 1.2   
 
         ):                                 
+
             signals.append(               
 
                 (                         
@@ -4832,11 +4569,11 @@ def analyze_prematch_match(match):
 
         if (                          
 
-            over_prob >= 80            
+            over_prob >= 78            
 
             and                        
 
-            expected_goals >= 4.3   
+            expected_goals >= 4.5   
 
             and                        
 
