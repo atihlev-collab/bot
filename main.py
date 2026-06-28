@@ -4220,6 +4220,40 @@ def analyze_prematch_match(match):
 
                 away_score               
 
+            )      
+
+        # PROBABILITY GAP PENALTY        
+
+        if (                              
+
+            abs(                          
+
+                home_probability         
+
+                -                        
+
+                away_probability         
+
+            ) < 20                       
+
+        ):                               
+
+            home_score -= 4              
+
+            away_score -= 4               
+
+            print(                       
+
+                "PROBABILITY GAP:",     
+
+                home,                     
+
+                away,                     
+
+                home_probability,         
+
+                away_probability         
+
             )                            
 
         score_gap = abs(                 
