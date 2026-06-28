@@ -1873,9 +1873,24 @@ def get_team_form(team_id, venue=None):
             scored              
             -               
             conceded            
-        )                     
+        )            
 
-        result = {          
+        win_quality = round(
+
+            goal_diff
+
+            /
+
+            max(1, wins),
+
+            2
+
+        )
+
+        result = {        
+
+            "win_quality":
+                 win_quality,
 
             "home_wins":           
                 home_wins,          
@@ -3140,6 +3155,32 @@ def analyze_prematch_match(match):
 
         )   
 
+        # WIN QUALITY BONUS             
+
+        if (                             
+
+            home_form["win_quality"] >= 1.8   
+
+        ):                              
+
+            home_score += 3             
+
+        elif (                          
+
+            home_form["win_quality"] <= 0.8   
+
+        ):                              
+
+            home_score -= 2             
+
+        print(                           
+
+            "AFTER WIN QUALITY:",        
+
+            home_score                  
+
+        )                               
+
         print(
             "AFTER COLLAPSE+DEFENSE:",
             home_score
@@ -3223,7 +3264,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 5              
+            home_score += 3              
 
         elif (                            
             
@@ -3231,7 +3272,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 3              
+            home_score += 2              
 
         elif (                           
 
@@ -3888,7 +3929,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            away_score += 3           
+            away_score += 2           
 
         elif (                        
 
@@ -3913,7 +3954,7 @@ def analyze_prematch_match(match):
 
         ):                                
 
-            away_score += 5              
+            away_score += 3              
 
         elif (                           
 
