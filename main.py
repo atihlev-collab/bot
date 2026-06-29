@@ -4275,7 +4275,7 @@ def analyze_prematch_match(match):
 
             )
 
-            over_signal = False
+            over_signal = True
          
         print(
             "BTTS CHECK:",
