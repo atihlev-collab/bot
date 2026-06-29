@@ -3408,8 +3408,8 @@ def analyze_prematch_match(match):
             home_form["draws"] <= 4    
             and                         
             home_edge >= 2   
-            and                              
-            away_score_gap >= 30             
+            and
+            score_gap >= 15            
             and
             form_gap >= 10
             and
@@ -4035,11 +4035,7 @@ def analyze_prematch_match(match):
 
         away_score_gap = away_score - home_score 
 
-        score_gap = abs(            
-            home_score                
-            -                        
-            away_score                
-        )                            
+               
 
         
         # DOMINANCE BONUS                
@@ -4104,7 +4100,9 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 4     
             and                        
-            away_edge >= 2             
+            away_edge >= 2    
+            and
+            away_score_gap >= 15
             and
             away_gap >= 15
             and
