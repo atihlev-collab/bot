@@ -3387,9 +3387,9 @@ def analyze_prematch_match(match):
             "recent_gap=", recent_gap,
             "recent_form=", home_form["recent_form_pct"],
             "prob=", home_probability
-         )
+        )
 
-         score_gap = home_score - away_score
+        score_gap = home_score - away_score
         
         if (
             home_score >= 50           
