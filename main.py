@@ -2923,7 +2923,7 @@ def analyze_prematch_match(match):
             away_form                       
         )    
            
-        home_score *= 0.4
+        home_score *= 0.6
 
         print(                   
 
@@ -3531,7 +3531,7 @@ def analyze_prematch_match(match):
 
            )
 
-        away_score *= 0.4
+        away_score *= 0.6
 
         print(                    
 
