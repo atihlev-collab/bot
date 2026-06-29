@@ -3407,7 +3407,9 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 4    
             and                         
-            home_edge >= 0            
+            home_edge >= 2   
+            and                              
+            away_score_gap >= 30             
             and
             form_gap >= 10
             and
@@ -4028,6 +4030,10 @@ def analyze_prematch_match(match):
             )                 
 
         )     
+
+        score_gap = home_score - away_score      
+
+        away_score_gap = away_score - home_score 
 
         score_gap = abs(            
             home_score                
