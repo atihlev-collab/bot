@@ -3506,6 +3506,14 @@ def analyze_prematch_match(match):
         )      
 
         home_signal = False
+
+        print(
+            "CHECK:",
+            home,
+            away,
+            home_score,
+            away_score
+        )
         
         if (
             home_score >= 50           
@@ -3558,9 +3566,13 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-            signals.append(                    
-
-                (                              
+            signals.append(   
+             
+            ) 
+         
+            print("HOME IF PASSED")  
+             
+                                          
                    "🏆 HOME WIN",             
            
                       
@@ -4355,7 +4367,10 @@ def analyze_prematch_match(match):
 
             signals.append(                     
 
-            (                              
+            (    
+
+            print("AWAY IF PASSED")
+             
                 "✈️ AWAY WIN",              
         
                 confidence_from_score(      
