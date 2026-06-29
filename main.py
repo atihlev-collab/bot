@@ -3566,33 +3566,32 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-            signals.append(   
-             
-            ) 
-         
-            print("HOME IF PASSED")  
-             
-                                          
-                   "🏆 HOME WIN",             
-           
-                      
-                   confidence_from_score(
-                       home_score
-                   ),
+            signals.append(           
 
-                   round(
-                       (
-                           100
-                           /
-                           match_odds[0]
-                       ),
-                       1
-                    )
+    (                     
 
-                )
+        "🏆 HOME WIN",    
 
-            )
+        confidence_from_score(   
+            home_score           
+        ),                       
 
+        round(                   
+            (                    
+                100              
+                /                
+                match_odds[0]    
+            ),                   
+            1                    
+        )                        
+
+    )                            
+
+)                                
+
+print(                           
+    "HOME IF PASSED"             
+)                               
             home_signal = True
      
         # AWAY WIN
@@ -4365,10 +4364,8 @@ def analyze_prematch_match(match):
                 away_score           
             )
 
-            signals.append(                     
-
-            (    
-
+            signals.append()       
+         
             print("AWAY IF PASSED")
              
                 "✈️ AWAY WIN",              
