@@ -3908,44 +3908,9 @@ def analyze_prematch_match(match):
                 away_strength,       
                 home_strength,        
                 h2h                   
-            )   
-
+            )         
 
         
-
-        if (                          
-            home_probability >= 65    
-            and                       
-            home_score >= 40          
-        ):                            
-
-            home_score += 1           
-
-        elif (                         
-            home_probability >= 68    
-            and                       
-            home_score >= 30           
-        ):                            
-
-            home_score += 1            
-
-
-        if (                          
-            away_probability >= 65     
-            and                        
-            away_score >= 40           
-        ):                            
-
-            away_score += 1           
-
-        elif (                        
-            away_probability >= 68     
-            and                        
-            away_score >= 30           
-        ):                             
-
-            away_score += 1            
-
 
         # EXTREME MOMENTUM BONUS         
 
@@ -4077,40 +4042,25 @@ def analyze_prematch_match(match):
             *                               
             100,                             
             1                                
-        )           
+        )      
 
+        if (
+            home_probability >= 65
+            and
+            home_score >= 40
+        ):
 
-                         
+            home_score += 1
 
-        home_probability = round(            
-            (                                
-                max(                         
-                    1,                       
-                    home_score + 100         
-                )                           
-                /                            
-                total_strength               
-            )                               
-            *                                
-            100,                            
-            1                               
-        )                                   
+        elif (
+            home_probability >= 68
+            and
+            home_score >= 30
+        ):
 
-        away_probability = round(             
-            (                               
-                max(                          
-                    1,                        
-                    away_score + 100         
-                )                            
-                /                            
-                total_strength               
-            )                               
-            *                                
-            100,                             
-            1                               
-        )        
+            home_score += 1
+                                     
         
-         
         if (
             away_score >= 50          
             and
