@@ -4126,30 +4126,36 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 65
-        ):
+            away_probability >= 65        
 
-            print(
-                "AWAY SIGNAL:",
-                away_score           
-            )
+        ):                               
 
-            signals.append(                     
+            print(                       
+                "AWAY SIGNAL:",          
+                away_score                
+            )                            
 
-            (                              
-                "✈️ AWAY WIN",              
-        
-                confidence_from_score(      
-                    away_score            
-                ),                         
-        
-                    round(                 
-                        away_probability,  
-                        1                  
-                    )                      
-             
-        print(
-            "OVER CHECK:",
+            signals.append(              
+
+                (                         
+
+                    "✈️ AWAY WIN",        
+
+                    confidence_from_score(
+                        away_score       
+                    ),                   
+
+                    round(               
+                        away_probability, 
+                        1                 
+                    )                     
+
+                )                        
+
+            )                            
+
+        print(                           
+            "OVER CHECK:",               
             home,
             away,
             over_prob,
