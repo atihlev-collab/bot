@@ -4088,14 +4088,7 @@ def analyze_prematch_match(match):
         )           
 
 
-        total_strength = max(                  
-            1,                               
-            home_score                       
-            +                               
-            away_score                       
-            +                                
-            200                              
-        )                                    
+                         
 
         home_probability = round(            
             (                                
