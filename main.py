@@ -3388,6 +3388,8 @@ def analyze_prematch_match(match):
             "recent_form=", home_form["recent_form_pct"],
             "prob=", home_probability
          )
+
+         score_gap = home_score - away_score
         
         if (
             home_score >= 50           
@@ -3402,7 +3404,9 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 4    
             and                         
-            home_edge >= 2                      
+            home_edge >= 2       
+            and
+            score_gap >= 12
             and
             form_gap >= 10
             and
@@ -4084,7 +4088,8 @@ def analyze_prematch_match(match):
         ):                                  
 
             away_score += 1               
-                                     
+
+            away_score_gap = away_score - home_score
         
         if (
             away_score >= 50          
@@ -4100,6 +4105,8 @@ def analyze_prematch_match(match):
             away_form["draws"] <= 4     
             and                        
             away_edge >= 2    
+            and
+            away_score_gap >= 12
             and
             away_score_gap >= 15
             and
