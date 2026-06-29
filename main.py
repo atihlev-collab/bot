@@ -3379,6 +3379,20 @@ def analyze_prematch_match(match):
     
 
         home_signal = False
+
+
+        print(
+            "HOME FILTERS:",
+            home,
+            away,
+            "score=", home_score,
+            "odds_ok=", home_odds_ok,
+            "edge=", home_edge,
+            "form_gap=", form_gap,
+            "recent_gap=", recent_gap,
+            "recent_form=", home_form["recent_form_pct"],
+            "prob=", home_probability
+         )
         
         if (
             home_score >= 50           
