@@ -4217,6 +4217,23 @@ def analyze_prematch_match(match):
 
         over_signal = False
 
+        print(
+            "OVER FILTERS:",
+            "xG=", expected_goals,
+            "Havg=", home_form["avg_scored"],
+            "Aavg=", away_form["avg_scored"],
+            "Hravg=", home_form["recent_avg_scored"],
+            "Aravg=", away_form["recent_avg_scored"],
+            "Hcon=", home_form["avg_conceded"],
+            "Acon=", away_form["avg_conceded"],
+            "Hov=", home_form["over25_pct"],
+            "Aov=", away_form["over25_pct"],
+            "Hrecent=", home_form["recent_over25"],
+            "Arecent=", away_form["recent_over25"],
+            "Hclean=", home_form["clean_sheet_pct"],
+            "Aclean=", away_form["clean_sheet_pct"]
+        )
+     
         if (
             over_prob >= 70
             and
