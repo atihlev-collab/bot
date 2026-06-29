@@ -3354,7 +3354,7 @@ def analyze_prematch_match(match):
             home_score
         )     
 
-             print(                 
+        print(                 
             "HOME SCORE:",     
             home,               
             away,              
