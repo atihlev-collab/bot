@@ -3389,7 +3389,7 @@ def analyze_prematch_match(match):
             "prob=", home_probability
         )
 
-        score_gap = home_score - away_score
+       
         
         if (
             home_score >= 50           
