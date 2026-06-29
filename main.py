@@ -3913,42 +3913,7 @@ def analyze_prematch_match(match):
             )   
 
 
-        total_strength = max(                  
-            1,                               
-            home_score                        
-            +                                
-            away_score                        
-            +                                 
-            200                               
-        )                                     
-
-        home_probability = round(             
-            (                                
-                max(                          
-                    1,                        
-                    home_score + 100         
-                )                             
-                /                             
-                total_strength               
-            )                                
-            *                                 
-            100,                              
-            1                                
-        )                                    
-
-        away_probability = round(             
-            (                                
-                max(                         
-                    1,                        
-                    away_score + 100         
-                )                             
-                /                             
-                total_strength               
-            )                                 
-            *                                 
-            100,                              
-            1                                
-        )                                    
+        
 
         if (                          
             home_probability >= 65    
@@ -4085,6 +4050,80 @@ def analyze_prematch_match(match):
             )                      
         )   
 
+        total_strength = max(                  
+            1,                               
+            home_score                       
+            +                               
+            away_score                       
+            +                                
+            200                             
+        )                                    
+
+        home_probability = round(             
+            (                               
+                max(                         
+                    1,                        
+                    home_score + 100          
+                )                            
+                /                            
+                total_strength               
+            )                               
+            *                               
+            100,                             
+            1                               
+        )                                    
+
+        away_probability = round(            
+            (                               
+                max(                          
+                    1,                       
+                    away_score + 100          
+                )                            
+                /                            
+                total_strength              
+            )                                
+            *                               
+            100,                             
+            1                                
+        )           
+
+
+        total_strength = max(                  
+            1,                               
+            home_score                       
+            +                               
+            away_score                       
+            +                                
+            200                              
+        )                                    
+
+        home_probability = round(            
+            (                                
+                max(                         
+                    1,                       
+                    home_score + 100         
+                )                           
+                /                            
+                total_strength               
+            )                               
+            *                                
+            100,                            
+            1                               
+        )                                   
+
+        away_probability = round(             
+            (                               
+                max(                          
+                    1,                        
+                    away_score + 100         
+                )                            
+                /                            
+                total_strength               
+            )                               
+            *                                
+            100,                             
+            1                               
+        )        
         
          
         if (
