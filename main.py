@@ -3566,11 +3566,11 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-signals.append(           
+            signals.append(           
 
-    (                     
+                (                     
 
-        "🏆 HOME WIN",    
+            "🏆 HOME WIN",    
 
         confidence_from_score(   
             home_score           
