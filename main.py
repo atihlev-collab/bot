@@ -4243,9 +4243,9 @@ def analyze_prematch_match(match):
             and
             home_form["avg_scored"] >= 1.4
             and
-            away_form["avg_scored"] >= 1.4
+            away_form["avg_scored"] >= 1.1
             and                              
-            home_form["recent_avg_scored"] >= 1.4  
+            home_form["recent_avg_scored"] >= 1.1  
             and                              
             away_form["recent_avg_scored"] >= 1.4  
             and
