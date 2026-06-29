@@ -3959,6 +3959,18 @@ def analyze_prematch_match(match):
 
         )     
 
+        score_gap = abs(             
+            home_score               
+            -                         
+            away_score               
+        )                           
+
+        away_score_gap = (           
+            away_score                
+            -                         
+            home_score                
+        )                             
+
                               
         # DOMINANCE BONUS                
 
