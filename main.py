@@ -4056,6 +4056,8 @@ def analyze_prematch_match(match):
             1                                
         )      
 
+     
+
         if (
             home_probability >= 65
             and
@@ -4071,6 +4073,22 @@ def analyze_prematch_match(match):
         ):
 
             home_score += 1
+
+        if (                               
+            away_probability >= 65          
+            and                             
+            away_score >= 40               
+        ):                                  
+
+            away_score += 1                
+
+        elif (                              
+            away_probability >= 68          
+            and                             
+            away_score >= 30               
+        ):                                  
+
+            away_score += 1               
                                      
         
         if (
