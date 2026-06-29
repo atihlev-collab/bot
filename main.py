@@ -3566,7 +3566,7 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-            signals.append(           
+signals.append(           
 
     (                     
 
