@@ -3445,28 +3445,24 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-            signals.append(                    
+            signals.append(              
 
-                (                              
-                   "🏆 HOME WIN",             
-           
-                      
-                   confidence_from_score(
-                       home_score
-                   ),
+                (                          
 
-                   round(
-                       (
-                           100
-                           /
-                           match_odds[0]
-                       ),
-                       1
-                    )
+                    "🏆 HOME WIN",          
 
-                )
+                    confidence_from_score(  
+                        home_score          
+                    ),                    
 
-           )
+                    round(                  
+                        home_probability,  
+                        1                  
+                    )                       
+
+                )                          
+
+            )                               
 
             home_signal = True
      
@@ -4147,17 +4143,10 @@ def analyze_prematch_match(match):
                     away_score            
                 ),                         
         
-                    round(                
-                        (                  
-                            100            
-                            /              
-                            match_odds[2]  
-                        ),                 
+                    round(                 
+                        away_probability,  
                         1                  
-                   )                                  
-              
-               )                                  
-            )  
+                    )                      
              
         print(
             "OVER CHECK:",
