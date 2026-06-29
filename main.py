@@ -4253,10 +4253,8 @@ def analyze_prematch_match(match):
             away_score                    
 
         )                                
-
-        # DOMINANCE BONUS                
-
-        
+              
+       
         # DOMINANCE BONUS                
 
         if (                             
