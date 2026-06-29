@@ -3507,13 +3507,7 @@ def analyze_prematch_match(match):
 
         home_signal = False
 
-        print(
-            "CHECK:",
-            home,
-            away,
-            home_score,
-            away_score
-        )
+        
         
         if (
             home_score >= 50           
