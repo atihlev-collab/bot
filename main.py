@@ -3915,22 +3915,42 @@ def analyze_prematch_match(match):
             )   
 
 
-        home_probability = max(    
-            0,                      
-            min(                   
-                100,                
-                50 + home_score     
-            )                      
-        )                          
+        total_strength = max(                  
+            1,                               
+            home_score                        
+            +                                
+            away_score                        
+            +                                 
+            200                               
+        )                                     
 
-        away_probability = max(    
-            0,                      
-            min(                   
-                100,                
-                50 + away_score    
-            )                       
-        )                           
+        home_probability = round(             
+            (                                
+                max(                          
+                    1,                        
+                    home_score + 100         
+                )                             
+                /                             
+                total_strength               
+            )                                
+            *                                 
+            100,                              
+            1                                
+        )                                    
 
+        away_probability = round(             
+            (                                
+                max(                         
+                    1,                        
+                    away_score + 100         
+                )                             
+                /                             
+                total_strength               
+            )                                 
+            *                                 
+            100,                              
+            1                                
+        )                                    
 
         if (                          
             home_probability >= 65    
