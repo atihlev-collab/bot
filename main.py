@@ -3566,33 +3566,30 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-            signals.append(           
+            signals.append(             
 
-                (                     
+                (                       
 
-            "🏆 HOME WIN",    
+                    "🏆 HOME WIN",      
 
-        confidence_from_score(   
-            home_score           
-        ),                       
+                    confidence_from_score(   
+                        home_score           
+                    ),                      
 
-        round(                   
-            (                    
-                100              
-                /                
-                match_odds[0]    
-            ),                   
-            1                    
-        )                        
+                    round(                  
+                        (                   
+                            100             
+                            /               
+                            match_odds[0]   
+                        ),                  
+                        1                   
+                    )                       
 
-    )                            
+                )                           
 
-)                                
+            )                               
 
-print(                           
-    "HOME IF PASSED"             
-)                               
-            home_signal = True
+            home_signal = True              
      
         # AWAY WIN
 
@@ -4364,29 +4361,30 @@ print(
                 away_score           
             )
 
-            signals.append()       
-         
-            print("AWAY IF PASSED")
-             
-                "✈️ AWAY WIN",              
-        
-                confidence_from_score(      
-                    away_score            
-                ),                         
-        
-                    round(                
-                        (                  
-                            100            
-                            /              
-                            match_odds[2]  
-                        ),                 
-                        1                  
-                   )                                  
-              
-               )                                  
-            )  
+            signals.append(              
 
-            away_signal = True
+                (                        
+
+                    "✈️ AWAY WIN",       
+
+                    confidence_from_score(   
+                        away_score           
+                    ),                      
+
+                    round(                  
+                        (                   
+                            100             
+                            /               
+                            match_odds[2]   
+                        ),                  
+                        1                   
+                    )                       
+
+                )                           
+
+            )                               
+
+            away_signal = True              
              
         print(
             "OVER CHECK:",
