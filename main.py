@@ -3376,9 +3376,7 @@ def analyze_prematch_match(match):
             home_probability    
         )                      
 
-        score_gap = home_score - away_score     
-
-        away_score_gap = away_score - home_score 
+       
 
         home_signal = False
 
@@ -3409,9 +3407,7 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 4    
             and                         
-            home_edge >= 2   
-            and
-            score_gap >= 15            
+            home_edge >= 2                      
             and
             form_gap >= 10
             and
