@@ -3376,7 +3376,9 @@ def analyze_prematch_match(match):
             home_probability    
         )                      
 
-    
+        score_gap = home_score - away_score     
+
+        away_score_gap = away_score - home_score 
 
         home_signal = False
 
@@ -3996,13 +3998,7 @@ def analyze_prematch_match(match):
 
         )     
 
-        score_gap = home_score - away_score      
-
-        away_score_gap = away_score - home_score 
-
-               
-
-        
+                              
         # DOMINANCE BONUS                
 
         if (                             
