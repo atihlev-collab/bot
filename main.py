@@ -3352,7 +3352,31 @@ def analyze_prematch_match(match):
             home,
             away,
             home_score
-        )      
+        )     
+
+             print(                 
+            "HOME SCORE:",     
+            home,               
+            away,              
+            home_score          
+        )                       
+
+        home_probability = max( 
+            0,                 
+            min(                
+                100,           
+                50 + home_score 
+            )                   
+        )                      
+
+        print(                  
+            "HOME PROB:",       
+            home,              
+            away,               
+            home_probability    
+        )                      
+
+    
 
         home_signal = False
         
