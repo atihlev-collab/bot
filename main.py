@@ -3507,7 +3507,14 @@ def analyze_prematch_match(match):
 
         home_signal = False
 
-        
+        print(
+            "HOME FILTER:",
+            home_probability,
+            form_gap,
+            recent_gap,
+            home_form["recent_form_pct"],
+            home_form["recent_goal_diff"]
+        )
         
         if (
             home_score >= 50           
@@ -3552,7 +3559,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.2
             and
-            home_probability >= 72
+            home_probability >= 65
         ):
 
             print(
@@ -4347,7 +4354,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 68
+            away_probability >= 65
         ):
 
             print(
