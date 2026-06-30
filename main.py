@@ -4058,6 +4058,18 @@ def analyze_prematch_match(match):
             away_score                
             -                         
             home_score                
+        )               
+
+        score_gap = abs(            
+            home_score                
+            -                         
+            away_score                
+        )                             
+
+        away_score_gap = (            
+            away_score                
+            -                         
+            home_score                
         )                             
 
                               
@@ -5065,8 +5077,10 @@ def prematch_loop():
             probability,
             odds_text,
            
-
         )
+
+
+
 
 # =========================================================
 # LIVE LOOP
