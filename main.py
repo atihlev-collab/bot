@@ -2871,21 +2871,7 @@ def analyze_prematch_match(match):
 
             home_score += 6
 
-        # STRONG FAVORITE BONUS        
-
-        if (                          
-
-            home_probability >= 72      
-            and                        
-            form_gap >= 20             
-            and                         
-            recent_gap >= 15           
-            and                         
-            home_form["wins"] >= 6      
-
-        ):                             
-
-            home_score += 4        
+     
 
         # GOAL DOMINANCE BONUS          
 
@@ -3511,21 +3497,7 @@ def analyze_prematch_match(match):
 
             away_score += 6
 
-        # STRONG FAVORITE BONUS         
-
-        if (                            
-
-            away_probability >= 72      
-            and                         
-            form_gap <= -20             
-            and                         
-            recent_gap <= -15           
-            and                         
-            away_form["wins"] >= 6      
-
-        ):                              
-
-            away_score += 4          
+          
 
         # GOAL DOMINANCE BONUS          
 
