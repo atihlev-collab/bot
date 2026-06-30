@@ -129,27 +129,6 @@ def init_database():
 
     """)
 
-    cursor.execute("""
-
-    CREATE TABLE IF NOT EXISTS odds_history (
-
-        fixture_id INTEGER PRIMARY KEY,
-
-        home_odd REAL,
-
-        draw_odd REAL,
-
-        away_odd REAL,
-
-        updated_at TEXT
-
-    )
-
-    """)
-
-
-
-
     conn.commit()
     conn.close()
 
