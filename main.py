@@ -622,7 +622,121 @@ def get_upcoming_matches():
     return matches
 
 
+# =========================================================
+# CARD PRESSURE
+# =========================================================
 
+def calculate_card_pressure(          
+
+    minute,                           
+
+    home_fouls,                       
+    away_fouls,                       
+
+    home_yellow,                    
+    away_yellow,                    
+
+    home_red,                       
+    away_red,                       
+
+    home_danger,                      
+    away_danger                      
+
+):                                    
+
+    pressure = 50                     
+
+    total_fouls = (                  
+
+        home_fouls                    
+        +                            
+        away_fouls                   
+
+    )                                 
+
+    total_yellow = (                  
+
+        home_yellow                   
+        +                            
+        away_yellow                   
+
+    )                                
+
+    total_red = (                     
+
+        home_red                     
+        +                             
+        away_red                     
+
+    )                                
+
+    total_danger = (                  
+
+        home_danger                  
+        +                            
+        away_danger                   
+
+    )                                 
+
+
+    pressure += min(                 
+
+        20,                          
+
+        total_fouls                  
+
+    )                               
+
+
+    pressure += min(                
+
+        18,                          
+
+        total_yellow                  
+        *                           
+        6                             
+
+    )                                
+
+
+    pressure += min(                 
+
+        10,                           
+
+        total_red                    
+        *                           
+        5                             
+
+    )                                 
+
+
+    pressure += min(                  
+
+        15,                         
+
+        total_danger                  
+        //                            
+        10                            
+
+    )                                
+
+
+    if minute >= 70:                  
+
+        pressure += 10               
+
+    elif minute >= 55:                
+
+        pressure += 5                
+
+
+    return min(                       
+
+        95,                          
+
+        pressure                     
+
+    )                                
 
              
 # =========================================================
@@ -881,6 +995,34 @@ def analyze_live_match(fixture):
             "Corner Kicks"
         )   
 
+        home_fouls = extract(                 
+            home_stats,                       
+            "Fouls"                           
+        )                                    
+
+        away_fouls = extract(                  
+            away_stats,                       
+            "Fouls"                            
+        )                                   
+
+        home_yellow = extract(                
+            home_stats,                        
+            "Yellow Cards"                    
+        )                                    
+
+        away_yellow = extract(                
+            away_stats,                       
+            "Yellow Cards"                     
+        )                                    
+
+        print(                                
+            "CARD STATS:",                    
+            home_fouls,                       
+            away_fouls,                      
+            home_yellow,                      
+            away_yellow                       
+        )                                    
+
         shots_diff = abs(
             home_shots_on -
             away_shots_on
@@ -916,6 +1058,85 @@ def analyze_live_match(fixture):
 
         if minute > 90:
             return None
+
+        # CARD PRESSURE                     
+
+        card_probability = (             
+
+            calculate_card_pressure(      
+
+                minute,                   
+
+                home_fouls,               
+                away_fouls,                
+
+                home_yellow,              
+                away_yellow,              
+
+                home_red,                 
+                away_red,                 
+
+                home_pressure,            
+                away_pressure            
+
+            )                             
+
+        )                                
+
+
+        print(                           
+
+            "CARD PROB:",                
+
+            card_probability,             
+
+            home_fouls,                   
+            away_fouls,                   
+
+            home_yellow,                 
+            away_yellow                   
+
+        )                               
+
+
+        if (                             
+
+            minute >= 55                
+            and                          
+
+            card_probability >= 82       
+            and                          
+
+            (                            
+
+                home_yellow             
+                +                         
+                away_yellow              
+
+            ) >= 3                       
+            and                          
+
+            (                            
+
+                home_fouls               
+                +                        
+                away_fouls               
+
+            ) >= 20                      
+
+        ):                               
+
+            return (    
+             
+                "🟨 OVER 1.5 NEXT CARDS", 
+
+                88,                       
+
+                minute,                   
+
+                card_probability          
+
+            )                           
 
 
         best_pressure = max(         
