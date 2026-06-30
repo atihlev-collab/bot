@@ -2885,7 +2885,25 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            home_score += 4             
+            home_score += 4        
+
+        # GOAL DOMINANCE BONUS          
+
+        if (                           
+
+            home_form["avg_scored"]     
+            >=                         
+            2.0                         
+
+            and                          
+
+            away_form["avg_conceded"]   
+            >=                           
+            1.4                         
+
+        ):                               
+
+            home_score += 3              
 
         # SUPER FORM BONUS                
 
@@ -3507,7 +3525,25 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 4             
+            away_score += 4          
+
+        # GOAL DOMINANCE BONUS          
+
+        if (                            
+
+            away_form["avg_scored"]     
+            >=                         
+            2.0                         
+
+            and                          
+
+            home_form["avg_conceded"]    
+            >=                           
+            1.4                          
+
+        ):                               
+
+            away_score += 3              
 
                # SUPER FORM BONUS             
 
