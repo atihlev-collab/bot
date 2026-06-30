@@ -4612,29 +4612,28 @@ def analyze_prematch_match(match):
 # SEND PREMATCH SIGNAL
 # =========================================================
 
-def send_prematch_signal(
+def send_prematch_signal(        
 
-    fixture_id,
+    fixture_id,                  
 
-    match_date,
-    kickoff_time,
+    match_date,                 
+    kickoff_time,                
 
-    country,
-    league,
+    country,                     
+    league,                      
 
-    home,
-    away,
+    home,                        
+    away,                        
 
-    market,
+    market,                       
 
-    confidence,
-    probability, 
-    odds_text,
-    drop_text
+    confidence,                  
+    probability,                  
+    odds_text                     
 
-):
+):                                
 
-    message = f"""
+    message = f"""               
 🔥 PREMATCH V3
 
 🏆 {home} vs {away}
@@ -4656,35 +4655,33 @@ def send_prematch_signal(
 
 💎 Confidence:
 {confidence}%
+"""                               
 
-{"📉 ODDS DROP" if drop_text != "-" else ""}
-"""
+    send_telegram(message)        
 
-    send_telegram(message)
+    save_signal(                  
 
-    save_signal(
+        fixture_id,               
 
-        fixture_id,
+        country,                  
+        league,                   
 
-        country,
-        league,
+        home,                     
+        away,                    
 
-        home,
-        away,
+        market,                   
 
-        market,
+        0,                       
+        confidence               
 
-        0,
-        confidence
+    )                             
 
-    )
-
-    print(
-        "SIGNAL SAVED:",
-        fixture_id,
-        market,
-        confidence
-    )
+    print(                       
+        "SIGNAL SAVED:",          
+        fixture_id,               
+        market,                   
+        confidence                
+    )                             
 
 # =========================================================
 # PREMATCH LOOP
@@ -4791,28 +4788,29 @@ def prematch_loop():
 
                 )                       
 
-            all_signals.append(
+        all_signals.append(            
 
-                (
-                    probability,
-                    fixture_id,
+            (                          
 
-                    match_date,
-                    kickoff_time,
+                probability,           
+                fixture_id,            
 
-                    country,
-                    league,
+                match_date,            
+                kickoff_time,           
 
-                    home,
-                    away,
+                country,               
+                league,                 
 
-                    market,
-                    confidence,
-                    odds_text,
-                    drop_text
-                )
+                home,                  
+                away,                   
 
-            )
+                market,                
+                confidence,            
+                odds_text               
+
+            )                           
+
+        )                               
 
     all_signals.sort(
         reverse=True,
@@ -4881,7 +4879,7 @@ def prematch_loop():
             confidence,
             probability,
             odds_text,
-            drop_text
+           
 
         )
 
