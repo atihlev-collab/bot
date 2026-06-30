@@ -4260,6 +4260,169 @@ def analyze_prematch_match(match):
 
             print("CHECKING:", home, "vs", away)
 
+        # HOME OVER 1.5                   
+
+        home_over15_prob = (             
+
+            (                            
+                home_form["avg_scored"]   
+                *                        
+                18                       
+            )                            
+
+            +                            
+
+            (                             
+                home_form["recent_avg_scored"]  
+                *                               
+                20                              
+            )                                  
+
+            +                                  
+
+            (                                   
+                away_form["avg_conceded"]       
+                *                               
+                18                              
+            )                                  
+
+            +                                   
+
+            (                                   
+                expected_goals                  
+                *                               
+                10                             
+            )                                   
+
+        )                                      
+
+        home_over15_prob = min(                
+            95,                                 
+            round(                              
+                home_over15_prob,              
+                1                              
+            )                                   
+        )                                       
+
+        home_over15_conf = confidence_from_score(  
+            home_over15_prob                       
+        )                                         
+
+        if (                                      
+
+            home_over15_prob >= 72                
+            and                                   
+            home_over15_conf >= 72                 
+            and                                    
+            home_form["avg_scored"] >= 1.7         
+            and                                    
+            home_form["recent_avg_scored"] >= 1.7  
+            and                                   
+            away_form["avg_conceded"] >= 1.2       
+            and                                   
+            expected_goals >= 3.0                  
+
+        ):                                       
+
+            signals.append(                       
+
+                (                                 
+
+                    "🏠 HOME OVER 1.5",           
+
+                    home_over15_conf,              
+
+                    round(                        
+                        home_over15_prob,         
+                        1                          
+                    )                             
+
+                )                                  
+
+            )     
+
+
+        # AWAY OVER 1.5                   
+
+        away_over15_prob = (              
+
+            (                            
+                away_form["avg_scored"]   
+                *                        
+                18                        
+            )                            
+
+            +                             
+
+            (                             
+                away_form["recent_avg_scored"]  
+                *                               
+                20                              
+            )                                   
+
+            +                                  
+
+            (                                   
+                home_form["avg_conceded"]       
+                *                               
+                18                             
+            )                                   
+
+            +                                  
+
+            (                                  
+                expected_goals                  
+                *                               
+                10                             
+            )                                   
+
+        )                                      
+
+        away_over15_prob = min(                 
+            95,                                
+            round(                              
+                away_over15_prob,              
+                1                               
+            )                                   
+        )                                       
+
+        away_over15_conf = confidence_from_score(   
+            away_over15_prob                      
+        )                                        
+
+        if (                                      
+
+            away_over15_prob >= 72                 
+            and                                   
+            away_over15_conf >= 72                
+            and                                    
+            away_form["avg_scored"] >= 1.7        
+            and                                    
+            away_form["recent_avg_scored"] >= 1.7  
+            and                                    
+            home_form["avg_conceded"] >= 1.2      
+            and                                    
+            expected_goals >= 3.0                 
+
+        ):                                         
+
+            signals.append(                       
+
+                (                                  
+
+                    "✈️ AWAY OVER 1.5",           
+
+                    away_over15_conf,              
+
+                    round(                         
+                        away_over15_prob,          
+                        1                         
+                    )                              
+
+                )                                 
+
+            )                                      
+
 
         # UNDER 2.5                  
 
