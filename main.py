@@ -4198,9 +4198,7 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 4     
             and                        
-            away_edge >= 2       
-            and
-            away_score_gap >= 15
+            away_edge >= 2                  
             and
             away_score_gap >= 15
             and
