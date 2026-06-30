@@ -4238,9 +4238,9 @@ def analyze_prematch_match(match):
 
             home_score >= 45                        
             and                                     
-            home_probability >= 70                 
+            home_probability >= 72                 
             and                                     
-            expected_goals >= 3.1                   
+            expected_goals >= 3.3                   
             and                                     
             home_form["avg_scored"] >= 1.8          
             and                                     
@@ -4250,7 +4250,7 @@ def analyze_prematch_match(match):
             and                                     
             away_form["recent_avg_conceded"] >= 1.2 
             and                                     
-            home_form["scored_pct"] >= 80          
+            home_form["scored_pct"] >= 85          
             and                                     
             away_form["clean_sheet_pct"] <= 40     
             and                                     
@@ -4289,9 +4289,9 @@ def analyze_prematch_match(match):
 
             away_score >= 45                        
             and                                     
-            away_probability >= 70                 
+            away_probability >= 72                 
             and                                     
-            expected_goals >= 3.1                   
+            expected_goals >= 3.3                   
             and                                    
             away_form["avg_scored"] >= 1.8          
             and                                     
@@ -4301,7 +4301,7 @@ def analyze_prematch_match(match):
             and                                     
             home_form["recent_avg_conceded"] >= 1.2 
             and                                     
-            away_form["scored_pct"] >= 80          
+            away_form["scored_pct"] >= 85          
             and                                     
             home_form["clean_sheet_pct"] <= 40      
             and                                     
