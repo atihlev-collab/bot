@@ -3162,7 +3162,38 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 3              
+            home_score += 3       
+
+        # EXPECTED GOALS BONUS         
+
+        if (                            
+
+            expected_goals >= 3.2       
+
+            and                        
+
+            home_form["avg_scored"]    
+            >=                          
+            1.8                        
+
+            and                        
+
+            away_form["avg_conceded"]   
+            >=                         
+            1.3                        
+
+        ):                             
+
+            home_score += 4             
+
+        elif (                         
+
+            expected_goals >= 2.8       
+
+        ):                             
+
+            home_score += 2             
+     
 
         # SUPER FORM BONUS                
 
@@ -3786,7 +3817,39 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            away_score += 3              
+            away_score += 3      
+
+
+        # EXPECTED GOALS BONUS         
+
+        if (                           
+
+            expected_goals >= 3.2       
+
+            and                       
+
+            away_form["avg_scored"]     
+            >=                         
+            1.8                         
+
+            and                         
+
+            home_form["avg_conceded"]  
+            >=                          
+            1.3                         
+
+        ):                             
+
+            away_score += 4            
+
+        elif (                         
+
+            expected_goals >= 2.8      
+
+        ):                             
+
+            away_score += 2            
+     
 
                # SUPER FORM BONUS             
 
@@ -4507,56 +4570,64 @@ def analyze_prematch_match(match):
 
             print("CHECKING:", home, "vs", away)
 
-        # HOME OVER 1.5                   
+        # HOME OVER 1.5                  
 
-        if (                                        
+        if (                              
 
-            home_score >= 45                        
-            and                                     
-            home_probability >= 72                 
-            and                                     
-            expected_goals >= 3.3                   
-            and                                     
-            home_form["avg_scored"] >= 1.8          
-            and                                     
-            home_form["recent_avg_scored"] >= 1.8   
-            and                                     
-            away_form["avg_conceded"] >= 1.3       
-            and                                     
+            home_score >= 45               
+            and                            
+            home_probability >= 72         
+            and                            
+            expected_goals >= 3.3          
+            and                           
+            home_form["avg_scored"] >= 1.8 
+            and                            
+            home_form["recent_avg_scored"] >= 1.8 
+            and                           
+            away_form["avg_conceded"] >= 1.3 
+            and                           
             away_form["recent_avg_conceded"] >= 1.2 
-            and                                     
-            home_form["scored_pct"] >= 85          
-            and                                     
-            away_form["clean_sheet_pct"] <= 40     
-            and                                     
-            home_form["recent_goal_diff"] >= 3      
-            and                                     
-            home_form["form_pct"] >= 60             
-            and                                     
-            home_strength > away_strength           
-            and                                     
-            home_edge >= 2                          
+            and                           
+            home_form["scored_pct"] >= 85  
+            and                            
+            away_form["clean_sheet_pct"] <= 40 
+            and                           
+            home_form["recent_goal_diff"] >= 3 
+            and                            
+            home_form["form_pct"] >= 60    
+            and                            
+            home_strength > away_strength  
+            and                            
+            home_edge >= 2                
+            and                            
+            match_odds                   
+            and                            
+            match_odds[0] is not None      
+            and                            
+            1.35 <= match_odds[0] <= 2.80  
 
-        ):                                          
+        ):                                
 
-            signals.append(                         
+            signals.append(                
 
-                (                                 
+                (                          
 
-                    "🏠 HOME OVER 1.5",             
+                    "🏠 HOME OVER 1.5",   
 
-                    confidence_from_score(          
-                        home_score                  
-                    ),                            
+                    confidence_from_score( 
+                        home_score        
+                    ),                     
 
-                    round(                          
-                        home_probability,           
-                        1                           
-                    )                             
+                    round(                
+                        home_probability,  
+                        1                  
+                    )                      
 
-                )                                 
+                )                         
 
-            )                                     
+            )       
+
+            home_over15_signal = True
 
         # AWAY OVER 1.5                   
 
@@ -4607,7 +4678,9 @@ def analyze_prematch_match(match):
 
                 )                                  
 
-            )                                            
+            )      
+
+            away_over15_signal = True
 
 
         # UNDER 2.5                  
