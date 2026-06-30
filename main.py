@@ -2874,9 +2874,7 @@ def analyze_prematch_match(match):
 
         )                  
 
-        if home_drop:      
-
-            home_score += 2   
+     
 
         print(
             "AFTER VENUE:",
@@ -3483,9 +3481,7 @@ def analyze_prematch_match(match):
                 0.25                      
             )            
 
-        if away_drop:    
-
-            away_score += 2  
+       
 
         print(
             "AFTER HOME DROP:",
@@ -4631,8 +4627,7 @@ def prematch_loop():
         market,
         confidence,
         odds_text,
-        drop_text
-
+       
     ) in top_signals:
 
         key = f"{fixture_id}_{market}"
