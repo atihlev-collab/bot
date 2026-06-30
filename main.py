@@ -1051,6 +1051,58 @@ def analyze_live_match(fixture):
         if minute < 25:
             return None
 
+        # 🚩 FIRST HALF OVER 1.5 CORNERS            
+
+        first_half_corner = False         
+
+        if (                               
+
+            35 <= minute <= 45              
+            and                             
+
+            max(                            
+
+                home_pressure,             
+                away_pressure               
+
+            ) >= 78                        
+            and                            
+
+            max(                            
+
+                home_shots_on,             
+                away_shots_on              
+
+            ) >= 4                          
+            and                             
+
+            (                             
+
+                home_corners              
+                +                          
+                away_corners              
+
+            ) <= 7                        
+
+        ):                                 
+
+            first_half_corner = True        
+
+            print(                         
+
+                "FIRST HALF CORNER MODE",   
+
+                fixture_id,                
+
+                minute,                     
+
+                home_corners,              
+
+                away_corners                
+
+            )                             
+     
+
         print(
             "PASSED MINUTE:",
             fixture_id
