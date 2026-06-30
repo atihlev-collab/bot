@@ -4726,30 +4726,7 @@ def prematch_loop():
         if not match_odds:
             continue
 
-        home_drop = False
-        away_drop = False
-
-        home_drop_text = ""
-        away_drop_text = ""
-
-        if match_odds:
-
-            (
-                home_drop,
-                away_drop,
-
-                home_drop_text,
-                away_drop_text
-
-            ) = odds_drop_check(
-
-                fixture_id,
-
-                match_odds[0],
-                match_odds[1],
-                match_odds[2]
-
-            )
+       
 
         country = match["league"]["country"]
         league = match["league"]["name"]
@@ -4782,51 +4759,37 @@ def prematch_loop():
                 probability        
             )                    
 
-            odds_text = "-"
-            drop_text = "-"
+        odds_text = "-"                  
 
-            if match_odds:                  
+        if match_odds:                  
 
-                if (                          
-                    "HOME WIN" in market      
-                    and                       
-                    match_odds[0] is not None 
-                ):                           
+            if (                         
 
-                    odds_text = str(        
-                        match_odds[0]        
-                    )                         
+                "HOME WIN" in market     
+                and                      
+                match_odds[0] is not None
 
-                    if home_drop:             
+            ):                           
 
-                        drop_text = home_drop_text  
+                odds_text = str(        
 
-                elif (                        
-                    "AWAY WIN" in market      
-                    and                      
-                    match_odds[2] is not None 
-                ):                            
+                    match_odds[0]       
 
-                    odds_text = str(         
-                        match_odds[2]         
-                    )                         
+                )                        
 
-                    if away_drop:            
+            elif (                       
 
-                        drop_text = away_drop_text  
+                "AWAY WIN" in market     
+                and                      
+                match_odds[2] is not None
 
-                elif (                       
-                    "BTTS" in market          
-                ):                            
+            ):                           
 
-                    odds_text = "-"           
+                odds_text = str(        
 
-                elif (                        
-                    "OVER" in market         
-                ):                           
+                    match_odds[2]        
 
-                    odds_text = "-"          
-
+                )                       
 
             all_signals.append(
 
@@ -4856,25 +4819,7 @@ def prematch_loop():
         key=lambda x: x[0]
     )
 
-    special_signals = [
-
-        s for s in all_signals
-
-        if (
-            "VALUE" in s[8]
-            or
-            s[11] != "-"
-        )
-
-    ]
-
-    top_signals = all_signals[:3]
-
-    for s in special_signals:
-
-        if s not in top_signals:
-
-            top_signals.append(s)
+    top_signals = all_signals[:3] 
 
     for (
         probability,
