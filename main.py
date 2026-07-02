@@ -3915,7 +3915,7 @@ def analyze_prematch_match(match):
                 home_form["avg_scored"]
                 -
                 away_form["avg_scored"]
-            ) >= 0.50
+            ) >= 0.30
             and                           
 
             (
@@ -3929,7 +3929,7 @@ def analyze_prematch_match(match):
             and
             home_form["recent_avg_scored"] >= 1.5
             and                           
-            home_form["recent_goal_diff"] >= 2   
+            home_form["recent_goal_diff"] >= 1   
             and
             home_form["avg_conceded"] <= 1.3
             and
@@ -4724,7 +4724,7 @@ def analyze_prematch_match(match):
                 away_form["avg_scored"]
                 -
                 home_form["avg_scored"]
-            ) >= 0.50
+            ) >= 0.30
             and                          
 
             (
