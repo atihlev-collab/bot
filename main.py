@@ -4085,33 +4085,39 @@ def analyze_prematch_match(match):
 
             )                            
 
-        if match_odds:                    
+        if match_odds:                             
 
-                edge = value_edge(                  
+            edge = value_edge(                    
 
-                    away_probability,              
+                away_probability,                  
 
-                    market_away                    
+                market_away                      
 
-                )                                                    
-            print(                     
+            )                                    
 
-                "AWAY EDGE SCORE:",      
-        
-                home,                     
-        
-                away,                     
-        
-                away_edge_score           
-        
-            )                            
+            away_edge_score = edge                
 
+            print(                               
 
-            away_score += (             
-                away_edge_score          
-                *                        
-                0.25                      
-            )            
+                "AWAY EDGE SCORE:",               
+
+                home,                            
+
+                away,                             
+
+                away_edge_score                  
+
+            )                                     
+
+            away_score += (                       
+
+                away_edge_score                  
+
+                *                               
+
+                0.25                            
+
+            )                                   
 
        
 
