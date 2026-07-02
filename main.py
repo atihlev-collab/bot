@@ -3702,13 +3702,13 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None
             ):
 
-            edge = value_edge(                    
+                edge = value_edge(                  
 
-                home_probability,                  
-            
-                market_home                         
-            
-            )                                                       
+                    home_probability,             
+
+                    market_home                   
+
+                )                                                             
 
                 print(
                     "HOME VALUE EDGE:",
@@ -4087,13 +4087,13 @@ def analyze_prematch_match(match):
 
         if match_odds:                    
 
-            edge = value_edge(                      
+                edge = value_edge(                  
 
-                away_probability,                   
-            
-                market_away                         
-            
-            )                                       
+                    away_probability,              
+
+                    market_away                    
+
+                )                                                    
             print(                     
 
                 "AWAY EDGE SCORE:",      
