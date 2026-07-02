@@ -2970,29 +2970,7 @@ def analyze_prematch_match(match):
             fixture_id
         )
 
-        market_prob = no_vig_probabilities(     
-
-            match_odds[0],                       
-            match_odds[1],                       
-            match_odds[2]                        
-
-        )                                        
-
-        if market_prob:                         
-
-            market_home = market_prob[0]         
-            market_draw = market_prob[1]         
-            market_away = market_prob[2]         
-
-            print(                               
-
-                "NO VIG:",                       
-
-                market_home,                     
-                market_draw,                     
-                market_away                      
-
-            )      
+      
          
         if not match_odds:
             return None
@@ -3004,6 +2982,29 @@ def analyze_prematch_match(match):
        ):
            return None
 
+        market_prob = no_vig_probabilities(     
+
+            match_odds[0],                      
+            match_odds[1],                      
+            match_odds[2]                      
+
+        )                                       
+
+        if market_prob:                         
+
+            market_home = market_prob[0]        
+            market_draw = market_prob[1]        
+            market_away = market_prob[2]        
+
+            print(                              
+
+                "NO VIG:",                       
+
+                market_home,                    
+                market_draw,                    
+                market_away                      
+
+            )                                  
       
 
         country = match["league"]["country"]
