@@ -2688,19 +2688,24 @@ def fair_odds(probability):
 # VALUE
 # =========================================================
 
-def value_edge(
+def value_edge(                        
 
-    probability,
-    odd
+    model_probability,                  
+    market_probability                  
 
-):
+):                                     
 
-    market_prob = 100 / odd
+    return round(                       
 
-    return round(
-        probability - market_prob,
-        2
-    )
+        model_probability              
+
+        -                               
+
+        market_probability,             
+
+        2                               
+
+    )                                   
 
 # =========================================================
 # NO VIG
@@ -3697,13 +3702,13 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None
             ):
 
-                edge = value_edge(              
+            edge = value_edge(                    
 
-                    min(95, home_score),        
-                
-                    match_odds[0]               
-                
-                )                                       
+                home_probability,                  
+            
+                market_home                         
+            
+            )                                                       
 
                 print(
                     "HOME VALUE EDGE:",
@@ -4082,11 +4087,13 @@ def analyze_prematch_match(match):
 
         if match_odds:                    
 
-            away_edge_score = odds_score( 
-                min(95, away_score),     
-                match_odds[2]            
-            )        
+            edge = value_edge(                      
 
+                away_probability,                   
+            
+                market_away                         
+            
+            )                                       
             print(                     
 
                 "AWAY EDGE SCORE:",      
