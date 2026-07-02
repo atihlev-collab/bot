@@ -3310,11 +3310,41 @@ def analyze_prematch_match(match):
         )    
 
          
-        home_score += (                     
-            home_strength                  
-            -                              
-            away_strength                  
-        ) * 0.25     
+        strength_gap = (                
+
+            home_strength               
+
+            -                            
+
+            away_strength                
+
+        )                                
+
+        home_score += (                  
+
+            strength_gap                
+
+            *                            
+
+            0.35                       
+
+        )                                
+
+        if (                            
+
+            strength_gap >= 25          
+
+        ):                              
+
+            home_score += 3              
+
+        elif (                           
+
+            strength_gap >= 15           
+
+        ):                              
+
+            home_score += 1              
 
         debug_base = home_score
 
@@ -4005,11 +4035,41 @@ def analyze_prematch_match(match):
 
       
         
-        away_score += (             
-            away_strength            
-            -                        
-            home_strength           
-        ) * 0.25       
+        strength_gap = (               
+
+            away_strength                
+
+            -                           
+
+            home_strength               
+
+        )                                
+
+        away_score += (                 
+
+            strength_gap                 
+
+            *                           
+
+            0.35                        
+
+        )                              
+
+        if (                            
+
+            strength_gap >= 25           
+
+        ):                              
+
+            away_score += 3              
+
+        elif (                           
+
+            strength_gap >= 15          
+
+        ):                              
+
+            away_score += 1              
 
         print(                      
 
