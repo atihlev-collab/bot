@@ -1345,7 +1345,80 @@ def analyze_live_match(fixture):
 
             card_probability            
 
-        )                               
+        )      
+
+
+        # EXTREME CARD MODE              
+
+        if (                             
+
+            minute >= 80                 
+
+            and                          
+
+            card_probability >= 85       
+
+            and                          
+
+            (                            
+
+                home_pressure            
+
+                +                        
+
+                away_pressure            
+
+            )                            
+
+            >=                           
+
+            140                          
+
+            and                          
+
+            (                            
+
+                home_fouls               
+
+                +                        
+
+                away_fouls               
+
+            )                            
+
+            >=                           
+
+            26                           
+
+            and                          
+
+            (                            
+
+                home_yellow              
+
+                +                        
+
+                away_yellow              
+
+            )                            
+
+            >=                           
+
+            4                            
+
+        ):                               
+
+            return (                     
+
+                "🟨 OVER 1.5 NEXT CARDS", 
+
+                92,                      
+
+                minute,                  
+
+                92                       
+
+            )                           
      
 
         # FAST GOALS OVERRIDE
