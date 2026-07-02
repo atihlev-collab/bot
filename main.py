@@ -881,6 +881,60 @@ def analyze_live_match(fixture):
             100
         )
 
+
+        home = fixture["goals"]["home"] or 0     
+        away = fixture["goals"]["away"] or 0      
+
+        goal_diff = abs(                         
+
+            home - away                           
+
+        )                                         
+
+
+        # GAME STATE ENGINE           
+
+        if goal_diff >= 2:             
+
+            if home > away:               
+
+                if minute >= 60:          
+
+                    home_pressure -= 10   
+                    away_pressure += 6   
+
+                if minute >= 75:          
+
+                    home_pressure -= 5    
+
+            elif away > home:             
+
+                if minute >= 60:          
+
+                    away_pressure -= 10   
+                    home_pressure += 6    
+
+                if minute >= 75:         
+
+                    away_pressure -= 5    
+
+        elif goal_diff == 1:             
+
+            if home > away:             
+
+                if minute >= 70:         
+
+                    home_pressure -= 4  
+                    away_pressure += 4  
+
+            elif away > home:            
+
+                if minute >= 70:         
+
+                    away_pressure -= 4   
+                    home_pressure += 4   
+     
+
         if home_form and home_form["avg_scored"] < 0.9:
 
             home_pressure -= 8
