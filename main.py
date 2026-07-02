@@ -758,6 +758,23 @@ def analyze_live_match(fixture):
         away_team = fixture["teams"]["away"]["name"]
 
 
+        country = fixture["league"]["country"]    
+
+        if (                                      
+
+            country in [                          
+
+                "Russia",                          
+
+                "Belarus"                          
+
+            ]                                      
+
+        ):                                        
+
+            return None                            
+
+
         banned = [
 
             "russia",
