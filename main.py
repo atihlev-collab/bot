@@ -3744,7 +3744,7 @@ def analyze_prematch_match(match):
         print(             
 
             "AFTER VALUE:", 
-
+ 
             home_score      
 
         )                   
