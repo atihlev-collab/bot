@@ -3840,7 +3840,35 @@ def analyze_prematch_match(match):
             "prob=", home_probability
         )
 
-       
+        # ATTACK / DEFENSE FILTER         
+
+        home_balance = (                  
+
+            home_form["avg_scored"]        
+
+            -                              
+
+            home_form["avg_conceded"]      
+
+        )                                 
+
+        away_balance = (                   
+
+            away_form["avg_scored"]       
+
+            -                             
+
+            away_form["avg_conceded"]      
+
+        )                                 
+
+        if (                               
+
+            home_balance < 0.30           
+
+        ):                                 
+
+            return None                    
         
         if (
             home_score >= 50           
@@ -4631,6 +4659,25 @@ def analyze_prematch_match(match):
             -
             home_score
         )
+
+
+        away_balance = (                  
+
+            away_form["avg_scored"]        
+
+            -                             
+
+            away_form["avg_conceded"]      
+
+        )                                 
+
+        if (                              
+
+            away_balance < 0.30            
+
+        ):                                
+
+            return None                    
         
         if (
             away_score >= 50          
