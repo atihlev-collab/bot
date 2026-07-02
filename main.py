@@ -1266,7 +1266,87 @@ def analyze_live_match(fixture):
 
             home - away                           
 
-        )                                         
+        )     
+
+
+        # CARD BONUS ENGINE              
+
+        if goal_diff <= 1:               
+
+            card_probability += 4        
+
+        if (                            
+
+            home == away                 
+
+        ):                              
+
+            card_probability += 4       
+
+        if minute >= 75:                
+
+            card_probability += 4       
+
+        if (                            
+
+            home_pressure >= 75         
+
+            and                          
+
+            away_pressure >= 75          
+
+        ):                               
+
+            card_probability += 5        
+
+        if (                            
+
+            (                            
+
+                home_fouls               
+
+                +                        
+
+                away_fouls               
+
+            )                            
+
+            >=                           
+
+            28                           
+
+        ):                              
+
+            card_probability += 5       
+
+        if (                             
+
+            (                            
+
+                home_yellow              
+
+                +                        
+
+                away_yellow              
+
+            )                           
+
+            >=                           
+
+            5                            
+
+        ):                              
+
+            card_probability += 5        
+
+        card_probability = min(         
+
+            95,                          
+
+            card_probability            
+
+        )                               
+     
 
         # FAST GOALS OVERRIDE
 
