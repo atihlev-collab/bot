@@ -4236,7 +4236,98 @@ def analyze_prematch_match(match):
 
             70                         
 
-        )                              
+        )          
+
+
+        # DEFENSIVE COLLAPSE          
+
+        defense_ok = (             
+
+            home_form["recent_avg_conceded"]   
+
+            <=                                 
+
+            1.60                               
+
+            and                                 
+
+            away_form["recent_avg_scored"]     
+
+            <=                                
+
+            2.20                               
+
+        )          
+
+
+        # FALSE FAVOURITE FILTER     
+
+        false_favourite = (           
+
+            match_odds              
+
+            and                      
+
+            match_odds[0] is not None 
+
+            and                     
+
+            match_odds[0] <= 1.80     
+
+            and                      
+
+            home_probability < 68     
+
+            and                       
+
+            home_edge < 2             
+
+            and                       
+
+            market_home >= 55         
+
+            and                       
+
+            form_gap < 10            
+
+        )        
+
+
+        # STABLE FAVOURITE           
+
+        stable_home = (              
+
+            home_form["wins"]         
+
+            >=                        
+
+            4                        
+
+            and                       
+
+            home_form["losses"]      
+
+            <=                        
+
+            2                        
+
+            and                       
+
+            home_form["recent_form_pct"] 
+
+            >=                           
+
+            55                          
+
+            and                          
+
+            home_form["avg_scored"]      
+
+            >=                           
+
+            1.50                         
+
+        )                               
      
         
         if (
@@ -4297,6 +4388,12 @@ def analyze_prematch_match(match):
             market_ok
             and
             elite_home
+            and
+            defense_ok
+            and
+            not false_favourite
+            and
+            stable_home
         ):
 
             print(
@@ -5454,6 +5551,97 @@ def analyze_prematch_match(match):
 
             70                          
 
+        )      
+
+
+        # DEFENSIVE COLLAPSE         
+
+        defense_ok = (              
+
+            away_form["recent_avg_conceded"]  
+
+            <=                                  
+
+            1.60                                
+
+            and                                
+
+            home_form["recent_avg_scored"]      
+
+            <=                                 
+
+            2.20                              
+
+        ) 
+
+
+        # FALSE FAVOURITE FILTER     
+
+        false_favourite = (           
+
+            match_odds                
+
+            and                       
+
+            match_odds[2] is not None 
+
+            and                       
+
+            match_odds[2] <= 1.80    
+
+            and                       
+
+            away_probability < 68    
+
+            and                      
+
+            away_edge < 2             
+
+            and                      
+
+            market_away >= 55        
+
+            and                       
+
+            form_gap > -10           
+
+        )             
+
+
+        # STABLE FAVOURITE           
+
+        stable_away = (               
+
+            away_form["wins"]        
+
+            >=                       
+
+            4                         
+
+            and                      
+
+            away_form["losses"]       
+
+            <=                       
+
+            2                         
+
+            and                       
+
+            away_form["recent_form_pct"] 
+
+            >=                           
+
+            55                           
+
+            and                          
+
+            away_form["avg_scored"]     
+
+            >=                          
+
+            1.50                        
+
         )                              
      
         
@@ -5515,6 +5703,12 @@ def analyze_prematch_match(match):
             market_ok
             and
             elite_away
+            and
+            defense_ok
+            and
+            not false_favourite
+            and
+            stable_away
         ):                               
 
             print(                       
