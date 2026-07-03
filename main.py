@@ -4166,6 +4166,23 @@ def analyze_prematch_match(match):
 
             home_form["losses"] * 2   
 
+        )               
+
+
+        # MARKET AGREEMENT           
+
+        market_ok = (                 
+
+            home_probability          
+
+            >=                      
+
+            market_home + 8         
+
+            and                      
+
+            home_edge >= 2            
+
         )                            
      
         
@@ -4223,6 +4240,8 @@ def analyze_prematch_match(match):
             dominance_ok
             and
             consistency_ok
+            and
+            market_ok
         ):
 
             print(
@@ -5310,6 +5329,23 @@ def analyze_prematch_match(match):
 
             away_form["losses"] * 2   
 
+        )      
+
+
+        # MARKET AGREEMENT          
+
+        market_ok = (                 
+
+            away_probability          
+
+            >=                        
+
+            market_away + 8          
+
+            and                       
+
+            away_edge >= 2           
+
         )                             
      
         
@@ -5367,6 +5403,8 @@ def analyze_prematch_match(match):
             dominance_ok
             and
             consistency_ok
+            and
+            market_ok
         ):                               
 
             print(                       
