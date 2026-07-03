@@ -4023,13 +4023,27 @@ def analyze_prematch_match(match):
 
             )                         
 
-        home_score = min(          
-            80,                    
-            max(                  
-                -80,               
-                home_score        
-            )                      
-        )                         
+        # FINAL SCORE LIMIT           
+
+        home_score = max(             
+
+            -80,                       
+
+            min(                       
+
+                85,                      
+
+                round(                  
+
+                    home_score,         
+
+                    2                    
+
+                )                       
+
+            )    
+           
+        )                                
 
     
 
@@ -5344,19 +5358,27 @@ def analyze_prematch_match(match):
 
         )                                
 
-        away_score = min(               
+        # FINAL SCORE LIMIT            
 
-            80,                          
+        away_score = max(              
 
-            max(                         
+            -80,                       
 
-                -80,                      
+            min(                       
 
-                away_score               
+                85,                     
 
-            )                             
+                round(                  
 
-        )                               
+                    away_score,          
+
+                    2                  
+
+                )                        
+
+            )                            
+
+        )                                          
 
         total_strength = (               
 
