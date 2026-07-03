@@ -4348,7 +4348,44 @@ def analyze_prematch_match(match):
 
             1.00                              
 
-        )                                    
+        )         
+
+
+        # DRAW RISK FILTER           
+
+        draw_risk = (                
+
+            abs(                     
+
+                home_form["form_pct"] 
+
+                -                   
+
+                away_form["form_pct"] 
+
+            )                        
+
+            <=                       
+
+            10                       
+
+            and                      
+
+            abs(                      
+
+                home_form["avg_scored"]   
+
+                -                         
+
+                away_form["avg_scored"]  
+
+            )                            
+
+            <=                           
+
+            0.30                          
+
+        )                                
      
         
         if (
@@ -4417,6 +4454,8 @@ def analyze_prematch_match(match):
             stable_home
             and
             recent_attack_ok
+            and
+            not draw_risk
         ):
 
             print(
@@ -5741,7 +5780,44 @@ def analyze_prematch_match(match):
 
             1.00                            
 
-        )                                    
+        )        
+
+
+        # DRAW RISK FILTER           
+
+        draw_risk = (                
+
+            abs(                     
+
+                away_form["form_pct"] 
+
+                -                    
+
+                home_form["form_pct"] 
+
+            )                        
+
+            <=                        
+
+            10                        
+
+            and                      
+
+            abs(                      
+
+                away_form["avg_scored"]   
+
+                -                        
+
+                home_form["avg_scored"]  
+
+            )                            
+
+            <=                            
+
+            0.30                         
+
+        )                                
      
         
         if (
@@ -5810,6 +5886,8 @@ def analyze_prematch_match(match):
             stable_away
             and
             recent_attack_ok
+            and
+            not draw_risk
         ):                               
 
             print(                       
