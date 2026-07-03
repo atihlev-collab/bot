@@ -5047,7 +5047,34 @@ def analyze_prematch_match(match):
 
         ):                                
 
-            home_score += 3              
+            home_score += 3  
+
+
+        # MOMENTUM COLLAPSE            
+
+        if (                           
+
+            away_form["momentum"]     
+
+            <=                         
+
+            -20                       
+
+        ):                             
+
+            away_score -= 4           
+
+        elif (                         
+
+            away_form["momentum"]      
+
+            <=                        
+
+            -10                       
+
+        ):                            
+
+            away_score -= 2           
 
         if (                             
 
@@ -5055,7 +5082,35 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            away_score += 3               
+            away_score += 3   
+
+
+        # MOMENTUM COLLAPSE          
+
+        if (                          
+
+            away_form["momentum"]      
+
+            <=                         
+
+            -20                       
+
+        ):                             
+
+            away_score -= 4           
+
+        elif (                       
+
+            away_form["momentum"]      
+
+            <=                        
+
+            -10                       
+
+        ):                            
+
+            away_score -= 2            
+     
 
         home_score = min(                
 
