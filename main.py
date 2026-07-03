@@ -2705,19 +2705,69 @@ def fair_odds(probability):
 # VALUE
 # =========================================================
 
-def value_edge(
+def value_edge(                    
 
-    probability,
-    odd
+    probability,                   
 
-):
+    odd                            
 
-    market_prob = 100 / odd
+):                                 
 
-    return round(
-        probability - market_prob,
-        2
-    )
+    try:                           
+
+        market_prob = (            
+
+            100                    
+
+            /                      
+
+            odd                    
+
+        )                           
+
+        edge = (                    
+
+            (
+
+                probability          
+
+                /                  
+
+                100                  
+
+            )                       
+
+            *
+
+            odd                     
+
+            -                        
+
+            1                       
+
+        ) * 100                      
+
+        edge += (                  
+
+            probability              
+
+            -                        
+
+            market_prob              
+
+        ) * 0.25                    
+
+        return round(               
+
+            edge,                   
+
+            2                       
+
+        )                            
+
+    except:                         
+
+        return 0                    
 
 # =========================================================
 # NO VIG
@@ -4686,46 +4736,145 @@ def analyze_prematch_match(match):
 
             away_score += 3               
 
-        home_score = min(     
+        home_score = min(                
 
-            80,              
+            80,                         
 
-            max(              
+            max(                         
 
-                -80,          
+                -80,                     
 
-                home_score    
+                home_score                
 
-            )                 
+            )                            
 
-        )                    
+        )                                
 
+        away_score = min(               
 
-        away_score = min(     
+            80,                          
 
-            80,              
+            max(                         
 
-            max(              
+                -80,                      
 
-                -80,        
+                away_score               
 
-                away_score    
+            )                             
 
-            )                 
+        )                               
 
-        )     
+        total_strength = (               
 
-        score_gap = abs(             
-            home_score               
-            -                         
-            away_score               
-        )                           
+            max(                          
 
-        away_score_gap = (           
-            away_score                
-            -                         
-            home_score                
-        )               
+                1,                        
+
+                (
+
+                    home_score           
+
+                    +                    
+
+                    80                   
+
+                )                        
+
+                +
+
+                (
+
+                    away_score           
+
+                    +                    
+
+                    80                   
+
+                )                        
+
+            )                             
+
+        )                                 
+
+        home_probability = round(        
+
+            (
+
+                max(                     
+
+                    1,                   
+
+                    home_score           
+
+                    +                    
+
+                    80                   
+
+                )                         
+
+                /                         
+
+                total_strength           
+
+            )                            
+
+            *                            
+
+            100,                          
+
+            1                            
+
+        )                                 
+
+        away_probability = round(        
+
+            (
+
+                max(                     
+
+                    1,                    
+
+                    away_score            
+
+                    +                    
+
+                    80                    
+
+                )                         
+
+                /                        
+
+                total_strength           
+
+            )                            
+
+            *                            
+
+            100,                         
+
+            1                             
+
+        )                                
+
+        score_gap = abs(                 
+
+            home_score                    
+
+            -                             
+
+            away_score                   
+
+        )                                 
+
+        away_score_gap = (               
+
+            away_score                    
+
+            -                            
+
+            home_score                   
+
+        )                                 
 
                   
 
