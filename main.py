@@ -5095,20 +5095,7 @@ def analyze_prematch_match(match):
 
         )                             
 
-            +
-
-            (
-
-                away_form["goal_diff"]   #16
-
-                -
-
-                home_form["goal_diff"]   #16
-
-            ) * 0.20                #12
-
-        )                           #8
-
+           
 
         # WIN EDGE BONUS                 
 
