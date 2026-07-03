@@ -3724,11 +3724,33 @@ def analyze_prematch_match(match):
             home_score
         )
 
-        home_edge = (
-            home_form["wins"]
-            -
-            away_form["wins"]
-        )
+        # HOME EDGE                
+
+        home_edge = (              
+
+            (
+
+                home_form["wins"]  
+
+                -
+
+                away_form["wins"]   
+
+            )                      
+
+            +
+
+            (
+
+                home_form["goal_diff"]   #16
+
+                -
+
+                away_form["goal_diff"]   #16
+
+            ) * 0.20                #12
+
+        )                           #8
 
         # WIN EDGE BONUS                
 
@@ -5019,14 +5041,33 @@ def analyze_prematch_match(match):
             away_score += 1            
          
  
-        away_edge = (
+        # AWAY EDGE                
 
+        away_edge = (               
 
-         
-            away_form["wins"]
-            -
-            home_form["wins"]
-        )
+            (
+
+                away_form["wins"]   
+
+                -
+
+                home_form["wins"]  
+
+            )                      
+
+            +
+
+            (
+
+                away_form["goal_diff"]   #16
+
+                -
+
+                home_form["goal_diff"]   #16
+
+            ) * 0.20                #12
+
+        )                           #8
 
 
         # WIN EDGE BONUS                 
