@@ -3947,35 +3947,46 @@ def analyze_prematch_match(match):
                 )                         
 
 
-                if (                       
+                if (                             
 
-                    value_score >= 24    
+                    value_score >= 24            
 
-                    and                  
+                    and                          
 
-                    home_probability >= 70 
+                    min(                         
 
-                ):                        
+                        95,                      
 
-                    home_super_value = True 
+                        away_score + 50          
 
-                    home_score += 4        
+                    ) >= 70                       
+
+                ):                               
+
+                    away_super_value = True      
+
+                    away_score += 4              
 
 
-                elif (                     
+                elif (                           
 
-                    value_score >= 18     
+                    value_score >= 18            
 
-                    and                   
+                    and                        
 
-                    home_probability >= 65 
+                    min(                         
 
-                ):                        
+                        95,                     
 
-                    home_value = True     
+                        away_score + 50         
 
-                    home_score += 2       
+                    ) >= 65                     
 
+                ):                             
+
+                    away_value = True           
+
+                    away_score += 2             
 
                 print(                    
 
@@ -4193,7 +4204,7 @@ def analyze_prematch_match(match):
 
         if (                          
 
-            home_probability >= 70      
+            home_probability >= 65      
 
             and                         
 
@@ -5268,8 +5279,13 @@ def analyze_prematch_match(match):
 
                     and                      
 
-                    away_probability >= 70   
+                    min(                     
 
+                        95,                  
+
+                        away_score + 50      
+
+                    ) >= 70                 
                 ):                           
 
                     away_super_value = True  
@@ -5283,7 +5299,13 @@ def analyze_prematch_match(match):
 
                     and                     
 
-                    away_probability >= 65   
+                    min(                     
+
+                        95,                   
+
+                        away_score + 50       
+
+                    ) >= 65                  
 
                 ):                          
 
