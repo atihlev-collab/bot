@@ -3724,33 +3724,45 @@ def analyze_prematch_match(match):
             home_score
         )
 
-        # HOME EDGE                
+        # HOME EDGE                   
 
-        home_edge = (              
+        home_edge = (                 
 
-            (
+            (                          
 
-                home_form["wins"]  
+                home_form["wins"]      
 
                 -
 
-                away_form["wins"]   
+                away_form["wins"]      
 
-            )                      
+            )                          
 
+            +
+
+            (                         
+
+                home_form["goal_diff"] 
+
+                -
+
+                away_form["goal_diff"] 
+
+            ) * 0.20                   
+
+        )                             
             +
 
             (
 
-                home_form["goal_diff"]   #16
+                home_form["goal_diff"]   
 
                 -
 
-                away_form["goal_diff"]   #16
+                away_form["goal_diff"]  
 
-            ) * 0.20                #12
-
-        )                           #8
+            ) * 0.20               
+        )                          
 
         # WIN EDGE BONUS                
 
@@ -5041,19 +5053,32 @@ def analyze_prematch_match(match):
             away_score += 1            
          
  
-        # AWAY EDGE                
+        # AWAY EDGE                   
 
-        away_edge = (               
+        away_edge = (                  
 
-            (
+            (                          
 
-                away_form["wins"]   
+                away_form["wins"]     
 
                 -
 
-                home_form["wins"]  
+                home_form["wins"]      
 
-            )                      
+            )                         
+            +
+
+            (                          
+
+                away_form["goal_diff"] 
+
+                -
+
+                home_form["goal_diff"] 
+
+            ) * 0.20                   
+
+        )                             
 
             +
 
