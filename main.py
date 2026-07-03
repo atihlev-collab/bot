@@ -3483,6 +3483,43 @@ def analyze_prematch_match(match):
 
         home_score += h2h  
 
+
+        # GOAL DIFFERENCE BONUS       
+
+        goal_diff = (                 
+
+            home_form["avg_scored"]    
+
+            -                          
+
+            home_form["avg_conceded"]  
+
+        )                             
+
+        if (                           
+
+            goal_diff >= 1.40         
+
+        ):                            
+
+            home_score += 4          
+
+        elif (                         
+
+            goal_diff >= 0.90         
+
+        ):                             
+
+            home_score += 2           
+
+        elif (                        
+
+            goal_diff >= 0.50          
+
+        ):                             
+
+            home_score += 1            
+
         print(
             "AFTER STRENGTH:",
             home_score
@@ -4381,6 +4418,43 @@ def analyze_prematch_match(match):
         )                           
 
         away_score -= h2h * 2    
+
+
+        # GOAL DIFFERENCE BONUS       
+
+        goal_diff = (                
+
+            away_form["avg_scored"]   
+
+            -                         
+
+            away_form["avg_conceded"]  
+
+        )                              
+
+        if (                          
+
+            goal_diff >= 1.40         
+
+        ):                             
+
+            away_score += 4           
+
+        elif (                        
+
+            goal_diff >= 0.90          
+
+        ):                             
+
+            away_score += 2         
+
+        elif (                         
+
+            goal_diff >= 0.50          
+
+        ):                             
+
+            away_score += 1          
 
 
         # AWAY VENUE BONUS             
