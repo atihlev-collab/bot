@@ -3808,6 +3808,33 @@ def analyze_prematch_match(match):
             home_score - debug_base
         )       
 
+
+        bonus_total = (              
+
+            home_score                 
+
+            -                          
+
+            debug_base                 
+
+        )                              
+
+        if (                           
+
+            bonus_total > 30            
+
+        ):                            
+
+            home_score -= (            
+
+                bonus_total             
+
+                -                      
+
+                28                      
+
+            )                         
+
         home_score = min(          
             80,                    
             max(                  
