@@ -4183,7 +4183,60 @@ def analyze_prematch_match(match):
 
             home_edge >= 2            
 
-        )                            
+        )       
+
+
+        # ELITE HOME FILTER            
+
+        elite_home = (                 
+
+            home_form["form_pct"]       
+
+            >=                        
+
+            65                          
+
+            and                        
+
+            home_form["recent_form_pct"]
+
+            >=                         
+
+            60                         
+
+            and                         
+
+            home_form["avg_scored"]     
+
+            >=                          
+
+            1.60                       
+
+            and                         
+
+            home_form["avg_conceded"]   
+
+            <=                         
+
+            1.10                        
+
+            and                        
+
+            home_edge                   
+
+            >=                          
+
+            3                           
+
+            and                         
+
+            home_probability           
+
+            >=                         
+
+            70                         
+
+        )                              
      
         
         if (
@@ -4242,6 +4295,8 @@ def analyze_prematch_match(match):
             consistency_ok
             and
             market_ok
+            and
+            elite_home
         ):
 
             print(
@@ -5346,7 +5401,60 @@ def analyze_prematch_match(match):
 
             away_edge >= 2           
 
-        )                             
+        )           
+
+
+        # ELITE AWAY FILTER            
+
+        elite_away = (                  
+
+            away_form["form_pct"]       
+
+            >=                         
+
+            65                          
+
+            and                         
+
+            away_form["recent_form_pct"]
+
+            >=                         
+
+            60                         
+
+            and                        
+
+            away_form["avg_scored"]     
+
+            >=                          
+
+            1.60                        
+
+            and                        
+
+            away_form["avg_conceded"]   
+
+            <=                         
+
+            1.10                       
+
+            and                         
+
+            away_edge                  
+
+            >=                         
+
+            3                           
+
+            and                         
+
+            away_probability            
+
+            >=                         
+
+            70                          
+
+        )                              
      
         
         if (
@@ -5405,6 +5513,8 @@ def analyze_prematch_match(match):
             consistency_ok
             and
             market_ok
+            and
+            elite_away
         ):                               
 
             print(                       
