@@ -3858,7 +3858,26 @@ def analyze_prematch_match(match):
                 100,                 
                 50 + home_score      
             )                        
-        )                           
+        )        
+
+
+        # CONSENSUS BONUS               
+
+        if (                          
+
+            home_probability >= 70      
+
+            and                         
+
+            home_edge >= 3              
+
+            and                        
+
+            market_home >= 55           
+
+        ):                              
+
+            home_score += 3             
 
         print(                  
             "HOME PROB:",       
@@ -4663,8 +4682,26 @@ def analyze_prematch_match(match):
             *                               
             100,                             
             1                                
-        )      
+        )     
 
+        
+        # CONSENSUS BONUS              
+
+        if (                           
+
+            away_probability >= 70     
+
+            and                         
+
+            away_edge >= 3             
+
+            and                         
+
+            market_away >= 55         
+
+        ):                             
+
+            away_score += 3            
      
 
         if (
