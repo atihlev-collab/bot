@@ -4312,7 +4312,61 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            away_score += 1              
+            away_score += 1     
+
+
+        # ATTACK / DEFENSE INDEX      
+
+        attack_gap = (               
+
+            (                        
+
+                away_form["avg_scored"]         
+
+                +                              
+
+                away_form["recent_avg_scored"]  
+
+            )                                 
+
+            -                                  
+
+            (                                  
+
+                home_form["avg_conceded"]       
+
+                +   
+
+                home_form["recent_avg_conceded"]
+
+            )                                  
+
+        )                                      
+
+        if (                                   
+
+            attack_gap >= 1.80                
+
+        ):                                     
+
+            away_score += 4                   
+
+        elif (                                 
+
+            attack_gap >= 1.40                
+
+        ):                                     
+
+            away_score += 2                   
+
+        elif (                               
+
+            attack_gap >= 1.00                 
+
+        ):                                    
+
+            away_score += 1                   
+     
 
         print(                      
 
