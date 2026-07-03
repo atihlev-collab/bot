@@ -3905,15 +3905,21 @@ def analyze_prematch_match(match):
 
                     +
 
-                    (
+                    (                         
 
-                        home_probability    
+                        min(                  
 
-                        -
+                            95,              
 
-                        market_home         
+                            home_score + 50   
 
-                    ) * 0.30               
+                        )                    
+
+                        -                    
+
+                        market_home           
+
+                    ) * 0.30                  
 
                 )                         
 
@@ -5155,11 +5161,17 @@ def analyze_prematch_match(match):
 
                     +
 
-                    (
+                    (                          
 
-                        away_probability      
+                        min(                  
 
-                        -
+                            95,             
+
+                            away_score + 50   
+
+                        )                   
+                       
+                        -                     
 
                         market_away           
 
