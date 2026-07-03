@@ -3362,7 +3362,60 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 1              
+            home_score += 1       
+
+
+        # ATTACK / DEFENSE INDEX      
+
+        attack_gap = (                 
+
+            (
+
+                home_form["avg_scored"]       
+
+                +
+
+                home_form["recent_avg_scored"] 
+
+            )                                 
+
+            -
+
+            (
+
+                away_form["avg_conceded"]       
+
+                +
+
+                away_form["recent_avg_conceded"]
+
+            )                                 
+
+        )                                      
+
+        if (                                 
+
+            attack_gap >= 1.60                
+
+        ):                                    
+
+            home_score += 5                    
+
+        elif (                                
+
+            attack_gap >= 1.20                 
+
+        ):                                    
+
+            home_score += 3                   
+
+        elif (                                
+
+            attack_gap >= 0.80                
+
+        ):                                    
+
+            home_score += 1                   
 
         debug_base = home_score
 
