@@ -3873,7 +3873,7 @@ def analyze_prematch_match(match):
                )
 
 
-                if edge >= 15:                 
+                if edge >= 12:                 
 
                     home_super_value = True    
                 
@@ -3881,7 +3881,7 @@ def analyze_prematch_match(match):
                 
                    
                 
-                elif edge >= 10:                
+                elif edge >= 6:                
                 
                     home_value = True         
                 
@@ -4677,13 +4677,13 @@ def analyze_prematch_match(match):
                 
                 )                                          
         
-                if edge >= 15:          
+                if edge >= 12:          
         
                     away_super_value = True   
         
                     away_score += 3           
         
-                elif edge >= 10:       
+                elif edge >= 6:       
         
                     away_value = True   
         
