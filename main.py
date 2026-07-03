@@ -3443,30 +3443,29 @@ def analyze_prematch_match(match):
 
         )                                      
 
-        if (                                 
+        if (                        
 
-            attack_gap >= 1.60                
+            attack_gap >= 1.80       
 
-        ):                                    
+        ):                           
 
-            home_score += 5                    
+            home_score += 4          
 
-        elif (                                
+        elif (                        
 
-            attack_gap >= 1.20                 
+            attack_gap >= 1.40        
 
-        ):                                    
+        ):                           
 
-            home_score += 3                   
+            home_score += 2         
 
-        elif (                                
+        elif (                        
 
-            attack_gap >= 0.80                
+            attack_gap >= 1.00       
 
-        ):                                    
+        ):                            
 
-            home_score += 1                   
-
+            home_score += 1          
         debug_base = home_score
 
         print(                     
@@ -3480,35 +3479,7 @@ def analyze_prematch_match(match):
             home_score              
 
         )                            
-
-
-        # STRENGTH GAP BONUS            
-
-        strength_gap = (               
-
-            home_strength             
-
-            -
-
-            away_strength             
-
-        )                              
-
-        if (                          
-
-            strength_gap >= 20        
-
-        ):                            
-
-            home_score += 4            
-
-        elif (                        
-
-            strength_gap >= 10         
-
-        ):                            
-
-            home_score += 2    
+       
 
         home_score += h2h  
 
