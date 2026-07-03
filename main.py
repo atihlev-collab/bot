@@ -4153,6 +4153,19 @@ def analyze_prematch_match(match):
 
             defense_gap >= 0.30       
 
+        )       
+
+
+        # FORM CONSISTENCY           
+
+        consistency_ok = (           
+
+            home_form["wins"]        
+
+            >=                       
+
+            home_form["losses"] * 2   
+
         )                            
      
         
@@ -4208,6 +4221,8 @@ def analyze_prematch_match(match):
             home_probability >= 65
             and
             dominance_ok
+            and
+            consistency_ok
         ):
 
             print(
@@ -5282,7 +5297,20 @@ def analyze_prematch_match(match):
 
             defense_gap >= 0.30       
 
-        )                            
+        )       
+
+
+        # FORM CONSISTENCY          
+
+        consistency_ok = (            
+
+            away_form["wins"]         
+
+            >=                        
+
+            away_form["losses"] * 2   
+
+        )                             
      
         
         if (
@@ -5337,6 +5365,8 @@ def analyze_prematch_match(match):
             away_probability >= 65        
             and
             dominance_ok
+            and
+            consistency_ok
         ):                               
 
             print(                       
