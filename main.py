@@ -4120,7 +4120,41 @@ def analyze_prematch_match(match):
 
         ):                                 
 
-            return None                    
+            return None          
+
+
+        # SUPER DOMINANCE FILTER     
+
+        goal_gap = (                
+
+            home_form["avg_scored"]   
+
+            -                       
+
+            away_form["avg_scored"]  
+
+        )                            
+
+        defense_gap = (              
+
+            away_form["avg_conceded"] 
+
+            -                         
+
+            home_form["avg_conceded"] 
+
+        )                             
+
+        dominance_ok = (             
+
+            goal_gap >= 0.40          
+
+            and                       
+
+            defense_gap >= 0.30       
+
+        )                            
+     
         
         if (
             home_score >= 50           
@@ -4172,6 +4206,8 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
             and
             home_probability >= 65
+            and
+            dominance_ok
         ):
 
             print(
@@ -5214,7 +5250,40 @@ def analyze_prematch_match(match):
 
         ):                                
 
-            return None                    
+            return None    
+
+        # SUPER DOMINANCE FILTER     
+
+        goal_gap = (                  
+
+            away_form["avg_scored"]   
+
+            -                        
+
+            home_form["avg_scored"]  
+
+        )                            
+
+        defense_gap = (             
+
+            home_form["avg_conceded"] 
+
+            -                        
+
+            away_form["avg_conceded"] 
+
+        )                            
+
+        dominance_ok = (             
+
+            goal_gap >= 0.40         
+
+            and                       
+
+            defense_gap >= 0.30       
+
+        )                            
+     
         
         if (
             away_score >= 50          
@@ -5266,7 +5335,8 @@ def analyze_prematch_match(match):
             home_form["recent_avg_conceded"] >= 1.2 
             and
             away_probability >= 65        
-
+            and
+            dominance_ok
         ):                               
 
             print(                       
