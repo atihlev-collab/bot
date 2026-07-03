@@ -3860,6 +3860,49 @@ def analyze_prematch_match(match):
             )                        
         )       
 
+
+        # QUALITY CONFIRMATION          
+
+        if (                            
+
+            home_form["wins"] >= 5      
+
+            and                          
+
+            home_form["losses"] <= 1     
+
+            and                          
+
+            home_form["form_pct"] >= 70 
+
+            and                         
+
+            home_edge >= 3               
+
+            and                         
+
+            market_home >= 52            
+
+        ):                              
+
+            home_score += 3             
+
+        elif (                           
+
+            home_form["wins"] >= 4       
+
+            and                         
+
+            home_form["form_pct"] >= 65  
+
+            and                          
+
+            home_edge >= 2             
+
+        ):                               
+
+            home_score += 1             
+
         # STRONG FAVOURITE BONUS        
 
         if (                            
@@ -4717,6 +4760,49 @@ def analyze_prematch_match(match):
             100,                             
             1                                
         )     
+
+
+        # QUALITY CONFIRMATION         
+
+        if (                            
+
+            away_form["wins"] >= 5      
+
+            and                         
+
+            away_form["losses"] <= 1    
+
+            and                          
+
+            away_form["form_pct"] >= 70  
+
+            and                         
+
+            away_edge >= 3               
+
+            and                          
+
+            market_away >= 52            
+
+        ):                              
+
+            away_score += 3              
+
+        elif (                           
+
+            away_form["wins"] >= 4      
+
+            and                         
+
+            away_form["form_pct"] >= 65  
+
+            and                          
+
+            away_edge >= 2              
+
+        ):                              
+
+            away_score += 1              
 
         # STRONG AWAY BONUS            
 
