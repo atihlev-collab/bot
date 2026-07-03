@@ -4327,7 +4327,28 @@ def analyze_prematch_match(match):
 
             1.50                         
 
-        )                               
+        )            
+
+
+        # RECENT GOALS FILTER         
+
+        recent_attack_ok = (          
+
+            home_form["recent_avg_scored"]   
+
+            >=                                
+
+            1.40                             
+
+            and                               
+
+            away_form["recent_avg_conceded"] 
+
+            >=                                
+
+            1.00                              
+
+        )                                    
      
         
         if (
@@ -4394,6 +4415,8 @@ def analyze_prematch_match(match):
             not false_favourite
             and
             stable_home
+            and
+            recent_attack_ok
         ):
 
             print(
@@ -5697,7 +5720,28 @@ def analyze_prematch_match(match):
 
             1.50                        
 
-        )                              
+        )     
+
+
+        # RECENT GOALS FILTER         
+
+        recent_attack_ok = (          
+
+            away_form["recent_avg_scored"]   
+
+            >=                               
+
+            1.40                             
+
+            and                               
+
+            home_form["recent_avg_conceded"]  
+
+            >=                               
+
+            1.00                            
+
+        )                                    
      
         
         if (
@@ -5764,6 +5808,8 @@ def analyze_prematch_match(match):
             not false_favourite
             and
             stable_away
+            and
+            recent_attack_ok
         ):                               
 
             print(                       
