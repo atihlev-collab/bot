@@ -3949,44 +3949,44 @@ def analyze_prematch_match(match):
 
                 if (                             
 
-                    value_score >= 24            
+                    value_score >= 24             
 
                     and                          
 
-                    min(                         
+                    min(                          
 
-                        95,                      
+                        95,                       
 
-                        away_score + 50          
+                        home_score + 50          
 
-                    ) >= 70                       
+                    ) >= 70                      
 
                 ):                               
 
-                    away_super_value = True      
+                    home_super_value = True       
 
-                    away_score += 4              
+                    home_score += 4              
 
 
                 elif (                           
 
                     value_score >= 18            
 
-                    and                        
+                    and                         
 
-                    min(                         
+                    min(                        
 
                         95,                     
 
-                        away_score + 50         
+                        home_score + 50         
 
                     ) >= 65                     
 
                 ):                             
 
-                    away_value = True           
+                    home_value = True           
 
-                    away_score += 2             
+                    home_score += 2             
 
                 print(                    
 
