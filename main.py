@@ -3881,19 +3881,90 @@ def analyze_prematch_match(match):
                )
 
 
-                if edge >= 12:                 
+                # SMART VALUE SCORE        
 
-                    home_super_value = True    
-                
-                    home_score += 4            
-                
-                   
-                
-                elif edge >= 6:                
-                
-                    home_value = True         
-                
-                    home_score += 2             
+                value_score = (             
+
+                    edge                    
+
+                    +
+
+                    home_edge * 2           
+
+                    +
+
+                    (
+
+                        home_score         
+
+                        /
+
+                        10
+
+                    )                      
+
+                    +
+
+                    (
+
+                        home_probability    
+
+                        -
+
+                        market_home         
+
+                    ) * 0.30               
+
+                )                         
+
+
+                if (                       
+
+                    value_score >= 24    
+
+                    and                  
+
+                    home_probability >= 70 
+
+                ):                        
+
+                    home_super_value = True 
+
+                    home_score += 4        
+
+
+                elif (                     
+
+                    value_score >= 18     
+
+                    and                   
+
+                    home_probability >= 65 
+
+                ):                        
+
+                    home_value = True     
+
+                    home_score += 2       
+
+
+                print(                    
+
+                    "HOME VALUE SCORE:",   
+
+                    home,                 
+
+                    away,                  
+
+                    round(                 
+
+                        value_score,      
+
+                        2                 
+
+                    )                    
+
+                )                         
 
         print(             
 
@@ -5060,17 +5131,90 @@ def analyze_prematch_match(match):
                 
                 )                                          
         
-                if edge >= 12:          
-        
-                    away_super_value = True   
-        
-                    away_score += 3           
-        
-                elif edge >= 6:       
-        
-                    away_value = True   
-        
-                    away_score += 1     
+                # SMART VALUE SCORE         
+
+                value_score = (             
+
+                    edge                    
+
+                    +
+
+                    away_edge * 2           
+
+                    +
+
+                    (
+
+                        away_score           
+
+                        /
+
+                        10
+
+                    )                       
+
+                    +
+
+                    (
+
+                        away_probability      
+
+                        -
+
+                        market_away           
+
+                    ) * 0.30                 
+
+                )                           
+
+
+                if (                         
+
+                    value_score >= 24       
+
+                    and                      
+
+                    away_probability >= 70   
+
+                ):                           
+
+                    away_super_value = True  
+
+                    away_score += 4          
+
+
+                elif (                      
+
+                    value_score >= 18        
+
+                    and                     
+
+                    away_probability >= 65   
+
+                ):                          
+
+                    away_value = True        
+
+                    away_score += 2          
+
+
+                print(                      
+
+                    "AWAY VALUE SCORE:",     
+
+                    home,                    
+
+                    away,                   
+
+                    round(                   
+
+                        value_score,        
+
+                        2                    
+
+                    )                       
+
+                )                           
         
         away_odds_ok = True             
     
