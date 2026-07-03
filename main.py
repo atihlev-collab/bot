@@ -3751,18 +3751,7 @@ def analyze_prematch_match(match):
             ) * 0.20                   
 
         )                             
-            +
-
-            (
-
-                home_form["goal_diff"]   
-
-                -
-
-                away_form["goal_diff"]  
-
-            ) * 0.20               
-        )                          
+          
 
         # WIN EDGE BONUS                
 
@@ -4088,13 +4077,39 @@ def analyze_prematch_match(match):
             home_score          
         )                       
 
-        home_probability = max(     
-            0,                      
-            min(                    
-                100,                 
-                50 + home_score      
-            )                        
-        )       
+        # HOME PROBABILITY            
+
+        home_probability = max(       
+
+            5,                        
+
+            min(                       
+
+                95,                    
+
+                round(                 
+
+                    50                 
+
+                    +
+
+                    (
+
+                        home_score     
+
+                        *              
+
+                        0.60           
+
+                    ),                 
+
+                    1                  
+
+                )                      
+
+            )                          
+
+        )                              
 
 
         # QUALITY CONFIRMATION          
@@ -5631,19 +5646,39 @@ def analyze_prematch_match(match):
             1                               
         )                                    
 
-        away_probability = round(            
-            (                               
-                max(                          
-                    1,                       
-                    away_score + 100          
-                )                            
-                /                            
-                total_strength              
-            )                                
-            *                               
-            100,                             
-            1                                
-        )     
+        # AWAY PROBABILITY            
+
+        away_probability = max(        
+
+            5,                        
+
+            min(                       
+
+                95,                    
+
+                round(                 
+
+                    50                 
+
+                    +
+
+                    (
+
+                        away_score     
+
+                        *              
+
+                        0.60          
+
+                    ),                 
+
+                    1                 
+
+                )                      
+
+            )                          
+
+        )                             
 
 
         # QUALITY CONFIRMATION         
