@@ -3858,7 +3858,41 @@ def analyze_prematch_match(match):
                 100,                 
                 50 + home_score      
             )                        
-        )        
+        )       
+
+        # STRONG FAVOURITE BONUS        
+
+        if (                            
+
+            home_probability >= 72      
+
+            and                         
+
+            home_edge >= 3             
+
+            and                        
+
+            home_form["wins"] >= 4      
+
+            and                         
+
+            home_form["losses"] <= 1    
+
+        ):                             
+
+            home_score += 4            
+
+        elif (                         
+
+            home_probability >= 68      
+
+            and                         
+
+            home_edge >= 2              
+
+        ):                             
+
+            home_score += 2             
 
 
         # CONSENSUS BONUS               
@@ -4683,6 +4717,40 @@ def analyze_prematch_match(match):
             100,                             
             1                                
         )     
+
+        # STRONG AWAY BONUS            
+
+        if (                          
+
+            away_probability >= 72      
+
+            and                        
+
+            away_edge >= 3              
+
+            and                         
+
+            away_form["wins"] >= 4     
+
+            and                        
+
+            away_form["losses"] <= 1    
+
+        ):                              
+
+            away_score += 4             
+
+        elif (                        
+
+            away_probability >= 68      
+
+            and                         
+
+            away_edge >= 2              
+
+        ):                              
+
+            away_score += 2             
 
         
         # CONSENSUS BONUS              
