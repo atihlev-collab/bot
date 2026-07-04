@@ -4546,17 +4546,17 @@ def analyze_prematch_match(match):
             and
             home_form["unbeaten_pct"] >= 60
             and
-            home_form["wins"] >= 2  
+            home_form["wins"] >= 3  
             and                         
             home_form["losses"] <= 3      
             and                        
-            home_form["draws"] <= 4    
+            home_form["draws"] <= 3    
             and                         
             home_edge >= 2                 
             and
-            form_gap >= 10
+            form_gap >= 15
             and
-            recent_gap >= 5
+            recent_gap >= 10
             and
             home_form["recent_form_pct"] >= 40                                                              
             and                                   
@@ -4576,19 +4576,26 @@ def analyze_prematch_match(match):
 
                 home_form["avg_conceded"] 
 
-            ) >= 0.30                    
+            ) >= 0.30     
+            and
+
+            (
+                home_form["goal_diff"]
+                -
+                away_form["goal_diff"]
+            ) >= 5
             and
             home_form["recent_avg_scored"] >= 1.5
             and                           
             home_form["recent_goal_diff"] >= 1   
             and
-            home_form["avg_conceded"] <= 1.3
+            home_form["avg_conceded"] <= 1.0
             and
-            away_form["avg_conceded"] >= 1.2
+            away_form["avg_conceded"] >= 1.4
             and
-            away_form["recent_avg_conceded"] >= 1.2
+            away_form["recent_avg_conceded"] >= 1.4
             and
-            home_probability >= 65
+            home_probability >= 68
             and
             dominance_ok
             and
@@ -6115,11 +6122,11 @@ def analyze_prematch_match(match):
             and
             away_form["unbeaten_pct"] >= 60
             and
-            away_form["wins"] >= 2
+            away_form["wins"] >= 3
             and                          
             away_form["losses"] <= 3    
             and                         
-            away_form["draws"] <= 4     
+            away_form["draws"] <= 3     
             and                        
             away_edge >= 2                  
             and
@@ -6127,9 +6134,9 @@ def analyze_prematch_match(match):
             and
             away_gap >= 15
             and
-            recent_away_gap >= 5
+            recent_away_gap >= 10
             and
-            away_form["avg_scored"] >= 1.5
+            away_form["avg_scored"] >= 1.8
             and
             (
                 away_form["avg_scored"]
@@ -6145,19 +6152,26 @@ def analyze_prematch_match(match):
 
                 away_form["avg_conceded"]
 
-            ) >= 0.30                     
+            ) >= 0.30       
+            and
+
+            (
+                away_form["goal_diff"]
+                -
+                home_form["goal_diff"]
+            ) >= 5
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
             and                          
             away_form["recent_goal_diff"] >= 1  
             and
-            away_form["avg_conceded"] <= 1.3
+            away_form["avg_conceded"] <= 1.0
             and
-            home_form["avg_conceded"] >= 1.2
+            home_form["avg_conceded"] >= 1.4
             and                                   
-            home_form["recent_avg_conceded"] >= 1.2 
+            home_form["recent_avg_conceded"] >= 1.4 
             and
-            away_probability >= 65        
+            away_probability >= 68        
             and
             dominance_ok
             and
@@ -6388,7 +6402,7 @@ def analyze_prematch_match(match):
             and                          
             expected_goals >= 3.2         
             and
-            home_form["avg_scored"] >= 1.3
+            home_form["avg_scored"] >= 1.8
             and
             away_form["avg_scored"] >= 1.3
             and                              
