@@ -4183,7 +4183,28 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 3         
+            home_score += 3        
+
+
+        home_score = max(              
+
+            -80,                     
+
+            min(                      
+
+                85,                   
+
+                round(                
+
+                    home_score,       
+
+                    2                 
+
+                )                      
+
+            )                         
+
+        )                             
 
 
         # HOME PROBABILITY            
