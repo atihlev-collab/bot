@@ -6586,55 +6586,55 @@ def analyze_prematch_match(match):
 
         )                             
 
-        if (                          
+        if (                              
 
-            over_prob <= 50            
-
-            and                        
-
-            expected_goals <= 2.0      
-
-            and                        
-
-            home_form["avg_scored"] <= 1.2      
-
-            and                       
-
-            away_form["avg_scored"] <= 1.2      
-
-            and       
-
-            home_form["recent_avg_scored"] <= 1.3
-            
-            and
-            
-            away_form["recent_avg_scored"] <= 1.3
-
-            and
-
-            home_form["avg_conceded"] <= 1.2    
-
-            and                        
-
-            away_form["avg_conceded"] <= 1.2    
-
-            and                          
-
-            home_form["clean_sheet_pct"] >= 35  
+            over_prob <= 45              
 
             and                           
 
-            away_form["clean_sheet_pct"] >= 35   
+            expected_goals <= 1.90        
 
-            and                       
+            and                           
 
-            home_form["over25_pct"] <= 45      
+            home_form["avg_scored"] <= 1.10      
 
-            and                       
+            and                          
 
-            away_form["over25_pct"] <= 45       
+            away_form["avg_scored"] <= 1.10      
 
-        ):                            
+            and                          
+
+            home_form["recent_avg_scored"] <= 1.20   
+
+            and                           
+
+            away_form["recent_avg_scored"] <= 1.20  
+
+            and                          
+
+            home_form["avg_conceded"] <= 1.10    
+
+            and                           
+
+            away_form["avg_conceded"] <= 1.10    
+
+            and                           
+
+            home_form["clean_sheet_pct"] >= 40   
+
+            and                         
+
+            away_form["clean_sheet_pct"] >= 40  
+
+            and                           
+
+            home_form["over25_pct"] <= 40        
+
+            and                          
+
+            away_form["over25_pct"] <= 40       
+
+        ):                              
 
             signals.append(            
 
