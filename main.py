@@ -4554,9 +4554,9 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 2                 
             and
-            form_gap >= 15
+            form_gap >= 12
             and
-            recent_gap >= 10
+            recent_gap >= 7
             and
             home_form["recent_form_pct"] >= 40                                                              
             and                                   
@@ -4595,7 +4595,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.4
             and
-            home_probability >= 68
+            home_probability >= 66
             and
             dominance_ok
             and
@@ -6135,8 +6135,10 @@ def analyze_prematch_match(match):
             away_gap >= 15
             and
             recent_away_gap >= 10
+            and                         
+            away_form["recent_form_pct"] >= 40       
             and
-            away_form["avg_scored"] >= 1.8
+            away_form["avg_scored"] >= 1.5
             and
             (
                 away_form["avg_scored"]
