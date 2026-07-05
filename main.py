@@ -4134,57 +4134,56 @@ def analyze_prematch_match(match):
 
         # STRONG FAVOURITE BONUS        
 
-        if (                            
+        if (                        
 
-            home_probability >= 72      
+            home_score >= 72         
 
-            and                         
+            and                       
 
-            home_edge >= 3             
+            home_edge >= 3           
 
-            and                        
+            and                       
 
-            home_form["wins"] >= 4      
+            home_form["wins"] >= 4     
 
-            and                         
+            and                       
 
-            home_form["losses"] <= 1    
+            home_form["losses"] <= 1   
 
         ):                             
 
-            home_score += 4            
+            home_score += 4           
 
         elif (                         
 
-            home_probability >= 68      
+            home_score >= 68           
 
-            and                         
+            and                       
 
-            home_edge >= 2              
+            home_edge >= 2             
 
-        ):                             
+        ):                           
 
-            home_score += 2             
+            home_score += 2            
 
 
         # CONSENSUS BONUS               
 
         if (                          
 
-            home_probability >= 65      
+            home_score >= 65          
 
-            and                         
+            and                       
 
-            home_edge >= 3              
+            home_edge >= 3            
 
             and                        
 
-            market_home >= 55           
+            market_home >= 55         
 
-        ):                              
+        ):                            
 
-            home_score += 3        
-
+            home_score += 3            
 
         home_score = max(              
 
