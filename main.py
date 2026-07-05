@@ -4989,7 +4989,7 @@ def analyze_prematch_match(match):
 
         print(
             "AFTER HOME DROP:",
-            home_score
+            away_score
         )
         
         # FORM COLLAPSE BONUS
@@ -5070,7 +5070,7 @@ def analyze_prematch_match(match):
 
         print(
             "AFTER COLLAPSE:",
-            home_score
+            away_score
         )
 
         # DEFENSIVE BONUS             
@@ -5422,18 +5422,7 @@ def analyze_prematch_match(match):
 
         # MOMENTUM COLLAPSE          
 
-        if (                          
-
-            away_form["momentum"]      
-
-            <=                         
-
-            -20                       
-
-        ):                             
-
-            away_score -= 4           
-
+      
         elif (                       
 
             away_form["momentum"]      
@@ -5805,21 +5794,7 @@ def analyze_prematch_match(match):
         )                              
 
     
-        if (                               
-            away_probability >= 65          
-            and                             
-            away_score >= 40               
-        ):                                  
-
-            away_score += 1                
-
-        elif (                              
-            away_probability >= 68          
-            and                             
-            away_score >= 30               
-        ):                                  
-
-            away_score += 1               
+           
 
         away_score_gap = (
             away_score
