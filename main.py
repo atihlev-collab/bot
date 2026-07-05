@@ -3821,7 +3821,7 @@ def analyze_prematch_match(match):
        
         if (                              
 
-            recent_gap >= 35            
+            recent_gap >= 40            
 
         ):                               
 
@@ -3829,7 +3829,7 @@ def analyze_prematch_match(match):
 
         elif (                            
             
-            recent_gap >= 25            
+            recent_gap >= 30            
 
         ):                              
 
@@ -3837,7 +3837,7 @@ def analyze_prematch_match(match):
 
         elif (                           
 
-            recent_gap >= 15              
+            recent_gap >= 20              
 
         ):                             
 
@@ -5184,7 +5184,7 @@ def analyze_prematch_match(match):
 
         if (                              
 
-            recent_away_gap >= 35        
+            recent_away_gap >= 40        
 
         ):                                
 
@@ -5192,7 +5192,7 @@ def analyze_prematch_match(match):
 
         elif (                           
 
-            recent_away_gap >= 25         
+            recent_away_gap >= 30         
 
         ):                               
 
@@ -5200,7 +5200,7 @@ def analyze_prematch_match(match):
 
         elif (                           
 
-            recent_away_gap >= 15         
+            recent_away_gap >= 20         
 
         ):                                
 
