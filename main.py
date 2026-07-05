@@ -3949,7 +3949,7 @@ def analyze_prematch_match(match):
 
                 if (                             
 
-                    value_score >= 24             
+                    value_score >= 28             
 
                     and                          
 
@@ -3970,7 +3970,7 @@ def analyze_prematch_match(match):
 
                 elif (                           
 
-                    value_score >= 18            
+                    value_score >= 22            
 
                     and                         
 
@@ -4550,7 +4550,7 @@ def analyze_prematch_match(match):
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 60
+            home_form["unbeaten_pct"] >= 70
             and
             home_form["wins"] >= 3  
             and                         
@@ -5288,7 +5288,7 @@ def analyze_prematch_match(match):
 
                 if (                         
 
-                    value_score >= 24       
+                    value_score >= 28       
 
                     and                      
 
@@ -5308,7 +5308,7 @@ def analyze_prematch_match(match):
 
                 elif (                      
 
-                    value_score >= 18        
+                    value_score >= 22        
 
                     and                     
 
@@ -6091,7 +6091,7 @@ def analyze_prematch_match(match):
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 60
+            away_form["unbeaten_pct"] >= 70
             and
             away_form["wins"] >= 3
             and                          
