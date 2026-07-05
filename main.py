@@ -3577,7 +3577,7 @@ def analyze_prematch_match(match):
                     home_form["home_games"]
                 )
 
-                * 5                       
+                * 3                       
 
             )                               
 
@@ -3856,7 +3856,7 @@ def analyze_prematch_match(match):
 
         if (                            
 
-            home_form["recent_goal_diff"] >= 6   
+            home_form["recent_goal_diff"] >= 8   
 
         ):                               
 
@@ -3864,7 +3864,7 @@ def analyze_prematch_match(match):
 
         elif (                          
 
-            home_form["recent_goal_diff"] >= 3   
+            home_form["recent_goal_diff"] >= 5   
 
         ):                              
 
@@ -5210,7 +5210,7 @@ def analyze_prematch_match(match):
 
         if (                             
 
-            away_form["recent_goal_diff"] >= 6  
+            away_form["recent_goal_diff"] >= 8  
 
         ):                              
 
@@ -5218,7 +5218,7 @@ def analyze_prematch_match(match):
 
         elif (                           
 
-            away_form["recent_goal_diff"] >= 3  
+            away_form["recent_goal_diff"] >= 5  
 
         ):                              
 
