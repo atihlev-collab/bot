@@ -4056,39 +4056,8 @@ def analyze_prematch_match(match):
                 28                      
 
             )                         
-
-        # FINAL SCORE LIMIT           
-
-        home_score = max(             
-
-            -80,                       
-
-            min(                       
-
-                85,                      
-
-                round(                  
-
-                    home_score,         
-
-                    2                    
-
-                )                       
-
-            )    
+                       
            
-        )                                
-
-    
-
-        print(                 
-            "HOME SCORE:",     
-            home,               
-            away,              
-            home_score          
-        )                       
-
-      
 
         # QUALITY CONFIRMATION          
 
@@ -4203,7 +4172,20 @@ def analyze_prematch_match(match):
 
             )                         
 
-        )                             
+        )     
+
+
+        print(                 
+
+            "HOME SCORE:",     
+
+            home,               
+
+            away,              
+
+            home_score          
+
+        )    
 
 
         # HOME PROBABILITY            
@@ -5481,25 +5463,7 @@ def analyze_prematch_match(match):
 
         # FINAL SCORE LIMIT            
 
-        away_score = max(              
-
-            -80,                       
-
-            min(                       
-
-                85,                     
-
-                round(                  
-
-                    away_score,          
-
-                    2                  
-
-                )                        
-
-            )                            
-
-        )                                          
+                            
 
         total_strength = (               
 
