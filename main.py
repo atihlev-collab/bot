@@ -5765,57 +5765,112 @@ def analyze_prematch_match(match):
 
         # STRONG AWAY BONUS            
 
-        if (                          
+        if (                        
 
-            away_probability >= 72      
-
-            and                        
-
-            away_edge >= 3              
-
-            and                         
-
-            away_form["wins"] >= 4     
+            away_score >= 72        
 
             and                        
 
-            away_form["losses"] <= 1    
+            away_edge >= 3             
 
-        ):                              
+            and                       
 
-            away_score += 4             
+            away_form["wins"] >= 4    
+
+            and                       
+
+            away_form["losses"] <= 1  
+
+        ):                            
+
+            away_score += 4            
 
         elif (                        
 
-            away_probability >= 68      
+            away_score >= 68           
 
-            and                         
+            and                        
 
-            away_edge >= 2              
+            away_edge >= 2            
 
-        ):                              
+        ):                            
 
-            away_score += 2             
+            away_score += 2            
 
         
         # CONSENSUS BONUS              
 
-        if (                           
+        if (                          
 
-            away_probability >= 70     
+            away_score >= 65           
 
-            and                         
+            and                        
 
             away_edge >= 3             
 
-            and                         
+            and                        
 
             market_away >= 55         
 
         ):                             
 
-            away_score += 3            
-     
+            away_score += 3      
+
+
+        away_score = max(             
+
+            -80,                      
+
+            min(                      
+
+                85,                  
+
+                round(                
+
+                    away_score,       
+
+                    2                 
+
+                )                    
+
+            )                         
+
+        )                             
+
+
+        # AWAY PROBABILITY            
+
+        away_probability = max(       
+
+            5,                         
+
+            min(                       
+
+                95,                  
+
+                round(                 
+
+                    50                
+
+                    +
+
+                    (
+
+                        away_score    
+
+                        *
+
+                        0.60          
+
+                    ),
+
+                    1                  
+
+                )                      
+
+            )                         
+
+        )                              
 
         if (
             home_probability >= 65
