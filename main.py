@@ -5650,39 +5650,7 @@ def analyze_prematch_match(match):
             1                               
         )                                    
 
-        # AWAY PROBABILITY            
-
-        away_probability = max(        
-
-            5,                        
-
-            min(                       
-
-                95,                    
-
-                round(                 
-
-                    50                 
-
-                    +
-
-                    (
-
-                        away_score     
-
-                        *              
-
-                        0.60          
-
-                    ),                 
-
-                    1                 
-
-                )                      
-
-            )                          
-
-        )                             
+      
 
 
         # QUALITY CONFIRMATION         
@@ -5836,22 +5804,7 @@ def analyze_prematch_match(match):
 
         )                              
 
-        if (
-            home_probability >= 65
-            and
-            home_score >= 40
-        ):
-
-            home_score += 1
-
-        elif (
-            home_probability >= 68
-            and
-            home_score >= 30
-        ):
-
-            home_score += 1
-
+    
         if (                               
             away_probability >= 65          
             and                             
