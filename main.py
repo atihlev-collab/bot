@@ -4088,40 +4088,7 @@ def analyze_prematch_match(match):
             home_score          
         )                       
 
-        # HOME PROBABILITY            
-
-        home_probability = max(       
-
-            5,                        
-
-            min(                       
-
-                95,                    
-
-                round(                 
-
-                    50                 
-
-                    +
-
-                    (
-
-                        home_score     
-
-                        *              
-
-                        0.60           
-
-                    ),                 
-
-                    1                  
-
-                )                      
-
-            )                          
-
-        )                              
-
+      
 
         # QUALITY CONFIRMATION          
 
@@ -4216,7 +4183,44 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 3             
+            home_score += 3         
+
+
+        # HOME PROBABILITY            
+
+        home_probability = max(       
+
+            5,                        
+
+            min(                       
+
+                95,                    
+
+                round(                 
+
+                    50                 
+
+                    +
+
+                    (
+
+                        home_score     
+
+                        *              
+
+                        0.60           
+
+                    ),                 
+
+                    1                  
+
+                )                      
+
+            )                          
+
+        )                              
+
+       
 
         print(                  
             "HOME PROB:",       
