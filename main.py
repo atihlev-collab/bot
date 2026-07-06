@@ -3854,6 +3854,35 @@ def analyze_prematch_match(match):
 
         home_score += home_stability   
 
+
+        # FORM RELIABILITY            
+
+        form_difference = abs(        
+
+            home_form["form_pct"]      
+
+            -
+
+            home_form["recent_form_pct"] 
+
+        )                             
+
+        if (                          
+
+            form_difference <= 8        
+
+        ):                             
+
+            home_score += 3           
+
+        elif (                       
+
+            form_difference <= 15      
+
+        ):                            
+
+            home_score += 1            
+
         # WIN STREAK BONUS               
 
         if (                             
@@ -5389,6 +5418,35 @@ def analyze_prematch_match(match):
             away_stability += 1        
 
         away_score += away_stability   
+
+
+        # FORM RELIABILITY            
+
+        form_difference = abs(         
+
+            away_form["form_pct"]     
+
+            -
+
+            away_form["recent_form_pct"] 
+
+        )                             
+
+        if (                         
+
+            form_difference <= 8       
+
+        ):                             
+
+            away_score += 3           
+
+        elif (                         
+
+            form_difference <= 15       
+
+        ):                           
+
+            away_score += 1            
 
         # WIN STREAK BONUS                
 
