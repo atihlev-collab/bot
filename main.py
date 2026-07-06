@@ -4053,13 +4053,25 @@ def analyze_prematch_match(match):
                 match_odds[0] is not None
             ):
 
-                edge = value_edge(              
+               prob = min(95, home_score)
 
-                    min(95, home_score),        
-                
-                    match_odds[0]               
-                
-                )                                       
+print("VALUE PROB:", prob)
+
+        edge = value_edge(         
+
+            prob,                  
+
+            match_odds[0]           
+
+        )                          
+
+        print(                      
+
+            "EDGE:",               
+
+            edge                   
+
+        )                                  
 
                 print(
                     "HOME VALUE EDGE:",
