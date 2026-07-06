@@ -4330,9 +4330,9 @@ def analyze_prematch_match(match):
             home_score += 2            
 
 
-        # CONSENSUS BONUS               
+        # CONSENSUS BONUS             
 
-        if (                          
+        if (                         
 
             home_score >= 65          
 
@@ -4342,40 +4342,41 @@ def analyze_prematch_match(match):
 
             and                        
 
-            market_home >= 55         
+            market_home >= 55          
 
-        ):                            
+        ):                           
 
-            home_score += 2      
+            home_score += 2           
 
 
-         bonus_total = (              
+        bonus_total = (               
 
-            home_score                 
+            home_score                
 
-            -                          
+            -                         
 
-            debug_base                 
+            debug_base                
 
-        )                              
+        )                             
 
-        if (                           
+        if (                         
 
-            bonus_total > 30            
+            bonus_total > 30         
 
-        ):                            
+        ):                             
 
-            home_score -= (            
+            home_score -= (           
 
-                bonus_total             
+                bonus_total           
 
                 -                      
 
-                28                      
+                28                    
 
-            )        
+            )                         
 
-        home_score = max(              
+
+        home_score = max(            
 
             -80,                     
 
@@ -4393,8 +4394,7 @@ def analyze_prematch_match(match):
 
             )                         
 
-        )     
-
+        )                              
 
         print(                 
 
@@ -6138,45 +6138,73 @@ def analyze_prematch_match(match):
             away_score += 1            
 
         
-        # CONSENSUS BONUS              
+        # CONSENSUS BONUS             
 
-        if (                          
+        if (                           
 
-            away_score >= 65           
+            away_score >= 65          
 
-            and                        
+            and                       
 
-            away_edge >= 3             
+            away_edge >= 3            
 
-            and                        
+            and                       
 
             market_away >= 55         
 
+        ):                            
+
+            away_score += 2            
+
+
+        # BONUS LIMIT                 
+
+        bonus_total = (               
+
+            away_score                 
+
+            -                          
+
+            debug_base                 
+
+        )                            
+
+        if (                          
+
+            bonus_total > 30           
+
         ):                             
 
-            away_score += 2      
+            away_score -= (            
 
+                bonus_total            
 
-        away_score = max(             
+                -                      
 
-            -80,                      
-
-            min(                      
-
-                85,                  
-
-                round(                
-
-                    away_score,       
-
-                    2                 
-
-                )                    
+                28                     
 
             )                         
 
-        )                             
-        
+
+        away_score = max(              
+
+            -80,                      
+
+            min(                       
+
+                85,                    
+
+                round(                
+
+                    away_score,        
+
+                    2                 
+
+                )                      
+
+            )                          
+
+        )                              
            
 
         away_score_gap = (
