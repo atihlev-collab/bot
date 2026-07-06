@@ -4287,6 +4287,59 @@ def analyze_prematch_match(match):
             "prob=", home_probability
         )
 
+        # RISK SCORE                 
+
+        home_risk = 0                
+
+        if (                         
+
+            draw_risk                
+
+        ):                           
+
+            home_risk += 5           
+
+        if (                          
+
+            home_form["losses"] >= 2  
+
+        ):                            
+
+            home_risk += 3          
+
+        if (                         
+
+            abs(                      
+
+                market_home           
+
+                -                     
+
+                home_probability     
+
+            ) >= 15                   
+
+        ):                           
+
+            home_risk += 4           
+
+        if (                         
+
+            recent_gap < 10           
+           
+        ):                           
+
+            home_risk += 2            
+
+        print(                       
+
+            "HOME RISK:",            
+
+            home_risk                 
+
+        )                            
+       
+
         # ATTACK / DEFENSE FILTER         
 
         home_balance = (                  
@@ -4605,6 +4658,8 @@ def analyze_prematch_match(match):
             home_form["recent_form_pct"] >= 40                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
+            and
+            home_risk <= 6
             and
             (
                 home_form["avg_scored"]
@@ -5449,6 +5504,57 @@ def analyze_prematch_match(match):
                 h2h                   
             )         
 
+        # RISK SCORE                
+
+        away_risk = 0               
+
+        if (                         
+
+            draw_risk                
+
+        ):                           
+
+            away_risk += 5           
+
+        if (                         
+
+            away_form["losses"] >= 2  
+
+        ):                           
+
+            away_risk += 3            
+
+        if (                         
+
+            abs(                     
+
+                market_away           
+
+                -                    
+
+                away_probability     
+
+            ) >= 15                  
+
+        ):                           
+
+            away_risk += 4           
+
+        if (                         
+
+            recent_away_gap < 10     
+
+        ):                            
+
+            away_risk += 2           
+
+        print(                       
+
+            "AWAY RISK:",            
+
+            away_risk                 
+
+        )                            
         
 
         # EXTREME MOMENTUM BONUS         
@@ -5497,21 +5603,42 @@ def analyze_prematch_match(match):
             away_score += 3   
 
 
-        # MOMENTUM COLLAPSE          
+        # EXTREME MOMENTUM BONUS          
 
-      
-        elif (                       
+        if (                             
 
-            away_form["momentum"]      
+            home_form["momentum"] >= 25   
 
-            <=                        
+        ):                               
 
-            -10                       
+            home_score += 3             
 
-        ):                            
 
-            away_score -= 2            
-     
+        # AWAY MOMENTUM                  
+
+        if (                             
+
+            away_form["momentum"] >= 25  
+
+        ):                               
+
+            away_score += 3             
+
+        elif (                           
+
+            away_form["momentum"] <= -20  
+
+        ):                               
+
+            away_score -= 4               
+
+        elif (                           
+
+            away_form["momentum"] <= -10  
+
+        ):                               
+
+            away_score -= 2               
 
         home_score = min(                
 
@@ -6187,6 +6314,8 @@ def analyze_prematch_match(match):
             away_form["recent_form_pct"] >= 40       
             and
             away_form["avg_scored"] >= 1.5
+            and
+            away_risk <= 6
             and
             (
                 away_form["avg_scored"]
