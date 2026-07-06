@@ -4485,7 +4485,11 @@ def analyze_prematch_match(match):
 
             and                       
 
-            form_gap < 10            
+            form_gap < 10         
+
+           and
+           
+           home_probability >= market_home + 10
 
         )        
 
@@ -6039,7 +6043,11 @@ def analyze_prematch_match(match):
 
             and                       
 
-            form_gap > -10           
+            form_gap > -10    
+           
+           and
+           
+           away_probability >= market_away + 10
 
         )             
 
