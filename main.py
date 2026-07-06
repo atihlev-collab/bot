@@ -4475,6 +4475,25 @@ def analyze_prematch_match(match):
         )          
 
 
+        # COMPLETE TEAM BONUS        
+
+        if (                          
+
+            home_form["avg_scored"] >= 1.8     
+
+            and
+
+            home_form["avg_conceded"] <= 0.9   
+
+            and
+
+            home_form["clean_sheet_pct"] >= 40 
+
+        ):                          
+
+            home_score += 3          
+
+
         # FALSE FAVOURITE FILTER     
 
         false_favourite = (           
@@ -6049,6 +6068,25 @@ def analyze_prematch_match(match):
             2.20                              
 
         ) 
+
+
+        # COMPLETE TEAM BONUS         
+
+        if (                         
+
+            away_form["avg_scored"] >= 1.8     
+
+            and
+
+            away_form["avg_conceded"] <= 0.9    
+
+            and
+
+            away_form["clean_sheet_pct"] >= 40  
+
+        ):                          
+
+            away_score += 3         
 
 
         # FALSE FAVOURITE FILTER     
