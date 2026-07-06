@@ -5726,36 +5726,7 @@ def analyze_prematch_match(match):
                 away_score += 1      
 
 
-        away_score = min(         
-            80,                   
-            max(                   
-                -80,               
-                away_score         
-            )                      
-        )   
-
-        total_strength = max(                  
-            1,                               
-            home_score                       
-            +                               
-            away_score                       
-            +                                
-            200                             
-        )                                    
-
-        home_probability = round(             
-            (                               
-                max(                         
-                    1,                        
-                    home_score + 100          
-                )                            
-                /                            
-                total_strength               
-            )                               
-            *                               
-            100,                             
-            1                               
-        )                                    
+             
 
       
 
@@ -5875,43 +5846,7 @@ def analyze_prematch_match(match):
             )                         
 
         )                             
-
-
-        # AWAY PROBABILITY            
-
-        away_probability = max(       
-
-            5,                         
-
-            min(                       
-
-                95,                  
-
-                round(                 
-
-                    50                
-
-                    +
-
-                    (
-
-                        away_score    
-
-                        *
-
-                        0.60          
-
-                    ),
-
-                    1                  
-
-                )                      
-
-            )                         
-
-        )                              
-
-    
+        
            
 
         away_score_gap = (
