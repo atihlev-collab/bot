@@ -4550,7 +4550,7 @@ def analyze_prematch_match(match):
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 70
+            home_form["unbeaten_pct"] >= 60
             and
             home_form["wins"] >= 4  
             and                         
@@ -4562,7 +4562,7 @@ def analyze_prematch_match(match):
             and
             form_gap >= 12
             and
-            recent_gap >= 7
+            recent_gap >= 5
             and
             home_form["recent_form_pct"] >= 40                                                              
             and                                   
@@ -4589,7 +4589,7 @@ def analyze_prematch_match(match):
                 home_form["goal_diff"]
                 -
                 away_form["goal_diff"]
-            ) >= 7
+            ) >= 5
             and
             home_form["recent_avg_scored"] >= 1.5
             and                           
@@ -6091,7 +6091,7 @@ def analyze_prematch_match(match):
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 70
+            away_form["unbeaten_pct"] >= 60
             and
             away_form["wins"] >= 4
             and                          
@@ -6105,7 +6105,7 @@ def analyze_prematch_match(match):
             and
             away_gap >= 15
             and
-            recent_away_gap >= 10
+            recent_away_gap >= 5
             and                         
             away_form["recent_form_pct"] >= 40       
             and
@@ -6132,7 +6132,7 @@ def analyze_prematch_match(match):
                 away_form["goal_diff"]
                 -
                 home_form["goal_diff"]
-            ) >= 7
+            ) >= 5
             and                                   
             away_form["recent_avg_scored"] >= 1.5 
             and                          
