@@ -4769,7 +4769,16 @@ def analyze_prematch_match(match):
 
             0.30                          
 
-        )                                
+        )      
+
+        print("DOMINANCE:", dominance_ok)
+        print("MARKET:", market_ok)
+        print("ELITE:", elite_home)
+        print("DEFENSE:", defense_ok)
+        print("FALSE:", false_favourite)
+        print("STABLE:", stable_home)
+        print("RECENT:", recent_attack_ok)
+        print("DRAW:", draw_risk)
      
         
         if (
