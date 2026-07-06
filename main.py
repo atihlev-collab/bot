@@ -3908,6 +3908,33 @@ def analyze_prematch_match(match):
         )       
 
 
+        # FORM TREND BONUS           
+
+        if (                           
+
+            home_form["momentum"] >= 15
+
+            and
+
+            away_form["momentum"] <= -10 
+
+        ):                             
+
+            home_score += 4            
+
+        elif (                         
+
+            home_form["momentum"] >= 8 
+
+            and
+
+            away_form["momentum"] <= -5 
+
+        ):                             
+
+            home_score += 2            
+
+
         # RECENT FORM EXPLOSION BONUS     
        
         if (                              
@@ -5415,6 +5442,33 @@ def analyze_prematch_match(match):
             -
             home_form["recent_form_pct"]    
         )      
+
+
+        # FORM TREND BONUS            
+
+        if (                            
+
+            away_form["momentum"] >= 15
+
+            and
+
+            home_form["momentum"] <= -10 
+
+        ):                             
+
+            away_score += 4             
+
+        elif (                        
+
+            away_form["momentum"] >= 8  
+
+            and
+
+            home_form["momentum"] <= -5 
+
+        ):                            
+
+            away_score += 2            
 
 
         # RECENT FORM EXPLOSION BONUS      
