@@ -4494,13 +4494,9 @@ def analyze_prematch_match(match):
 
         )                                 
 
-        if (                               
-
-            home_balance < 0.30           
-
-        ):                                 
-
-            return None          
+        home_balance_ok = (
+            home_balance >= 0.30
+       )    
 
 
         # SUPER DOMINANCE FILTER     
@@ -4839,6 +4835,8 @@ def analyze_prematch_match(match):
             away_form["recent_avg_conceded"] >= 1.2
             and
             home_probability >= 70
+            and
+            home_balance_ok
             and
             dominance_ok
             and
@@ -6185,24 +6183,21 @@ def analyze_prematch_match(match):
             home_score
         )
 
-
         away_balance = (                  
 
             away_form["avg_scored"]        
-
-            -                             
-
-            away_form["avg_conceded"]      
-
+      
+            -                              
+      
+            away_form["avg_conceded"]     
+      
+        )                                  
+      
+        away_balance_ok = (                
+      
+            away_balance >= 0.30           
+      
         )                                 
-
-        if (                              
-
-            away_balance < 0.30            
-
-        ):                                
-
-            return None    
 
         # SUPER DOMINANCE FILTER     
 
@@ -6551,7 +6546,9 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 70        
+            away_probability >= 70     
+            and
+            away_balance_ok
             and
             dominance_ok
             and
