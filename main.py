@@ -4826,7 +4826,7 @@ def analyze_prematch_match(match):
                 home_form["goal_diff"]
                 -
                 away_form["goal_diff"]
-            ) >= 5
+            ) >= 3
             and
             home_form["recent_avg_scored"] >= 1.3
             and                           
@@ -4834,9 +4834,9 @@ def analyze_prematch_match(match):
             and
             home_form["avg_conceded"] <= 1.0
             and
-            away_form["avg_conceded"] >= 1.4
+            away_form["avg_conceded"] >= 1.2
             and
-            away_form["recent_avg_conceded"] >= 1.4
+            away_form["recent_avg_conceded"] >= 1.2
             and
             home_probability >= 70
             and
@@ -4844,9 +4844,7 @@ def analyze_prematch_match(match):
             and
             consistency_ok
             and
-            market_ok
-            and
-            elite_home
+            market_ok       
             and
             defense_ok
             and
@@ -6541,7 +6539,7 @@ def analyze_prematch_match(match):
                 away_form["goal_diff"]
                 -
                 home_form["goal_diff"]
-            ) >= 5
+            ) >= 3
             and                                   
             away_form["recent_avg_scored"] >= 1.3 
             and                          
@@ -6549,9 +6547,9 @@ def analyze_prematch_match(match):
             and
             away_form["avg_conceded"] <= 1.0
             and
-            home_form["avg_conceded"] >= 1.4
+            home_form["avg_conceded"] >= 1.2
             and                                   
-            home_form["recent_avg_conceded"] >= 1.3 
+            home_form["recent_avg_conceded"] >= 1.2 
             and
             away_probability >= 70        
             and
@@ -6559,9 +6557,7 @@ def analyze_prematch_match(match):
             and
             consistency_ok
             and
-            market_ok
-            and
-            elite_away
+            market_ok           
             and
             defense_ok
             and
