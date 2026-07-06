@@ -4491,7 +4491,34 @@ def analyze_prematch_match(match):
 
         ):                          
 
-            home_score += 3          
+            home_score += 3         
+
+
+        # EASY GOALS PENALTY        
+
+        if (                         
+
+            home_form["avg_scored"] >= 2.0     
+
+            and
+
+            home_form["avg_conceded"] >= 1.5    
+
+        ):                           
+
+            home_score -= 3           
+
+        if (                         
+
+            away_form["avg_scored"] >= 2.0     
+
+            and
+
+            away_form["avg_conceded"] >= 1.5   
+
+        ):                            
+
+            away_score -= 3           
 
 
         # FALSE FAVOURITE FILTER     
@@ -4639,13 +4666,13 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 3    
             and                         
-            home_edge >= 2                 
+            home_edge >= 3                 
             and
-            form_gap >= 12
+            form_gap >= 20
             and
-            recent_gap >= 5
+            recent_gap >= 15
             and
-            home_form["recent_form_pct"] >= 40                                                              
+            home_form["recent_form_pct"] >= 60                                                              
             and                                   
             home_form["avg_scored"] >= 1.5
             and
@@ -4683,7 +4710,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.4
             and
-            home_probability >= 66
+            home_probability >= 72
             and
             dominance_ok
             and
@@ -6234,15 +6261,15 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 3     
             and                        
-            away_edge >= 2                  
+            away_edge >= 3                  
             and
             away_score_gap >= 15
             and
-            away_gap >= 15
+            away_gap >= 20
             and
-            recent_away_gap >= 5
+            recent_away_gap >= 15
             and                         
-            away_form["recent_form_pct"] >= 40       
+            away_form["recent_form_pct"] >= 60       
             and
             away_form["avg_scored"] >= 1.5
             and
@@ -6280,7 +6307,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.4 
             and
-            away_probability >= 68        
+            away_probability >= 72        
             and
             dominance_ok
             and
