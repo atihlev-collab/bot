@@ -3386,7 +3386,34 @@ def analyze_prematch_match(match):
 
             away_strength                
 
-        )                                
+        )           
+
+
+        # BIG STRENGTH BONUS         
+
+        if (                        
+
+            strength_gap >= 30        
+
+        ):                          
+
+            home_score += 3           
+
+        elif (                       
+
+            strength_gap >= 20        
+
+        ):                            
+
+            home_score += 1          
+
+        elif (                       
+
+            strength_gap <= -30       
+
+        ):                           
+
+            home_score -= 3           
 
         home_score += (                  
 
@@ -4972,7 +4999,34 @@ def analyze_prematch_match(match):
 
             home_strength               
 
-        )                                
+        )           
+
+
+        # BIG STRENGTH BONUS         
+
+        if (                        
+
+            strength_gap >= 30       
+
+        ):                           
+
+            away_score += 3          
+
+        elif (                        
+
+            strength_gap >= 20       
+
+        ):                           
+
+            away_score += 1           
+
+        elif (                       
+
+            strength_gap <= -30       
+
+        ):                           
+
+            away_score -= 3           
 
         away_score += (                 
 
