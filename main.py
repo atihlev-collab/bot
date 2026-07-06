@@ -4047,52 +4047,57 @@ def analyze_prematch_match(match):
         home_super_value = False
         home_value = False
 
-        if match_odds:
+        if match_odds:                   
 
-            if (
-                match_odds[0] is not None
-            ):
+            if (                           
 
-        prob = min(               
+                match_odds[0] is not None 
 
-            95,                    
+            ):                           
 
-            home_score             
+                prob = min(                
 
-        )                          
+                    95,                    
 
-        print(                      
+                    home_score            
 
-            "VALUE PROB:",         
+                )                         
 
-            prob                    
+                print(                  
 
-        )                          
+                    "VALUE PROB:",      
 
+                    prob                
 
-        edge = value_edge(         
+                )                        
 
-            prob,                  
+                edge = value_edge(       
 
-            match_odds[0]           
+                    prob,                
 
-        )                          
+                    match_odds[0]         
 
-        print(                      
+                )                         
 
-            "EDGE:",               
+                print(                   
 
-            edge                   
+                    "EDGE:",             
 
-        )                                  
+                    edge                  
 
-                print(
-                    "HOME VALUE EDGE:",
-                    home,
-                    away,
-                    edge
-                )
+                )                        
 
+                print(                   
+
+                    "HOME VALUE EDGE:",   
+
+                    home,               
+
+                    away,                
+
+                    edge                 
+
+                )                         
 
                 print(
                     "HOME VALUE INPUT:",
