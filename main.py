@@ -3818,6 +3818,24 @@ def analyze_prematch_match(match):
             home_stability += 1        
 
         home_score += home_stability   
+
+        # WIN STREAK BONUS               
+
+        if (                             
+         
+            home_form["wins"] >= 7         
+         
+        ):                               
+         
+            home_score += 4                 
+         
+        elif (                             
+         
+            home_form["wins"] >= 5         
+         
+        ):                               
+         
+            home_score += 2                 
        
 
         # MOMENTUM BONUS               
@@ -5227,7 +5245,25 @@ def analyze_prematch_match(match):
             away_stability += 1        
 
         away_score += away_stability   
-       
+
+        # WIN STREAK BONUS                
+
+        if (                             
+      
+            away_form["wins"] >= 7         
+      
+        ):                                
+      
+            away_score += 4                 
+      
+        elif (                            
+      
+            away_form["wins"] >= 5         
+      
+        ):                                
+      
+            away_score += 2               
+         
 
         # MOMENTUM BONUS                
 
