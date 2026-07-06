@@ -4608,8 +4608,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["avg_scored"] >= 1.5
             and
-            home_risk <= 6
-            and
+          
             (
                 home_form["avg_scored"]
                 -
@@ -5453,58 +5452,7 @@ def analyze_prematch_match(match):
                 h2h                   
             )         
 
-        # RISK SCORE                
-
-        away_risk = 0               
-
-        if (                         
-
-            draw_risk                
-
-        ):                           
-
-            away_risk += 5           
-
-        if (                         
-
-            away_form["losses"] >= 2  
-
-        ):                           
-
-            away_risk += 3            
-
-        if (                         
-
-            abs(                     
-
-                market_away           
-
-                -                    
-
-                away_probability     
-
-            ) >= 15                  
-
-        ):                           
-
-            away_risk += 4           
-
-        if (                         
-
-            recent_away_gap < 10     
-
-        ):                            
-
-            away_risk += 2           
-
-        print(                       
-
-            "AWAY RISK:",            
-
-            away_risk                 
-
-        )                            
-        
+      
    
 
         # EXTREME MOMENTUM BONUS          
@@ -5733,6 +5681,11 @@ def analyze_prematch_match(match):
             away_risk                 
         )                             
 
+        # RISK PENALTY
+
+        home_score -= home_risk * 0.8
+
+        away_score -= away_risk * 0.8
                               
         # DOMINANCE BONUS                
 
@@ -6276,8 +6229,7 @@ def analyze_prematch_match(match):
             and
             away_form["avg_scored"] >= 1.5
             and
-            away_risk <= 6
-            and
+            
             (
                 away_form["avg_scored"]
                 -
