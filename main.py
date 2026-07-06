@@ -4203,34 +4203,7 @@ def analyze_prematch_match(match):
             away,
             home_score - debug_base
         )       
-
-
-        bonus_total = (              
-
-            home_score                 
-
-            -                          
-
-            debug_base                 
-
-        )                              
-
-        if (                           
-
-            bonus_total > 30            
-
-        ):                            
-
-            home_score -= (            
-
-                bonus_total             
-
-                -                      
-
-                28                      
-
-            )        
-
+      
 
          # COMPLETE TEAM BONUS        
 
@@ -4342,7 +4315,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            home_score += 4           
+            home_score += 1           
 
         elif (                         
 
@@ -4373,7 +4346,34 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            home_score += 3            
+            home_score += 2      
+
+
+         bonus_total = (              
+
+            home_score                 
+
+            -                          
+
+            debug_base                 
+
+        )                              
+
+        if (                           
+
+            bonus_total > 30            
+
+        ):                            
+
+            home_score -= (            
+
+                bonus_total             
+
+                -                      
+
+                28                      
+
+            )        
 
         home_score = max(              
 
@@ -6123,7 +6123,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            away_score += 4            
+            away_score += 2            
 
         elif (                        
 
@@ -6135,7 +6135,7 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            away_score += 2            
+            away_score += 1            
 
         
         # CONSENSUS BONUS              
@@ -6154,7 +6154,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            away_score += 3      
+            away_score += 2      
 
 
         away_score = max(             
