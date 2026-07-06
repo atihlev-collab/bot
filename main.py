@@ -3484,6 +3484,41 @@ def analyze_prematch_match(match):
         home_score += h2h  
 
 
+        # STRONG H2H BONUS            
+
+        if (                         
+
+            h2h >= 5                    
+
+        ):                            
+
+            home_score += 3          
+
+        elif (                       
+
+            h2h >= 3                   
+
+        ):                            
+
+            home_score += 2            
+
+        elif (                        
+
+            h2h <= -5                 
+
+        ):                            
+
+            home_score -= 3           
+
+        elif (                         
+
+            h2h <= -3                  
+
+        ):                            
+
+            home_score -= 2           
+
+
         # GOAL DIFFERENCE BONUS       
 
         goal_diff = (                 
@@ -4976,6 +5011,41 @@ def analyze_prematch_match(match):
         )                           
 
         away_score -= h2h * 2    
+
+
+        # STRONG H2H BONUS            
+
+        if (                          
+
+            h2h <= -5                 
+
+        ):                            
+
+            away_score += 3          
+
+        elif (                        
+
+            h2h <= -3                 
+
+        ):                             
+
+            away_score += 2           
+
+        elif (                        
+
+            h2h >= 5                  
+
+        ):                            
+
+            away_score -= 3           
+
+        elif (                        
+
+            h2h >= 3                 
+
+        ):                            
+
+            away_score -= 2            
 
 
         # GOAL DIFFERENCE BONUS       
