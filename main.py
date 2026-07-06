@@ -3782,6 +3782,44 @@ def analyze_prematch_match(match):
             home_score
         )
 
+        # FORM STABILITY              
+
+        home_stability = 0             
+
+        if (                          
+            home_form["losses"] == 0    
+
+        ):                             
+
+            home_stability += 2         
+
+        elif (                          
+
+            home_form["losses"] == 1  
+
+        ):                             
+
+            home_stability += 1        
+
+        if (                            
+
+            home_form["recent_form_pct"] >= 80   
+
+        ):                             
+
+            home_stability += 2         
+
+        elif (                        
+
+            home_form["recent_form_pct"] >= 65  
+
+        ):                            
+
+            home_stability += 1        
+
+        home_score += home_stability   
+       
+
         # MOMENTUM BONUS               
 
         momentum_gap = (              
@@ -5144,6 +5182,45 @@ def analyze_prematch_match(match):
             -
             home_form["form_pct"]
         )
+
+        # FORM STABILITY               
+
+        away_stability = 0            
+
+        if (                         
+
+            away_form["losses"] == 0    
+
+        ):                             
+
+            away_stability += 2        
+
+        elif (                         
+
+            away_form["losses"] == 1    
+
+        ):                              
+
+            away_stability += 1        
+
+        if (                           
+
+            away_form["recent_form_pct"] >= 80   
+
+        ):                             
+
+            away_stability += 2       
+
+        elif (                         
+
+            away_form["recent_form_pct"] >= 65   
+
+        ):                             
+
+            away_stability += 1        
+
+        away_score += away_stability   
+       
 
         # MOMENTUM BONUS                
 
