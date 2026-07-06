@@ -4111,7 +4111,54 @@ def analyze_prematch_match(match):
 
                 28                      
 
-            )                         
+            )        
+
+
+         # COMPLETE TEAM BONUS        
+
+        if (                          
+
+            home_form["avg_scored"] >= 1.8     
+
+            and
+
+            home_form["avg_conceded"] <= 0.9   
+
+            and
+
+            home_form["clean_sheet_pct"] >= 40 
+
+        ):                          
+
+            home_score += 3         
+
+
+        # EASY GOALS PENALTY        
+
+        if (                         
+
+            home_form["avg_scored"] >= 2.0     
+
+            and
+
+            home_form["avg_conceded"] >= 1.5    
+
+        ):                           
+
+            home_score -= 3           
+
+        if (                         
+
+            away_form["avg_scored"] >= 2.0     
+
+            and
+
+            away_form["avg_conceded"] >= 1.5   
+
+        ):                            
+
+            away_score -= 3           
+
                        
            
 
@@ -4472,53 +4519,7 @@ def analyze_prematch_match(match):
 
             2.20                               
 
-        )          
-
-
-        # COMPLETE TEAM BONUS        
-
-        if (                          
-
-            home_form["avg_scored"] >= 1.8     
-
-            and
-
-            home_form["avg_conceded"] <= 0.9   
-
-            and
-
-            home_form["clean_sheet_pct"] >= 40 
-
-        ):                          
-
-            home_score += 3         
-
-
-        # EASY GOALS PENALTY        
-
-        if (                         
-
-            home_form["avg_scored"] >= 2.0     
-
-            and
-
-            home_form["avg_conceded"] >= 1.5    
-
-        ):                           
-
-            home_score -= 3           
-
-        if (                         
-
-            away_form["avg_scored"] >= 2.0     
-
-            and
-
-            away_form["avg_conceded"] >= 1.5   
-
-        ):                            
-
-            away_score -= 3           
+        )               
 
 
         # FALSE FAVOURITE FILTER     
