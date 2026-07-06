@@ -4286,58 +4286,7 @@ def analyze_prematch_match(match):
             "recent_form=", home_form["recent_form_pct"],
             "prob=", home_probability
         )
-
-        # RISK SCORE                 
-
-        home_risk = 0                
-
-        if (                         
-
-            draw_risk                
-
-        ):                           
-
-            home_risk += 5           
-
-        if (                          
-
-            home_form["losses"] >= 2  
-
-        ):                            
-
-            home_risk += 3          
-
-        if (                         
-
-            abs(                      
-
-                market_home           
-
-                -                     
-
-                home_probability     
-
-            ) >= 15                   
-
-        ):                           
-
-            home_risk += 4           
-
-        if (                         
-
-            recent_gap < 10           
-           
-        ):                           
-
-            home_risk += 2            
-
-        print(                       
-
-            "HOME RISK:",            
-
-            home_risk                 
-
-        )                            
+                   
        
 
         # ATTACK / DEFENSE FILTER         
@@ -5556,52 +5505,7 @@ def analyze_prematch_match(match):
 
         )                            
         
-
-        # EXTREME MOMENTUM BONUS         
-
-        if (                             
-
-            home_form["momentum"] >= 25   
-
-        ):                                
-
-            home_score += 3  
-
-
-        # MOMENTUM COLLAPSE            
-
-        if (                           
-
-            away_form["momentum"]     
-
-            <=                         
-
-            -20                       
-
-        ):                             
-
-            away_score -= 4           
-
-        elif (                         
-
-            away_form["momentum"]      
-
-            <=                        
-
-            -10                       
-
-        ):                            
-
-            away_score -= 2           
-
-        if (                             
-
-            away_form["momentum"] >= 25   
-
-        ):                               
-
-            away_score += 3   
-
+   
 
         # EXTREME MOMENTUM BONUS          
 
@@ -5770,7 +5674,64 @@ def analyze_prematch_match(match):
 
         )                                 
 
-                  
+        # RISK SCORE                 
+
+        home_risk = 0                 
+        away_risk = 0                 
+
+        if (                         
+            draw_risk                 
+        ):                            
+            home_risk += 5            
+            away_risk += 5           
+
+        if (                         
+            home_form["losses"] >= 2  
+        ):                           
+            home_risk += 3           
+
+        if (                         
+            away_form["losses"] >= 2  
+        ):                            
+            away_risk += 3            
+
+        if (                          
+            abs(                     
+                market_home          
+                -
+                home_probability     
+            ) >= 15                 
+        ):                            
+            home_risk += 4           
+
+        if (                        
+            abs(                      
+                market_away           
+                -
+                away_probability      
+            ) >= 15                   
+        ):                           
+            away_risk += 4            
+
+        if (                         
+            recent_gap < 10          
+        ):                            
+            home_risk += 2            
+
+        if (                          
+            recent_away_gap < 10      
+        ):                           
+            away_risk += 2          
+
+        print(                       
+            "HOME RISK:",             
+            home_risk                 
+        )                             
+
+        print(                       
+            "AWAY RISK:",             
+            away_risk                 
+        )                             
 
                               
         # DOMINANCE BONUS                
