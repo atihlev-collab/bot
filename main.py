@@ -4667,11 +4667,11 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 3    
             and                         
-            home_edge >= 3                 
+            home_edge >= 2                 
             and
-            form_gap >= 20
+            form_gap >= 15
             and
-            recent_gap >= 15
+            recent_gap >= 10
             and
             home_form["recent_form_pct"] >= 60                                                              
             and                                   
@@ -4701,7 +4701,7 @@ def analyze_prematch_match(match):
                 away_form["goal_diff"]
             ) >= 5
             and
-            home_form["recent_avg_scored"] >= 1.5
+            home_form["recent_avg_scored"] >= 1.3
             and                           
             home_form["recent_goal_diff"] >= 1   
             and
@@ -4711,7 +4711,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.4
             and
-            home_probability >= 72
+            home_probability >= 70
             and
             dominance_ok
             and
@@ -6262,13 +6262,13 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 3     
             and                        
-            away_edge >= 3                  
+            away_edge >= 2                  
             and
             away_score_gap >= 15
             and
-            away_gap >= 20
+            away_gap >= 15
             and
-            recent_away_gap >= 15
+            recent_away_gap >= 10
             and                         
             away_form["recent_form_pct"] >= 60       
             and
@@ -6298,7 +6298,7 @@ def analyze_prematch_match(match):
                 home_form["goal_diff"]
             ) >= 5
             and                                   
-            away_form["recent_avg_scored"] >= 1.5 
+            away_form["recent_avg_scored"] >= 1.3 
             and                          
             away_form["recent_goal_diff"] >= 1  
             and
@@ -6306,9 +6306,9 @@ def analyze_prematch_match(match):
             and
             home_form["avg_conceded"] >= 1.4
             and                                   
-            home_form["recent_avg_conceded"] >= 1.4 
+            home_form["recent_avg_conceded"] >= 1.3 
             and
-            away_probability >= 72        
+            away_probability >= 70        
             and
             dominance_ok
             and
