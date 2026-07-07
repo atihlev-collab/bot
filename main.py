@@ -4583,11 +4583,11 @@ def analyze_prematch_match(match):
 
             >=                      
 
-            market_home + 8         
+            market_home + 5         
 
             and                      
 
-            home_edge >= 2            
+            home_edge >= 1            
 
         )       
 
@@ -4864,7 +4864,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80
             and
-            home_probability >= 70
+            home_probability >= 68
             and
             home_balance_ok
             and
@@ -6313,11 +6313,11 @@ def analyze_prematch_match(match):
 
             >=                        
 
-            market_away + 8          
+            market_away + 5          
 
             and                       
 
-            away_edge >= 2           
+            away_edge >= 1           
 
         )           
 
@@ -6606,7 +6606,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 70     
+            away_probability >= 68     
             and
             away_balance_ok
             and
