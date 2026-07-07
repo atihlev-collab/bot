@@ -4553,11 +4553,11 @@ def analyze_prematch_match(match):
 
         dominance_ok = (             
 
-            goal_gap >= 0.40          
+            goal_gap >= 0.25          
 
             and                       
 
-            defense_gap >= 0.30       
+            defense_gap >= 0.15       
 
         )       
 
@@ -6283,11 +6283,11 @@ def analyze_prematch_match(match):
 
         dominance_ok = (             
 
-            goal_gap >= 0.40         
+            goal_gap >= 0.25         
 
             and                       
 
-            defense_gap >= 0.30       
+            defense_gap >= 0.15       
 
         )       
 
