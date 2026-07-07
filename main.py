@@ -4829,7 +4829,7 @@ def analyze_prematch_match(match):
             home_score += 1
         
         if (
-            home_score >= 35
+            home_score >= 55
             and
             home_odds_ok
             and
@@ -6584,7 +6584,7 @@ def analyze_prematch_match(match):
             away_score += 1
         
         if (
-            away_score >= 35          
+            away_score >= 55          
             and
             away_odds_ok
             and
