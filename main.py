@@ -4870,9 +4870,7 @@ def analyze_prematch_match(match):
             and
             away_form["avg_conceded"] >= 1.0
             and
-            away_form["recent_avg_conceded"] >= 0.80
-            and
-            home_probability >= 65
+            away_form["recent_avg_conceded"] >= 0.80           
             and
             home_balance_ok 
             and
@@ -6606,9 +6604,7 @@ def analyze_prematch_match(match):
             and
             home_form["avg_conceded"] >= 1.0
             and                                   
-            home_form["recent_avg_conceded"] >= 1.2 
-            and
-            away_probability >= 65     
+            home_form["recent_avg_conceded"] >= 1.2            
             and
             away_balance_ok
             and
