@@ -6544,8 +6544,16 @@ def analyze_prematch_match(match):
 
             0.30                         
 
-        )                                
-     
+        )      
+
+        if dominance_ok:
+            away_score += 2
+       
+        if stable_away:
+            away_score += 1
+
+        if recent_attack_ok:
+            away_score += 1
         
         if (
             away_score >= 35          
@@ -6562,7 +6570,7 @@ def analyze_prematch_match(match):
             and                        
             away_edge >= 2                  
             and
-            away_score_gap >= 15
+            away_score_gap >= 5
             and
             away_gap >= 5
             and
@@ -6606,9 +6614,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 1.2            
             and
-            away_balance_ok
-            and
-            dominance_ok
+            away_balance_ok         
             and
             consistency_ok
             and
@@ -6617,13 +6623,9 @@ def analyze_prematch_match(match):
             defense_ok
             and
             not false_favourite
-            and
-            (
-                stable_away
-                or
-                recent_attack_ok
-            )
-            and
+          
+           and         
+            
             not draw_risk
         ):                               
 
