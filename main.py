@@ -4806,6 +4806,19 @@ def analyze_prematch_match(match):
         print("RECENT:", recent_attack_ok)
         print("DRAW:", draw_risk)
 
+        print(
+            "HOME FINAL:",
+            home_score,
+            home_odds_ok,
+            home_balance_ok,
+            consistency_ok,
+            dominance_ok,
+            market_ok,
+            defense_ok,
+            false_favourite,
+            draw_risk,
+        )
+
         if dominance_ok:
             home_score += 2
 
@@ -6545,6 +6558,19 @@ def analyze_prematch_match(match):
             0.30                         
 
         )      
+
+        print(
+            "AWAY FINAL:",
+            away_score,
+            away_odds_ok,
+            away_balance_ok,
+            consistency_ok,
+            dominance_ok,
+            market_ok,
+            defense_ok,
+            false_favourite,
+            draw_risk,
+        )
 
         if dominance_ok:
             away_score += 2
