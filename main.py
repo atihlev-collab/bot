@@ -4587,7 +4587,7 @@ def analyze_prematch_match(match):
 
             and                      
 
-            home_edge >= 1            
+            home_edge >= 0.5            
 
         )       
 
@@ -6330,7 +6330,7 @@ def analyze_prematch_match(match):
 
             and                       
 
-            away_edge >= 1           
+            away_edge >= 0.5           
 
         )           
 
