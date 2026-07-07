@@ -6686,41 +6686,7 @@ def analyze_prematch_match(match):
             )         
 
 
-        print(                    
-
-            ">>> BEFORE AWAY APPEND",  
-
-            signals                  
-
-        )                            
-
-        signals.append(                
-
-            (                         
-
-                "✈️ AWAY WIN",         
-
-                confidence_from_score( 
-                    away_score         
-                ),                     
-
-                round(                 
-                    away_probability,  
-                    1                  
-                )                     
-
-            )                          
-
-        )                             
-
-        print(                         
-
-            ">>> AFTER AWAY APPEND",   
-
-            signals                    
-
-        )                              
-
+      
         print(                           
             "OVER CHECK:",               
             home,
