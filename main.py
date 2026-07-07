@@ -4924,40 +4924,7 @@ def analyze_prematch_match(match):
 
             )        
 
-        print(                    
-
-            ">>> BEFORE HOME APPEND",   
-
-            signals                    
-
-        )                             
-
-        signals.append(               
-
-            (                         
-
-                "🏆 HOME WIN",         
-
-                confidence_from_score( 
-                    home_score        
-                ),                    
-
-                round(                
-                    home_probability, 
-                    1                  
-                )                     
-
-            )                         
-
-        )                            
-
-        print(                        
-
-            ">>> AFTER HOME APPEND",   
-
-            signals                    
-
-        )                              
+      
        
             home_signal = True
      
