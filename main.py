@@ -4225,7 +4225,7 @@ def analyze_prematch_match(match):
         ):
 
             home_odds_ok = (
-                1.40 <= match_odds[0] <= 2.80
+                1.30 <= match_odds[0] <= 3.50
             )
         print(
             "HOME BONUS TOTAL:",
@@ -5798,7 +5798,7 @@ def analyze_prematch_match(match):
         ):      
 
             away_odds_ok = (
-                1.40 <= match_odds[2] <= 3.20
+                1.30 <= match_odds[2] <= 3.50
             )
          
             print(  
