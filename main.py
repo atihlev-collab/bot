@@ -4822,9 +4822,9 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 2                 
             and
-            form_gap >= 15
+            form_gap >= 10
             and
-            recent_gap >= 10
+            recent_gap >= 5
             and
             home_form["recent_form_pct"] >= 50                                                              
             and                                   
@@ -4852,19 +4852,19 @@ def analyze_prematch_match(match):
                 home_form["goal_diff"]
                 -
                 away_form["goal_diff"]
-            ) >= 3
+            ) >= 2
             and
             home_form["recent_avg_scored"] >= 1.20
             and                           
             home_form["recent_goal_diff"] >= 1   
             and
-            home_form["avg_conceded"] <= 1.0
+            home_form["avg_conceded"] <= 1.20
             and
-            away_form["avg_conceded"] >= 1.20
+            away_form["avg_conceded"] >= 1.0
             and
             away_form["recent_avg_conceded"] >= 0.80
             and
-            home_probability >= 68
+            home_probability >= 65
             and
             home_balance_ok
             and
@@ -6564,9 +6564,9 @@ def analyze_prematch_match(match):
             and
             away_score_gap >= 15
             and
-            away_gap >= 15
+            away_gap >= 10
             and
-            recent_away_gap >= 10
+            recent_away_gap >= 5
             and                         
             away_form["recent_form_pct"] >= 50       
             and
@@ -6594,19 +6594,19 @@ def analyze_prematch_match(match):
                 away_form["goal_diff"]
                 -
                 home_form["goal_diff"]
-            ) >= 3
+            ) >= 2
             and                                   
             away_form["recent_avg_scored"] >= 1.20 
             and                          
             away_form["recent_goal_diff"] >= 1  
             and
-            away_form["avg_conceded"] <= 1.0
+            away_form["avg_conceded"] <= 1.20
             and
-            home_form["avg_conceded"] >= 0.80
+            home_form["avg_conceded"] >= 1.0
             and                                   
             home_form["recent_avg_conceded"] >= 1.2 
             and
-            away_probability >= 68     
+            away_probability >= 65     
             and
             away_balance_ok
             and
