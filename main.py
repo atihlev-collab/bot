@@ -4805,7 +4805,15 @@ def analyze_prematch_match(match):
         print("STABLE:", stable_home)
         print("RECENT:", recent_attack_ok)
         print("DRAW:", draw_risk)
-     
+
+        if dominance_ok:
+            home_score += 2
+
+        if stable_home:
+            home_score += 1
+
+        if recent_attack_ok:
+            home_score += 1
         
         if (
             home_score >= 50           
@@ -4866,9 +4874,7 @@ def analyze_prematch_match(match):
             and
             home_probability >= 65
             and
-            home_balance_ok
-            and
-            dominance_ok
+            home_balance_ok            
             and
             consistency_ok
             and
@@ -4876,13 +4882,7 @@ def analyze_prematch_match(match):
             and
             defense_ok
             and
-            not false_favourite
-           and
-           (
-               stable_home
-               or
-               recent_attack_ok
-            )
+            not false_favourite        
             and
             not draw_risk
         ):
