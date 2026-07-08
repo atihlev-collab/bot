@@ -2115,25 +2115,8 @@ def get_team_form(team_id, venue=None):
             recent_form_pct               
 
         )               
-
-
-        home_form_trend = (                 
-
-            home_form["recent_form_pct"]     
-            -                               
-            home_form["form_pct"]           
-
-        )                                   
-
-        away_form_trend = (                  
-
-            away_form["recent_form_pct"]   
-            -                                
-            away_form["form_pct"]           
-
-        )                                   
+                    
                
-
         recent_avg_scored = round(     
             recent_scored / len(recent_games),
             2
