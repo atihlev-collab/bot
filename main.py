@@ -3018,7 +3018,7 @@ def smart_confidence(
     score,                            
     probability,                      
     edge                             
-
+    risk
 ):                                    
 
     confidence = 50                   
@@ -3077,7 +3077,31 @@ def smart_confidence(
 
     ):                               
 
-        confidence += 5              
+        confidence += 5       
+
+    if (                              
+       
+        risk >= 8                     
+
+    ):                               
+
+        confidence -= 15             
+
+    elif (                           
+
+        risk >= 6                     
+
+    ):                               
+
+        confidence -= 10              
+
+    elif (                          
+
+        risk >= 4                    
+
+    ):                               
+
+        confidence -= 5              
 
     return min(                      
 
@@ -5027,9 +5051,14 @@ def analyze_prematch_match(match):
 
                     "🏆 HOME WIN",          
 
-                    confidence_from_score(  
-                        home_score          
-                    ),                    
+                    smart_confidence(                    
+
+                        home_score,                      
+                        home_probability,                
+                        home_edge,                       
+                        home_risk                        
+                  
+                    ),                                            
 
                     round(                  
                         home_probability,  
@@ -6786,9 +6815,14 @@ def analyze_prematch_match(match):
 
                     "✈️ AWAY WIN",        
 
-                    confidence_from_score(
-                        away_score       
-                    ),                   
+                    smart_confidence(                   
+
+                        away_score,                      
+                        away_probability,                
+                        away_edge,                       
+                        away_risk                         
+                  
+                    ),                                    
 
                     round(               
                         away_probability, 
