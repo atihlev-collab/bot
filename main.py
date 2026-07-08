@@ -4882,15 +4882,15 @@ def analyze_prematch_match(match):
             and                           
             home_probability >= 65   
             and
+            home_balance_ok
+            and
             dominance_ok
             and
+            consistency_ok
+            and
             market_ok
-            and                             
-            home_balance_ok                 
-            and                            
-            consistency_ok                
-            and                            
-            defense_ok                      
+            and
+            defense_ok          
             and                             
             not false_favourite             
             and                             
