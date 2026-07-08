@@ -2114,7 +2114,24 @@ def get_team_form(team_id, venue=None):
 
             recent_form_pct               
 
-        )                                 
+        )               
+
+
+        home_form_trend = (                 
+
+            home_form["recent_form_pct"]     
+            -                               
+            home_form["form_pct"]           
+
+        )                                   
+
+        away_form_trend = (                  
+
+            away_form["recent_form_pct"]   
+            -                                
+            away_form["form_pct"]           
+
+        )                                   
                
 
         recent_avg_scored = round(     
@@ -4127,7 +4144,24 @@ def analyze_prematch_match(match):
 
             home_score      
 
-        )                   
+        )               
+
+
+        if (                               
+
+            home_form_trend >= 15           
+
+        ):                                  
+
+            home_score += 2                  
+
+        elif (                              
+
+            home_form_trend <= -15          
+
+        ):                                  
+
+            home_score -= 2                 
 
 
         # RECENT GOAL DIFF BONUS         
@@ -5972,7 +6006,22 @@ def analyze_prematch_match(match):
                 h2h                   
             )         
 
-      
+
+        if (                               
+
+            away_form_trend >= 15           
+
+        ):                                 
+
+            away_score += 2                 
+
+        elif (                              
+
+            away_form_trend <= -15           
+
+        ):                                  
+
+            away_score -= 2                 
    
 
         # EXTREME MOMENTUM BONUS          
