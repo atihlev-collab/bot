@@ -4586,25 +4586,7 @@ def analyze_prematch_match(match):
             away,               
             home_probability    
         )             
-
-
-        print(                           
-
-            "HOME VALUE GAP:",          
-
-            round(                       
-
-                home_probability          
-                -                         
-                market_home,               
-
-                1                         
-
-            )                            
-
-        )                                
-
-       
+            
 
         home_signal = False
 
@@ -5988,24 +5970,7 @@ def analyze_prematch_match(match):
                 away_strength,       
                 home_strength,        
                 h2h                   
-            )              
-
-
-        print(                             
-
-            "AWAY VALUE GAP:",             
-
-            round(                        
-
-                away_probability           
-                -                         
-                market_away,               
-
-                1                        
-
-            )                             
-
-        )                                
+            )                                 
    
 
         # EXTREME MOMENTUM BONUS          
