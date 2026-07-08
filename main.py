@@ -4145,23 +4145,7 @@ def analyze_prematch_match(match):
             home_score      
 
         )               
-
-
-        if (                               
-
-            home_form_trend >= 15           
-
-        ):                                  
-
-            home_score += 2                  
-
-        elif (                              
-
-            home_form_trend <= -15          
-
-        ):                                  
-
-            home_score -= 2                 
+               
 
 
         # RECENT GOAL DIFF BONUS         
@@ -6004,24 +5988,7 @@ def analyze_prematch_match(match):
                 away_strength,       
                 home_strength,        
                 h2h                   
-            )         
-
-
-        if (                               
-
-            away_form_trend >= 15           
-
-        ):                                 
-
-            away_score += 2                 
-
-        elif (                              
-
-            away_form_trend <= -15           
-
-        ):                                  
-
-            away_score -= 2                 
+            )                      
    
 
         # EXTREME MOMENTUM BONUS          
