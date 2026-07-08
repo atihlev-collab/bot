@@ -3009,125 +3009,83 @@ def confidence_from_score(score):
     return 50         
 
 
-        # =========================================================
-        # CONFIDENCE
-        # =========================================================
-      
-        def confidence_from_score(score):     
-      
-            if (                              
-      
-                score >= 85                  
-      
-            ):                               
-      
-                return 90                    
-      
-            elif (                           
-      
-                score >= 70                  
-      
-            ):                                
-      
-                return 80                     
-      
-            elif (                           
-      
-                score >= 55                   
-      
-            ):                              
-      
-                return 70                     
-      
-            elif (                            
-      
-                score >= 40                   
-      
-            ):                               
-      
-                return 60                  
-      
-            return 50                         
+# =========================================================
+# SMART CONFIDENCE
+# =========================================================
 
+def smart_confidence(                
 
+    score,                            
+    probability,                      
+    edge                             
 
-        # =========================================================
-        # SMART CONFIDENCE
-        # =========================================================
-      
-        def smart_confidence(                
-      
-            score,                           
-            probability,                     
-            edge                             
-      
-        ):                                   
-      
-            confidence = 50                   
-      
-            if (                             
-      
-                score >= 55                  
-      
-            ):                                
-      
-                confidence += 10             
-      
-            if (                              
-      
-                score >= 70                  
-      
-            ):                               
-      
-                confidence += 10             
-      
-            if (                              
-      
-                score >= 85                 
-      
-            ):                               
-      
-                confidence += 10              
-      
-            if (                             
-      
-                probability >= 75            
-      
-            ):                                
-      
-                confidence += 5              
-      
-            if (                              
-      
-                probability >= 85             
-      
-            ):                               
-      
-                confidence += 5               
-      
-            if (                              
-      
-                edge >= 3                    
-      
-            ):                               
-      
-                confidence += 5              
-      
-            if (                             
-      
-                edge >= 8                    
-      
-            ):                                
-      
-                confidence += 5               
-      
-            return min(                      
-      
-                confidence,                  
-                95                           
-      
-            )                                 
+):                                    
 
+    confidence = 50                   
+
+    if (                             
+
+        score >= 55                   
+
+    ):                               
+
+        confidence += 10              
+
+    if (                             
+
+        score >= 70                  
+
+    ):                               
+
+        confidence += 10             
+
+    if (                             
+
+        score >= 85                  
+
+    ):                                
+
+        confidence += 10             
+
+    if (                             
+
+        probability >= 75            
+
+    ):                              
+
+        confidence += 5              
+
+    if (                             
+
+        probability >= 85            
+
+    ):                              
+
+        confidence += 5               
+
+    if (                              
+
+        edge >= 3                     
+
+    ):                               
+
+        confidence += 5               
+
+    if (                             
+
+        edge >= 8                   
+
+    ):                               
+
+        confidence += 5              
+
+    return min(                      
+
+        confidence,                  
+        95                            
+
+    )                                 
+           
 
 # =========================================================
 # PREMATCH ANALYSIS
