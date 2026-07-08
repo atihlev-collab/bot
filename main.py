@@ -4819,6 +4819,40 @@ def analyze_prematch_match(match):
             draw_risk,
         )
 
+
+        print(
+            "HOME FAIL:",
+            home_form["unbeaten_pct"],
+            home_form["wins"],
+            home_edge,
+            form_gap,
+            recent_gap,
+            home_form["recent_form_pct"],
+            home_form["avg_scored"],
+            (
+                home_form["avg_scored"]
+                -
+                away_form["avg_scored"]
+           ),
+           (
+                home_form["avg_scored"]
+                -
+                home_form["avg_conceded"]
+           ),
+           (
+               home_form["goal_diff"]
+               -
+               away_form["goal_diff"]
+          ),
+          home_form["recent_avg_scored"],
+          home_form["recent_goal_diff"],
+          home_form["avg_conceded"],
+          away_form["avg_conceded"],
+          away_form["recent_avg_conceded"],
+          home_probability
+      )
+       
+
         if dominance_ok:
             home_score += 2
 
