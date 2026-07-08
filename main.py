@@ -3017,7 +3017,7 @@ def smart_confidence(
 
     score,                            
     probability,                      
-    edge                             
+    edge,                             
     risk
 ):                                    
 
