@@ -4585,7 +4585,24 @@ def analyze_prematch_match(match):
             home,              
             away,               
             home_probability    
-        )                      
+        )             
+
+
+        print(                           
+
+            "HOME VALUE GAP:",          
+
+            round(                       
+
+                home_probability          
+                -                         
+                market_home,               
+
+                1                         
+
+            )                            
+
+        )                                
 
        
 
@@ -5971,7 +5988,24 @@ def analyze_prematch_match(match):
                 away_strength,       
                 home_strength,        
                 h2h                   
-            )                      
+            )              
+
+
+        print(                             
+
+            "AWAY VALUE GAP:",             
+
+            round(                        
+
+                away_probability           
+                -                         
+                market_away,               
+
+                1                        
+
+            )                             
+
+        )                                
    
 
         # EXTREME MOMENTUM BONUS          
@@ -7358,7 +7392,7 @@ def analyze_prematch_match(match):
             signals
         )
 
-        signals = signals[:2]        
+        signals = signals[:4]        
          
         print(
             "RETURN SIGNALS:", 
