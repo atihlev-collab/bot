@@ -4828,79 +4828,71 @@ def analyze_prematch_match(match):
         if recent_attack_ok:
             home_score += 1
         
-        if (
-            home_score >= 50
-            and
-            home_odds_ok
-            and
-            home_form["unbeaten_pct"] >= 60
-            and
-            home_form["wins"] >= 2  
-            and                         
-            home_form["losses"] <= 3      
-            and                        
-            home_form["draws"] <= 4    
-            and                         
+        if (                               
+
+            home_score >= 55                
+            and                            
+            home_odds_ok                   
+            and                            
+            home_form["unbeaten_pct"] >= 60 
+            and                             
+            home_form["wins"] >= 2          
+            and                             
+            home_form["losses"] <= 3        
+            and                             
+            home_form["draws"] <= 4         
+            and                             
             home_edge >= 2                 
-            and
-            form_gap >= 10
-            and
-            recent_gap >= 5
-            and
-            home_form["recent_form_pct"] >= 50                                                              
-            and                                   
-            home_form["avg_scored"] >= 1.50
-            and
-          
+            and                             
+            form_gap >= 10                  
+            and                             
+            recent_gap >= 5                 
+            and                             
+            home_form["recent_form_pct"] >= 45   
+            and                            
+            home_form["avg_scored"] >= 1.50 
+            and                             
             (
-                home_form["avg_scored"]
-                -
-                away_form["avg_scored"]
-            ) >= 0.50
+                home_form["avg_scored"]     
+                -                          
+                away_form["avg_scored"]     
+            ) >= 0.40                      
+            and                             
+            (
+               home_form["avg_scored"]    
+               -                           
+               home_form["avg_conceded"]   
+            ) >= 0.30                     
+            and                             
+            (
+                home_form["goal_diff"]     
+                -                           
+                away_form["goal_diff"]      
+            ) >= 1                          
+            and                             
+            home_form["recent_avg_scored"] >= 1.40   
             and                           
-
-            (
-                home_form["avg_scored"]  
-
-                -
-
-                home_form["avg_conceded"] 
-
-            ) >= 0.30     
-            and
-
-            (
-                home_form["goal_diff"]
-                -
-                away_form["goal_diff"]
-            ) >= 1
-            and
-            home_form["recent_avg_scored"] >= 1.50
+            home_form["recent_goal_diff"] >= 2      
+            and                             
+            home_form["avg_conceded"] <= 1.30        
+            and                            
+            away_form["avg_conceded"] >= 1.00       
+            and                            
+            away_form["recent_avg_conceded"] >= 0.80 
             and                           
-            home_form["recent_goal_diff"] >= 2   
-            and
-            home_form["avg_conceded"] <= 1.30
-            and
-            away_form["avg_conceded"] >= 1.20
-            and
-            away_form["recent_avg_conceded"] >= 0.80      
-            and
-            home_probability >= 65
-            and
-            home_balance_ok 
-            and
-            dominance_ok
-            and
-            consistency_ok
-            and
-            market_ok       
-            and
-            defense_ok
-            and
-            not false_favourite        
-            and
-            not draw_risk
-        ):
+            home_probability >= 65          
+            and                             
+            home_balance_ok                 
+            and                            
+            consistency_ok                
+            and                            
+            defense_ok                      
+            and                             
+            not false_favourite             
+            and                             
+            not draw_risk                   
+        
+        ):                                 
 
             print(
                 "HOME SIGNAL:",
