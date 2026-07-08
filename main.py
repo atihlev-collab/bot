@@ -4880,7 +4880,11 @@ def analyze_prematch_match(match):
             and                            
             away_form["recent_avg_conceded"] >= 0.80 
             and                           
-            home_probability >= 65          
+            home_probability >= 65   
+            and
+            dominance_ok
+            and
+            market_ok
             and                             
             home_balance_ok                 
             and                            
