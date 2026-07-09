@@ -4906,17 +4906,7 @@ def analyze_prematch_match(match):
                 "HOME SIGNAL:",
                 home_score                
             )
-
-
-        market_gap = abs(                 
-
-            home_probability               
-            -                              
-            market_home                    
-
-        )                                  
-
-           
+                             
 
             signals.append(              
 
@@ -6676,18 +6666,8 @@ def analyze_prematch_match(match):
                 "AWAY SIGNAL:",          
                 away_score                
             )     
-
-
-        market_gap = abs(                 
-
-            away_probability              
-            -                             
-            market_away                   
-
-        )                                
-
+              
         
-
             signals.append(              
 
                 (                         
