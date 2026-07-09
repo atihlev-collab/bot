@@ -4916,13 +4916,7 @@ def analyze_prematch_match(match):
 
         )                                  
 
-        if (                               
-
-            market_gap > 35                
-
-        ):                                 
-
-            home_signal = False            
+           
 
             signals.append(              
 
@@ -6692,13 +6686,7 @@ def analyze_prematch_match(match):
 
         )                                
 
-        if (                              
-
-            market_gap > 35               
-
-        ):                                
-
-            away_signal = False           
+        
 
             signals.append(              
 
