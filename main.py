@@ -4907,7 +4907,7 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
-        market_gap = abs(                 
+            market_gap = abs(                 
 
             home_probability               
             -                              
@@ -6682,7 +6682,7 @@ def analyze_prematch_match(match):
                 away_score                
             )     
 
-        market_gap = abs(                 
+            market_gap = abs(                 
 
             away_probability             
             -                             
