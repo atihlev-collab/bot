@@ -7243,7 +7243,7 @@ def analyze_prematch_match(match):
             signals
         )
 
-        signals = signals[:2]        
+        signals = signals[:10]        
          
         print(
             "RETURN SIGNALS:", 
