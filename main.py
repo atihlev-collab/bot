@@ -88,6 +88,7 @@ sent_live = {}
 
 sent_prematch = {}
 team_form_cache = {}
+odds_cache = {}
 
 # =========================================================
 # DATABASE
@@ -278,6 +279,22 @@ def get_odds(fixture_id):
 
 def get_match_odds(fixture_id):
 
+    if fixture_id in odds_cache:         
+
+        cache_time, data = odds_cache[fixture_id]   
+
+        if (                            
+
+            time.time()                   
+            -                           
+            cache_time                  
+            <                           
+            900                           
+
+        ):                                
+
+            return data                   
+
     try:
 
         print(
@@ -389,11 +406,22 @@ def get_match_odds(fixture_id):
                 away_odd is not None
             ):
 
-                return (
-                    home_odd,
-                    draw_odd,
-                    away_odd
-                )
+        result = (                    
+      
+            home_odd,                 
+            draw_odd,                 
+            away_odd                   
+      
+       )                              
+      
+      odds_cache[fixture_id] = (    
+      
+          time.time(),               
+          result                     
+      
+      )                            
+      
+      return result                
 
                 print(
                     "INCOMPLETE ODDS:",
@@ -3733,7 +3761,7 @@ def analyze_prematch_match(match):
 
         elif (                         
 
-            expected_goals >= 2.8       
+            expected_goals >= 3.0       
 
         ):                             
 
@@ -4829,7 +4857,7 @@ def analyze_prematch_match(match):
             home_score += 1
         
         if (
-            home_score >= 50
+            home_score >= 52
             and
             home_odds_ok
             and
@@ -4841,7 +4869,7 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 4    
             and                         
-            home_edge >= 2                 
+            home_edge >= 2.5                 
             and
             form_gap >= 10
             and
@@ -4885,7 +4913,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 65
+            home_probability >= 68
             and
             home_balance_ok 
             and
@@ -6762,7 +6790,7 @@ def analyze_prematch_match(match):
         )
      
         if (
-            over_prob >= 70
+            over_prob >= 75
             and
             over_conf >= 70
             and                           
