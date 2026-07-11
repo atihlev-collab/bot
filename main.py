@@ -406,22 +406,22 @@ def get_match_odds(fixture_id):
                 away_odd is not None
             ):
 
-        result = (                    
+                result = (                    
+              
+                    home_odd,                 
+                    draw_odd,                 
+                    away_odd                   
+              
+               )                              
+              
+               odds_cache[fixture_id] = (    
+              
+                   time.time(),               
+                   result                     
+              
+              )                            
       
-            home_odd,                 
-            draw_odd,                 
-            away_odd                   
-      
-       )                              
-      
-      odds_cache[fixture_id] = (    
-      
-          time.time(),               
-          result                     
-      
-      )                            
-      
-      return result                
+              return result                
 
                 print(
                     "INCOMPLETE ODDS:",
