@@ -398,39 +398,43 @@ def get_match_odds(fixture_id):
                 away_odd
             )
 
-            if (
-                home_odd is not None
-                and
-                draw_odd is not None
-                and
-                away_odd is not None
-            ):
+            if (                          
 
-                result = (                    
-              
-                    home_odd,                 
-                    draw_odd,                 
-                    away_odd                   
-              
-               )                              
-              
-               odds_cache[fixture_id] = (    
-              
-                   time.time(),               
-                   result                     
-              
-              )                            
-      
-              return result                
+                home_odd is not None      
+                and                       
+                draw_odd is not None       
+                and                       
+                away_odd is not None      
 
-                print(
-                    "INCOMPLETE ODDS:",
-                    home_odd,
-                    draw_odd,
-                    away_odd
-                )
+            ):                             
 
-        return None
+                result = (                
+
+                    home_odd,             
+                    draw_odd,             
+                    away_odd               
+
+                )                         
+
+                odds_cache[fixture_id] = ( 
+
+                    time.time(),          
+                    result               
+
+                )                         
+
+                return result              
+
+            print(                        
+
+                "INCOMPLETE ODDS:",       
+                home_odd,               
+                draw_odd,                  
+                away_odd                   
+
+            )                            
+
+        return None                        
 
     except Exception as e:
 
@@ -7709,13 +7713,31 @@ if __name__ == "__main__":
    
     init_database()
 
-    while True:
+    last_prematch_scan = 0
 
-        prematch_loop()
+while True:                     
 
-        live_loop()
+    if (                        
 
-        time.sleep(300)
+        time.time()           
+        -                       
+        last_prematch_scan       
+        >=                      
+        900                      
+
+    ):                           
+
+        prematch_loop()         
+
+        last_prematch_scan = (   
+
+            time.time()         
+
+        )                      
+
+    live_loop()                 
+
+    time.sleep(300)             
 
 
 
