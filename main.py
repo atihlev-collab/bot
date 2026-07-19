@@ -1012,8 +1012,8 @@ def analyze_live_match(fixture):
      
         if home_red > away_red:
 
-            home_pressure -= 25
-            away_pressure += 15
+            home_pressure -= 35
+            away_pressure += 20
 
         home_xg = extract(
             home_stats,
@@ -1043,8 +1043,8 @@ def analyze_live_match(fixture):
 
         if away_red > home_red:
 
-            away_pressure -= 25
-            home_pressure += 15
+            away_pressure -= 35
+            home_pressure += 20
 
         home_shots_on = extract(
             home_stats,
