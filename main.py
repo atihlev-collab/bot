@@ -722,11 +722,11 @@ def calculate_card_pressure(
 
     pressure += min(                
 
-        18,                          
+        24,                          
 
         total_yellow                  
         *                           
-        6                             
+        8                             
 
     )                                
 
@@ -1436,11 +1436,11 @@ def analyze_live_match(fixture):
 
             >=                           
 
-            5                            
+            4                            
 
         ):                              
 
-            card_probability += 5        
+            card_probability += 8        
 
         card_probability = min(         
 
