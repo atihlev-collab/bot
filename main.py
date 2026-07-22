@@ -8264,10 +8264,9 @@ def prematch_loop():
                 probability        
             )                    
 
-        odds_text = "-"                  
+            odds_text = "-"                  
 
-        if match_odds:                  
-
+       
             if (                         
 
                 "HOME WIN" in market     
@@ -8276,11 +8275,9 @@ def prematch_loop():
 
             ):                           
 
-                odds_text = str(        
+               odds_text = str(match_odds[0])     
 
-                    match_odds[0]       
-
-                )                        
+                                        
 
             elif (                       
 
@@ -8290,15 +8287,13 @@ def prematch_loop():
 
             ):                           
 
-                odds_text = str(        
+               odds_text = str(match_odds[2])      
 
-                    match_odds[2]        
+                             
 
-                )                       
+            all_signals.append(            
 
-        all_signals.append(            
-
-            (                          
+               (                          
 
                 probability,           
                 fixture_id,            
