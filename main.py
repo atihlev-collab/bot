@@ -5038,7 +5038,51 @@ def analyze_prematch_match(match):
 
             home_form["losses"] * 2   
 
-        )               
+        )          
+
+
+        # FAVOURITE PROTECTION               
+
+        if (                                
+
+            home_probability >= 72           
+            and                             
+            home_score >= 45                 
+            and                            
+            away_score >= home_score - 5    
+
+        ):                                  
+
+            away_score -= 8                 
+
+            print(                           
+
+                "HOME FAVOURITE",           
+                home_score,                
+                away_score                   
+
+            )                              
+
+
+        if (                                
+
+            away_probability >= 72          
+            and                             
+            away_score >= 45                
+            and                             
+            home_score >= away_score - 5    
+
+        ):                                  
+
+            home_score -= 8                  
+
+            print(                           
+
+                "AWAY FAVOURITE",           
+                home_score,                  
+                away_score                  
+
+            )                              
 
 
         # MARKET AGREEMENT           
@@ -7105,6 +7149,50 @@ def analyze_prematch_match(match):
             away_form["losses"] * 2   
 
         )      
+
+
+        # FAVOURITE PROTECTION              
+
+        if (                                
+
+            home_probability >= 72          
+            and                              
+            home_score >= 45                
+            and                             
+            away_score >= home_score - 5    
+
+        ):                                  
+
+            away_score -= 8                 
+
+            print(                          
+
+                "HOME FAVOURITE",           
+                home_score,                  
+                away_score                 
+
+            )                              
+
+
+        if (                                
+
+            away_probability >= 72          
+            and                             
+            away_score >= 45                
+            and                             
+            home_score >= away_score - 5    
+
+        ):                                  
+
+            home_score -= 8                 
+
+            print(                          
+
+                "AWAY FAVOURITE",           
+                home_score,                
+                away_score                  
+
+            )                              
 
 
         # MARKET AGREEMENT          
