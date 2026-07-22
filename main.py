@@ -340,8 +340,6 @@ def get_match_odds(fixture_id):
 
         for bet in bets:                             
 
-        for bet in bets:
-
 
             if bet.get("name") in [     
                 "Both Teams To Score",  
