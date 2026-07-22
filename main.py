@@ -1341,23 +1341,23 @@ def analyze_live_match(fixture):
 
         ):       
 
-        if not market_available(                 
+        if not market_available(                  
             fixture_id,                           
             "Cards"                                
-        ):                                         
-            return None                            
+        ):                                       
+            return None                           
 
-        return (
-        
-            "🟨 OVER 1.5 NEXT CARDS",
-        
-            88,
-        
-            minute,
-        
-            card_probability
-        
-        )
+        return (                                   
+
+            "🟨 OVER 1.5 NEXT CARDS",              
+
+            88,                                    
+
+            minute,                               
+
+            card_probability                       
+
+        )                                          
 
             
 
