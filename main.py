@@ -6449,9 +6449,7 @@ def analyze_prematch_match(match):
             away_score += 1             
              
         away_super_value = False
-        away_value = False
-
-        if match_odds:                 
+        away_value = False                     
 
         if (                                  
 
