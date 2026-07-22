@@ -10,7 +10,7 @@ import threading
 import time
 import logging
  
-   
+    
 
 from scipy.stats import poisson
 from datetime import datetime, timedelta
@@ -2292,6 +2292,120 @@ def get_team_form(team_id, venue=None):
     except:
 
         return None
+
+
+#############################################
+# STANDINGS
+#############################################
+
+standings_cache = {}
+
+def get_league_table(
+
+    league_id,
+
+    season
+
+):
+
+    key = (
+
+        f"{league_id}_{season}"
+
+    )
+
+    if (
+
+        key in standings_cache
+
+    ):
+
+        return (
+
+            standings_cache[key]
+
+        )
+
+    url = (
+
+        f"{BASE_URL}/standings"
+
+        f"?league={league_id}&season={season}"
+
+    )
+
+    try:
+
+        response = (
+
+            requests.get(
+
+                url,
+
+                headers=HEADERS,
+
+                timeout=20
+
+            ).json()
+
+        )
+
+        table = {}
+
+        if (
+
+            response.get("response")
+
+        ):
+
+            standings = (
+
+                response["response"][0]["league"]["standings"][0]
+
+            )
+
+            for row in standings:
+
+                table[
+
+                    row["team"]["id"]
+
+                ] = {
+
+                    "rank":
+
+                        row["rank"],
+
+                    "points":
+
+                        row["points"],
+
+                    "played":
+
+                        row["all"]["played"],
+
+                    "goal_diff":
+
+                        row["goalsDiff"]
+
+                }
+
+        standings_cache[key] = table
+
+        return table
+
+    except Exception as e:
+
+        print(
+
+            "STANDINGS ERROR:",
+
+            e
+
+        )
+
+        return {}
+
     
 
 # =========================================================
