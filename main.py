@@ -6507,65 +6507,37 @@ def analyze_prematch_match(match):
 
                 )                           
 
-
-                if (                         
-
-                    value_score >= 28       
-
-                    and                      
-
-                    min(                     
-
-                        95,                  
-
-                        away_score + 50      
-
-                    ) >= 70                 
-                ):                           
-
-                    away_super_value = True  
-
-                    away_score += 4          
-
-
-                elif (                      
-
-                    value_score >= 22        
-
-                    and                     
-
-                    min(                     
-
-                        95,                   
-
-                        away_score + 50       
-
-                    ) >= 65                  
-
-                ):                          
-
-                    away_value = True        
-
-                    away_score += 2          
-
-
-                print(                      
-
-                    "AWAY VALUE SCORE:",     
-
-                    home,                    
-
-                    away,                   
-
-                    round(                   
-
-                        value_score,        
-
-                        2                    
-
-                    )                       
-
-                )                           
+            if (                             
+                value_score >= 28            
+                and                          
+                min(                         
+                    95,                      
+                    away_score + 50         
+                ) >= 70                      
+            ):                               
+                away_super_value = True      
+                away_score += 4               
+        
+            elif (                           
+                value_score >= 22             
+                and                         
+                min(                          
+                    95,                     
+                    away_score + 50         
+                ) >= 65                      
+            ):                               
+                away_value = True            
+                away_score += 2              
+        
+            print(                           
+                "AWAY VALUE SCORE:",         
+                home,                        
+                away,                        
+                round(                       
+                    value_score,              
+                    2                        
+                )                            
+            )                                       
         
         away_odds_ok = True                      
 
