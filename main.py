@@ -6654,7 +6654,11 @@ def analyze_prematch_match(match):
 
             1                             
 
-        )                                
+        )        
+
+
+        
+     
 
         score_gap = abs(                 
 
@@ -6674,7 +6678,73 @@ def analyze_prematch_match(match):
 
             home_score                   
 
-        )                                 
+        )        
+
+
+        # HOME MARKET FILTER                
+
+        if (                                 
+
+            len(match_odds) >= 3            
+
+        ):                                    
+
+            home_odd = match_odds[0]          
+            away_odd = match_odds[2]        
+
+            if (                             
+
+                home_probability >= 65       
+                and                          
+                home_odd >= 3.00              
+                and                          
+                away_odd <= 2.20             
+
+            ):                              
+
+                home_score -= 12            
+
+                print(                         
+
+                    "HOME MARKET PENALTY",    
+                    home_odd,                 
+                    away_odd,                
+                    home_score                
+
+                )                            
+
+
+        # AWAY MARKET FILTER                 
+
+        if (                                 
+
+            len(match_odds) >= 3            
+
+        ):                                   
+
+            home_odd = match_odds[0]         
+            away_odd = match_odds[2]         
+
+            if (                           
+
+                away_probability >= 65       
+                and                          
+                away_odd >= 3.00              
+                and                         
+                home_odd <= 2.20              
+
+            ):                              
+
+                away_score -= 12              
+
+                print(                         
+
+                    "AWAY MARKET PENALTY",    
+                    home_odd,               
+                    away_odd,                 
+                    away_score                
+
+                )                           
 
         # RISK SCORE                 
 
