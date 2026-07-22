@@ -430,7 +430,9 @@ def get_match_odds(fixture_id):
                 "ODDS FOUND:",
                 home_odd,
                 draw_odd,
-                away_odd
+                away_odd,
+                over25_odd,                           
+                btts_odd  
             )
 
             if (                          
@@ -447,10 +449,12 @@ def get_match_odds(fixture_id):
 
                     home_odd,             
                     draw_odd,             
-                    away_odd               
+                    away_odd, 
+                    over25_odd,                          
+                    btts_odd                             
 
-                )                         
-
+                )                                        
+                                     
                 odds_cache[fixture_id] = ( 
 
                     time.time(),          
@@ -465,8 +469,9 @@ def get_match_odds(fixture_id):
                 "INCOMPLETE ODDS:",       
                 home_odd,               
                 draw_odd,                  
-                away_odd                   
-
+                away_odd,                   
+                over25_odd,                         
+                btts_odd   
             )                            
 
         return None                        
@@ -3250,20 +3255,26 @@ def analyze_prematch_match(match):
         if not match_odds:
             return None
 
-        if (
-           match_odds[0] is None
-           or
-           match_odds[2] is None
-       ):
-           return None
+        home_odd = match_odds[0]                   
+        draw_odd = match_odds[1]                   
+        away_odd = match_odds[2]                 
+        over25_odd = match_odds[3]                
+        btts_odd = match_odds[4]                  
 
-        market_prob = no_vig_probabilities(     
+        if (                                       
+            home_odd is None                       
+            or                                     
+            away_odd is None                        
+        ):                                         
+            return None                            
 
-            match_odds[0],                      
-            match_odds[1],                      
-            match_odds[2]                      
+        market_prob = no_vig_probabilities(      
 
-        )                                       
+            home_odd,                            
+            draw_odd,                          
+            away_odd                             
+
+        )                                                             
 
         if market_prob:                         
 
@@ -8265,7 +8276,11 @@ def prematch_loop():
         if not match_odds:
             continue
 
-       
+        home_odd = match_odds[0]                     
+        draw_odd = match_odds[1]                    
+        away_odd = match_odds[2]                     
+        over25_odd = match_odds[3]                  
+        btts_odd = match_odds[4]                     
 
         country = match["league"]["country"]
         league = match["league"]["name"]
