@@ -29,6 +29,7 @@ BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {
     "x-apisports-key": API_KEY
 }
+LIVE_BETS = {}
 
 TZ = ZoneInfo("Europe/Sofia")
 
@@ -444,68 +445,7 @@ def get_match_odds(fixture_id):
         )
 
         return None
-
-
-def market_available(                      
-
-    fixture_id,                           
-
-    market_name                          
-
-):                                       
-
-    odds = get_odds(                       
-        fixture_id                       
-    )                                    
-
-    if not odds:                           
-        return None                      
-
-    bookmakers = odds[0].get(              
-        "bookmakers",                     
-        []                                 
-    )                                     
-
-    for bookmaker in bookmakers:          
-
-        bets = bookmaker.get(             
-            "bets",                      
-            []                             
-        )                                 
-
-        for bet in bets:                  
-
-            if market_name.lower() in (   
-                bet.get(                  
-                    "name",              
-                    ""                    
-                ).lower()                 
-            ):                             
-
-                values = bet.get(         
-                    "values",             
-                    []                   
-                )                         
-
-                if values:                 
-
-                    try:                  
-
-                        odd = float(      
-                            values[0]["odd"] 
-                        )                 
-
-                        if odd < 1.40:     
-                            return None    
-
-                        return odd         
-
-                    except:               
-                        return None        
-
-    return None                           
-
-
+         
 
 # =========================================================
 # EXTRACT STAT
