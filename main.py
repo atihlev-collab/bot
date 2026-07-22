@@ -332,6 +332,14 @@ def get_match_odds(fixture_id):
             []
         )
 
+        home_odd = None                              
+        draw_odd = None                             
+        away_odd = None                             
+        over25_odd = None                            
+        btts_odd = None                            
+
+        for bet in bets:                             
+
         for bet in bets:
 
 
@@ -347,10 +355,38 @@ def get_match_odds(fixture_id):
 
                     if value["value"] == "Yes":   
 
-                        print(                    
-                            "BTTS ODD =",         
-                            value["odd"]          
-                        )                                 
+                        btts_odd = float(          
+                            value["odd"]         
+                        )                            
+
+                        print(                      
+                            "BTTS ODD =",            
+                            btts_odd                
+                        )        
+
+            if bet.get("name") in [                    
+                "Goals Over/Under",                   
+                "Over/Under"                           
+            ]:                                         
+
+                for value in bet.get(                   
+                    "values",                           
+                    []                                  
+                ):                                      
+
+                    if value["value"] in [              
+                        "Over 2.5",                   
+                        "Over 2.5 Goals"                
+                    ]:                                 
+
+                        over25_odd = float(            
+                            value["odd"]               
+                        )                              
+
+                        print(                         
+                            "OVER2.5 ODD =",           
+                            over25_odd                  
+                        )                               
          
                               
             if bet.get("name") in [
