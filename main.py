@@ -3227,7 +3227,7 @@ def analyze_prematch_match(match):
 
         )                                          
 
-        home_form = get_team_form(
+       
 
         home_form = get_team_form(
             home_id,
