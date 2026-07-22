@@ -3159,6 +3159,76 @@ def analyze_prematch_match(match):
         home_id = match["teams"]["home"]["id"]
         away_id = match["teams"]["away"]["id"]
 
+        league_id = match["league"]["id"]          
+
+        season = match["league"]["season"]        
+
+        table = get_league_table(                 
+
+            league_id,                            
+
+            season                               
+
+        )                                        
+
+        home_rank = None                          
+        away_rank = None                          
+
+        home_points = None                        
+        away_points = None                         
+
+        if (                                      
+
+            home_id in table                     
+
+        ):                                         
+
+            home_rank = (                         
+
+                table[home_id]["rank"]            
+
+            )                                     
+
+            home_points = (                        
+
+                table[home_id]["points"]          
+
+            )                                      
+
+        if (                                     
+
+            away_id in table                      
+
+        ):                                       
+
+            away_rank = (                          
+
+                table[away_id]["rank"]            
+
+            )                                    
+
+            away_points = (                       
+
+                table[away_id]["points"]           
+
+            )                                   
+
+        print(                                     
+
+            "TABLE:",                             
+
+            home_rank,                             
+
+            away_rank,                           
+
+            home_points,                           
+
+            away_points                           
+
+        )                                          
+
+        home_form = get_team_form(
+
         home_form = get_team_form(
             home_id,
             venue="home"
