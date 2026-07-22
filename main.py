@@ -8259,65 +8259,57 @@ def prematch_loop():
         )      
    
      
-        for market, confidence, probability in signals:
-         
-            print(                 
-                "DEBUG SIGNAL:",   
-                market,           
-                confidence,       
-                probability        
-            )                    
+        for market, confidence, probability in signals:     
 
-            odds_text = "-"                  
-
-       
-         if (                                  
-
-             "HOME WIN" in market                
-             and                                
-             home_odd is not None                
-         
-         ):                                      
-         
-             odds_text = str(home_odd)           
-
-                                        
-
-            elif (                       
-
-        if (                                  
-
-            "AWAY WIN" in market               
-            and                                
-            away_odd is not None               
+            print(                                           
+                "DEBUG SIGNAL:",                              
+                market,                                     
+                confidence,                                   
+                probability                                   
+            )                                                
         
-        ):                                      
+            odds_text = "-"                                
         
-            odds_text = str(away_odd)           
+            if (                                             
+        
+                "HOME WIN" in market                         
+                and                                           
+                home_odd is not None                        
+        
+            ):                                               
+        
+                odds_text = str(home_odd)                   
+        
+            elif (                                           
+        
+                "AWAY WIN" in market                         
+                and                                           
+                away_odd is not None                         
+        
+            ):                                               
+        
+                odds_text = str(away_odd)                    
+        
+            all_signals.append(                               
 
-        all_signals.append(
+            (                                            
 
-               (                          
+                    probability,                            
+                    fixture_id,                               
+                    match_date,                             
+                    kickoff_time,                            
+                    country,                                 
+                    league,                                   
+                    home,                                    
+                    away,                                    
+                    market,                                 
+                    confidence,                              
+                    odds_text                               
 
-                probability,           
-                fixture_id,            
+                )                                            
 
-                match_date,            
-                kickoff_time,           
-
-                country,               
-                league,                 
-
-                home,                  
-                away,                   
-
-                market,                
-                confidence,            
-                odds_text               
-
-            )                           
-
-        )                               
+            )                                                 
+   
 
     all_signals.sort(
         reverse=True,
