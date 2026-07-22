@@ -3911,7 +3911,73 @@ def analyze_prematch_match(match):
                 goal_gap,                    
                 home_score                   
 
-            )                               
+            )         
+
+
+        # HOME ANOMALY FILTER                    
+
+        if (                                    
+
+            home_rank                           
+            and                                 
+            away_rank                           
+
+        ):                                      
+
+            rank_gap = (                         
+
+                away_rank                       
+                -                               
+                home_rank                       
+
+            )                                  
+
+            point_gap = (                      
+
+                away_points                    
+                -                                
+                home_points                      
+
+            )                                  
+
+
+            if (                               
+
+                away_rank <= 3                  
+                and                             
+                home_rank >= 9                  
+
+            ):                                
+
+                home_score -= 12              
+
+
+            if point_gap >= 12:               
+
+                home_score -= 8               
+
+
+            if (                               
+
+                away_rank <= 3                 
+                and                            
+                home_rank >= 9                
+                and                            
+                point_gap >= 12                
+
+            ):                                
+
+                home_score -= 10             
+
+
+            print(                           
+
+                "HOME ANOMALY:",              
+                rank_gap,                     
+                point_gap,                    
+                home_score                   
+
+            )                                
 
         # STRONG H2H BONUS            
 
@@ -5657,6 +5723,72 @@ def analyze_prematch_match(match):
         )                           
 
         away_score -= h2h * 2    
+
+
+        # AWAY ANOMALY FILTER                  
+
+        if (                                   
+
+            home_rank                           
+            and                                 
+            away_rank                          
+
+        ):                                     
+
+            rank_gap = (                        
+
+                home_rank                       
+                -                                
+                away_rank                       
+
+            )                                  
+
+            point_gap = (                      
+
+                home_points                    
+                -                                
+                away_points                    
+
+            )                                  
+
+
+            if (                              
+
+                home_rank <= 3                 
+                and                            
+                away_rank >= 9                 
+
+            ):                                
+
+                away_score -= 12               
+
+
+            if point_gap >= 12:             
+
+                away_score -= 8               
+
+
+            if (                             
+
+                home_rank <= 3                 
+                and                           
+                away_rank >= 9                
+                and                           
+                point_gap >= 12                
+
+            ):                               
+
+                away_score -= 10             
+
+
+            print(                           
+
+                "AWAY ANOMALY:",              
+                rank_gap,                    
+                point_gap,                   
+                away_score                   
+
+            )                               
 
 
         # STRONG H2H BONUS            
