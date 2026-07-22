@@ -446,6 +446,66 @@ def get_match_odds(fixture_id):
         return None
 
 
+def market_available(                      
+
+    fixture_id,                           
+
+    market_name                          
+
+):                                       
+
+    odds = get_odds(                       
+        fixture_id                       
+    )                                    
+
+    if not odds:                           
+        return None                      
+
+    bookmakers = odds[0].get(              
+        "bookmakers",                     
+        []                                 
+    )                                     
+
+    for bookmaker in bookmakers:          
+
+        bets = bookmaker.get(             
+            "bets",                      
+            []                             
+        )                                 
+
+        for bet in bets:                  
+
+            if market_name.lower() in (   
+                bet.get(                  
+                    "name",              
+                    ""                    
+                ).lower()                 
+            ):                             
+
+                values = bet.get(         
+                    "values",             
+                    []                   
+                )                         
+
+                if values:                 
+
+                    try:                  
+
+                        odd = float(      
+                            values[0]["odd"] 
+                        )                 
+
+                        if odd < 1.40:     
+                            return None    
+
+                        return odd         
+
+                    except:               
+                        return None        
+
+    return None                           
+
+
 
 # =========================================================
 # EXTRACT STAT
@@ -1279,19 +1339,27 @@ def analyze_live_match(fixture):
 
             ) >= 20                      
 
-        ):                               
+        ):       
 
-            return (    
-             
-                "🟨 OVER 1.5 NEXT CARDS", 
+        if not market_available(                 
+            fixture_id,                           
+            "Cards"                                
+        ):                                         
+            return None                            
 
-                88,                       
+return (
 
-                minute,                   
+    "🟨 OVER 1.5 NEXT CARDS",
 
-                card_probability          
+    88,
 
-            )                           
+    minute,
+
+    card_probability
+
+)
+
+            
 
 
         best_pressure = max(         
@@ -1509,7 +1577,13 @@ def analyze_live_match(fixture):
 
             4                            
 
-        ):                               
+        ):         
+
+        if not market_available(                   
+            fixture_id,                           
+            "Cards"                              
+        ):                                         
+            return None                          
 
             return (                     
 
@@ -1541,6 +1615,12 @@ def analyze_live_match(fixture):
 
             if home > away:
 
+                if not market_available(                  
+                    fixture_id,                           
+                    "Next Goal"                           
+                ):                                        
+                    return None                           
+
                 return (
 
                     "🎯 NEXT GOAL HOME",
@@ -1551,6 +1631,12 @@ def analyze_live_match(fixture):
                 )
 
             else:
+
+                if not market_available(                   
+                    fixture_id,                           
+                    "Next Goal"                           
+                ):                                        
+                    return None                           
 
                 return (
 
@@ -1608,7 +1694,13 @@ def analyze_live_match(fixture):
 
         ):                                  
 
-            if home_pressure > away_pressure:    
+            if home_pressure > away_pressure:   
+
+                if not market_available(                 
+                    fixture_id,                         
+                    "Next Goal"                            
+                ):                                         
+                    return None                            
 
                 return (                        
 
@@ -1635,6 +1727,12 @@ def analyze_live_match(fixture):
                 )                                
 
             elif away_pressure > home_pressure:  
+
+                if not market_available(                  
+                    fixture_id,                            
+                    "Next Goal"                            
+                ):                                        
+                    return None                          
 
                 return (                         
 
@@ -1822,7 +1920,13 @@ def analyze_live_match(fixture):
 
             corner_probability >= 70    
 
-        ):                             
+        ):        
+
+            if not market_available(                  
+                fixture_id,                           
+                "Corners"                             
+            ):                                        
+                return None                            
 
             return (                    
 
