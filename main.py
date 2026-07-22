@@ -5039,30 +5039,7 @@ def analyze_prematch_match(match):
             home_form["losses"] * 2   
 
         )          
-
-
-        # FAVOURITE PROTECTION               
-
-        if (                                
-
-            home_probability >= 72           
-            and                             
-            home_score >= 45                 
-            and                            
-            away_probability >= home_probability - 5    
-
-        ):                                  
-
-            home_score += 2                
-
-            print(                           
-
-                "HOME FAVOURITE",           
-                home_score,                
-                away_score                   
-
-            )                                   
-
+     
 
         # MARKET AGREEMENT           
 
