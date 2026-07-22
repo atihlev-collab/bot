@@ -6810,6 +6810,44 @@ def analyze_prematch_match(match):
         home_score -= home_risk * 0.8
 
         away_score -= away_risk * 0.8
+
+
+        # DRAW RISK FILTER                
+
+        probability_gap = abs(            
+         
+            home_probability              
+            -                              
+            away_probability               
+
+        )                                 
+
+        if (                               
+
+            probability_gap <= 8            
+            and                             
+
+            abs(                           
+
+                home_score                 
+                -                           
+                away_score                 
+
+            ) <= 8                         
+
+        ):                                 
+
+            home_score -= 6                
+            away_score -= 6                
+
+            print(                         
+
+                "DRAW RISK",                
+                probability_gap,           
+                home_score,                
+                away_score                 
+
+            )                            
                               
         # DOMINANCE BONUS                
 
