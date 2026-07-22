@@ -5501,6 +5501,71 @@ def analyze_prematch_match(match):
 
         away_score *= 0.6
 
+
+        # AWAY ANOMALY FILTER                  
+
+        if (                              
+
+            home_rank                         
+            and                             
+            away_rank                       
+
+        ):                                   
+
+            if (                             
+
+                home_rank <= 3               
+                and                          
+                away_rank >= 9               
+
+            ):                              
+
+                away_score -= 12            
+
+
+            if (                             
+
+                (
+                    home_points             
+                    -                       
+                    away_points             
+                )
+                >= 12                       
+
+            ):                              
+
+                away_score -= 8             
+
+
+            if (                             
+
+                home_rank <= 3              
+                and                          
+                away_rank >= 9              
+                and                         
+
+                (
+                    home_points              
+                    -                        
+                    away_points            
+                )
+                >= 12                       
+
+            ):                              
+
+                away_score -= 10            
+
+
+            print(                          
+
+                "AWAY ANOMALY:",              
+                home_rank,                    
+                away_rank,                    
+                home_points - away_points,   
+                away_score                    
+
+            )                               
+
         if (                                  
 
             home_rank                         
