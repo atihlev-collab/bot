@@ -1579,27 +1579,26 @@ def analyze_live_match(fixture):
 
         ):         
 
-        if not market_available(                  
-            fixture_id,                            
-            "Cards"                               
-        ):                                        
-            return None                            
+            if not market_available(             
+                fixture_id,                      
+                "Cards"                          
+            ):                                  
+                return None                      
 
-        return (                                  
+            return (                             
 
-            "🟨 OVER 1.5 NEXT CARDS",             
+                "🟨 OVER 1.5 NEXT CARDS",         
 
-            92,                                   
+                92,                              
 
-            minute,                                
+                minute,                          
 
-            92                                    
+                92                                
 
-        )                                          
+            )                                                   
 
-        # FAST GOALS OVERRIDE      
+  
      
-
         # FAST GOALS OVERRIDE
 
         if (
