@@ -3640,7 +3640,17 @@ def analyze_prematch_match(match):
 
             elif goal_gap >= 8:             
 
-                home_score += 2             
+                home_score += 2          
+
+            if (                              
+
+                table[home_id]["played"] >= 10 
+                and                            
+                table[away_id]["played"] >= 10 
+
+            ):                               
+
+                home_score += 2               
 
             print(                           
 
@@ -5498,7 +5508,18 @@ def analyze_prematch_match(match):
 
             elif goal_gap >= 8:             
 
+                away_score += 2       
+
+            if (                              
+
+                table[home_id]["played"] >= 10 
+                and                            
+                table[away_id]["played"] >= 10 
+
+            ):                               
+
                 away_score += 2             
+         
 
             print(                          
 
