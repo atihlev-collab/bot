@@ -6467,7 +6467,7 @@ def analyze_prematch_match(match):
 
             # SMART VALUE SCORE
 
-                value_score = (             
+            value_score = (                   
 
                     edge                    
 
