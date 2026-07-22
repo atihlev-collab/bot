@@ -3397,6 +3397,35 @@ def analyze_prematch_match(match):
            
         home_score *= 0.6
 
+
+        goal_match = False                       
+
+        if (                                    
+
+            home_form["avg_scored"] >= 1.60        
+
+            and                                    
+
+            away_form["avg_scored"] >= 1.60       
+
+            and                                    
+
+            home_form["avg_conceded"] >= 1.00     
+
+            and                                  
+
+            away_form["avg_conceded"] >= 1.00      
+
+            and                                   
+
+            expected_goals >= 2.80                
+
+        ):                                        
+
+            goal_match = True                     
+
+            home_score -= 8                        
+
         print(                   
 
             "HOME RAW SCORE:",    
@@ -4861,6 +4890,8 @@ def analyze_prematch_match(match):
             home_score += 1
         
         if (
+            not goal_match                       
+            and                                
             home_score >= 52
             and
             home_odds_ok
@@ -6620,6 +6651,8 @@ def analyze_prematch_match(match):
             away_score += 1
         
         if (
+            not goal_match                        
+            and                                
             away_score >= 50          
             and
             away_odds_ok
