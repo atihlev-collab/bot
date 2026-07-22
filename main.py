@@ -3255,10 +3255,7 @@ def analyze_prematch_match(match):
         ):
             return None
 
-        home_rank = None            
-        away_rank = None            
-        home_points = None          
-        away_points = None           
+            
      
         print(                 
             "OVER ANALYZE:",    
