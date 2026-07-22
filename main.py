@@ -3184,6 +3184,12 @@ def analyze_prematch_match(match):
             home_form["avg_scored"] < 1.0
         ):
             return None
+
+        home_rank = None            
+        away_rank = None            
+        home_points = None          
+        away_points = None           
+     
         print(                 
             "OVER ANALYZE:",    
             home,               
@@ -3570,6 +3576,99 @@ def analyze_prematch_match(match):
        
 
         home_score += h2h  
+
+
+        # LEAGUE TABLE BONUS                    
+
+        if (                                    
+
+            home_rank                           
+
+            and                                
+
+            away_rank                           
+
+        ):                                     
+
+            if (                              
+
+                home_rank <= 3                 
+
+            ):                                 
+
+                home_score += 5                 
+
+            elif (                             
+
+                home_rank <= 5                 
+
+            ):                                 
+
+                home_score += 3                
+
+            if (                              
+
+                away_rank <= 3                 
+
+            ):                                 
+
+                home_score -= 6              
+
+            elif (                             
+
+                away_rank <= 5               
+
+            ):                                
+
+                home_score -= 3                
+
+            if (                               
+
+                away_rank <= 3                 
+
+                and                           
+
+                home_rank >= 9                 
+
+            ):                                
+
+                home_score -= 10      
+
+        if (                                 
+
+            home_points is not None           
+
+            and                             
+
+            away_points is not None         
+
+        ):                                   
+
+            points_gap = (                    
+
+                away_points                   
+
+                -                             
+
+                home_points                    
+
+            )                                 
+
+            if (                              
+
+                points_gap >= 20             
+
+            ):                             
+
+                home_score -= 12             
+
+            elif (                         
+
+                points_gap >= 12             
+
+            ):                              
+
+                home_score -= 8              
 
 
         # STRONG H2H BONUS            
