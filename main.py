@@ -5049,11 +5049,11 @@ def analyze_prematch_match(match):
             and                             
             home_score >= 45                 
             and                            
-            away_score >= home_score - 5    
+            away_probability >= home_probability - 5    
 
         ):                                  
 
-            away_score -= 8                 
+            home_score += 2                
 
             print(                           
 
