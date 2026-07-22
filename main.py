@@ -3854,7 +3854,7 @@ def analyze_prematch_match(match):
 
             )                                
 
-                point_gap = (                      
+            point_gap = (                      
                 home_points                   
                 -                              
                 away_points                    
@@ -3913,71 +3913,69 @@ def analyze_prematch_match(match):
 
             )         
 
+        # HOME ANOMALY FILTER                
 
-        # HOME ANOMALY FILTER                    
+        if (                                 
 
-        if (                                    
+            home_rank                         
+            and                               
+            away_rank                          
 
-            home_rank                           
-            and                                 
-            away_rank                           
+        ):                                  
 
-        ):                                      
+            if (                              
 
-            rank_gap = (                         
+                away_rank <= 3                
+                and                            
+                home_rank >= 9                 
 
-                away_rank                       
-                -                               
-                home_rank                       
+            ):                               
 
-            )                                  
+                home_score -= 12             
 
-            point_gap = (                      
 
-                away_points                    
-                -                                
-                home_points                      
+            if (                              
 
-            )                                  
+                (
+                    away_points              
+                    -                        
+                    home_points               
+                )
+                >= 12                        
+
+            ):                              
+
+                home_score -= 8              
 
 
             if (                               
 
-                away_rank <= 3                  
-                and                             
-                home_rank >= 9                  
+                away_rank <= 3               
+                and                           
+                home_rank >= 9               
+                and                           
+
+                (
+                    away_points              
+                    -                        
+                    home_points              
+                )
+                >= 12                        
 
             ):                                
 
-                home_score -= 12              
+                home_score -= 10              
 
 
-            if point_gap >= 12:               
+            print(                             
 
-                home_score -= 8               
+                "HOME ANOMALY:",               
+                away_rank,                   
+                home_rank,                    
+                away_points - home_points,     
+                home_score                    
 
-
-            if (                               
-
-                away_rank <= 3                 
-                and                            
-                home_rank >= 9                
-                and                            
-                point_gap >= 12                
-
-            ):                                
-
-                home_score -= 10             
-
-
-            print(                           
-
-                "HOME ANOMALY:",              
-                rank_gap,                     
-                point_gap,                    
-                home_score                   
-
-            )                                
+            )                                           
 
         # STRONG H2H BONUS            
 
