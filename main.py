@@ -5426,6 +5426,56 @@ def analyze_prematch_match(match):
 
         away_score *= 0.6
 
+
+        if (                                  
+
+            home_rank                          
+            and                                
+            away_rank                         
+
+        ):                                     
+
+            rank_gap = (                       
+
+                away_rank                     
+                -                              
+                home_rank                       
+
+            )    
+         
+            point_gap = (                       
+
+                home_points                   
+                -                              
+                away_points                     
+
+            )                                 
+
+            if rank_gap <= -8:               
+
+                away_score += 6               
+
+            elif rank_gap <= -5:              
+
+                away_score += 3              
+
+            if point_gap <= -15:             
+
+                away_score += 4               
+
+            elif point_gap <= -8:            
+
+                away_score += 2              
+
+            print(                          
+
+                "AWAY TABLE BONUS:",         
+                rank_gap,                     
+                point_gap,                    
+                away_score                   
+
+            )                             
+
         print(                    
 
             "AWAY RAW SCORE:",     
