@@ -4203,7 +4203,7 @@ def analyze_prematch_match(match):
 
             home_edge_score = odds_score( 
                 min(95, home_score),      
-                match_odds[0]            
+                home_odd              
             )                                          
 
             home_score += (              
@@ -4607,7 +4607,7 @@ def analyze_prematch_match(match):
 
             if (                           
 
-                match_odds[0] is not None 
+            home_odd is not None        
 
             ):                           
 
@@ -4631,7 +4631,7 @@ def analyze_prematch_match(match):
 
                     prob,                
 
-                    match_odds[0]         
+                    home_odd           
 
                 )                         
 
@@ -4660,7 +4660,7 @@ def analyze_prematch_match(match):
                     home,
                     away,
                     home_score,
-                    match_odds[0]
+                    home_odd   
                )
 
 
@@ -4774,21 +4774,19 @@ def analyze_prematch_match(match):
 
         )                   
         
-        if (
-            match_odds
-            and
-            match_odds[0] is not None
-        ):
+        if (                              
+            home_odd is not None           
+        ):                                
 
-            home_odds_ok = (                     
+            home_odds_ok = (               
 
-                1.30                            
-                <=                             
-                match_odds[0]                   
-                <=                             
-                2.70                            
+                1.30                       
+                <=                       
+                home_odd                  
+                <=                        
+                2.70                      
 
-        )               
+            )                            
      
         print(
             "HOME BONUS TOTAL:",
@@ -5231,21 +5229,17 @@ def analyze_prematch_match(match):
 
         # FALSE FAVOURITE FILTER     
 
-        false_favourite = (           
+        false_favourite = (                  
 
-            match_odds              
+            home_odd is not None            
 
-            and                      
+            and
 
-            match_odds[0] is not None 
+            home_odd <= 1.80               
 
-            and                     
+            and
 
-            match_odds[0] <= 1.80     
-
-            and                      
-
-            home_probability < 68     
+            home_probability < 68            
 
             and                       
 
@@ -6077,17 +6071,16 @@ def analyze_prematch_match(match):
 
             )                            
 
-        if match_odds:                    
+        if away_odd is not None:                
 
-            away_edge_score = odds_score( 
-                min(95, away_score),     
-                match_odds[2]            
-            )        
-
-            print(                     
-
-                "AWAY EDGE SCORE:",      
+            away_edge_score = odds_score(       
+                min(95, away_score),            
+                away_odd                         
+            )                                    
         
+            print(                               
+        
+                "AWAY EDGE SCORE:",              
                 home,                     
         
                 away,                     
@@ -6460,21 +6453,21 @@ def analyze_prematch_match(match):
 
         if match_odds:                 
 
-            if (                        
-        
-                match_odds[2] is not None
-        
-            ):                         
-        
-                edge = value_edge(                
+        if (                                  
 
-                    min(95, away_score),         
-                
-                    match_odds[2]                 
-                
-                )                                          
+            away_odd is not None             
         
-                # SMART VALUE SCORE         
+        ):                                    
+        
+            edge = value_edge(                
+        
+                min(95, away_score),          
+        
+                away_odd                       
+        
+            )                                 
+
+            # SMART VALUE SCORE
 
                 value_score = (             
 
@@ -6576,21 +6569,19 @@ def analyze_prematch_match(match):
 
                 )                           
         
-        away_odds_ok = True             
-    
-        if (                            
+        away_odds_ok = True                      
 
-            match_odds                  
-
-            and                         
-
-            match_odds[2] is not None   
-
-        ):      
-
-            away_odds_ok = (
-                1.30 <= match_odds[2] <= 3.50
-            )
+        if (                                      
+        
+            away_odd is not None                  
+        
+        ):                                        
+        
+            away_odds_ok = (                      
+        
+                1.30 <= away_odd <= 3.50         
+        
+            )                                    
          
             print(  
                 
@@ -6778,20 +6769,19 @@ def analyze_prematch_match(match):
         )        
 
 
-        # HOME MARKET FILTER                
+        # HOME MARKET FILTER               
 
-        if (                                 
+        if (                              
 
-            len(match_odds) >= 3            
+            home_odd is not None           
+            and                          
+            away_odd is not None           
 
-        ):                                    
+        ):                                 
 
-            home_odd = match_odds[0]          
-            away_odd = match_odds[2]        
+            if (                           
 
-            if (                             
-
-                home_probability >= 65       
+                home_probability >= 65     
                 and                          
                 home_odd >= 3.00              
                 and                          
@@ -6811,18 +6801,17 @@ def analyze_prematch_match(match):
                 )                            
 
 
-        # AWAY MARKET FILTER                 
+        # AWAY MARKET FILTER                
 
         if (                                 
 
-            len(match_odds) >= 3            
+            home_odd is not None            
+            and                             
+            away_odd is not None             
 
         ):                                   
 
-            home_odd = match_odds[0]         
-            away_odd = match_odds[2]         
-
-            if (                           
+            if (                            
 
                 away_probability >= 65       
                 and                          
@@ -7358,24 +7347,20 @@ def analyze_prematch_match(match):
             away_score += 3         
 
 
-        # FALSE FAVOURITE FILTER     
+        # FALSE FAVOURITE FILTER          
 
-        false_favourite = (           
+        false_favourite = (              
 
-            match_odds                
+            away_odd is not None         
 
-            and                       
+            and                          
 
-            match_odds[2] is not None 
+            away_odd <= 1.80            
 
-            and                       
+            and                          
 
-            match_odds[2] <= 1.80    
-
-            and                       
-
-            away_probability < 68    
-
+            away_probability < 68        
+                                      
             and                      
 
             away_edge < 2             
@@ -7894,9 +7879,9 @@ def analyze_prematch_match(match):
             and                            
             match_odds                   
             and                            
-            match_odds[0] is not None      
+            home_odd is not None      
             and                            
-            1.35 <= match_odds[0] <= 2.80  
+            1.35 <= home_odd <= 2.80 
 
         ):                                
 
@@ -8316,31 +8301,31 @@ def prematch_loop():
             odds_text = "-"                  
 
        
-            if (                         
+         if (                                  
 
-                "HOME WIN" in market     
-                and                      
-                match_odds[0] is not None
-
-            ):                           
-
-               odds_text = str(match_odds[0])     
+             "HOME WIN" in market                
+             and                                
+             home_odd is not None                
+         
+         ):                                      
+         
+             odds_text = str(home_odd)           
 
                                         
 
             elif (                       
 
-                "AWAY WIN" in market     
-                and                      
-                match_odds[2] is not None
+        if (                                  
 
-            ):                           
+            "AWAY WIN" in market               
+            and                                
+            away_odd is not None               
+        
+        ):                                      
+        
+            odds_text = str(away_odd)           
 
-               odds_text = str(match_odds[2])      
-
-                             
-
-            all_signals.append(            
+        all_signals.append(
 
                (                          
 
@@ -8555,23 +8540,29 @@ def live_loop():
 
         )                                         
 
-        if match_odds:                           
+        if (                                   
+            home_odd is not None               
+            or                                 
+            away_odd is not None               
+        ):                                      
+        
+            if "HOME" in signal[0]:            
+        
+                odds_text = str(               
+        
+                    home_odd                   
+        
+                )                              
+        
+            elif "AWAY" in signal[0]:           
+        
+                odds_text = str(               
+        
+                    away_odd                    
+        
+                )                              
 
-            if "HOME" in signal[0]:              
-
-                odds_text = str(                  
-
-                    match_odds[0]                 
-
-                )                               
-
-            elif "AWAY" in signal[0]:             
-
-                odds_text = str(                  
-
-                    match_odds[2]                 
-
-                )                               
+                                               
 
         send_telegram(                            
 
