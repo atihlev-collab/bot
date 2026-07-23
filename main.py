@@ -340,54 +340,64 @@ def get_match_odds(fixture_id):
 
         for bet in bets:                             
 
-            print("BET NAME:", bet.get("name"))
+           
+            name = bet.get(                                 
+                "name",                                      
+                ""                                           
+            ).lower()                                       
 
-            if bet.get("name") in [     
-                "Both Teams To Score",  
-                "BTTS"                   
-            ]:                          
+            if (                                             
 
-                for value in bet.get(    
-                    "values",            
-                    []                   
-                ):                      
+                "both" in name                              
+                or                                           
+                "btts" in name                               
 
-                    if value["value"] == "Yes":   
+            ):                                              
 
-                        btts_odd = float(          
-                            value["odd"]         
-                        )                            
+                for value in bet.get(                       
+                    "values",                               
+                    []                                      
+                ):                                          
 
-                        print(                      
-                            "BTTS ODD =",            
-                            btts_odd                
-                        )        
+                    if value["value"].upper() == "YES":     
 
-            print("BET NAME:", bet.get("name"))
+                        btts_odd = float(                    
+                            value["odd"]                   
+                        )                                    
 
-            if bet.get("name") in [                    
-                "Goals Over/Under",                   
-                "Over/Under"                           
-            ]:                                         
+                        print(                               
+                            "BTTS ODD =",                  
+                            btts_odd                       
+                        )                                  
 
-                for value in bet.get(                   
-                    "values",                           
-                    []                                  
-                ):                                      
+            if (                                           
 
-                    if value["value"] in [              
-                        "Over 2.5",                   
-                        "Over 2.5 Goals"                
-                    ]:                                 
+                "over" in name                               
+                and                                         
+                "under" in name                            
 
-                        over25_odd = float(            
-                            value["odd"]               
-                        )                              
+            ):                                              
 
-                        print(                         
-                            "OVER2.5 ODD =",           
-                            over25_odd                  
-                        )     
+                for value in bet.get(                       
+                    "values",                                
+                    []                                      
+                ):                                          
+
+                    if (                                    
+
+                        "over 2.5"                          
+                        in value["value"].lower()           
+
+                    ):                                     
+
+                        over25_odd = float(                 
+                            value["odd"]                    
+                        )                                   
+
+                        print(                              
+                            "OVER2.5 ODD =",                
+                            over25_odd                      
+                        )                                  
                      
             print("BET NAME:", bet.get("name"))
                               
