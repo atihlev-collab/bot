@@ -8292,67 +8292,68 @@ def prematch_loop():
             "%H:%M"
         )      
    
-     
-     for market, confidence, probability in signals:                   
+    
+        for market, confidence, probability in signals:               
 
-        print(                                                         
-            "DEBUG SIGNAL:",                                           
-            market,                                                    
-            confidence,                                                
-            probability                                               
-        )                                                            
+            print(                                                     
+                "DEBUG SIGNAL:",                                       
+                market,                                                
+                confidence,                                             
+                probability                                            
+            )                                                          
 
-        odds_text = "-"                                                
+            odds_text = "-"                                            
 
-        if (                                                           
+            if (                                                        
 
-            "HOME WIN" in market                                       
-            and                                                        
-            home_odd is not None                                     
+                "HOME WIN" in market                                    
+                and                                                     
+                home_odd is not None                                   
 
-        ):                                                             
+            ):                                                         
 
-            odds_text = str(home_odd)                                  
+                odds_text = str(home_odd)                               
 
-        elif (                                                         
+            elif (                                                      
 
-            "AWAY WIN" in market                                       
-            and                                                        
-            away_odd is not None                                       
+                "AWAY WIN" in market                                   
+                and                                                    
+                away_odd is not None                                   
 
-        ):                                                            
+            ):                                                        
 
-            odds_text = str(away_odd)                                  
+                odds_text = str(away_odd)                               
 
-        elif (                                                         
+            elif (                                                      
 
-            "BTTS" in market                                          
-            and                                                        
-            btts_odd is not None                                       
+                "BTTS" in market                                       
+                and                                                    
+                btts_odd is not None                                   
 
-        ):                                                           
+            ):                                                         
 
-            odds_text = str(btts_odd)                                  
+                odds_text = str(btts_odd)                              
 
-        elif (                                                         
+            elif (                                                     
 
-            "OVER 2.5" in market                                       
-            and                                                        
-            over25_odd is not None                                    
+                "OVER 2.5" in market                                   
+                and                                                     
+                over25_odd is not None                                  
 
-        ):                                                             
+            ):                                                       
 
-            odds_text = str(over25_odd)                                
+                odds_text = str(over25_odd)                            
 
-        elif (                                                         
+            elif (                                                     
 
-            "OVER 3.5" in market                                      
-            and                                                         
-            over25_odd is not None                                      
+                "OVER 3.5" in market                                   
+                and                                                   
+                over25_odd is not None                                 
 
-        ):                                                             
+            ):                                                         
 
-            odds_text = str(over25_odd)                                                  
+                odds_text = str(over25_odd)                             
+
         
             all_signals.append(                               
 
