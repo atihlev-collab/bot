@@ -945,20 +945,54 @@ def analyze_live_match(fixture):
             venue="away"
         )
 
-        if home_form:
+        if home_form:                                              
 
-           home_pressure += min(
-               12,
-               round(home_form["form_pct"] / 10)
-        )
+            form_bonus = (                                        
+        
+                home_form["form_pct"] * 0.40                       
+                +
+                home_form["recent_form_pct"] * 0.30               
+                +
+                home_form["unbeaten_pct"] * 0.20                
+                +
+                (
+                    home_form["avg_scored"] * 100 / 3
+                ) * 0.10                                         
+        
+            )                                                      
+        
+            home_pressure += min(                                
+        
+                18,                                                
+        
+                round(form_bonus / 8)                            
+        
+            )             
 
-        if away_form:
+        if away_form:                                             
 
-            away_pressure += min(
-            15,
-            round(away_form["form_pct"] / 8)
-        )
-
+            form_bonus = (                                        
+        
+                away_form["form_pct"] * 0.40                       
+                +
+                away_form["recent_form_pct"] * 0.30              
+                +
+                away_form["unbeaten_pct"] * 0.20                
+                +
+                (
+                    away_form["avg_scored"] * 100 / 3
+                ) * 0.10                                       
+        
+            )                                                     
+        
+            away_pressure += min(                                
+        
+                18,                                              
+        
+                round(form_bonus / 8)                           
+        
+            )      
+         
         home_pressure = min(
             home_pressure,
             100
