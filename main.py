@@ -315,14 +315,7 @@ def get_match_odds(fixture_id):
             []                          
         )                               
 
-        if len(bookmakers) < 3:     
-
-            print(                  
-                "WEAK MARKET:",     
-                fixture_id          
-            )                     
-
-            return None             
+                
 
         if not bookmakers:
             return None
@@ -414,9 +407,7 @@ def get_match_odds(fixture_id):
                 "Winner"
             ]:
 
-                home_odd = None
-                draw_odd = None
-                away_odd = None
+               
 
                 for value in bet.get(
                     "values",
@@ -463,7 +454,11 @@ def get_match_odds(fixture_id):
                 draw_odd is not None       
                 and                       
                 away_odd is not None      
-
+                and
+                over25_odd is not None
+                and
+                btts_odd is not None
+             
             ):                             
 
                 result = (                
