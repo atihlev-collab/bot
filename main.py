@@ -327,24 +327,25 @@ def get_match_odds(fixture_id):
         if not bookmakers:
             return None
 
-        bets = []                       
-
-        for bookmaker in bookmakers:    
-
-            bets.extend(                 
-                bookmaker.get(           
-                    "bets",             
-                    []                   
-                )                        
-            )                           
-
-        home_odd = None                              
+        home_odd = None                            
         draw_odd = None                             
         away_odd = None                             
         over25_odd = None                            
-        btts_odd = None                            
+        btts_odd = None                             
 
-        for bet in bets:                             
+        for bookmaker in bookmakers:               
+
+            print(                                 
+                "BOOKMAKER:",                      
+                bookmaker.get("name")              
+            )                                      
+
+            bets = bookmaker.get(                   
+                "bets",                           
+                []                                  
+            )                                      
+
+            for bet in bets:                                        
 
            
                 name = bet.get(                                 
