@@ -340,6 +340,7 @@ def get_match_odds(fixture_id):
 
         for bet in bets:                             
 
+            print("BET NAME:", bet.get("name"))
 
             if bet.get("name") in [     
                 "Both Teams To Score",  
@@ -361,6 +362,8 @@ def get_match_odds(fixture_id):
                             "BTTS ODD =",            
                             btts_odd                
                         )        
+
+            print("BET NAME:", bet.get("name"))
 
             if bet.get("name") in [                    
                 "Goals Over/Under",                   
@@ -384,8 +387,9 @@ def get_match_odds(fixture_id):
                         print(                         
                             "OVER2.5 ODD =",           
                             over25_odd                  
-                        )                               
-         
+                        )     
+                     
+            print("BET NAME:", bet.get("name"))
                               
             if bet.get("name") in [
                 "Match Winner",
