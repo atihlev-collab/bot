@@ -310,10 +310,10 @@ def get_match_odds(fixture_id):
         if not odds:
             return None
 
-        bookmakers = odds[0].get(
-            "bookmakers",
-            []
-        )
+        bookmakers = odds[0].get(       
+            "bookmakers",               
+            []                          
+        )                               
 
         if len(bookmakers) < 3:     
 
@@ -327,10 +327,16 @@ def get_match_odds(fixture_id):
         if not bookmakers:
             return None
 
-        bets = bookmakers[0].get(
-            "bets",
-            []
-        )
+        bets = []                       
+
+        for bookmaker in bookmakers:    
+
+            bets.extend(                 
+                bookmaker.get(           
+                    "bets",             
+                    []                   
+                )                        
+            )                           
 
         home_odd = None                              
         draw_odd = None                             
@@ -341,29 +347,29 @@ def get_match_odds(fixture_id):
         for bet in bets:                             
 
            
-            name = bet.get(                                 
-                "name",                                      
-                ""                                           
-            ).lower()                                       
-
-            if (                                             
-
-                "both" in name                              
-                or                                           
-                "btts" in name                               
-
-            ):                                              
-
-                for value in bet.get(                       
-                    "values",                               
-                    []                                      
-                ):                                          
-
-                    if value["value"].upper() == "YES":     
-
-                        btts_odd = float(                    
-                            value["odd"]                   
-                        )                                    
+                name = bet.get(                                 
+                    "name",                                      
+                    ""                                           
+                ).lower()                                       
+    
+                if (                                             
+    
+                    "both" in name                              
+                    or                                           
+                    "btts" in name                               
+    
+                ):                                              
+    
+                    for value in bet.get(                       
+                        "values",                               
+                        []                                      
+                    ):                                          
+    
+                        if value["value"].upper() == "YES":     
+    
+                            btts_odd = float(                    
+                                value["odd"]                   
+                            )                                    
 
                         print(                               
                             "BTTS ODD =",                  
