@@ -7483,27 +7483,27 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 50          
+            away_score >= 58          
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 60
+            away_form["unbeaten_pct"] >= 65
             and
-            away_form["wins"] >= 2
+            away_form["wins"] >= 3
             and                          
-            away_form["losses"] <= 3    
+            away_form["losses"] <= 2    
             and                         
-            away_form["draws"] <= 4     
+            away_form["draws"] <= 3     
             and                        
-            away_edge >= 2                  
+            away_edge >= 4.0                 
             and
-            away_score_gap >= 5
+            away_score_gap >= 15
             and
-            away_gap >= 10
+            away_gap >= 15
             and
-            recent_away_gap >= 5
+            recent_away_gap >= 10
             and                         
-            away_form["recent_form_pct"] >= 40       
+            away_form["recent_form_pct"] >= 55       
             and
             away_form["avg_scored"] >= 1.50
             and
@@ -7512,7 +7512,7 @@ def analyze_prematch_match(match):
                 away_form["avg_scored"]
                 -
                 home_form["avg_scored"]
-            ) >= 0.30
+            ) >= 0.50
             and                          
 
             (
@@ -7522,26 +7522,26 @@ def analyze_prematch_match(match):
 
                 away_form["avg_conceded"]
 
-            ) >= 0.50       
+            ) >= 0.30       
             and
 
             (
                 away_form["goal_diff"]
                 -
                 home_form["goal_diff"]
-            ) >= 1
+            ) >= 2
             and                                   
             away_form["recent_avg_scored"] >= 1.50 
             and                          
-            away_form["recent_goal_diff"] >= 2  
+            away_form["recent_goal_diff"] >= 3  
             and
-            away_form["avg_conceded"] <= 1.30
+            away_form["avg_conceded"] <= 1.20
             and
-            home_form["avg_conceded"] >= 1.20
+            home_form["avg_conceded"] >= 1.30
             and                                   
-            home_form["recent_avg_conceded"] >= 1.2     
+            home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 65
+            away_probability >= 72
             and
             away_balance_ok         
             and
@@ -7551,10 +7551,8 @@ def analyze_prematch_match(match):
             and
             defense_ok
             and
-            not false_favourite
-          
-           and         
-            
+            not false_favourite      
+            and                     
             not draw_risk
         ):                               
 
