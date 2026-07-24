@@ -533,7 +533,7 @@ def get_match_odds(fixture_id):
                     away_odd, 
                     over25_odd,   
                     under25_odd,
-                    btts_odd                             
+                    btts_odd,                             
                     home_over15_odd,               
                     away_over15_odd,              
                     over35_odd       
