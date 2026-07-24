@@ -8444,7 +8444,12 @@ def prematch_loop():
 
                 odds_text = str(over25_odd)                            
                              
-
+            elif (                                
+                "UNDER 2.5" in market            
+                and                              
+                under25_odd is not None          
+            ):                                  
+                odds_text = str(under25_odd)      
         
             all_signals.append(                               
 
