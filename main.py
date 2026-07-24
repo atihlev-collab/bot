@@ -7958,9 +7958,9 @@ def analyze_prematch_match(match):
 
                     "🏠 HOME OVER 1.5",   
 
-                    confidence_from_score( 
-                        home_score        
-                    ),                     
+                    confidence_from_score(        
+                        home_over15_probability     
+                    ),                                            
 
                     round(                
                         home_over15_probability,      
@@ -8011,9 +8011,9 @@ def analyze_prematch_match(match):
 
                     "✈️ AWAY OVER 1.5",             
 
-                    confidence_from_score(          
-                        away_score                  
-                    ),                             
+                    confidence_from_score(        
+                        away_over15_probability     
+                    ),                                                 
 
                     round(                         
                          away_over15_probability,               
