@@ -2108,7 +2108,163 @@ def analyze_live_match(fixture):
 
     except:                         
 
-        return None      
+        return None     
+
+
+# =========================================================    
+# REST & FATIGUE ENGINE                                        
+# =========================================================    
+
+def calculate_rest_fatigue(                                    
+    games                                                       
+):                                                              
+
+    try:                                                       
+
+        if not games:                                           
+            return 0                                            
+
+        now = datetime.now(                                     
+            timezone.utc                                        
+        )                                                       
+
+        match_dates = []                                       
+
+        for game in games[:5]:                                 
+
+            try:                                               
+
+                game_date = datetime.fromisoformat(             
+                    game["fixture"]["date"].replace(             
+                        "Z",                                    
+                        "+00:00"                                
+                    )                                           
+                )                                               
+
+                match_dates.append(                             
+                    game_date                                  
+                )                                               
+
+            except Exception:                                  
+                continue                                       
+
+        if not match_dates:                                    
+            return 0                                            
+
+        # -------------------------------------------------     
+        # SORT: NEWEST MATCH FIRST                              
+        # -------------------------------------------------    
+
+        match_dates.sort(                                       
+            reverse=True                                        
+        )                                                       
+
+        last_match = match_dates[0]                             
+
+        rest_days = (                                          
+            now                                                 
+            -                                                   
+            last_match                                         
+        ).total_seconds() / 86400                               
+
+        # -------------------------------------------------    
+        # MATCHES IN LAST 8 DAYS                                
+        # -------------------------------------------------     
+
+        matches_last_8 = 0                                     
+
+        for game_date in match_dates:                           
+
+            days_ago = (                                        
+                now                                            
+                -                                              
+                game_date                                       
+            ).total_seconds() / 86400                          
+
+            if (                                                
+                0                                              
+                <=                                              
+                days_ago                                      
+                <=                                             
+                8                                               
+            ):                                                 
+
+                matches_last_8 += 1                             
+
+        # -------------------------------------------------     
+        # FATIGUE SCORE                                         
+        # -------------------------------------------------     
+
+        fatigue_adjustment = 0                                
+
+        # Very short recovery                                   
+
+        if rest_days < 3:                                       
+            fatigue_adjustment -= 4                            
+
+        elif rest_days < 4:                                     
+            fatigue_adjustment -= 3                            
+
+        elif rest_days < 5:                                    
+            fatigue_adjustment -= 1                            
+
+        # Good recovery                                         
+
+        elif (                                                  
+            rest_days >= 6                                      
+            and                                                 
+            rest_days <= 9                                     
+        ):                                                    
+
+            fatigue_adjustment += 2                             
+
+        # Too long without a competitive match                 
+
+        elif rest_days >= 15:                                  
+            fatigue_adjustment -= 1                            
+
+        # -------------------------------------------------     
+        # FIXTURE CONGESTION                                   
+        # -------------------------------------------------     
+
+        if matches_last_8 >= 4:                                 
+            fatigue_adjustment -= 3                            
+
+        elif matches_last_8 >= 3:                               
+            fatigue_adjustment -= 2                             
+
+        # -------------------------------------------------     
+        # SAFETY LIMIT                                         
+        # -------------------------------------------------     
+
+        fatigue_adjustment = max(                             
+            -4,                                                 
+            min(                                               
+                4,                                             
+                fatigue_adjustment                             
+            )                                                  
+        )                                                       
+
+        print(                                                  
+            "REST FATIGUE:",                                    
+            "REST=",                                           
+            round(rest_days, 1),                                
+            "MATCHES_8D=",                                      
+            matches_last_8,                                    
+            "ADJ=",                                             
+            fatigue_adjustment                                 
+        )                                                       
+
+        return fatigue_adjustment                               
+
+    except Exception as e:                                     
+
+        print(                                                 
+            "REST FATIGUE ERROR:",                              
+            repr(e)                                            
+        )                                                      
+
+        return 0                                               
 
 
 # =========================================================
