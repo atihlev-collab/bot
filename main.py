@@ -3329,19 +3329,19 @@ def analyze_prematch_match(match):
             away_odd is not None            
         ):                                                              
 
-        market_prob = no_vig_probabilities(      
+            market_prob = no_vig_probabilities(      
 
-            home_odd,                            
-            draw_odd,                          
-            away_odd                             
-
-        )                                                             
-
-        if market_prob:                         
-
-            market_home = market_prob[0]        
-            market_draw = market_prob[1]        
-            market_away = market_prob[2]        
+                home_odd,                            
+                draw_odd,                          
+                away_odd                             
+    
+            )                                                             
+    
+            if market_prob:                         
+    
+                market_home = market_prob[0]        
+                market_draw = market_prob[1]        
+                market_away = market_prob[2]        
 
             print(                              
 
