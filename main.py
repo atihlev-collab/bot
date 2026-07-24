@@ -6692,65 +6692,41 @@ def analyze_prematch_match(match):
 
         )                                 
 
-        home_probability = round(        
+        home_probability = max(                 
+            5,                                  
+            min(                                
+                95,                             
+                round(                          
+                    (                           
+                        max(                     
+                            1,                   
+                            home_score + 80      
+                        )                       
+                        /                       
+                        total_strength          
+                    ) * 100,                    
+                    1                           
+                )                               
+            )                                   
+        )                                       
 
-            (
-
-                max(                     
-
-                    1,                   
-
-                    home_score           
-
-                    +                    
-
-                    80                   
-
-                )                         
-
-                /                         
-
-                total_strength           
-
-            )                            
-
-            *                            
-
-            100,                          
-
-            1                            
-
-        )                                 
-
-        away_probability = round(        
-
-            (
-
-                max(                     
-
-                    1,                    
-
-                    away_score            
-
-                    +                    
-
-                    80                    
-
-                )                         
-
-                /                        
-
-                total_strength           
-
-            )                            
-
-            *                            
-
-            100,                         
-
-            1                             
-
-        )        
+        away_probability = max(                 
+            5,                                  
+            min(                                
+                95,                             
+                round(                          
+                    (                           
+                        max(                     
+                            1,                   
+                            away_score + 80      
+                        )                       
+                        /                       
+                        total_strength          
+                    ) * 100,                    
+                    1                           
+                )                               
+            )                                   
+        )                                       
 
 
         
