@@ -8334,7 +8334,7 @@ def send_prematch_signal(
         confidence               
 
     )                             
-    return sent_ok                                 
+                                    
     print(                                   
         "SIGNAL SAVED:",                     
         fixture_id,                           
