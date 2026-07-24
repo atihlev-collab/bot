@@ -8095,8 +8095,10 @@ def analyze_prematch_match(match):
 
                     "🛡 UNDER 2.5",    
 
-                    confidence_from_score(70), 
-
+                    confidence_from_score( 
+                        under_prob   
+                    ),
+                 
                     round(             
 
                         under_prob,    
