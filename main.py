@@ -9201,19 +9201,7 @@ def prematch_loop():
             ):                                                
 
                 odds_text = str(over35_odd)                   
-
-
-            if odds_text == "-":                               
-
-                print(                                        
-                    "SKIP NO BETANO ODDS:",                    
-                    home,                                      
-                    away,                                      
-                    market                                    
-                )                                             
-
-                continue                                      
-
+                                    
 
             all_signals.append(                               
 
