@@ -3800,7 +3800,199 @@ def market_roi_report():
     finally:                                                  
 
         if conn is not None:                                   
-            conn.close()                                       
+            conn.close()    
+
+
+# =========================================================    
+# PROBABILITY CALIBRATION                                     
+# =========================================================    
+
+def get_calibrated_probability(                                
+    market,                                                   
+    raw_probability,                                          
+    min_samples=20                                             
+):                                                            
+
+    try:                                                      
+
+        raw_probability = float(                              
+            raw_probability                                   
+        )                                                     
+
+        # PROBABILITY BUCKET                                   
+
+        bucket_start = int(                                    
+            raw_probability // 5                              
+        ) * 5                                                  
+
+        bucket_end = (                                        
+            bucket_start + 4.999                              
+        )                                                      
+
+        bucket_start = max(                                   
+            0,                                                 
+            bucket_start                                       
+        )                                                      
+
+        bucket_end = min(                                      
+            100,                                               
+            bucket_end                                        
+        )                                                      
+
+        # DATABASE                                            
+
+        conn = sqlite3.connect(                                
+            "v3_ai.db"                                        
+        )                                                     
+
+        cursor = conn.cursor()                                
+
+        cursor.execute(                                       
+            """                                               
+            SELECT result                                     
+            FROM signals                                      
+            WHERE market = ?                                   
+            AND confidence >= ?                                
+            AND confidence <= ?                               
+            AND result IN ('WIN', 'LOSS')                     
+            """,                                             
+            (                                                  
+                market,                                        
+                bucket_start,                                  
+                bucket_end                                   
+            )                                                  
+        )                                                     
+
+        rows = cursor.fetchall()                              
+
+        conn.close()                                         
+
+        samples = len(rows)                                   
+
+        # NOT ENOUGH HISTORY                                  
+
+        if samples < min_samples:                              
+
+            print(                                             
+                "CALIBRATION:",                               
+                market,                                        
+                "RAW=",                                       
+                round(raw_probability, 1),                    
+                "SAMPLES=",                                   
+                samples,                                      
+                "STATUS=NOT ENOUGH DATA"                       
+            )                                                  
+
+            return round(                                    
+                raw_probability,                               
+                1                                              
+            )                                                
+
+        # HISTORICAL RESULTS                                  
+
+        wins = sum(                                            
+            1                                                  
+            for row in rows                                   
+            if row[0] == "WIN"                                
+        )                                                      
+
+        losses = sum(                                         
+            1                                                 
+            for row in rows                                    
+            if row[0] == "LOSS"                               
+        )                                                     
+
+        total = (                                              
+            wins                                               
+            +                                                  
+            losses                                             
+        )                                                     
+
+        if total == 0:                                        
+
+            return round(                                      
+                raw_probability,                              
+                1                                              
+            )                                                  
+
+        historical_probability = (                            
+            wins                                               
+            /                                                  
+            total                                            
+        ) * 100                                              
+
+        # HISTORY WEIGHT                                      
+
+        history_weight = min(                                 
+            0.50,                                              
+            max(                                              
+                0.20,                                         
+                samples / 200                                 
+            )                                                 
+        )                                                      
+
+        raw_weight = (                                         
+            1.0                                                
+            -                                                  
+            history_weight                                     
+        )                                                     
+
+        calibrated_probability = (                             
+            raw_probability                                   
+            *                                                 
+            raw_weight                                        
+            +                                                  
+            historical_probability                             
+            *                                                  
+            history_weight                                    
+        )                                                      
+
+        calibrated_probability = max(                          
+            5,                                                
+            min(                                               
+                95,                                            
+                calibrated_probability                        
+            )                                                  
+        )                                                     
+
+        calibrated_probability = round(                       
+            calibrated_probability,                           
+            1                                                
+        )                                                     
+
+        print(                                                
+            "CALIBRATION:",                                    
+            market,                                            
+            "RAW=",                                           
+            round(raw_probability, 1),                        
+            "HIST=",                                          
+            round(historical_probability, 1),                  
+            "CAL=",                                           
+            calibrated_probability,                            
+            "WINS=",                                           
+            wins,                                              
+            "LOSSES=",                                         
+            losses,                                           
+            "SAMPLES=",                                        
+            samples,                                          
+            "WEIGHT=",                                        
+            round(history_weight, 2)                          
+        )                                                     
+
+        return calibrated_probability                        
+
+    except Exception as e:                                    
+
+        print(                                                
+            "CALIBRATION ERROR:",                              
+            market,                                            
+            repr(e)                                           
+        )                                                      
+
+        return round(                                         
+            float(raw_probability),                            
+            1                                                  
+        )                                                      
 
 
 # =========================================================   
