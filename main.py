@@ -3316,14 +3316,18 @@ def analyze_prematch_match(match):
         under25_odd = match_odds[4]
         btts_odd = match_odds[4]                  
 
-        if (                                       
-            home_odd is None    
-            or                            #12
-            draw_odd is None
-            or                                     
-            away_odd is None                        
-        ):                                         
-            return None                            
+        market_prob = None                   
+        market_home = None                  
+        market_draw = None                   
+        market_away = None                   
+
+        if (                                
+            home_odd is not None            
+            and                             
+            draw_odd is not None             
+            and                            
+            away_odd is not None            
+        ):                                                              
 
         market_prob = no_vig_probabilities(      
 
@@ -7816,7 +7820,7 @@ def analyze_prematch_match(match):
         if (
             btts_prob >= 73
             and
-            btts_conf >= 73
+            btts_conf >= 80
             and                          
             expected_goals >= 3.2         
             and
@@ -8475,9 +8479,13 @@ def prematch_loop():
    
 
     all_signals.sort(                      
-        reverse=True,                       
-        key=lambda x: x[0]                  
-    )                                       
+        reverse=True,                     
+        key=lambda x: (                    
+            x[0]                          
+            +                             
+            x[9]                           
+        ) / 2                              
+    )                                                            
 
     top_signals = []                        
     used_fixtures = set()                   
