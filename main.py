@@ -4822,7 +4822,7 @@ def analyze_prematch_match(match):
                 <=                       
                 home_odd                  
                 <=                        
-                2.70                      
+                2.10                      
 
             )                            
      
@@ -6587,7 +6587,7 @@ def analyze_prematch_match(match):
         
             away_odds_ok = (                      
         
-                1.30 <= away_odd <= 3.50         
+                1.30 <= away_odd <= 2.10         
         
             )                                    
          
