@@ -348,10 +348,38 @@ def get_match_odds(fixture_id):
         if not bookmakers:
             return None
 
-        bets = bookmakers[0].get(
-            "bets",
-            []
-        )
+        betano = None                         
+
+        for bookmaker in bookmakers:          
+
+            if (                              
+                bookmaker.get("id") == 32     
+                or                            
+                bookmaker.get("name") == "Betano" 
+            ):                               
+
+                betano = bookmaker             
+                break                         
+
+        if betano is None:                    
+
+            print(                             
+                "BETANO NOT FOUND:",          
+                fixture_id                     
+            )                                 
+
+            return None                       
+
+        bets = betano.get(                    
+            "bets",                            
+            []                                
+        )                                     
+
+        print(                                
+            "USING BOOKMAKER:",                
+            betano.get("id"),                  
+            betano.get("name")                
+        )                                     
 
         home_odd = None                              
         draw_odd = None                             
@@ -5578,17 +5606,7 @@ def analyze_prematch_match(match):
 
             home_score -= 3           
 
-        if (                         
-
-            away_form["avg_scored"] >= 2.0     
-
-            and
-
-            away_form["avg_conceded"] >= 1.5   
-
-        ):                            
-
-            away_score -= 3           
+      
 
                        
            
@@ -6351,6 +6369,16 @@ def analyze_prematch_match(match):
            )
 
         away_score *= 0.6
+
+        # AWAY EASY GOALS PENALTY          
+
+        if (                                 
+            away_form["avg_scored"] >= 2.0   
+            and                              
+            away_form["avg_conceded"] >= 1.5 
+        ):                                  
+
+            away_score -= 3                 
 
 
         # AWAY ANOMALY FILTER                  
