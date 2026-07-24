@@ -2332,6 +2332,19 @@ def get_team_form(team_id, venue=None):
         if len(games) < 3:
             return None
 
+        # REST & FATIGUE                                     
+
+        fatigue_adjustment = calculate_rest_fatigue(         
+            games                                             
+        )                                                    
+
+        print(                                              
+            "TEAM FATIGUE:",                                 
+            team_id,                                          
+            "ADJ=",                                          
+            fatigue_adjustment                               
+        )                                                    
+
         scored = 0
         conceded = 0
 
@@ -2546,6 +2559,9 @@ def get_team_form(team_id, venue=None):
         )                     
 
         result = {
+
+            "fatigue_adjustment":                             
+                fatigue_adjustment,                        
 
             "home_wins":           
                 home_wins,          
@@ -4878,6 +4894,25 @@ def analyze_prematch_match(match):
         home_score *= 0.6
 
 
+        # HOME REST & FATIGUE                                 
+
+        home_fatigue = home_form.get(                         
+            "fatigue_adjustment",                              
+            0                                                 
+        )                                                     
+
+        home_score += home_fatigue                            
+
+        print(                                                
+            "HOME FATIGUE:",                                   
+            home,                                             
+            "ADJ=",                                           
+            home_fatigue,                                     
+            "SCORE=",                                         
+            round(home_score, 2)                               
+        )                                                      
+
+
         if (                                 
 
             home_rank                           
@@ -6795,6 +6830,25 @@ def analyze_prematch_match(match):
            )
 
         away_score *= 0.6
+
+
+        # AWAY REST & FATIGUE                                 
+
+        away_fatigue = away_form.get(                         
+            "fatigue_adjustment",                              
+            0                                                  
+        )                                                     
+
+        away_score += away_fatigue                           
+
+        print(                                                 
+            "AWAY FATIGUE:",                                  
+            away,                                              
+            "ADJ=",                                            
+            away_fatigue,                                     
+            "SCORE=",                                          
+            round(away_score, 2)                               
+        )                                                      
 
         # AWAY EASY GOALS PENALTY          
 
