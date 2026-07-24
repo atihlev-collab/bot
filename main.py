@@ -9094,6 +9094,31 @@ def prematch_loop():
         if not match_odds:
             continue
 
+        if len(match_odds) < 9:               
+
+            print(                              
+                "OLD ODDS CACHE:",             
+                fixture_id,                    
+                len(match_odds),               
+                match_odds                      
+            )                                   
+
+            odds_cache.pop(                    
+                fixture_id,                     
+                None                           
+            )                                   
+
+            match_odds = get_match_odds(       
+                fixture_id                      
+            )                                   
+
+            if (                               
+                not match_odds                  
+                or                             
+                len(match_odds) < 9             
+            ):                                 
+                continue                       
+
         home_odd = match_odds[0]                     
         draw_odd = match_odds[1]                    
         away_odd = match_odds[2]                     
