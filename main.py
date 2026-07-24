@@ -138,25 +138,36 @@ def init_database():
 # TELEGRAM
 # =========================================================
 
-def send_telegram(message):
+def send_telegram(message):                       
 
-    try:
+    try:                                            
 
-        r = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={
-                "chat_id": CHAT_ID,
-                "text": message
-            },
-            timeout=20
-        )
+        r = requests.post(                         
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",  
+            json={                                 
+                "chat_id": CHAT_ID,                 
+                "text": message                     
+            },                                     
+            timeout=20                             
+        )                                          
 
-        
+        if r.status_code == 200:                   
+            return True                            
 
-    except Exception as e:
+        print(                                     
+            "TELEGRAM SEND FAILED:",                
+            r.status_code,                         
+            r.text                                 
+        )                                           
 
-        print("TELEGRAM ERROR")
-        print(repr(e))
+        return False                               
+
+    except Exception as e:                         
+
+        print("TELEGRAM ERROR")                    
+        print(repr(e))                              
+
+        return False                               
 
 # =========================================================
 # FILTERS
@@ -8298,9 +8309,10 @@ def send_prematch_signal(
 {confidence}%
 """                               
 
-    send_telegram(message)     
+     sent_ok = send_telegram(message)                
 
-
+    if not sent_ok:                                 
+        return False                              
     try:                                           
         odd_value = float(odds_text)               
     except (ValueError, TypeError):                
@@ -8322,7 +8334,7 @@ def send_prematch_signal(
         confidence               
 
     )                             
-
+    return sent_ok                                 
     print(                       
         "SIGNAL SAVED:",          
         fixture_id,               
@@ -8537,9 +8549,7 @@ def prematch_loop():
                 sent_prematch[key]
             ) < 86400:
 
-                continue
-
-        sent_prematch[key] = time.time()
+                continue       
 
         print(
             market,
@@ -8549,7 +8559,7 @@ def prematch_loop():
 
              
 
-        send_prematch_signal(
+            sent_ok = send_prematch_signal(            
 
             fixture_id,
 
@@ -8570,7 +8580,8 @@ def prematch_loop():
            
         )
 
-
+        if sent_ok:                                
+            sent_prematch[key] = time.time()                    
 
 
 # =========================================================
