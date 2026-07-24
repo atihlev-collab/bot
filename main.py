@@ -7492,6 +7492,26 @@ def analyze_prematch_match(match):
 
         if recent_attack_ok:
             away_score += 1
+
+
+        away_probability = max(                   
+            5,                                     
+            min(                                   
+                95,                                
+                round(                             
+                    (                              
+                        max(                        
+                            1,                      
+                            away_score + 80         
+                        )                          
+                        /                          
+                        total_strength            
+                    ) * 100,                       
+                    1                              
+                )                                  
+            )                                      
+        )                                          
+     
         
         if (
             not goal_match                        
