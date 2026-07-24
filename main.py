@@ -7862,13 +7862,53 @@ def analyze_prematch_match(match):
 
             print("CHECKING:", home, "vs", away)
 
+
+        home_over15_probability = (                    
+            1                                          
+            -                                          
+            poisson.pmf(0, home_attack)                
+            -                                          
+            poisson.pmf(1, home_attack)                
+        ) * 100                                        
+
+        home_over15_probability = round(               
+            max(                                       
+                5,                                     
+                min(                                   
+                    95,                                
+                    home_over15_probability            
+                )                                      
+            ),                                         
+            1                                          
+        )                                              
+
+        away_over15_probability = (                    
+            1                                          
+            -                                          
+            poisson.pmf(0, away_attack)                
+            -                                          
+            poisson.pmf(1, away_attack)                
+        ) * 100                                       
+
+        away_over15_probability = round(               
+            max(                                       
+                5,                                     
+                min(                                   
+                    95,                                
+                    away_over15_probability            
+                )                                      
+            ),                                         
+            1                                          
+        )                                              
+
+     
         # HOME OVER 1.5                  
 
         if (                              
 
             home_score >= 45               
             and                            
-            home_probability >= 72         
+            home_over15_probability >= 72                    
             and                            
             expected_goals >= 3.3          
             and                           
@@ -7906,7 +7946,7 @@ def analyze_prematch_match(match):
                     ),                     
 
                     round(                
-                        home_probability,  
+                        home_over15_probability,      
                         1                  
                     )                      
 
@@ -7922,7 +7962,7 @@ def analyze_prematch_match(match):
 
             away_score >= 45                        
             and                                     
-            away_probability >= 72                 
+            away_over15_probability >= 72                            
             and                                     
             expected_goals >= 3.3                   
             and                                    
@@ -7959,7 +7999,7 @@ def analyze_prematch_match(match):
                     ),                             
 
                     round(                         
-                        away_probability,          
+                         away_over15_probability,               
                         1                           
                     )                              
 
