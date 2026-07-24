@@ -5424,6 +5424,17 @@ def analyze_prematch_match(match):
 
         if recent_attack_ok:
             home_score += 1
+
+        home_probability = max(                    
+            5,                                     
+            min(                                   
+                95,                                
+                round(                             
+                    50 + (home_score * 0.60),      
+                    1                              
+                )                                  
+            )                                      
+        )                                          
         
         if (
             not goal_match                       
