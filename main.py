@@ -3803,142 +3803,196 @@ def market_roi_report():
             conn.close()                                       
 
 
-# =========================================================    
-# MARKET SELECTOR                                             
+# =========================================================   
+# MARKET SELECTOR V2 - MARKET AGREEMENT                       
 # =========================================================    
 
-def market_selector_score(                                   
+def market_selector_score(                                    
     market,                                                   
-    probability,                                              
+    probability,                                               
     confidence,                                               
     odds_text                                                  
-):                                                             
+):                                                            
 
-    try:                                                     
+    try:                                                      
 
         probability = float(probability)                      
-        confidence = float(confidence)                        
+        confidence = float(confidence)                         
+
+        # -------------------------------------------------    
+        # BASE SCORE                                          
+        # -------------------------------------------------   
 
         base_score = (                                        
             probability                                       
             +                                                 
             confidence                                         
-        ) / 2                                                 
+        ) / 2                                                  
+
+
+        # -------------------------------------------------    
+        # MARKET AGREEMENT                                     
+        # -------------------------------------------------    
+
+        market_bonus = 0.0                                    
+        market_gap = 0.0                                       
+        market_probability = 0.0                              
+        market_status = "NO ODDS"                             
 
         try:                                                  
             odd = float(odds_text)                             
-        except (                                             
-            TypeError,                                       
-            ValueError                                       
+        except (                                               
+            TypeError,                                         
+            ValueError                                         
         ):                                                    
-            odd = 0.0                                          
+            odd = 0.0                                         
 
-        value_bonus = 0.0                                    
 
         if odd > 1.0:                                         
 
-            implied_probability = (                           
+            market_probability = (                            
                 100                                            
                 /                                             
                 odd                                           
-            )                                                 
-
-            value_gap = (                                    
-                probability                                   
-                -                                             
-                implied_probability                            
             )                                                  
 
-            if value_gap >= 15:                               
-                value_bonus = 6                                
+            market_gap = (                                     
+                probability                                    
+                -                                              
+                market_probability                            
+            )                                                  
 
-            elif value_gap >= 10:                              
-                value_bonus = 4                               
 
-            elif value_gap >= 5:                               
-                value_bonus = 2                               
+            # BOT clearly stronger than market                
+            if market_gap >= 25:                              
 
-            elif value_gap < 0:                                
-                value_bonus = -5                               
+                market_bonus = 7                               
+                market_status = "STRONG VALUE"                 
 
-        performance = get_market_performance(                 
-            market                                            
+
+            elif market_gap >= 15:                             
+
+                market_bonus = 5                               
+                market_status = "VALUE"                        
+
+
+            elif market_gap >= 8:                              
+
+                market_bonus = 3                               
+                market_status = "GOOD VALUE"                  
+
+
+            # Model and market relatively close                
+            elif market_gap >= 0:                              
+
+                market_bonus = 1                             
+                market_status = "MARKET CONFIRMED"             
+
+
+            # Market slightly disagrees                       
+            elif market_gap >= -8:                             
+
+                market_bonus = 0                              
+                market_status = "NEUTRAL"                      
+
+
+            # Market strongly disagrees                       
+            elif market_gap >= -15:                            
+
+                market_bonus = -2                             
+                market_status = "MARKET WARNING"               
+
+
+            else:                                              
+
+                market_bonus = -4                             
+                market_status = "STRONG WARNING"              
+
+
+        # -------------------------------------------------   
+        # HISTORICAL MARKET ROI                               
+        # -------------------------------------------------    
+
+        performance = get_market_performance(                
+            market                                             
         )                                                     
 
         roi_bonus = 0.0                                       
 
-        if performance["bets"] >= 20:                          
+        if performance["bets"] >= 20:                         
 
-            roi = performance["roi"]                         
+            roi = performance["roi"]                          
 
             if roi >= 15:                                     
-                roi_bonus = 8                                 
+                roi_bonus = 8                                  
 
-            elif roi >= 8:                                   
-                roi_bonus = 5                                 
+            elif roi >= 8:                                    
+                roi_bonus = 5                                  
 
             elif roi >= 3:                                    
-                roi_bonus = 2                                 
+                roi_bonus = 2                                  
 
             elif roi <= -10:                                  
-                roi_bonus = -8                                
+                roi_bonus = -8                                 
 
             elif roi <= -5:                                   
                 roi_bonus = -4                                 
 
+
+        # -------------------------------------------------   
+        # FINAL SELECTOR SCORE                                
+        # -------------------------------------------------    
+
         final_score = (                                       
             base_score                                        
             +                                                 
-            value_bonus                                        
-            +                                                 
-            roi_bonus                                         
+            market_bonus                                      
+            +                                                  
+            roi_bonus                                          
         )                                                      
 
         final_score = max(                                    
-            0,                                                 
+            0,                                                
             min(                                              
                 100,                                           
-                final_score                                    
-            )                                                  
+                final_score                                   
+            )                                                
         )                                                      
 
+
         print(                                               
-            "MARKET SELECTOR:",                               
-            market,                                          
-            "PROB=",                                          
+            "MARKET SELECTOR V2:",                             
+            market,                                           
+            "MODEL=",                                         
             round(probability, 1),                            
-            "CONF=",                                           
-            round(confidence, 1),                              
-            "VALUE BONUS=",                                    
-            round(value_bonus, 1),                            
-            "BETS=",                                           
-            performance["bets"],                              
-            "ROI=",                                            
+            "MARKET=",                                         
+            round(market_probability, 1),                      
+            "GAP=",                                            
+            round(market_gap, 1),                             
+            "STATUS=",                                         
+            market_status,                                     
+            "BONUS=",                                         
+            market_bonus,                                     
+            "ROI=",                                           
             performance["roi"],                               
-            "FINAL=",                                          
-            round(final_score, 1)                             
+            "FINAL=",                                         
+            round(final_score, 1)                            
         )                                                      
 
         return round(                                         
-            final_score,                                      
-            2                                                 
+            final_score,                                       
+            2                                                  
         )                                                     
 
-    except Exception as e:                                    
 
-        print(                                                
+    except Exception as e:                                     
+
+        print(                                                 
             "MARKET SELECTOR ERROR:",                          
-            market,                                          
             repr(e)                                            
-        )                                                     
+        )                                                      
 
-        return (                                               
-            float(probability)                                 
-            +                                                 
-            float(confidence)                                  
-        ) / 2                                                 
-
-
+        return 0                                              
 # =========================================================
 # PREMATCH SCORE
 # =========================================================
