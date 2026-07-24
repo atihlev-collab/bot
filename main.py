@@ -8561,7 +8561,7 @@ def prematch_loop():
 
              
 
-            sent_ok = send_prematch_signal(            
+        sent_ok = send_prematch_signal(            
 
             fixture_id,
 
