@@ -2108,7 +2108,133 @@ def analyze_live_match(fixture):
 
     except:                         
 
-        return None                 
+        return None      
+
+
+# =========================================================    
+# FORM DECAY - RECENT MATCH WEIGHT                             
+# =========================================================    
+
+def calculate_form_decay(                                      
+    games,                                                      
+    team_id                                                    
+):                                                              
+
+    try:                                                       
+
+        if not games:                                          
+            return 50.0                                         
+
+        # Най-новият мач трябва да е първи                     
+        weights = [                                            
+            1.00,                                               
+            0.85,                                               
+            0.70,                                              
+            0.55,                                              
+            0.40                                               
+        ]                                                      
+
+        weighted_points = 0.0                                  
+        max_points = 0.0                                       
+
+        used_games = games[:5]                                  
+
+        for i, game in enumerate(used_games):                    
+
+            weight = weights[i]                                 
+
+            home_id = game["teams"]["home"]["id"]               
+            away_id = game["teams"]["away"]["id"]              
+
+            home_goals = (                                     
+                game["goals"]["home"]                           
+                or                                             
+                0                                              
+            )                                                  
+
+            away_goals = (                                      
+                game["goals"]["away"]                           
+                or                                              
+                0                                              
+            )                                                  
+
+            points = 0                                         
+
+            if team_id == home_id:                              
+
+                if home_goals > away_goals:                    
+                    points = 3                                  
+
+                elif home_goals == away_goals:                  
+                    points = 1                                  
+
+            elif team_id == away_id:                           
+
+                if away_goals > home_goals:                     
+                    points = 3                                  
+
+                elif away_goals == home_goals:                  
+                    points = 1                                  
+
+            else:                                               
+                continue                                        
+
+            weighted_points += (                               
+                points                                          
+                *                                              
+                weight                                         
+            )                                                  
+
+            max_points += (                                    
+                3                                               
+                *                                              
+                weight                                          
+            )                                                  
+
+        if max_points <= 0:                                    
+            return 50.0                                         
+
+        decay_form = (                                         
+            weighted_points                                     
+            /                                                  
+            max_points                                         
+        ) * 100                                                
+
+        decay_form = max(                                      
+            0,                                                  
+            min(                                                
+                100,                                           
+                decay_form                                      
+            )                                                  
+        )                                                      
+
+        print(                                                  
+            "FORM DECAY:",                                     
+            team_id,                                           
+            "GAMES=",                                           
+            len(used_games),                                    
+            "POINTS=",                                          
+            round(weighted_points, 2),                         
+            "MAX=",                                             
+            round(max_points, 2),                              
+            "FORM=",                                           
+            round(decay_form, 2)                               
+        )                                                       
+
+        return round(                                          
+            decay_form,                                         
+            2                                                   
+        )                                                       
+
+    except Exception as e:                                     
+
+        print(                                                  
+            "FORM DECAY ERROR:",                                
+            team_id,                                           
+            repr(e)                                            
+        )                                                      
+
+        return 50.0                                            
 
 
 # =========================================================
@@ -4009,7 +4135,30 @@ def market_selector_score(
     try:                                                      
 
         probability = float(probability)                      
-        confidence = float(confidence)                         
+        confidence = float(confidence)   
+
+
+        # CALIBRATED PROBABILITY                              
+
+        raw_probability = probability                         
+
+        calibrated_probability = (                            
+            get_calibrated_probability(                       
+                market,                                        
+                raw_probability                               
+            )                                                  
+        )                                                     
+
+        probability = calibrated_probability                   
+
+        print(                                                 
+            "SELECTOR CALIBRATION:",                            
+            market,                                            
+            "RAW=",                                           
+            round(raw_probability, 1),                        
+            "CAL=",                                            
+            round(calibrated_probability, 1)                   
+        )                                                      
 
         # -------------------------------------------------    
         # BASE SCORE                                          
