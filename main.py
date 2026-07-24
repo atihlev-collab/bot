@@ -3312,7 +3312,8 @@ def analyze_prematch_match(match):
         home_odd = match_odds[0]                   
         draw_odd = match_odds[1]                   
         away_odd = match_odds[2]                 
-        over25_odd = match_odds[3]                
+        over25_odd = match_odds[3] 
+        under25_odd = match_odds[4]
         btts_odd = match_odds[4]                  
 
         if (                                       
