@@ -3391,7 +3391,126 @@ def get_market_performance(
     finally:                                                 
 
         if conn is not None:                                  
-            conn.close()         
+            conn.close()     
+
+
+# =========================================================   
+# MARKET ROI REPORT                                           
+# =========================================================    
+
+def market_roi_report():                                     
+
+    conn = None                                               
+
+    try:                                                       
+
+        conn = sqlite3.connect(                               
+            "v3_ai.db"                                         
+        )                                                     
+
+        cur = conn.cursor()                                   
+
+        cur.execute(                                           
+            """                                                
+            SELECT DISTINCT market                           
+            FROM signals                                       
+            WHERE result IS NOT NULL                           
+            AND TRIM(result) != ''                             
+            ORDER BY market                                   
+            """                                               
+        )                                                     
+
+        rows = cur.fetchall()                                 
+
+        if not rows:                                          
+
+            print(                                            
+                "ROI REPORT: NO SETTLED SIGNALS"              
+            )                                                  
+
+            return []                                         
+
+        report = []                                           
+
+        for row in rows:                                      
+
+            market = row[0]                                   
+
+            if not market:                                     
+                continue                                       
+
+            stats = get_market_performance(                   
+                market,                                       
+                100                                           
+            )                                                 
+
+            if stats["bets"] == 0:                             
+                continue                                       
+
+            report.append(                                    
+                (                                              
+                    stats["roi"],                              
+                    stats["win_rate"],                         
+                    stats["bets"],                             
+                    stats["avg_odd"],                          
+                    market                                    
+                )                                              
+            )                                                  
+
+        report.sort(                                           
+            reverse=True,                                      
+            key=lambda x: x[0]                                 
+        )                                                      
+
+        print(                                                 
+            "=================================="                
+        )                                                     
+        print(                                                 
+            "MARKET PERFORMANCE / ROI"                         
+        )                                                      
+        print(                                                
+            "=================================="                
+        )                                                     
+
+        for (                                                  
+            roi,                                               
+            win_rate,                                          
+            bets,                                              
+            avg_odd,                                           
+            market                                            
+        ) in report:                                           
+
+            print(                                             
+                market,                                       
+                "| BETS:",                                     
+                bets,                                          
+                "| WIN:",                                      
+                f"{win_rate}%",                                
+                "| AVG ODD:",                                  
+                avg_odd,                                      
+                "| ROI:",                                     
+                f"{roi:+.1f}%"                                
+            )                                                 
+
+        print(                                                 
+            "=================================="                
+        )                                                     
+
+        return report                                         
+
+    except Exception as e:                                     
+
+        print(                                                
+            "MARKET ROI REPORT ERROR:",                        
+            repr(e)                                            
+        )                                                      
+
+        return []                                             
+
+    finally:                                                  
+
+        if conn is not None:                                   
+            conn.close()                                       
 
 
 # =========================================================    
