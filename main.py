@@ -5426,25 +5426,25 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 52
+            home_score >= 58
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 60
+            home_form["unbeaten_pct"] >= 65
             and
-            home_form["wins"] >= 2  
+            home_form["wins"] >= 3  
             and                         
-            home_form["losses"] <= 3      
+            home_form["losses"] <= 2      
             and                        
-            home_form["draws"] <= 4    
+            home_form["draws"] <= 3    
             and                         
-            home_edge >= 2.5                 
+            home_edge >= 4.0                 
             and
-            form_gap >= 10
+            form_gap >= 15
             and
-            recent_gap >= 5
+            recent_gap >= 10
             and
-            home_form["recent_form_pct"] >= 50                                                              
+            home_form["recent_form_pct"] >= 55                                                              
             and                                   
             home_form["avg_scored"] >= 1.50
             and
@@ -5470,11 +5470,11 @@ def analyze_prematch_match(match):
                 home_form["goal_diff"]
                 -
                 away_form["goal_diff"]
-            ) >= 1
+            ) >= 2
             and
             home_form["recent_avg_scored"] >= 1.50
             and                           
-            home_form["recent_goal_diff"] >= 2   
+            home_form["recent_goal_diff"] >= 3  
             and
             home_form["avg_conceded"] <= 1.30
             and
@@ -5482,7 +5482,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 68
+            home_probability >= 72
             and
             home_balance_ok 
             and
