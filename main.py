@@ -445,7 +445,16 @@ def get_match_odds(fixture_id):
 
                         under25_odd = float(             
                             value["odd"]                 
-                        )                               
+                        )       
+
+                    elif value["value"] in [            
+                        "Over 3.5",                      
+                        "Over 3.5 Goals"                 
+                    ]:                                 
+
+                        over35_odd = float(             
+                            value["odd"]                
+                        )                              
 
                         print(                          
                             "UNDER2.5 ODD =",            
@@ -525,7 +534,9 @@ def get_match_odds(fixture_id):
                     over25_odd,   
                     under25_odd,
                     btts_odd                             
-
+                    home_over15_odd,               
+                    away_over15_odd,              
+                    over35_odd       
                 )                                        
                                      
                 odds_cache[fixture_id] = ( 
@@ -6222,10 +6233,18 @@ def analyze_prematch_match(match):
             away_form["avg_conceded"] >= 1.20
             and
             away_form["recent_avg_conceded"] >= 0.80      
-            and
-            home_probability >= 72
-            and
-            home_balance_ok 
+            and                                    
+            home_probability >= 72                 
+            and                                   
+
+            (                                     
+                home_probability                  
+                -                                  
+                market_home                       
+            ) <= 30                               
+            and                                   
+
+            home_balance_ok                       
             and
             dominance_ok
             and
@@ -9080,7 +9099,11 @@ def prematch_loop():
         away_odd = match_odds[2]                     
         over25_odd = match_odds[3]  
         under25_odd = match_odds[4]
-        btts_odd = match_odds[5]                     
+        btts_odd = match_odds[5]   
+
+        home_over15_odd = match_odds[6]    
+        away_over15_odd = match_odds[7]    
+        over35_odd = match_odds[8]         
 
         country = match["league"]["country"]
         league = match["league"]["name"]
@@ -9113,7 +9136,18 @@ def prematch_loop():
                 probability                                            
             )                                                          
 
-            odds_text = "-"                                            
+            odds_text = "-"       
+
+                print(                          
+                    "SKIP NO BETANO ODDS:",    
+                    home,                       
+                    away,                      
+                    market                      
+                )                              
+
+                continue     
+
+            all_signals.append(
 
             if (                                                        
 
@@ -9160,7 +9194,32 @@ def prematch_loop():
                 and                              
                 under25_odd is not None          
             ):                                  
-                odds_text = str(under25_odd)      
+                odds_text = str(under25_odd)    
+
+
+            elif (                                
+                "HOME OVER 1.5" in market         
+                and                               
+                home_over15_odd is not None        
+            ):                                     
+
+                odds_text = str(home_over15_odd)   
+
+            elif (                               
+                "AWAY OVER 1.5" in market          
+                and                                
+                away_over15_odd is not None        
+            ):                                     
+
+                odds_text = str(away_over15_odd)   
+
+            elif (                                
+                "OVER 3.5" in market              
+                and                               
+                over35_odd is not None             
+            ):                                     
+
+                odds_text = str(over35_odd)       
         
             all_signals.append(                               
 
