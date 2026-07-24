@@ -8516,15 +8516,7 @@ def analyze_prematch_match(match):
             )                          
             
          
-    all_signals.sort(                       
-        reverse=True,                       
-        key=lambda x: market_selector_score( 
-            x[8],                           
-            x[0],                           
-            x[9],                          
-            x[10]                           
-        )                                   
-    )                                       
+            
         print(
             "SIGNAL:",
             signals
@@ -8789,7 +8781,18 @@ def prematch_loop():
             +                             
             x[9]                           
         ) / 2                              
-    )                                                            
+    )     
+
+    all_signals.sort(                          
+        reverse=True,                          
+        key=lambda x: market_selector_score(    
+            x[8],                              
+            x[0],                              
+            x[9],                              
+            x[10]                              
+        )                                     
+    )                                          
+
 
     top_signals = []                        
     used_fixtures = set()                   
