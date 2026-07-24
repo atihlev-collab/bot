@@ -7402,9 +7402,9 @@ def analyze_prematch_match(match):
 
             form_gap > -10    
            
-           and
+            and
            
-           away_probability >= market_away + 10
+            market_away >= away_probability + 10     
 
         )             
 
