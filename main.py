@@ -8202,10 +8202,10 @@ def analyze_prematch_match(match):
 
                 (                      
 
-                    "🚀 OVER 3.5",     
-
-                    over_conf,        
-
+                    "🚀 OVER 3.5",                           
+                    confidence_from_score(     
+                        over35_prob            
+                    ),                        
                     round(            
 
                         over35_prob,                   
