@@ -8275,7 +8275,13 @@ def send_prematch_signal(
 {confidence}%
 """                               
 
-    send_telegram(message)        
+    send_telegram(message)     
+
+
+     try:                                           
+        odd_value = float(odds_text)               
+    except (ValueError, TypeError):                
+        odd_value = 0.0                            
 
     save_signal(                  
 
@@ -8289,7 +8295,7 @@ def send_prematch_signal(
 
         market,                   
 
-        0,                       
+        odd_value,                       
         confidence               
 
     )                             
