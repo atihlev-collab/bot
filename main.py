@@ -3325,7 +3325,7 @@ def analyze_prematch_match(match):
         away_odd = match_odds[2]                 
         over25_odd = match_odds[3] 
         under25_odd = match_odds[4]
-        btts_odd = match_odds[4]                  
+        btts_odd = match_odds[5]                  
 
         market_prob = None                   
         market_home = None                  
@@ -8309,7 +8309,7 @@ def send_prematch_signal(
 {confidence}%
 """                               
 
-     sent_ok = send_telegram(message)                
+    sent_ok = send_telegram(message)                
 
     if not sent_ok:                                 
         return False                              
@@ -8335,12 +8335,14 @@ def send_prematch_signal(
 
     )                             
     return sent_ok                                 
-    print(                       
-        "SIGNAL SAVED:",          
-        fixture_id,               
-        market,                   
-        confidence                
-    )                             
+    print(                                   
+        "SIGNAL SAVED:",                     
+        fixture_id,                           
+        market,                               
+        confidence                           
+    )                                        
+
+    return True                                       
 
 # =========================================================
 # PREMATCH LOOP
@@ -8387,7 +8389,7 @@ def prematch_loop():
         away_odd = match_odds[2]                     
         over25_odd = match_odds[3]  
         under25_odd = match_odds[4]
-        btts_odd = match_odds[4]                     
+        btts_odd = match_odds[5]                     
 
         country = match["league"]["country"]
         league = match["league"]["name"]
