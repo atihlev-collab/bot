@@ -8094,11 +8094,41 @@ def analyze_prematch_match(match):
 
    
 
-        # OVER 3.5                     
+        # OVER 3.5     
+
+
+        over35_prob = 0                            
+
+        for h in range(8):                         
+            for a in range(8):                     
+                if h + a >= 4:                     
+                    over35_prob += (                
+                        poisson.pmf(                
+                            h,                      
+                            home_attack             
+                        )                           
+                        *                           
+                        poisson.pmf(                
+                            a,                     
+                            away_attack            
+                        )                           
+                    )                               
+
+        over35_prob = round(                       
+            max(                                   
+                5,                                 
+                min(                               
+                    95,                            
+                    over35_prob * 100              
+                )                                  
+            ),                                     
+            1                                      
+        )                                          
+     
 
         if (                          
 
-            over_prob >= 78            
+            over35_prob >= 65                                 
 
             and                        
 
@@ -8144,7 +8174,7 @@ def analyze_prematch_match(match):
 
                     round(            
 
-                        over_prob,     
+                        over35_prob,                   
 
                         1             
 
