@@ -335,7 +335,8 @@ def get_match_odds(fixture_id):
         home_odd = None                              
         draw_odd = None                             
         away_odd = None                             
-        over25_odd = None                            
+        over25_odd = None    
+        under25_odd = None
         btts_odd = None                            
 
         for bet in bets:                             
@@ -382,7 +383,21 @@ def get_match_odds(fixture_id):
 
                         over25_odd = float(            
                             value["odd"]               
-                        )                              
+                        )       
+
+                    elif value["value"] in [            
+                        "Under 2.5",                    
+                        "Under 2.5 Goals"                
+                    ]:                                  
+
+                        under25_odd = float(             
+                            value["odd"]                 
+                        )                               
+
+                        print(                          
+                            "UNDER2.5 ODD =",            
+                            under25_odd                  
+                        )                               
 
                         print(                         
                             "OVER2.5 ODD =",           
@@ -454,7 +469,8 @@ def get_match_odds(fixture_id):
                     home_odd,             
                     draw_odd,             
                     away_odd, 
-                    over25_odd,                          
+                    over25_odd,   
+                    under25_odd,
                     btts_odd                             
 
                 )                                        
@@ -8350,7 +8366,8 @@ def prematch_loop():
         home_odd = match_odds[0]                     
         draw_odd = match_odds[1]                    
         away_odd = match_odds[2]                     
-        over25_odd = match_odds[3]                  
+        over25_odd = match_odds[3]  
+        under25_odd = match_odds[4]
         btts_odd = match_odds[4]                     
 
         country = match["league"]["country"]
@@ -8449,12 +8466,31 @@ def prematch_loop():
             )                                                 
    
 
-    all_signals.sort(
-        reverse=True,
-        key=lambda x: x[0]
-    )
+    all_signals.sort(                      
+        reverse=True,                       
+        key=lambda x: x[0]                  
+    )                                       
 
-    top_signals = all_signals[:3] 
+    top_signals = []                        
+    used_fixtures = set()                   
+
+    for signal_item in all_signals:         
+
+        fixture_id = signal_item[1]         
+
+        if fixture_id in used_fixtures:     
+            continue                        
+
+        top_signals.append(                 
+            signal_item                     
+        )                                   
+
+        used_fixtures.add(                  
+            fixture_id                      
+        )                                   
+
+        if len(top_signals) >= 3:           
+            break                           
 
     for (
         probability,
