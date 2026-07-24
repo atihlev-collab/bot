@@ -9151,15 +9151,6 @@ def prematch_loop():
             )                                                 
    
 
-    all_signals.sort(                      
-        reverse=True,                     
-        key=lambda x: (                    
-            x[0]                          
-            +                             
-            x[9]                           
-        ) / 2                              
-    )     
-
     all_signals.sort(                          
         reverse=True,                          
         key=lambda x: market_selector_score(    
@@ -9432,46 +9423,37 @@ def live_loop():
 """
 )          
          
-if __name__ == "__main__":
+if __name__ == "__main__":                         
 
-    print("MAIN V3 STARTED")
-   
-    init_database()
+    print("MAIN V3 STARTED")                      
 
-    last_prematch_scan = 0
+    init_database()                               
 
-while True:                     
+    last_prematch_scan = 0                         
 
-    if (                        
+    while True:                                    
 
-        time.time()           
-        -                       
-        last_prematch_scan       
-        >=                      
-        900                      
+        if (                                       
+            time.time()                            
+            -                                     
+            last_prematch_scan                     
+            >=                                    
+            900                                   
+        ):                                         
 
-    ):            
+            check_prematch_results()               
 
-        check_prematch_results()              
+            market_roi_report()                    
 
-        prematch_loop()                        
+            prematch_loop()                        
 
-        last_prematch_scan = (                 
-            time.time()                        
-        )                                     
+            last_prematch_scan = (                
+                time.time()                        
+            )                                      
 
-        prematch_loop()         
+        live_loop()                               
 
-        last_prematch_scan = (   
-
-            time.time()         
-
-        )                      
-
-    live_loop()                 
-
-    time.sleep(300)             
-
+        time.sleep(300)                            
 
 
 
