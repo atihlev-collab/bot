@@ -7858,12 +7858,7 @@ def analyze_prematch_match(match):
             home_strength > away_strength  
             and                            
             home_edge >= 2                
-            and                            
-            match_odds                   
-            and                            
-            home_odd is not None      
-            and                            
-            1.35 <= home_odd <= 2.80 
+             
 
         ):                                
 
@@ -8321,16 +8316,7 @@ def prematch_loop():
             ):                                                       
 
                 odds_text = str(over25_odd)                            
-
-            elif (                                                     
-
-                "OVER 3.5" in market                                   
-                and                                                   
-                over25_odd is not None                                 
-
-            ):                                                         
-
-                odds_text = str(over25_odd)                             
+                             
 
         
             all_signals.append(                               
