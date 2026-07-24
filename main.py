@@ -8278,7 +8278,7 @@ def send_prematch_signal(
     send_telegram(message)     
 
 
-     try:                                           
+    try:                                           
         odd_value = float(odds_text)               
     except (ValueError, TypeError):                
         odd_value = 0.0                            
