@@ -358,7 +358,10 @@ def get_match_odds(fixture_id):
         away_odd = None                             
         over25_odd = None    
         under25_odd = None
-        btts_odd = None                            
+        btts_odd = None 
+        home_over15_odd = None                      
+        away_over15_odd = None                        
+        over35_odd = None   
 
         for bet in bets:                             
 
