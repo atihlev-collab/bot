@@ -326,6 +326,16 @@ def get_match_odds(fixture_id):
             []
         )
 
+        print(                               
+            "BOOKMAKERS:",                   
+            [                                
+                (                            
+                    b.get("id"),             
+                    b.get("name")            
+                )                             
+                for b in bookmakers          
+            ]                                
+        )                                    
         if len(bookmakers) < 3:     
 
             print(                  
