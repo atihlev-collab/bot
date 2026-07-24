@@ -8568,9 +8568,15 @@ def live_loop():
         match_odds = get_match_odds(              
 
             fixture_id                           
-
         )                                         
 
+        home_odd = None                           
+        away_odd = None                           
+
+        if match_odds:                            
+            home_odd = match_odds[0]              
+            away_odd = match_odds[2]              
+     
         if (                                   
             home_odd is not None               
             or                                 
