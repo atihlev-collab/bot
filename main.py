@@ -3243,6 +3243,264 @@ def save_signal(
     conn.commit()
     conn.close()
 
+
+# =========================================================    
+# PREMATCH RESULT CHECKER                                    
+# =========================================================   
+
+def evaluate_prematch_result(                                
+    market,                                                    
+    home_goals,                                               
+    away_goals                                                
+):                                                            
+
+    try:                                                      
+
+        market_text = str(                                     
+            market                                             
+        ).upper()                                             
+
+        total_goals = (                                       
+            home_goals                                        
+            +                                                  
+            away_goals                                         
+        )                                                     
+
+        if "HOME WIN" in market_text:                          
+            return (                                          
+                "WIN"                                          
+                if home_goals > away_goals                     
+                else "LOSS"                                   
+            )                                                  
+
+        if "AWAY WIN" in market_text:                          
+            return (                                           
+                "WIN"                                          
+                if away_goals > home_goals                     
+                else "LOSS"                                   
+            )                                                  
+
+        if "HOME OVER 1.5" in market_text:                     
+            return (                                          
+                "WIN"                                          
+                if home_goals >= 2                             
+                else "LOSS"                                   
+            )                                                  
+
+        if "AWAY OVER 1.5" in market_text:                      
+            return (                                           
+                "WIN"                                         
+                if away_goals >= 2                            
+                else "LOSS"                                   
+            )                                                  
+
+        if "OVER 3.5" in market_text:                         
+            return (                                           
+                "WIN"                                          
+                if total_goals >= 4                           
+                else "LOSS"                                    
+            )                                                 
+        if "OVER 2.5" in market_text:                           
+            return (                                         
+                "WIN"                                          
+                if total_goals >= 3                            
+                else "LOSS"                                    
+            )                                                 
+
+        if "UNDER 2.5" in market_text:                         
+            return (                                          
+                "WIN"                                          
+                if total_goals <= 2                           
+                else "LOSS"                                    
+            )                                                  
+
+        if "BTTS" in market_text:                              
+            return (                                           
+                "WIN"                                          
+                if (                                           
+                    home_goals >= 1                            
+                    and                                        
+                    away_goals >= 1                          
+                )                                              
+                else "LOSS"                                  
+            )                                                  
+
+        return None                                            
+
+    except Exception as e:                                    
+
+        print(                                                
+            "RESULT EVALUATE ERROR:",                          
+            market,                                           
+            repr(e)                                           
+        )                                                     
+
+        return None                                            
+
+
+def check_prematch_results():                                 
+
+    conn = None                                              
+
+    try:                                                      
+
+        conn = sqlite3.connect(                                
+            "v3_ai.db"                                         
+        )                                                      
+
+        cur = conn.cursor()                                   
+
+        cur.execute(                                         
+            """                                               
+            SELECT                                            
+                id,                                           
+                fixture_id,                                    
+                market                                         
+            FROM signals                                       
+            WHERE result IS NULL                              
+            OR TRIM(result) = ''                              
+            """                                               
+        )                                                     
+
+        pending = cur.fetchall()                              
+
+        print(                                                 
+            "RESULT CHECK PENDING:",                          
+            len(pending)                                      
+        )                                                      
+
+        for (                                                 
+            signal_id,                                        
+            fixture_id,                                       
+            market                                            
+        ) in pending:                                          
+
+            try:                                              
+
+                response = requests.get(                       
+                    f"{BASE_URL}/fixtures",                    
+                    headers=HEADERS,                            
+                    params={                                  
+                        "id": fixture_id                        
+                    },                                         
+                    timeout=20                                 
+                ).json()                                      
+
+                fixtures = response.get(                      
+                    "response",                               
+                    []                                         
+                )                                             
+
+                if not fixtures:                               
+                    continue                                   
+
+                fixture = fixtures[0]                         
+
+                status = (                                     
+                    fixture                                   
+                    .get(                                      
+                        "fixture",                             
+                        {}                                    
+                    )                                          
+                    .get(                                      
+                        "status",                              
+                        {}                                    
+                    )                                          
+                    .get(                                     
+                        "short"                                 
+                    )                                          
+                )                                              
+
+                if status not in (                            
+                    "FT",                                      
+                    "AET",                                     
+                    "PEN"                                      
+                ):                                             
+                    continue                                   
+
+                home_goals = (                                
+                    fixture                                    
+                    .get(                                     
+                        "goals",                                
+                        {}                                    
+                    )                                          
+                    .get(                                      
+                        "home"                                 
+                    )                                          
+                )                                             
+
+                away_goals = (                                
+                    fixture                                   
+                    .get(                                      
+                        "goals",                                
+                        {}                                    
+                    )                                          
+                    .get(                                     
+                        "away"                                  
+                    )                                          
+                )                                             
+
+                if (                                           
+                    home_goals is None                         
+                    or                                        
+                    away_goals is None                        
+                ):                                             
+                    continue                                  
+
+                result = evaluate_prematch_result(            
+                    market,                                    
+                    home_goals,                                
+                    away_goals                                
+                )                                             
+
+                if result is None:                             
+                    continue                                  
+
+                cur.execute(                                  
+                    """                                        
+                    UPDATE signals                             
+                    SET result = ?                             
+                    WHERE id = ?                               
+                    """,                                       
+                    (                                          
+                        result,                                
+                        signal_id                              
+                    )                                         
+                )                                              
+
+                conn.commit()                                 
+
+                print(                                        
+                    "RESULT SAVED:",                            
+                    fixture_id,                                
+                    market,                                    
+                    home_goals,                                
+                    "-",                                      
+                    away_goals,                               
+                    result                                    
+                )                                              
+
+            except Exception as e:                            
+
+                print(                                         
+                    "FIXTURE RESULT ERROR:",                    
+                    fixture_id,                               
+                    repr(e)                                   
+                )                                              
+
+    except Exception as e:                                    
+
+        print(                                                 
+            "RESULT CHECK ERROR:",                             
+            repr(e)                                           
+        )                                                     
+
+    finally:                                                  
+
+        if conn is not None:                                   
+            conn.close()                                       
+
+
 # =========================================================   
 # MARKET PERFORMANCE / ROI                                    
 # =========================================================   
@@ -9192,7 +9450,15 @@ while True:
         >=                      
         900                      
 
-    ):                           
+    ):            
+
+        check_prematch_results()              
+
+        prematch_loop()                        
+
+        last_prematch_scan = (                 
+            time.time()                        
+        )                                     
 
         prematch_loop()         
 
