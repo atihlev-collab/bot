@@ -3300,7 +3300,9 @@ def analyze_prematch_match(match):
         btts_odd = match_odds[4]                  
 
         if (                                       
-            home_odd is None                       
+            home_odd is None    
+            or                            #12
+            draw_odd is None
             or                                     
             away_odd is None                        
         ):                                         
