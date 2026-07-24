@@ -3243,6 +3243,293 @@ def save_signal(
     conn.commit()
     conn.close()
 
+# =========================================================   
+# MARKET PERFORMANCE / ROI                                    
+# =========================================================   
+
+def get_market_performance(                                   
+    market,                                                   
+    limit=100                                                 
+):                                                            
+
+    conn = None                                               
+
+    try:                                                      
+
+        conn = sqlite3.connect(                                
+            "v3_ai.db"                                        
+        )                                                      
+
+        cur = conn.cursor()                                   
+
+        cur.execute(                                          
+            """                                                
+            SELECT odd, result                                
+            FROM signals                                      
+            WHERE market = ?                                  
+            AND result IS NOT NULL                            
+            AND TRIM(result) != ''                            
+            ORDER BY id DESC                                  
+            LIMIT ?                                            
+            """,                                              
+            (                                                  
+                market,                                       
+                limit                                         
+            )                                                 
+        )                                                     
+
+        rows = cur.fetchall()                                 
+
+        settled = 0                                           
+        wins = 0                                             
+        losses = 0                                            
+        total_staked = 0.0                                     
+        total_return = 0.0                                    
+        odds_sum = 0.0                                        
+        odds_count = 0                                        
+
+        for odd, result in rows:                              
+
+            result_text = str(                                
+                result                                         
+            ).strip().upper()                                 
+
+            if result_text not in (                           
+                "WIN",                                         
+                "LOSS"                                         
+            ):                                               
+                continue                                      
+
+            settled += 1                                      
+            total_staked += 1.0                               
+
+            try:                                             
+                odd_value = float(odd)                         
+            except (                                          
+                TypeError,                                    
+                ValueError                                    
+            ):                                                
+                odd_value = 0.0                              
+
+            if odd_value > 1.0:                               
+                odds_sum += odd_value                         
+                odds_count += 1                                
+
+            if result_text == "WIN":                            
+                wins += 1                                     
+
+                if odd_value > 1.0:                           
+                    total_return += odd_value                   
+
+            elif result_text == "LOSS":                       
+                losses += 1                                  
+
+        if settled == 0:                                      
+            return {                                         
+                "bets": 0,                                    
+                "wins": 0,                                     
+                "losses": 0,                                  
+                "win_rate": 0.0,                               
+                "avg_odd": 0.0,                                
+                "roi": 0.0                                     
+            }                                                 
+
+        win_rate = (                                          
+            wins                                              
+            /                                                 
+            settled                                           
+        ) * 100                                               
+
+        if total_staked > 0:                                  
+            roi = (                                            
+                (                                             
+                    total_return                               
+                    -                                         
+                    total_staked                              
+                )                                             
+                /                                              
+                total_staked                                   
+            ) * 100                                          
+        else:                                                  
+            roi = 0.0                                          
+
+        if odds_count > 0:                                    
+            avg_odd = (                                        
+                odds_sum                                       
+                /                                              
+                odds_count                                     
+            )                                                 
+        else:                                                
+            avg_odd = 0.0                                     
+
+        return {                                              
+            "bets": settled,                                   
+            "wins": wins,                                     
+            "losses": losses,                                 
+            "win_rate": round(win_rate, 1),                   
+            "avg_odd": round(avg_odd, 2),                    
+            "roi": round(roi, 1)                              
+        }                                                     
+
+    except Exception as e:                                   
+
+        print(                                                
+            "MARKET ROI ERROR:",                              
+            market,                                           
+            repr(e)                                            
+        )                                                      
+
+        return {                                              
+            "bets": 0,                                        
+            "wins": 0,                                        
+            "losses": 0,                                       
+            "win_rate": 0.0,                                  
+            "avg_odd": 0.0,                                   
+            "roi": 0.0                                        
+        }                                                     
+
+    finally:                                                 
+
+        if conn is not None:                                  
+            conn.close()         
+
+
+# =========================================================    
+# MARKET SELECTOR                                             
+# =========================================================    
+
+def market_selector_score(                                   
+    market,                                                   
+    probability,                                              
+    confidence,                                               
+    odds_text                                                  
+):                                                             
+
+    try:                                                     
+
+        probability = float(probability)                      
+        confidence = float(confidence)                        
+
+        base_score = (                                        
+            probability                                       
+            +                                                 
+            confidence                                         
+        ) / 2                                                 
+
+        try:                                                  
+            odd = float(odds_text)                             
+        except (                                             
+            TypeError,                                       
+            ValueError                                       
+        ):                                                    
+            odd = 0.0                                          
+
+        value_bonus = 0.0                                    
+
+        if odd > 1.0:                                         
+
+            implied_probability = (                           
+                100                                            
+                /                                             
+                odd                                           
+            )                                                 
+
+            value_gap = (                                    
+                probability                                   
+                -                                             
+                implied_probability                            
+            )                                                  
+
+            if value_gap >= 15:                               
+                value_bonus = 6                                
+
+            elif value_gap >= 10:                              
+                value_bonus = 4                               
+
+            elif value_gap >= 5:                               
+                value_bonus = 2                               
+
+            elif value_gap < 0:                                
+                value_bonus = -5                               
+
+        performance = get_market_performance(                 
+            market                                            
+        )                                                     
+
+        roi_bonus = 0.0                                       
+
+        if performance["bets"] >= 20:                          
+
+            roi = performance["roi"]                         
+
+            if roi >= 15:                                     
+                roi_bonus = 8                                 
+
+            elif roi >= 8:                                   
+                roi_bonus = 5                                 
+
+            elif roi >= 3:                                    
+                roi_bonus = 2                                 
+
+            elif roi <= -10:                                  
+                roi_bonus = -8                                
+
+            elif roi <= -5:                                   
+                roi_bonus = -4                                 
+
+        final_score = (                                       
+            base_score                                        
+            +                                                 
+            value_bonus                                        
+            +                                                 
+            roi_bonus                                         
+        )                                                      
+
+        final_score = max(                                    
+            0,                                                 
+            min(                                              
+                100,                                           
+                final_score                                    
+            )                                                  
+        )                                                      
+
+        print(                                               
+            "MARKET SELECTOR:",                               
+            market,                                          
+            "PROB=",                                          
+            round(probability, 1),                            
+            "CONF=",                                           
+            round(confidence, 1),                              
+            "VALUE BONUS=",                                    
+            round(value_bonus, 1),                            
+            "BETS=",                                           
+            performance["bets"],                              
+            "ROI=",                                            
+            performance["roi"],                               
+            "FINAL=",                                          
+            round(final_score, 1)                             
+        )                                                      
+
+        return round(                                         
+            final_score,                                      
+            2                                                 
+        )                                                     
+
+    except Exception as e:                                    
+
+        print(                                                
+            "MARKET SELECTOR ERROR:",                          
+            market,                                          
+            repr(e)                                            
+        )                                                     
+
+        return (                                               
+            float(probability)                                 
+            +                                                 
+            float(confidence)                                  
+        ) / 2                                                 
+
+
 # =========================================================
 # PREMATCH SCORE
 # =========================================================
@@ -8229,22 +8516,15 @@ def analyze_prematch_match(match):
             )                          
             
          
-        signals.sort(                 
-
-            reverse=True,             
-
-            key=lambda x: (           
-
-                x[1]                 
-
-                +                    
-
-                x[2]                  
-
-            ) / 2                     
-
-        )             
-
+    all_signals.sort(                       
+        reverse=True,                       
+        key=lambda x: market_selector_score( 
+            x[8],                           
+            x[0],                           
+            x[9],                          
+            x[10]                           
+        )                                   
+    )                                       
         print(
             "SIGNAL:",
             signals
