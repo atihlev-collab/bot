@@ -13,7 +13,7 @@ import logging
     
 
 from scipy.stats import poisson
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from telegram import Bot
