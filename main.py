@@ -8644,6 +8644,132 @@ def send_prematch_signal(
 # PREMATCH LOOP
 # =========================================================
 
+
+# =========================================================
+# TIPSTER PRO FINAL - BLOOM-STYLE VALUE / QUALITY ENGINE
+# =========================================================
+
+TIPSTER_RULES = {
+    "HOME WIN":      (74.0, 80.0, 1.35, 2.80, 2.0),
+    "AWAY WIN":      (74.0, 80.0, 1.40, 3.20, 2.0),
+    "OVER 2.5":      (73.0, 78.0, 1.40, 2.50, 2.0),
+    "BTTS":          (72.0, 78.0, 1.40, 2.50, 2.0),
+    "UNDER 2.5":     (72.0, 78.0, 1.40, 2.60, 2.0),
+    "HOME OVER 1.5": (73.0, 78.0, 1.35, 2.70, 2.0),
+    "AWAY OVER 1.5": (73.0, 78.0, 1.40, 3.00, 2.0),
+    "OVER 3.5":      (74.0, 80.0, 1.55, 3.20, 2.0),
+}
+
+def tipster_market_key(market):
+    m = str(market or "").upper()
+    for key in (
+        "HOME OVER 1.5", "AWAY OVER 1.5", "OVER 3.5",
+        "OVER 2.5", "UNDER 2.5", "BTTS", "HOME WIN", "AWAY WIN"
+    ):
+        if key in m:
+            return key
+    return m.strip()
+
+def tipster_price_metrics(probability, odd):
+    try:
+        p = float(probability)
+        o = float(odd)
+        if o <= 1.0:
+            return -999.0, -999.0
+        edge = p - (100.0 / o)
+        ev = (p / 100.0) * o - 1.0
+        return edge, ev
+    except Exception:
+        return -999.0, -999.0
+
+def tipster_final_gate(market, probability, confidence, odd):
+    try:
+        p = float(probability)
+        c = float(confidence)
+        o = float(odd)
+    except Exception:
+        return False, -999.0, -999.0, "BAD_DATA"
+
+    key = tipster_market_key(market)
+    min_p, min_c, min_o, max_o, min_edge = TIPSTER_RULES.get(
+        key, (74.0, 80.0, 1.40, 3.00, 2.0)
+    )
+    edge, ev = tipster_price_metrics(p, o)
+
+    if p < min_p:
+        return False, edge, ev, "LOW_PROB"
+    if c < min_c:
+        return False, edge, ev, "LOW_CONF"
+    if o < min_o:
+        return False, edge, ev, "ODD_LOW"
+    if o > max_o:
+        return False, edge, ev, "ODD_HIGH"
+    if edge < min_edge:
+        return False, edge, ev, "NO_EDGE"
+    if p >= 90.0 and c < 82.0:
+        return False, edge, ev, "HIGH_PROB_WEAK_SUPPORT"
+
+    return True, edge, ev, "PASS"
+
+def tipster_selector_score(market, probability, confidence, odd):
+    ok, edge, ev, _ = tipster_final_gate(
+        market, probability, confidence, odd
+    )
+    if not ok:
+        return -1000000.0
+
+    p = float(probability)
+    c = float(confidence)
+    o = float(odd)
+    key = tipster_market_key(market)
+
+    score = (
+        p * 0.46
+        + c * 0.32
+        + max(-10.0, min(edge, 25.0)) * 0.14
+        + max(-0.20, min(ev, 0.50)) * 16.0
+    )
+
+    if key in ("HOME WIN", "AWAY WIN", "OVER 2.5", "BTTS"):
+        score += 1.0
+    if o >= 3.0:
+        score -= 2.0
+
+    return round(score, 3)
+
+def tipster_filter_signals(all_signals):
+    passed = []
+    for item in all_signals:
+        try:
+            probability, fixture_id, match_date, kickoff_time, country, league, home, away, market, confidence, odds_text = item
+
+            if odds_text in (None, "", "-"):
+                print("TIPSTER REJECT:", home, away, market, "NO_ODDS")
+                continue
+
+            odd = float(odds_text)
+            ok, edge, ev, reason = tipster_final_gate(
+                market, probability, confidence, odd
+            )
+
+            print(
+                "TIPSTER GATE:", home, away, market,
+                "PROB=", probability,
+                "CONF=", confidence,
+                "ODD=", odd,
+                "EDGE=", round(edge, 2),
+                "EV=", round(ev, 3),
+                "RESULT=", reason
+            )
+
+            if ok:
+                passed.append(item)
+
+        except Exception as e:
+            print("TIPSTER FILTER ERROR:", repr(e))
+
+    return passed
+
 def prematch_loop():
 
     print("PREMATCH SCAN START")
@@ -8814,9 +8940,14 @@ def prematch_loop():
             )                                                 
    
 
+    # TIPSTER PRO FINAL GATE
+    all_signals = tipster_filter_signals(
+        all_signals
+    )
+
     all_signals.sort(                          
         reverse=True,                          
-        key=lambda x: market_selector_score(    
+        key=lambda x: tipster_selector_score(    
             x[8],                              
             x[0],                              
             x[9],                              
@@ -9117,7 +9248,7 @@ if __name__ == "__main__":
 
         live_loop()                               
 
-        time.sleep(300)                       
+        time.sleep(300)                      
                          
 
 
