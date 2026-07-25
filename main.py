@@ -890,1225 +890,382 @@ def calculate_card_pressure(
 def analyze_live_match(fixture):
     try:
         fixture_id = fixture["fixture"]["id"]
+        minute = fixture["fixture"]["status"].get("elapsed") or 0
 
-        minute = fixture["fixture"]["status"]["elapsed"]
-        
-        home_goals = fixture["goals"].get("home", 0) or 0
-        away_goals = fixture["goals"].get("away", 0) or 0
-        current_goals = home_goals + away_goals
-        
+        if minute < 25 or minute > 90:
+            return None
 
         home_team = fixture["teams"]["home"]["name"]
         away_team = fixture["teams"]["away"]["name"]
+        country = fixture["league"].get("country", "")
 
-
-        country = fixture["league"]["country"]    
-
-        if (                                      
-
-            country in [                          
-
-                "Russia",                          
-
-                "Belarus"                          
-
-            ]                                      
-
-        ):                                        
-
-            return None                            
-
-
-        banned = [
-
-            "russia",
-            "belarus"
-
+        check_text = f"{home_team} {away_team}".lower()
+        blocked_live = [
+            "reserve", "reserves", "women", "female",
+            "u17", "u18", "u19", "u20", "u21", "u22", "u23",
+            "russia", "belarus"
         ]
 
-        check_text = (
-            home_team +
-            " " +
-            away_team
-        ).lower()
+        if country in ["Russia", "Belarus"]:
+            return None
 
-        for word in banned:
+        if any(word in check_text for word in blocked_live):
+            return None
 
-            if word in check_text:
-                return None
+        stats = get_statistics(fixture_id)
 
-        text = (
-            home_team +
-            " " +
-            away_team
-        ).lower()
-
-        blocked = [
-
-            "res",
-            "reserve",
-
-            "women",
-
-            "u17",
-            "u18",
-            "u19",
-            "u20",
-            "u21",
-            "u22",
-            "u23"
-
-        ]
-
-        for word in blocked:
-
-            if word in text:
-                return None
-
-        stats = get_statistics(
-            fixture_id
-        )
-         
-
-        print(                       
-            "LIVE STATS:",          
-            fixture_id,              
-            len(stats)               
-        )                           
+        print("LIVE STATS:", fixture_id, len(stats))
 
         if len(stats) < 2:
-
-            print(
-                "NO STATS:",
-                fixture_id
-            )
-
-            return None         
+            return None
 
         home_stats = stats[0]
         away_stats = stats[1]
 
-        home_red = extract(
-            home_stats,
-            "Red Cards"
-        )
+        home = fixture["goals"].get("home", 0) or 0
+        away = fixture["goals"].get("away", 0) or 0
+        total = home + away
+        goal_diff = abs(home - away)
 
-        away_red = extract(
-            away_stats,
-            "Red Cards"
-        )
+        home_red = extract(home_stats, "Red Cards")
+        away_red = extract(away_stats, "Red Cards")
+        home_shots_on = extract(home_stats, "Shots on Goal")
+        away_shots_on = extract(away_stats, "Shots on Goal")
+        home_total_shots = extract(home_stats, "Total Shots")
+        away_total_shots = extract(away_stats, "Total Shots")
+        home_corners = extract(home_stats, "Corner Kicks")
+        away_corners = extract(away_stats, "Corner Kicks")
+        home_fouls = extract(home_stats, "Fouls")
+        away_fouls = extract(away_stats, "Fouls")
+        home_yellow = extract(home_stats, "Yellow Cards")
+        away_yellow = extract(away_stats, "Yellow Cards")
+        home_xg = extract(home_stats, "Expected Goals")
+        away_xg = extract(away_stats, "Expected Goals")
 
-        home_pressure = calculate_pressure(
-            home_stats
-        )
-
-        away_pressure = calculate_pressure(
-            away_stats
-        )
-
-        # FORM BONUS
+        home_pressure = calculate_pressure(home_stats)
+        away_pressure = calculate_pressure(away_stats)
 
         home_form = get_team_form(
             fixture["teams"]["home"]["id"],
             venue="home"
         )
-
         away_form = get_team_form(
             fixture["teams"]["away"]["id"],
             venue="away"
         )
 
-        if home_form:                                              
+        # Small form adjustment. Live statistics remain the main signal.
+        if home_form:
+            form_bonus = (
+                home_form["form_pct"] * 0.40
+                + home_form["recent_form_pct"] * 0.30
+                + home_form["unbeaten_pct"] * 0.20
+                + (home_form["avg_scored"] * 100 / 3) * 0.10
+            )
+            home_pressure += min(12, round(form_bonus / 10))
 
-            form_bonus = (                                        
-        
-                home_form["form_pct"] * 0.40                       
-                +
-                home_form["recent_form_pct"] * 0.30               
-                +
-                home_form["unbeaten_pct"] * 0.20                
-                +
-                (
-                    home_form["avg_scored"] * 100 / 3
-                ) * 0.10                                         
-        
-            )                                                      
-        
-            home_pressure += min(                                
-        
-                18,                                                
-        
-                round(form_bonus / 8)                            
-        
-            )             
+        if away_form:
+            form_bonus = (
+                away_form["form_pct"] * 0.40
+                + away_form["recent_form_pct"] * 0.30
+                + away_form["unbeaten_pct"] * 0.20
+                + (away_form["avg_scored"] * 100 / 3) * 0.10
+            )
+            away_pressure += min(12, round(form_bonus / 10))
 
-        if away_form:                                             
+        # xG adjustment.
+        if home_xg >= 1.5:
+            home_pressure += 8
+        elif home_xg >= 0.9:
+            home_pressure += 4
 
-            form_bonus = (                                        
-        
-                away_form["form_pct"] * 0.40                       
-                +
-                away_form["recent_form_pct"] * 0.30              
-                +
-                away_form["unbeaten_pct"] * 0.20                
-                +
-                (
-                    away_form["avg_scored"] * 100 / 3
-                ) * 0.10                                       
-        
-            )                                                     
-        
-            away_pressure += min(                                
-        
-                18,                                              
-        
-                round(form_bonus / 8)                           
-        
-            )      
-         
-        home_pressure = min(
-            home_pressure,
-            100
-        )
+        if away_xg >= 1.5:
+            away_pressure += 8
+        elif away_xg >= 0.9:
+            away_pressure += 4
 
-        away_pressure = min(
-            away_pressure,
-            100
-        )
-
-
-        home = fixture["goals"]["home"] or 0     
-        away = fixture["goals"]["away"] or 0      
-
-        goal_diff = abs(                         
-
-            home - away                           
-
-        )                                         
-
-
-        # GAME STATE ENGINE           
-
-        if goal_diff >= 2:             
-
-            if home > away:               
-
-                if minute >= 60:          
-
-                    home_pressure -= 10   
-                    away_pressure += 6   
-
-                if minute >= 75:          
-
-                    home_pressure -= 5    
-
-            elif away > home:             
-
-                if minute >= 60:          
-
-                    away_pressure -= 10   
-                    home_pressure += 6    
-
-                if minute >= 75:         
-
-                    away_pressure -= 5    
-
-        elif goal_diff == 1:             
-
-            if home > away:             
-
-                if minute >= 70:         
-
-                    home_pressure -= 4  
-                    away_pressure += 4  
-
-            elif away > home:            
-
-                if minute >= 70:         
-
-                    away_pressure -= 4   
-                    home_pressure += 4   
-     
-
-        if home_form and home_form["avg_scored"] < 0.9:
-
-            home_pressure -= 8
-
-        if away_form and away_form["avg_scored"] < 0.9:
-
-            away_pressure -= 8
-
-        if (                              
-            away_form                     
-            and                            
-            away_form["avg_conceded"] >= 1.5   
-        ):                                
-
-            home_pressure += 5             
-
-
-        if (                               
-            home_form                     
-            and                            
-            home_form["avg_conceded"] >= 1.5  
-        ):                                 
-
-            away_pressure += 5             
-         
-     
+        # Red cards strongly change the game state.
         if home_red > away_red:
-
-            home_pressure -= 35
-            away_pressure += 20
-
-        home_xg = extract(
-            home_stats,
-            "Expected Goals"
-        )
-
-        away_xg = extract(
-            away_stats,
-            "Expected Goals"
-        )
-
-        if home_xg >= 1.2:
-
-            home_pressure += 10
-
-        elif home_xg >= 0.8:
-
-            home_pressure += 5
-
-        if away_xg >= 1.2:
-
-            away_pressure += 10
-
-        elif away_xg >= 0.8:
-
-           away_pressure += 5
-
-        if away_red > home_red:
-
-            away_pressure -= 35
-            home_pressure += 20
-
-        home_shots_on = extract(
-            home_stats,
-            "Shots on Goal"
-        )
-
-        away_shots_on = extract(
-            away_stats,
-            "Shots on Goal"
-        )
-
-        if minute >= 35 and home_shots_on == 0:
-  
-            home_pressure -= 10
-
-        if away_shots_on == 0:
-
-            away_pressure -= 10
-
-        if home_shots_on == 0:
-
-            away_pressure += 5
-
-        if away_shots_on == 0:
-
-            home_pressure += 5
-          
-        home_total_shots = extract(
-            home_stats,
-            "Total Shots"
-        )
-
-        away_total_shots = extract(
-            away_stats,
-            "Total Shots"
-        )
-
-        if home_shots_on >= 6:
-            home_pressure += 5
-
-        if away_shots_on >= 6:
-            away_pressure += 5
-        
-        home_corners = extract(
-            home_stats,
-            "Corner Kicks"
-        )
-
-        away_corners = extract(
-            away_stats,
-            "Corner Kicks"
-        )   
-
-        home_fouls = extract(                 
-            home_stats,                       
-            "Fouls"                           
-        )                                    
-
-        away_fouls = extract(                  
-            away_stats,                       
-            "Fouls"                            
-        )                                   
-
-        home_yellow = extract(                
-            home_stats,                        
-            "Yellow Cards"                    
-        )                                    
-
-        away_yellow = extract(                
-            away_stats,                       
-            "Yellow Cards"                     
-        )                                    
-
-        print(                                
-            "CARD STATS:",                    
-            home_fouls,                       
-            away_fouls,                      
-            home_yellow,                      
-            away_yellow                       
-        )                                    
-
-        shots_diff = abs(
-            home_shots_on -
-            away_shots_on
-        )
-
-        corners_diff = abs(
-            home_corners -
-            away_corners
-        )
-
-        dominance = abs(
-            home_pressure -
-            away_pressure
-        )             
-
-
-        print(
-            "LIVE MINUTE:",
-            fixture_id,
-            minute
-        )
-
-        if not minute:
-            return None
-
-        if minute < 25:
-            return None
-
-        # 🚩 FIRST HALF OVER 1.5 CORNERS            
-
-        first_half_corner = False         
-
-        if (                               
-
-            35 <= minute <= 45              
-            and                             
-
-            max(                            
-
-                home_pressure,             
-                away_pressure               
-
-            ) >= 78                        
-            and                            
-
-            max(                            
-
-                home_shots_on,             
-                away_shots_on              
-
-            ) >= 4                          
-            and                             
-
-            (                             
-
-                home_corners              
-                +                          
-                away_corners              
-
-            ) <= 7                        
-
-        ):                                 
-
-            first_half_corner = True        
-
-            print(                         
-
-                "FIRST HALF CORNER MODE",   
-
-                fixture_id,                
-
-                minute,                     
-
-                home_corners,              
-
-                away_corners                
-
-            )                             
-     
-
-        print(
-            "PASSED MINUTE:",
-            fixture_id
-        )
-
-        if minute > 90:
-            return None
-
-        # CARD PRESSURE                     
-
-        card_probability = (             
-
-            calculate_card_pressure(      
-
-                minute,                   
-
-                home_fouls,               
-                away_fouls,                
-
-                home_yellow,              
-                away_yellow,              
-
-                home_red,                 
-                away_red,                 
-
-                home_pressure,            
-                away_pressure            
-
-            )                             
-
-        )                                
-
-
-        print(                           
-
-            "CARD PROB:",                
-
-            card_probability,             
-
-            home_fouls,                   
-            away_fouls,                   
-
-            home_yellow,                 
-            away_yellow                   
-
-        )                               
-
-
-        if (                             
-
-            minute >= 55                
-            and                          
-
-            card_probability >= 82       
-            and                          
-
-            (                            
-
-                home_yellow             
-                +                         
-                away_yellow              
-
-            ) >= 3                       
-            and                          
-
-            (                            
-
-                home_fouls               
-                +                        
-                away_fouls               
-
-            ) >= 20                      
-
-        ):       
-
-            if not market_available(            
-                fixture_id,                   
-                "Cards"                         
-            ):                                 
-                return None                     
-
-            return (                            
-
-                "🟨 OVER 1.5 NEXT CARDS",       
-
-                88,                            
-
-                minute,                         
-
-                card_probability                
-
-            )                                           
-
-            
-
-
-        best_pressure = max(         
-
-            home_pressure,            
-
-            away_pressure             
-
-        )                            
-
-        minimum_pressure = 50        
-
-        if minute >= 60:             
-
-            minimum_pressure = 54     
-
-        if minute >= 70:             
-
-            minimum_pressure = 57     
-
-        if (                         
-
-            best_pressure             
-
-            <                         
-
-            minimum_pressure         
-
-        ):                            
-
-            return None               
-
-        if dominance < 7:            
-
-            return None               
-
-        min_shots = 4               
-
-        if minute >= 60:              
-
-            min_shots = 5             
-
-        if minute >= 70:            
-
-            min_shots = 5            
-     
-
-        home = fixture["goals"]["home"] or 0     
-        away = fixture["goals"]["away"] or 0     
-
-        total = home + away                      
-
-        if total >= 5:                            
-            min_shots -= 1                        
-
-        if (                                     
-
-            max(                                  
-
-                home_shots_on,                   
-
-                away_shots_on                    
-
-            )                                    
-
-            <                                     
-
-            min_shots                            
-
-        ):                                       
-
-            return None                           
-
-        goal_diff = abs(                         
-
-            home - away                           
-
-        )     
-
-
-        # CARD BONUS ENGINE              
-
-        if goal_diff <= 1:               
-
-            card_probability += 4        
-
-        if (                            
-
-            home == away                 
-
-        ):                              
-
-            card_probability += 4       
-
-        if minute >= 75:                
-
-            card_probability += 4       
-
-        if (                            
-
-            home_pressure >= 75         
-
-            and                          
-
-            away_pressure >= 75          
-
-        ):                               
-
-            card_probability += 5        
-
-        if (                            
-
-            (                            
-
-                home_fouls               
-
-                +                        
-
-                away_fouls               
-
-            )                            
-
-            >=                           
-
-            28                           
-
-        ):                              
-
-            card_probability += 5       
-
-        if (                             
-
-            (                            
-
-                home_yellow              
-
-                +                        
-
-                away_yellow              
-
-            )                           
-
-            >=                           
-
-            4                            
-
-        ):                              
-
-            card_probability += 8        
-
-        card_probability = min(         
-
-            95,                          
-
-            card_probability            
-
-        )      
-
-
-        # EXTREME CARD MODE              
-
-        if (                             
-
-            minute >= 80                 
-
-            and                          
-
-            card_probability >= 85       
-
-            and                          
-
-            (                            
-
-                home_pressure            
-
-                +                        
-
-                away_pressure            
-
-            )                            
-
-            >=                           
-
-            140                          
-
-            and                          
-
-            (                            
-
-                home_fouls               
-
-                +                        
-
-                away_fouls               
-
-            )                            
-
-            >=                           
-
-            26                           
-
-            and                          
-
-            (                            
-
-                home_yellow              
-
-                +                        
-
-                away_yellow              
-
-            )                            
-
-            >=                           
-
-            4                            
-
-        ):         
-
-            if not market_available(             
-                fixture_id,                      
-                "Cards"                          
-            ):                                  
-                return None                      
-
-            return (                             
-
-                "🟨 OVER 1.5 NEXT CARDS",         
-
-                92,                              
-
-                minute,                          
-
-                92                                
-
-            )                                                   
-
-  
-     
-        # FAST GOALS OVERRIDE
-
-        if (
-            minute <= 40
-            and
-            total >= 2
-            and
-            goal_diff >= 2
-            and
-            max(
-                home_pressure,
-                away_pressure
-            ) >= 80
-        ):
-
+            home_pressure -= 25
+            away_pressure += 15
+        elif away_red > home_red:
+            away_pressure -= 25
+            home_pressure += 15
+
+        # Team leading comfortably often reduces attacking urgency.
+        if goal_diff >= 2 and minute >= 60:
             if home > away:
+                home_pressure -= 8
+                away_pressure += 5
+            else:
+                away_pressure -= 8
+                home_pressure += 5
 
-                if not market_available(                  
-                    fixture_id,                           
-                    "Next Goal"                           
-                ):                                        
-                    return None                           
+        home_pressure = max(0, min(100, home_pressure))
+        away_pressure = max(0, min(100, away_pressure))
 
+        best_pressure = max(home_pressure, away_pressure)
+        pressure_diff = abs(home_pressure - away_pressure)
+        total_shots_on = home_shots_on + away_shots_on
+        total_shots = home_total_shots + away_total_shots
+        total_corners = home_corners + away_corners
+        total_fouls = home_fouls + away_fouls
+        total_cards = home_yellow + away_yellow
+
+        print(
+            "LIVE ENGINE:", home_team, away_team,
+            "MIN=", minute,
+            "SCORE=", home, away,
+            "PRESS=", home_pressure, away_pressure,
+            "SOT=", home_shots_on, away_shots_on,
+            "SHOTS=", home_total_shots, away_total_shots,
+            "CORNERS=", home_corners, away_corners,
+            "XG=", home_xg, away_xg,
+            "CARDS=", total_cards,
+            "FOULS=", total_fouls
+        )
+
+        # =========================================================
+        # FIRST HALF OVER 1.5 CORNERS
+        # =========================================================
+        if 35 <= minute <= 43:
+            fh_corner_probability = 50
+            fh_corner_probability += max(0, best_pressure - 65) * 0.8
+            fh_corner_probability += min(10, total_shots * 0.5)
+            fh_corner_probability += min(8, total_corners * 1.2)
+            fh_corner_probability = round(min(95, fh_corner_probability), 1)
+
+            if (
+                best_pressure >= 72
+                and total_shots >= 10
+                and total_corners >= 2
+                and fh_corner_probability >= 72
+            ):
                 return (
-
-                    "🎯 NEXT GOAL HOME",
-                    90,
+                    "🚩 FIRST HALF OVER 1.5 CORNERS",
+                    fh_corner_probability,
                     minute,
-                    90
-
+                    fh_corner_probability
                 )
 
-            else:
-
-                if not market_available(                   
-                    fixture_id,                           
-                    "Next Goal"                           
-                ):                                        
-                    return None                           
-
-                return (
-
-                    "🎯 NEXT GOAL AWAY",
-                    90,
-                    minute,
-                    90
-
-                )         
-                   
-
-        print(
-            "OVER15 CHECK:",
-            home_team,
-            away_team,
+        # =========================================================
+        # OVER 1.5 NEXT CARDS
+        # =========================================================
+        card_probability = calculate_card_pressure(
             minute,
+            home_fouls,
+            away_fouls,
+            home_yellow,
+            away_yellow,
+            home_red,
+            away_red,
             home_pressure,
-            away_pressure,
-            home_shots_on,
-            away_shots_on,
-            home_corners,
-            away_corners
-        )       
-
-
-                # NORMAL NEXT GOAL
-
-        if (                              
-
-            minute > 40                  
-
-            and
-
-            minute < 75                     
-
-            and
-
-            max(                           
-
-                home_pressure,            
-
-                away_pressure              
-
-            ) >= 65                        
-
-            and
-
-            max(                            
-
-                home_shots_on,              
-
-                away_shots_on              
-
-            ) >= 4                         
-
-        ):                                  
-
-            if home_pressure > away_pressure:   
-
-                if not market_available(                 
-                    fixture_id,                         
-                    "Next Goal"                            
-                ):                                         
-                    return None                            
-
-                return (                        
-
-                    "🎯 NEXT GOAL HOME",         
-
-                    min(                         
-
-                        95,                      
-
-                        home_pressure           
-
-                    ),                          
-
-                    minute,                     
-
-                    min(                       
-
-                        95,                     
-
-                        home_pressure            
-
-                    )                           
-
-                )                                
-
-            elif away_pressure > home_pressure:  
-
-                if not market_available(                  
-                    fixture_id,                            
-                    "Next Goal"                            
-                ):                                        
-                    return None                          
-
-                return (                         
-
-                    "🎯 NEXT GOAL AWAY",         
-
-                    min(                        
-
-                        95,                      
-
-                        away_pressure            
-
-                    ),                           
-
-                    minute,                     
-
-                    min(                        
-
-                        95,                      
-
-                        away_pressure           
-
-                    )                           
-
-                )                                
-
-        # OVER 1.5 REMAINING GOALS    
-
-        if (                            
-
-            minute <= 75                
-
-            and                        
-
-            max(                        
-
-                home_pressure,          
-
-                away_pressure           
-
-            ) >= 55                     
-
-            and                         
-
-            (                           
-
-                home_shots_on           
-
-                +                       
-
-                away_shots_on           
-
-            ) >= 4                      
-
-            and                         
-
-            (                           
-
-                home_corners            
-
-                +                       
-
-                away_corners            
-
-            ) >= 3                      
-
-        ):                             
-
-            return (                   
-
-                "🚀 OVER 1.5 REMAINING GOALS", 
-
-                90,                     
-
-                minute,                 
-
-                90                    
-                
-            )                           
-                    
-
-        # OVER 1.5 NEXT CORNERS          
-
-        corner_probability = 50        
-
-        corner_probability += (        
-
-            max(                        
-
-                home_pressure,         
-
-                away_pressure           
-
-            ) - 70                      
-
-        ) * 2                           
-
-        corner_probability += (         
-
-            home_corners               
-
-            +                          
-
-            away_corners                
-
-        )                               
-
-        corner_probability += (         
-
-            shots_diff                  
-
-            *                           
-
-            2                          
-
-        )                               
-
-        corner_probability = min(       
-
-            95,                        
-
-            max(                        
-
-                50,                    
-
-                corner_probability      
-
-            )                          
-
-        )        
-
-
-        print(
-            "CORNER CHECK:",
-            home_team,
-            away_team,
-            minute,
-            corner_probability,
-            home_corners,
-            away_corners
+            away_pressure
         )
 
-        if (                           
-
-            minute >= 60               
-
-            and                        
-
-            minute <= 88               
-
-            and                        
-
-            (                         
-
-                home_corners          
-
-                +                       
-
-                away_corners           
-
-            ) >= 6                      
-
-            and                       
-
-            (                          
-
-                home_total_shots        
-
-                +                       
-
-                away_total_shots      
-
-            ) >= 10                    
-
-            and                        
-
-            max(                       
-
-                home_pressure,         
-
-                away_pressure           
-
-            ) >= 70                    
-
-            and                         
-
-            corner_probability >= 70    
-
-        ):        
-
-            if not market_available(                  
-                fixture_id,                           
-                "Corners"                             
-            ):                                        
-                return None                            
-
-            return (                    
-
-                "🚩 OVER 1.5 NEXT CORNERS",   
-
-                corner_probability,     
-
-                minute,                
-
-                corner_probability      
-
-            )          
-
-        print(
-            "PASSED CORNERS BLOCK:",
-            home_team,
-            away_team,
-            minute
-        )
-
-
-                # LATE GOAL                   
-
-        if (                           
-
-            minute >= 75               
-
-            and                       
-
-            minute <= 90               
-
-            and                        
-
-            max(                       
-
-                home_pressure,        
-
-                away_pressure          
-
-            ) >= 55                    
-
-            and                       
-
-            (                          
-
-                home_total_shots       
-
-                +                      
-
-                away_total_shots      
-
-            ) >= 8                   
-
-            and                        
-
-            (                          
-
-                home_corners           
-
-                +                      
-
-                away_corners          
-
-            ) >= 5
-
-
-            and                       
-
-            (                         
-
-                home_xg >= 1.2        
-
-                or                    
-
-                away_xg >= 1.2         
-
-            )                         
-
-        ):                            
-
-            return (                   
-
-            "🔥 LATE GOAL",        
-
-            90,                     
-
-            minute,                 
-
-            90                     
-
-        )                          
-
-    except:                         
-
-        return None     
+        if goal_diff <= 1:
+            card_probability += 4
+        if home == away:
+            card_probability += 3
+        if minute >= 70:
+            card_probability += 4
+        if total_fouls >= 28:
+            card_probability += 5
+        if total_cards >= 4:
+            card_probability += 6
+
+        card_probability = min(95, card_probability)
+
+        print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
+
+        if (
+            55 <= minute <= 84
+            and card_probability >= 84
+            and total_cards >= 2
+            and total_fouls >= 18
+            and goal_diff <= 2
+        ):
+            return (
+                "🟨 OVER 1.5 NEXT CARDS",
+                card_probability,
+                minute,
+                card_probability
+            )
+
+        # =========================================================
+        # FAST NEXT GOAL - 25 TO 42
+        # =========================================================
+        if 25 <= minute <= 42 and total >= 1:
+            fast_goal_probability = 50
+            fast_goal_probability += max(0, best_pressure - 65) * 0.65
+            fast_goal_probability += min(12, total_shots_on * 1.5)
+            fast_goal_probability += min(6, total_corners)
+            fast_goal_probability += min(8, total * 2)
+            fast_goal_probability += min(8, pressure_diff * 0.25)
+            fast_goal_probability = round(min(95, fast_goal_probability), 1)
+
+            if (
+                best_pressure >= 76
+                and total_shots_on >= 4
+                and pressure_diff >= 10
+                and fast_goal_probability >= 75
+            ):
+                if (
+                    home_pressure >= away_pressure + 10
+                    and home_shots_on >= away_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL HOME",
+                        fast_goal_probability,
+                        minute,
+                        fast_goal_probability
+                    )
+
+                if (
+                    away_pressure >= home_pressure + 10
+                    and away_shots_on >= home_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL AWAY",
+                        fast_goal_probability,
+                        minute,
+                        fast_goal_probability
+                    )
+
+        # =========================================================
+        # NORMAL NEXT GOAL - 41 TO 74
+        # =========================================================
+        if 41 <= minute <= 74:
+            normal_goal_probability = 48
+            normal_goal_probability += max(0, best_pressure - 65) * 0.70
+            normal_goal_probability += min(14, total_shots_on * 1.4)
+            normal_goal_probability += min(7, total_corners * 0.7)
+            normal_goal_probability += min(8, pressure_diff * 0.25)
+            normal_goal_probability += min(6, (home_xg + away_xg) * 2)
+            normal_goal_probability = round(min(95, normal_goal_probability), 1)
+
+            print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
+
+            if (
+                best_pressure >= 70
+                and total_shots_on >= 5
+                and pressure_diff >= 10
+                and normal_goal_probability >= 76
+            ):
+                if (
+                    home_pressure >= away_pressure + 10
+                    and home_shots_on >= away_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL HOME",
+                        normal_goal_probability,
+                        minute,
+                        normal_goal_probability
+                    )
+
+                if (
+                    away_pressure >= home_pressure + 10
+                    and away_shots_on >= home_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL AWAY",
+                        normal_goal_probability,
+                        minute,
+                        normal_goal_probability
+                    )
+
+        # =========================================================
+        # OVER 1.5 REMAINING GOALS
+        # =========================================================
+        remaining_probability = 45
+        remaining_probability += max(0, best_pressure - 60) * 0.55
+        remaining_probability += min(15, total_shots_on * 1.4)
+        remaining_probability += min(8, total_corners * 0.7)
+        remaining_probability += min(10, (home_xg + away_xg) * 2.2)
+        if total >= 2:
+            remaining_probability += 4
+        remaining_probability = round(min(95, remaining_probability), 1)
+
+        print("OVER15 REMAINING CHECK:", minute, remaining_probability)
+
+        if (
+            30 <= minute <= 65
+            and best_pressure >= 68
+            and total_shots_on >= 5
+            and total_shots >= 12
+            and (home_xg + away_xg) >= 1.5
+            and remaining_probability >= 76
+        ):
+            return (
+                "🚀 OVER 1.5 REMAINING GOALS",
+                remaining_probability,
+                minute,
+                remaining_probability
+            )
+
+        # =========================================================
+        # OVER 1.5 NEXT CORNERS
+        # =========================================================
+        corner_probability = 45
+        corner_probability += max(0, best_pressure - 60) * 0.55
+        corner_probability += min(14, total_corners * 1.2)
+        corner_probability += min(12, total_shots * 0.45)
+        corner_probability += min(6, total_shots_on * 0.6)
+        corner_probability = round(min(95, corner_probability), 1)
+
+        print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
+
+        if (
+            55 <= minute <= 82
+            and total_corners >= 5
+            and total_shots >= 12
+            and best_pressure >= 68
+            and corner_probability >= 75
+        ):
+            return (
+                "🚩 OVER 1.5 NEXT CORNERS",
+                corner_probability,
+                minute,
+                corner_probability
+            )
+
+        # =========================================================
+        # LATE GOAL
+        # =========================================================
+        if 75 <= minute <= 88:
+            late_goal_probability = 45
+            late_goal_probability += max(0, best_pressure - 60) * 0.65
+            late_goal_probability += min(15, total_shots_on * 1.3)
+            late_goal_probability += min(8, total_corners * 0.6)
+            late_goal_probability += min(10, (home_xg + away_xg) * 2)
+
+            if goal_diff <= 1:
+                late_goal_probability += 5
+
+            late_goal_probability = round(min(95, late_goal_probability), 1)
+
+            print("LATE GOAL CHECK:", minute, late_goal_probability)
+
+            if (
+                best_pressure >= 68
+                and total_shots_on >= 5
+                and total_shots >= 12
+                and total_corners >= 4
+                and (home_xg + away_xg) >= 1.4
+                and late_goal_probability >= 76
+            ):
+                return (
+                    "🔥 LATE GOAL",
+                    late_goal_probability,
+                    minute,
+                    late_goal_probability
+                )
+
+        return None
+
+    except Exception as e:
+        print("LIVE ANALYSIS ERROR:", repr(e))
+        return None
 
 
 # =========================================================    
@@ -10051,7 +9208,8 @@ def live_loop():
 
         key = (
             f"live_{fixture_id}_"
-            f"{home_goals}_{away_goals}"
+            f"{home_goals}_{away_goals}_"
+            f"{signal[0]}"
         )
 
         if key in sent_live:
@@ -10230,6 +9388,7 @@ if __name__ == "__main__":
         live_loop()                               
 
         time.sleep(300)                            
+                         
 
 
 
