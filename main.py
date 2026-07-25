@@ -7089,6 +7089,18 @@ def analyze_prematch_match(match):
             round(away_score, 2)                               
         )      
 
+        # AWAY INJURIES & SUSPENSIONS                          
+
+        away_score += away_absence_adjustment                
+
+        print(                                                
+            "AWAY ABSENCE SCORE:",                             
+            away,                                             
+            "ADJ=",                                           
+            away_absence_adjustment,                          
+            "SCORE=",                                          
+            round(away_score, 2)                               
+        )                                                     
 
         # AWAY INJURIES & SUSPENSIONS                          
 
