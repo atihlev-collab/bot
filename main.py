@@ -291,273 +291,191 @@ def get_odds(fixture_id):
 
 def get_match_odds(fixture_id):
 
-    if fixture_id in odds_cache:         
-
-        cache_time, data = odds_cache[fixture_id]   
-
-        if (                            
-
-            time.time()                   
-            -                           
-            cache_time                  
-            <                           
-            900                           
-
-        ):                                
-
-            return data                   
+    if fixture_id in odds_cache:
+        cache_time, data = odds_cache[fixture_id]
+        if time.time() - cache_time < 900:
+            return data
 
     try:
+        print("GET ODDS FOR:", fixture_id)
 
-        print(
-            "GET ODDS FOR:",
-            fixture_id
-        )
-
-        odds = get_odds(
-            fixture_id
-        )
-
+        odds = get_odds(fixture_id)
         if not odds:
             return None
 
-        bookmakers = odds[0].get(
-            "bookmakers",
-            []
-        )
-
-        print(                               
-            "BOOKMAKERS:",                   
-            [                                
-                (                            
-                    b.get("id"),             
-                    b.get("name")            
-                )                             
-                for b in bookmakers          
-            ]                                
-        )                                    
-        if len(bookmakers) < 3:     
-
-            print(                  
-                "WEAK MARKET:",     
-                fixture_id          
-            )                     
-
-            return None             
-
-        if not bookmakers:
-            return None
-
-        betano = None                         
-
-        for bookmaker in bookmakers:          
-
-            if (                              
-                bookmaker.get("id") == 32     
-                or                            
-                bookmaker.get("name") == "Betano" 
-            ):                               
-
-                betano = bookmaker             
-                break                         
-
-        if betano is None:                    
-
-            print(                             
-                "BETANO NOT FOUND:",          
-                fixture_id                     
-            )                                 
-
-            return None                       
-
-        bets = betano.get(                    
-            "bets",                            
-            []                                
-        )                                     
-
-        print(                                
-            "USING BOOKMAKER:",                
-            betano.get("id"),                  
-            betano.get("name")                
-        )                                     
-
-        home_odd = None                              
-        draw_odd = None                             
-        away_odd = None                             
-        over25_odd = None    
-        under25_odd = None
-        btts_odd = None 
-     
-        home_over15_odd = None                      
-        away_over15_odd = None                        
-        over35_odd = None   
-
-        for bet in bets:                             
-
-            print("BET NAME:", bet.get("name"))
-
-            if bet.get("name") in [     
-                "Both Teams To Score",  
-                "BTTS"                   
-            ]:                          
-
-                for value in bet.get(    
-                    "values",            
-                    []                   
-                ):                      
-
-                    if value["value"] == "Yes":   
-
-                        btts_odd = float(          
-                            value["odd"]         
-                        )                            
-
-                        print(                      
-                            "BTTS ODD =",            
-                            btts_odd                
-                        )        
-
-            print("BET NAME:", bet.get("name"))
-
-            if bet.get("name") in [                    
-                "Goals Over/Under",                   
-                "Over/Under"                           
-            ]:                                         
-
-                for value in bet.get(                   
-                    "values",                           
-                    []                                  
-                ):                                      
-
-                    if value["value"] in [              
-                        "Over 2.5",                   
-                        "Over 2.5 Goals"                
-                    ]:                                 
-
-                        over25_odd = float(            
-                            value["odd"]               
-                        )       
-
-                    elif value["value"] in [            
-                        "Under 2.5",                    
-                        "Under 2.5 Goals"                
-                    ]:                                  
-
-                        under25_odd = float(             
-                            value["odd"]                 
-                        )                               
-
-                        print(                          
-                            "UNDER2.5 ODD =",            
-                            under25_odd                  
-                        )                               
-
-                        print(                         
-                            "OVER2.5 ODD =",           
-                            over25_odd                  
-                        )     
-                     
-            print("BET NAME:", bet.get("name"))
-                              
-            if bet.get("name") in [
-                "Match Winner",
-                "1X2",
-                "Winner"
-            ]:
-
-                home_odd = None
-                draw_odd = None
-                away_odd = None
-
-                for value in bet.get(
-                    "values",
-                    []
-                ):
-
-                    print(
-                        "VALUE =",
-                        value
-                    )
-
-                    if value["value"] == "Home":
-
-                        home_odd = float(
-                            value["odd"]
-                        )
-
-                    elif value["value"] == "Draw":
-
-                        draw_odd = float(
-                            value["odd"]
-                        )
-
-                    elif value["value"] == "Away":
-
-                        away_odd = float(
-                            value["odd"]
-                        )             
-               
-
-            print(
-                "ODDS FOUND:",
-                home_odd,
-                draw_odd,
-                away_odd,
-                over25_odd,                           
-                btts_odd  
-            )
-
-            if (                          
-
-                home_odd is not None      
-                and                       
-                draw_odd is not None       
-                and                       
-                away_odd is not None      
-
-            ):                             
-
-                result = (                
-
-                    home_odd,             
-                    draw_odd,             
-                    away_odd, 
-                    over25_odd,   
-                    under25_odd,
-                    btts_odd                             
-
-                )                                        
-                                     
-                odds_cache[fixture_id] = ( 
-
-                    time.time(),          
-                    result               
-
-                )                         
-
-                return result              
-
-            print(                        
-
-                "INCOMPLETE ODDS:",       
-                home_odd,               
-                draw_odd,                  
-                away_odd,                   
-                over25_odd,                         
-                btts_odd   
-            )                            
-
-        return None                        
-
-    except Exception as e:
+        bookmakers = odds[0].get("bookmakers", [])
 
         print(
-            "GET MATCH ODDS ERROR:",
-            repr(e)
+            "BOOKMAKERS:",
+            [(b.get("id"), b.get("name")) for b in bookmakers]
         )
 
+        if len(bookmakers) < 3:
+            print("WEAK MARKET:", fixture_id)
+            return None
+
+        betano = None
+        for bookmaker in bookmakers:
+            if (
+                bookmaker.get("id") == 32
+                or str(bookmaker.get("name", "")).lower() == "betano"
+            ):
+                betano = bookmaker
+                break
+
+        if betano is None:
+            print("BETANO NOT FOUND:", fixture_id)
+            return None
+
+        bets = betano.get("bets", [])
+        print("USING BOOKMAKER:", betano.get("id"), betano.get("name"))
+
+        home_odd = None
+        draw_odd = None
+        away_odd = None
+        over25_odd = None
+        under25_odd = None
+        btts_odd = None
+        home_over15_odd = None
+        away_over15_odd = None
+        over35_odd = None
+
+        def clean_text(value):
+            return " ".join(str(value or "").strip().lower().replace("_", " ").split())
+
+        def safe_float(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        for bet in bets:
+            bet_name_raw = bet.get("name", "")
+            bet_name = clean_text(bet_name_raw)
+            values = bet.get("values", [])
+
+            print("BET NAME:", bet_name_raw)
+
+            # 1X2
+            if bet_name in ("match winner", "1x2", "winner"):
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    odd = safe_float(value.get("odd"))
+                    if value_name == "home":
+                        home_odd = odd
+                    elif value_name == "draw":
+                        draw_odd = odd
+                    elif value_name == "away":
+                        away_odd = odd
+
+            # BTTS
+            if (
+                "both teams to score" in bet_name
+                or bet_name == "btts"
+            ):
+                for value in values:
+                    if clean_text(value.get("value")) in ("yes", "btts yes"):
+                        btts_odd = safe_float(value.get("odd"))
+
+            # Full-match goal totals: Over 2.5 / Under 2.5 / Over 3.5
+            is_full_goal_total = (
+                bet_name in ("goals over/under", "over/under", "total goals")
+                or (
+                    "goal" in bet_name
+                    and "over/under" in bet_name
+                    and "home" not in bet_name
+                    and "away" not in bet_name
+                    and "team" not in bet_name
+                    and "first half" not in bet_name
+                    and "second half" not in bet_name
+                )
+            )
+
+            if is_full_goal_total:
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    odd = safe_float(value.get("odd"))
+                    if value_name in ("over 2.5", "over 2.5 goals"):
+                        over25_odd = odd
+                    elif value_name in ("under 2.5", "under 2.5 goals"):
+                        under25_odd = odd
+                    elif value_name in ("over 3.5", "over 3.5 goals"):
+                        over35_odd = odd
+
+            # Betano/API naming differs by competition. Support the common
+            # Home/Away Team Total variants without confusing them with 1X2.
+            is_home_total = (
+                ("home" in bet_name and "total" in bet_name and "goal" in bet_name)
+                or bet_name in (
+                    "home team over/under",
+                    "home team total",
+                    "home goals over/under"
+                )
+            )
+
+            is_away_total = (
+                ("away" in bet_name and "total" in bet_name and "goal" in bet_name)
+                or bet_name in (
+                    "away team over/under",
+                    "away team total",
+                    "away goals over/under"
+                )
+            )
+
+            if is_home_total:
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    if value_name in ("over 1.5", "over 1.5 goals"):
+                        home_over15_odd = safe_float(value.get("odd"))
+
+            if is_away_total:
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    if value_name in ("over 1.5", "over 1.5 goals"):
+                        away_over15_odd = safe_float(value.get("odd"))
+
+        print(
+            "ODDS FOUND:",
+            home_odd,
+            draw_odd,
+            away_odd,
+            over25_odd,
+            under25_odd,
+            btts_odd,
+            home_over15_odd,
+            away_over15_odd,
+            over35_odd
+        )
+
+        # Keep 1X2 as the basic Betano market-integrity check, but goal-market
+        # odds are allowed to be None when Betano does not offer that market.
+        if (
+            home_odd is None
+            or draw_odd is None
+            or away_odd is None
+        ):
+            print("INCOMPLETE 1X2 ODDS:", home_odd, draw_odd, away_odd)
+            return None
+
+        result = (
+            home_odd,
+            draw_odd,
+            away_odd,
+            over25_odd,
+            under25_odd,
+            btts_odd,
+            home_over15_odd,
+            away_over15_odd,
+            over35_odd
+        )
+
+        odds_cache[fixture_id] = (time.time(), result)
+        return result
+
+    except Exception as e:
+        print("GET MATCH ODDS ERROR:", repr(e))
         return None
-         
+
 
 # =========================================================
 # EXTRACT STAT
@@ -8264,569 +8182,355 @@ def analyze_prematch_match(match):
             home_form["over25"],
             away_form["over25"]
         )
+        # =========================================================
+        # PREMATCH GOAL MARKETS - QUALITY SCORING
+        # =========================================================
+        # Instead of requiring every statistic to clear a hard threshold,
+        # each market first passes sensible safety gates and then collects
+        # agreement points from independent indicators. This keeps signals
+        # selective without one borderline stat killing an otherwise strong bet.
+
+        # ---------------------------------------------------------
         # OVER 2.5
-
-        over_league = league_score(
-            country,
-            "⚽ OVER 2.5"
-        )
-
-        over_value = expected_goals * 10     
-
+        # ---------------------------------------------------------
+        over_league = league_score(country, "⚽ OVER 2.5")
+        over_value = expected_goals * 10
         over_final = calculate_final_score(
-
             form_score,
             over_prob,
-
             over_value,
             over_league
-
         )
+        over_conf = confidence_from_score(over_final)
 
-        over_conf = confidence_from_score(
-            over_final
+        over_quality = 0
+        if over_prob >= 75:
+            over_quality += 2
+        elif over_prob >= 70:
+            over_quality += 1
+
+        if expected_goals >= 3.30:
+            over_quality += 2
+        elif expected_goals >= 2.90:
+            over_quality += 1
+
+        if home_form["avg_scored"] + away_form["avg_scored"] >= 2.70:
+            over_quality += 1
+        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] >= 2.70:
+            over_quality += 1
+        if home_form["avg_conceded"] + away_form["avg_conceded"] >= 2.10:
+            over_quality += 1
+        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 50:
+            over_quality += 1
+        if home_form["recent_over25"] + away_form["recent_over25"] >= 4:
+            over_quality += 1
+        if max(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) <= 60:
+            over_quality += 1
+
+        print(
+            "OVER QUALITY:", home, away,
+            "PROB=", over_prob,
+            "CONF=", over_conf,
+            "xG=", expected_goals,
+            "Q=", over_quality
         )
-
-        print(                                 
-             "OVER SCORE:",                  
-             home,                            
-             away,                             
-             over_prob,                       
-             over_final,                      
-             over_conf                         
-        )                                    
-        print(                          
-            "OVER DETAILS:",            
-            home,                       
-            away,                       
-            over_prob,                  
-            over_conf,                   
-            home_form["avg_scored"],    
-            away_form["avg_scored"],    
-            home_form["avg_conceded"],   
-            away_form["avg_conceded"]    
-        )      
 
         over_signal = False
-
-        print(
-            "OVER FILTERS:",
-            "xG=", expected_goals,
-            "Havg=", home_form["avg_scored"],
-            "Aavg=", away_form["avg_scored"],
-            "Hravg=", home_form["recent_avg_scored"],
-            "Aravg=", away_form["recent_avg_scored"],
-            "Hcon=", home_form["avg_conceded"],
-            "Acon=", away_form["avg_conceded"],
-            "Hov=", home_form["over25_pct"],
-            "Aov=", away_form["over25_pct"],
-            "Hrecent=", home_form["recent_over25"],
-            "Arecent=", away_form["recent_over25"],
-            "Hclean=", home_form["clean_sheet_pct"],
-            "Aclean=", away_form["clean_sheet_pct"]
-        )
-     
         if (
-            over_prob >= 75
-            and
-            over_conf >= 70
-            and                           
-            expected_goals >= 3.5         
-            and
-            (
-                home_form["avg_scored"]
-                +
-                away_form["avg_scored"]
-            ) >= 3.0
-            and                              
-            (
-                home_form["recent_avg_scored"]
-                +
-                away_form["recent_avg_scored"]
-            ) >= 3.0
-            and
-            home_form["avg_conceded"] >= 1.0
-            and                                            
-            away_form["avg_conceded"] >= 1.0 
-            and                           
-            home_form["clean_sheet_pct"] <= 50  
-            and                          
-            away_form["clean_sheet_pct"] <= 50   
-            and                                  
-            home_form["recent_avg_conceded"] >= 1.0 
-            and                                    
-            away_form["recent_avg_conceded"] >= 1.0 
-            and                         
-            home_form["over25_pct"] >= 58 
-            and                         
-            away_form["over25_pct"] >= 58 
-            and                         
-            (                           
-                home_form["over25"]      
-                +                       
-                away_form["over25"]   
-            ) >= 4     
-
-         and
-         (
-               home_form["recent_over25"]
-               +
-               away_form["recent_over25"]
-        ) >= 5
+            over_prob >= 68
+            and over_conf >= 65
+            and expected_goals >= 2.75
+            and over_quality >= 6
         ):
-
-            signals.append(
-
-                (
-                    "⚽ OVER 2.5",
-                    over_conf,
-                    round(
-                        over_prob,
-                        1
-                    )
-                )
-
-            )
-
+            signals.append((
+                "⚽ OVER 2.5",
+                over_conf,
+                round(over_prob, 1)
+            ))
             over_signal = True
-         
-        print(
-            "BTTS CHECK:",
-            home,
-            away,
-            btts_prob,
-            home_form["btts"],
-            away_form["btts"]
-        )
 
+        # ---------------------------------------------------------
         # BTTS
-
-        btts_league = league_score(
-            country,
-            "💎 BTTS"
-        )
-
-        btts_value = (                    
-            home_form["recent_avg_scored"] 
-            +                              
-            away_form["recent_avg_scored"]        
-        ) * 5                            
-
+        # ---------------------------------------------------------
+        btts_league = league_score(country, "💎 BTTS")
+        btts_value = (
+            home_form["recent_avg_scored"]
+            + away_form["recent_avg_scored"]
+        ) * 5
         btts_final = calculate_final_score(
-
             form_score,
             btts_prob,
-
             btts_value,
             btts_league
+        )
+        btts_conf = confidence_from_score(btts_final)
 
+        home_btts_rate = (
+            home_form["btts"] / max(1, home_form["played"])
+        )
+        away_btts_rate = (
+            away_form["btts"] / max(1, away_form["played"])
         )
 
-        btts_conf = confidence_from_score(
-            btts_final
-        )
+        btts_quality = 0
+        if btts_prob >= 74:
+            btts_quality += 2
+        elif btts_prob >= 68:
+            btts_quality += 1
 
-        print(                             
-            "BTTS SCORE:",                 
-            home,                           
-            away,                           
-            btts_prob,                     
-            btts_final,                      
-            btts_conf                     
-        )                                    
+        if expected_goals >= 3.10:
+            btts_quality += 2
+        elif expected_goals >= 2.70:
+            btts_quality += 1
+
+        if min(home_form["scored_pct"], away_form["scored_pct"]) >= 75:
+            btts_quality += 2
+        elif min(home_form["scored_pct"], away_form["scored_pct"]) >= 65:
+            btts_quality += 1
+
+        if min(
+            home_form["recent_avg_scored"],
+            away_form["recent_avg_scored"]
+        ) >= 1.20:
+            btts_quality += 1
+
+        if min(home_btts_rate, away_btts_rate) >= 0.60:
+            btts_quality += 1
+        elif min(home_btts_rate, away_btts_rate) >= 0.50:
+            btts_quality += 0.5
+
+        if min(
+            home_form["recent_avg_conceded"],
+            away_form["recent_avg_conceded"]
+        ) >= 0.80:
+            btts_quality += 1
+
+        if max(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) <= 50:
+            btts_quality += 1
+
+        print(
+            "BTTS QUALITY:", home, away,
+            "PROB=", btts_prob,
+            "CONF=", btts_conf,
+            "xG=", expected_goals,
+            "Q=", btts_quality
+        )
 
         if (
-            btts_prob >= 73
-            and
-            btts_conf >= 80
-            and                          
-            expected_goals >= 3.2         
-            and
-            home_form["avg_scored"] >= 1.8
-            and
-            away_form["avg_scored"] >= 1.3
-            and                              
-            home_form["recent_avg_scored"] >= 1.3  
-            and                               
-            away_form["recent_avg_scored"] >= 1.3  
-            and
-            home_form["scored_pct"] >= 75
-            and
-            away_form["scored_pct"] >= 75                      
-            and
-            home_form["recent_goal_diff"] > -3
-            and
-            away_form["recent_goal_diff"] > -3
-            and        
-            min(
-                home_form["recent_avg_scored"],
-                away_form["recent_avg_scored"]
-            ) >= 1.3
-            and
-            (
-                home_form["btts"]          
-                /
-                home_form["played"]          
-            ) >= 0.60                        
-
-            and                             
-
-            (
-                away_form["btts"]            
-                /
-                away_form["played"]         
-            ) >= 0.60                               
-            and                                   
-            home_form["recent_avg_conceded"] >= 0.8
-            and                                   
-            away_form["recent_avg_conceded"] >= 0.8
-            and
-            home_form["clean_sheet_pct"] <= 40
-            and
-            away_form["clean_sheet_pct"] <= 40
+            btts_prob >= 67
+            and btts_conf >= 70
+            and expected_goals >= 2.60
+            and min(home_form["scored_pct"], away_form["scored_pct"]) >= 65
+            and btts_quality >= 6
         ):
+            signals.append((
+                "💎 BTTS",
+                btts_conf,
+                round(btts_prob, 1)
+            ))
 
-            signals.append(
+        # ---------------------------------------------------------
+        # TEAM OVER 1.5 GOALS
+        # ---------------------------------------------------------
+        home_over15_probability = (
+            1
+            - poisson.pmf(0, home_attack)
+            - poisson.pmf(1, home_attack)
+        ) * 100
+        home_over15_probability = round(
+            max(5, min(95, home_over15_probability)), 1
+        )
 
-                (
-                    "💎 BTTS",
-                    btts_conf,
-                    round(
-                        btts_prob,
-                        1
-                    )
-                )
+        away_over15_probability = (
+            1
+            - poisson.pmf(0, away_attack)
+            - poisson.pmf(1, away_attack)
+        ) * 100
+        away_over15_probability = round(
+            max(5, min(95, away_over15_probability)), 1
+        )
 
-            )
+        home_over15_quality = 0
+        if home_over15_probability >= 72:
+            home_over15_quality += 2
+        elif home_over15_probability >= 66:
+            home_over15_quality += 1
+        if home_form["avg_scored"] >= 1.80:
+            home_over15_quality += 1
+        if home_form["recent_avg_scored"] >= 1.70:
+            home_over15_quality += 1
+        if away_form["avg_conceded"] >= 1.30:
+            home_over15_quality += 1
+        if away_form["recent_avg_conceded"] >= 1.20:
+            home_over15_quality += 1
+        if home_form["scored_pct"] >= 80:
+            home_over15_quality += 1
+        if home_strength > away_strength:
+            home_over15_quality += 1
+        if home_edge >= 2:
+            home_over15_quality += 1
+        if home_form["recent_goal_diff"] >= 1:
+            home_over15_quality += 1
 
-            print("CHECKING:", home, "vs", away)
+        print(
+            "HOME O1.5 QUALITY:", home, away,
+            "PROB=", home_over15_probability,
+            "Q=", home_over15_quality
+        )
 
-
-        home_over15_probability = (                    
-            1                                          
-            -                                          
-            poisson.pmf(0, home_attack)                
-            -                                          
-            poisson.pmf(1, home_attack)                
-        ) * 100                                        
-
-        home_over15_probability = round(               
-            max(                                       
-                5,                                     
-                min(                                   
-                    95,                                
-                    home_over15_probability            
-                )                                      
-            ),                                         
-            1                                          
-        )                                              
-
-        away_over15_probability = (                    
-            1                                          
-            -                                          
-            poisson.pmf(0, away_attack)                
-            -                                          
-            poisson.pmf(1, away_attack)                
-        ) * 100                                       
-
-        away_over15_probability = round(               
-            max(                                       
-                5,                                     
-                min(                                   
-                    95,                                
-                    away_over15_probability            
-                )                                      
-            ),                                         
-            1                                          
-        )                                              
-
-     
-        # HOME OVER 1.5                  
-
-        if (                              
-
-            home_score >= 45               
-            and                            
-            home_over15_probability >= 72                    
-            and                            
-            expected_goals >= 3.3          
-            and                           
-            home_form["avg_scored"] >= 1.8 
-            and                            
-            home_form["recent_avg_scored"] >= 1.8 
-            and                           
-            away_form["avg_conceded"] >= 1.3 
-            and                           
-            away_form["recent_avg_conceded"] >= 1.2 
-            and                           
-            home_form["scored_pct"] >= 85  
-            and                            
-            away_form["clean_sheet_pct"] <= 40 
-            and                           
-            home_form["recent_goal_diff"] >= 3 
-            and                            
-            home_form["form_pct"] >= 60    
-            and                            
-            home_strength > away_strength  
-            and                            
-            home_edge >= 2                
-             
-
-        ):                                
-
-            signals.append(                
-
-                (                          
-
-                    "🏠 HOME OVER 1.5",   
-
-                    confidence_from_score(        
-                        home_over15_probability     
-                    ),                                            
-
-                    round(                
-                        home_over15_probability,      
-                        1                  
-                    )                      
-
-                )                         
-
-            )       
-
+        home_over15_signal = False
+        if (
+            home_score >= 40
+            and home_over15_probability >= 65
+            and expected_goals >= 2.80
+            and home_over15_quality >= 6
+        ):
+            signals.append((
+                "🏠 HOME OVER 1.5",
+                confidence_from_score(home_over15_probability),
+                round(home_over15_probability, 1)
+            ))
             home_over15_signal = True
 
-        # AWAY OVER 1.5                   
+        away_over15_quality = 0
+        if away_over15_probability >= 72:
+            away_over15_quality += 2
+        elif away_over15_probability >= 66:
+            away_over15_quality += 1
+        if away_form["avg_scored"] >= 1.80:
+            away_over15_quality += 1
+        if away_form["recent_avg_scored"] >= 1.70:
+            away_over15_quality += 1
+        if home_form["avg_conceded"] >= 1.30:
+            away_over15_quality += 1
+        if home_form["recent_avg_conceded"] >= 1.20:
+            away_over15_quality += 1
+        if away_form["scored_pct"] >= 80:
+            away_over15_quality += 1
+        if away_strength > home_strength:
+            away_over15_quality += 1
+        if away_edge >= 2:
+            away_over15_quality += 1
+        if away_form["recent_goal_diff"] >= 1:
+            away_over15_quality += 1
 
-        if (                                        
+        print(
+            "AWAY O1.5 QUALITY:", home, away,
+            "PROB=", away_over15_probability,
+            "Q=", away_over15_quality
+        )
 
-            away_score >= 45                        
-            and                                     
-            away_over15_probability >= 72                            
-            and                                     
-            expected_goals >= 3.3                   
-            and                                    
-            away_form["avg_scored"] >= 1.8          
-            and                                     
-            away_form["recent_avg_scored"] >= 1.8   
-            and                                     
-            home_form["avg_conceded"] >= 1.3        
-            and                                     
-            home_form["recent_avg_conceded"] >= 1.2 
-            and                                     
-            away_form["scored_pct"] >= 85          
-            and                                     
-            home_form["clean_sheet_pct"] <= 40      
-            and                                     
-            away_form["recent_goal_diff"] >= 3     
-            and                                    
-            away_form["form_pct"] >= 60             
-            and                                     
-            away_strength > home_strength           
-            and                                     
-            away_edge >= 2                          
-
-        ):                                         
-
-            signals.append(                         
-
-                (                                 
-
-                    "✈️ AWAY OVER 1.5",             
-
-                    confidence_from_score(        
-                        away_over15_probability     
-                    ),                                                 
-
-                    round(                         
-                         away_over15_probability,               
-                        1                           
-                    )                              
-
-                )                                  
-
-            )      
-
+        away_over15_signal = False
+        if (
+            away_score >= 40
+            and away_over15_probability >= 65
+            and expected_goals >= 2.80
+            and away_over15_quality >= 6
+        ):
+            signals.append((
+                "✈️ AWAY OVER 1.5",
+                confidence_from_score(away_over15_probability),
+                round(away_over15_probability, 1)
+            ))
             away_over15_signal = True
 
+        # ---------------------------------------------------------
+        # UNDER 2.5
+        # ---------------------------------------------------------
+        under_prob = 100 - over_prob
+        under_quality = 0
+
+        if under_prob >= 65:
+            under_quality += 2
+        elif under_prob >= 58:
+            under_quality += 1
+        if expected_goals <= 2.00:
+            under_quality += 2
+        elif expected_goals <= 2.30:
+            under_quality += 1
+        if home_form["avg_scored"] + away_form["avg_scored"] <= 2.30:
+            under_quality += 1
+        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] <= 2.40:
+            under_quality += 1
+        if home_form["avg_conceded"] + away_form["avg_conceded"] <= 2.40:
+            under_quality += 1
+        if max(home_form["over25_pct"], away_form["over25_pct"]) <= 50:
+            under_quality += 1
+        if min(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) >= 30:
+            under_quality += 1
+
+        print(
+            "UNDER QUALITY:", home, away,
+            "PROB=", under_prob,
+            "xG=", expected_goals,
+            "Q=", under_quality
+        )
+
+        if (
+            under_prob >= 58
+            and expected_goals <= 2.35
+            and under_quality >= 6
+        ):
+            signals.append((
+                "🛡 UNDER 2.5",
+                confidence_from_score(under_prob),
+                round(under_prob, 1)
+            ))
+
+        # ---------------------------------------------------------
+        # OVER 3.5
+        # ---------------------------------------------------------
+        over35_prob = 0
+        for h in range(8):
+            for a in range(8):
+                if h + a >= 4:
+                    over35_prob += (
+                        poisson.pmf(h, home_attack)
+                        * poisson.pmf(a, away_attack)
+                    )
+
+        over35_prob = round(
+            max(5, min(95, over35_prob * 100)), 1
+        )
+
+        over35_quality = 0
+        if over35_prob >= 65:
+            over35_quality += 2
+        elif over35_prob >= 57:
+            over35_quality += 1
+        if expected_goals >= 4.10:
+            over35_quality += 2
+        elif expected_goals >= 3.60:
+            over35_quality += 1
+        if home_form["avg_scored"] + away_form["avg_scored"] >= 3.20:
+            over35_quality += 1
+        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] >= 3.20:
+            over35_quality += 1
+        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 60:
+            over35_quality += 1
+        if home_form["recent_over25"] + away_form["recent_over25"] >= 5:
+            over35_quality += 1
+        if home_form["avg_conceded"] + away_form["avg_conceded"] >= 2.40:
+            over35_quality += 1
+
+        print(
+            "OVER3.5 QUALITY:", home, away,
+            "PROB=", over35_prob,
+            "xG=", expected_goals,
+            "Q=", over35_quality
+        )
+
+        if (
+            over35_prob >= 55
+            and expected_goals >= 3.40
+            and over35_quality >= 6
+        ):
+            signals.append((
+                "🚀 OVER 3.5",
+                confidence_from_score(over35_prob),
+                round(over35_prob, 1)
+            ))
 
-        # UNDER 2.5                  
-
-        under_prob = (                
-
-            100                       
-
-            -                         
-
-            over_prob                  
-
-        )                             
-
-        if (                              
-
-            over_prob <= 45              
-
-            and                           
-
-            expected_goals <= 1.90        
-
-            and                           
-
-            home_form["avg_scored"] <= 1.10      
-
-            and                          
-
-            away_form["avg_scored"] <= 1.10      
-
-            and                          
-
-            home_form["recent_avg_scored"] <= 1.20   
-
-            and                           
-
-            away_form["recent_avg_scored"] <= 1.20  
-
-            and                          
-
-            home_form["avg_conceded"] <= 1.10    
-
-            and                           
-
-            away_form["avg_conceded"] <= 1.10    
-
-            and                           
-
-            home_form["clean_sheet_pct"] >= 40   
-
-            and                         
-
-            away_form["clean_sheet_pct"] >= 40  
-
-            and                           
-
-            home_form["over25_pct"] <= 40        
-
-            and                          
-
-            away_form["over25_pct"] <= 40       
-
-        ):                              
-
-            signals.append(            
-
-                (                      
-
-                    "🛡 UNDER 2.5",    
-
-                    confidence_from_score( 
-                        under_prob   
-                    ),
-                 
-                    round(             
-
-                        under_prob,    
-
-                        1              
-
-                    )                  
-
-                )                      
-
-            )       
-
-   
-
-        # OVER 3.5     
-
-
-        over35_prob = 0                            
-
-        for h in range(8):                         
-            for a in range(8):                     
-                if h + a >= 4:                     
-                    over35_prob += (                
-                        poisson.pmf(                
-                            h,                      
-                            home_attack             
-                        )                           
-                        *                           
-                        poisson.pmf(                
-                            a,                     
-                            away_attack            
-                        )                           
-                    )                               
-
-        over35_prob = round(                       
-            max(                                   
-                5,                                 
-                min(                               
-                    95,                            
-                    over35_prob * 100              
-                )                                  
-            ),                                     
-            1                                      
-        )                                          
-     
-
-        if (                          
-
-            over35_prob >= 65                                 
-
-            and                        
-
-            expected_goals >= 4.5   
-
-            and                        
-
-            home_form["avg_scored"] >= 1.8      
-
-            and                        
-
-            away_form["avg_scored"] >= 1.6     
-
-            and                        
-
-            home_form["over25_pct"] >= 73       
-
-            and                        
-
-            away_form["over25_pct"] >= 73      
-
-            and                        
-
-            (                          
-
-                home_form["recent_over25"]      
-
-                +                     
-
-                away_form["recent_over25"]      
-
-            ) >= 6                     
-
-        ):                             
-
-            signals.append(            
-
-                (                      
-
-                    "🚀 OVER 3.5",                           
-                    confidence_from_score(     
-                        over35_prob            
-                    ),                        
-                    round(            
-
-                        over35_prob,                   
-
-                        1             
-
-                    )                  
-
-                )                      
-
-            )                          
-            
-         
-            
         print(
             "SIGNAL:",
             signals
@@ -8981,7 +8685,10 @@ def prematch_loop():
         away_odd = match_odds[2]                     
         over25_odd = match_odds[3]  
         under25_odd = match_odds[4]
-        btts_odd = match_odds[5]                     
+        btts_odd = match_odds[5]
+        home_over15_odd = match_odds[6] if len(match_odds) > 6 else None
+        away_over15_odd = match_odds[7] if len(match_odds) > 7 else None
+        over35_odd = match_odds[8] if len(match_odds) > 8 else None
 
         country = match["league"]["country"]
         league = match["league"]["name"]
@@ -9056,13 +8763,36 @@ def prematch_loop():
 
                 odds_text = str(over25_odd)                            
                              
-            elif (                                
-                "UNDER 2.5" in market            
-                and                              
-                under25_odd is not None          
-            ):                                  
-                odds_text = str(under25_odd)      
-        
+            elif (
+                "UNDER 2.5" in market
+                and under25_odd is not None
+            ):
+                odds_text = str(under25_odd)
+
+            elif (
+                "HOME OVER 1.5" in market
+                and home_over15_odd is not None
+            ):
+                odds_text = str(home_over15_odd)
+
+            elif (
+                "AWAY OVER 1.5" in market
+                and away_over15_odd is not None
+            ):
+                odds_text = str(away_over15_odd)
+
+            elif (
+                "OVER 3.5" in market
+                and over35_odd is not None
+            ):
+                odds_text = str(over35_odd)
+
+            # Never send a prematch recommendation without the actual
+            # Betano price for that exact market.
+            if odds_text == "-":
+                print("SKIP NO BETANO ODDS:", home, away, market)
+                continue
+
             all_signals.append(                               
 
             (                                            
@@ -9387,7 +9117,7 @@ if __name__ == "__main__":
 
         live_loop()                               
 
-        time.sleep(300)                            
+        time.sleep(300)                       
                          
 
 
