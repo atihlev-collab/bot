@@ -90,6 +90,8 @@ sent_live = {}
 sent_prematch = {}
 team_form_cache = {}
 odds_cache = {}
+live_market_cache = {}
+betano_market_cache = {}
 
 # =========================================================
 # DATABASE
@@ -685,6 +687,151 @@ def get_upcoming_matches():
 
 
 # =========================================================
+# BETANO / LIVE MARKET AVAILABILITY
+# =========================================================
+
+def _norm_market_text(value):
+    return " ".join(str(value or "").strip().lower().replace("_", " ").split())
+
+
+def get_betano_market_catalog(fixture_id):
+    """Return Betano pre-match bet names/values for this fixture.
+
+    This confirms that Betano covers the market family for the fixture.
+    Cached to protect the API request budget.
+    """
+    cached = betano_market_cache.get(fixture_id)
+    if cached and time.time() - cached[0] < 900:
+        return cached[1]
+
+    catalog = []
+    try:
+        odds = get_odds(fixture_id)
+        if odds:
+            bookmakers = odds[0].get("bookmakers", [])
+            betano = next(
+                (
+                    b for b in bookmakers
+                    if b.get("id") == 32
+                    or _norm_market_text(b.get("name")) == "betano"
+                ),
+                None
+            )
+            if betano:
+                for bet in betano.get("bets", []):
+                    catalog.append({
+                        "name": _norm_market_text(bet.get("name")),
+                        "values": [
+                            _norm_market_text(v.get("value"))
+                            for v in bet.get("values", [])
+                        ]
+                    })
+    except Exception as e:
+        print("BETANO MARKET CATALOG ERROR:", fixture_id, repr(e))
+
+    betano_market_cache[fixture_id] = (time.time(), catalog)
+    return catalog
+
+
+def get_live_market_catalog(fixture_id):
+    """Return currently open in-play market names/values from API-Football."""
+    cached = live_market_cache.get(fixture_id)
+    if cached and time.time() - cached[0] < 30:
+        return cached[1]
+
+    catalog = []
+    try:
+        data = requests.get(
+            f"{BASE_URL}/odds/live",
+            headers=HEADERS,
+            params={"fixture": fixture_id},
+            timeout=15
+        ).json()
+
+        for event in data.get("response", []):
+            status = event.get("status", {}) or {}
+            if status.get("blocked") or status.get("finished"):
+                continue
+
+            # API-Football live odds are returned as bet objects. Keep this
+            # parser tolerant to both direct `odds` and bookmaker-like shapes.
+            groups = []
+            if isinstance(event.get("odds"), list):
+                groups.extend(event.get("odds", []))
+            if isinstance(event.get("bets"), list):
+                groups.extend(event.get("bets", []))
+            for bookmaker in event.get("bookmakers", []) or []:
+                groups.extend(bookmaker.get("bets", []) or [])
+
+            for bet in groups:
+                values = bet.get("values", []) or []
+                catalog.append({
+                    "name": _norm_market_text(bet.get("name")),
+                    "values": [
+                        _norm_market_text(v.get("value"))
+                        for v in values
+                    ]
+                })
+    except Exception as e:
+        print("LIVE MARKET CATALOG ERROR:", fixture_id, repr(e))
+
+    live_market_cache[fixture_id] = (time.time(), catalog)
+    return catalog
+
+
+def _catalog_has_market(catalog, market_type):
+    for bet in catalog:
+        name = bet.get("name", "")
+        values = bet.get("values", [])
+        joined = " ".join([name] + values)
+
+        if market_type == "FH_CORNERS":
+            if "corner" in joined and ("first half" in joined or "1st half" in joined):
+                return True
+
+        elif market_type == "NEXT_CORNERS":
+            if "corner" in joined:
+                # Accept explicit next/remaining markets or a live corner O/U
+                # containing an Over 1.5 line.
+                if "next" in joined or "remaining" in joined or "over 1.5" in joined:
+                    return True
+
+        elif market_type == "NEXT_CARDS":
+            if "card" in joined:
+                if "next" in joined or "remaining" in joined or "over 1.5" in joined:
+                    return True
+
+    return False
+
+
+def betano_live_market_available(fixture_id, market_type):
+    """Conservative availability gate for corner/card Telegram signals.
+
+    Requires BOTH:
+      1) Betano to list that market family for the fixture pre-match; and
+      2) API-Football live odds to show a compatible in-play market now.
+
+    API-Football's /odds/live feed is not documented as bookmaker-specific,
+    so this deliberately uses both checks instead of pretending it can prove
+    a Betano live price when the feed does not expose one.
+    """
+    betano_catalog = get_betano_market_catalog(fixture_id)
+    live_catalog = get_live_market_catalog(fixture_id)
+
+    betano_ok = _catalog_has_market(betano_catalog, market_type)
+    live_ok = _catalog_has_market(live_catalog, market_type)
+
+    print(
+        "BETANO LIVE MARKET CHECK:",
+        fixture_id,
+        market_type,
+        "BETANO=", betano_ok,
+        "LIVE=", live_ok
+    )
+
+    return betano_ok and live_ok
+
+# =========================================================
 # CARD PRESSURE
 # =========================================================
 
@@ -817,9 +964,12 @@ def analyze_live_match(fixture):
         away_team = fixture["teams"]["away"]["name"]
         country = fixture["league"].get("country", "")
 
-        check_text = f"{home_team} {away_team}".lower()
+        league_name = fixture["league"].get("name", "")
+        check_text = f"{country} {league_name} {home_team} {away_team}".lower()
         blocked_live = [
-            "reserve", "reserves", "women", "female",
+            "reserve", "reserves", "women", "woman", "female",
+            "ladies", "femenina", "feminine", "feminin", "femminile",
+            "frauen", "damen", "feminino",
             "u17", "u18", "u19", "u20", "u21", "u22", "u23",
             "russia", "belarus"
         ]
@@ -828,6 +978,12 @@ def analyze_live_match(fixture):
             return None
 
         if any(word in check_text for word in blocked_live):
+            print("LIVE BLOCKED MATCH:", home_team, away_team, league_name)
+            return None
+
+        if home_team.strip().lower().endswith((" w", " women", " ladies")):
+            return None
+        if away_team.strip().lower().endswith((" w", " women", " ladies")):
             return None
 
         stats = get_statistics(fixture_id)
@@ -959,8 +1115,11 @@ def analyze_live_match(fixture):
                 and total_corners >= 2
                 and fh_corner_probability >= 72
             ):
-                return (
-                    "🚩 FIRST HALF OVER 1.5 CORNERS",
+                if not betano_live_market_available(fixture_id, "FH_CORNERS"):
+                    print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
+                else:
+                    return (
+                        "🚩 FIRST HALF OVER 1.5 CORNERS",
                     fh_corner_probability,
                     minute,
                     fh_corner_probability
@@ -1003,8 +1162,11 @@ def analyze_live_match(fixture):
             and total_fouls >= 18
             and goal_diff <= 2
         ):
-            return (
-                "🟨 OVER 1.5 NEXT CARDS",
+            if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
+                print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
+            else:
+                return (
+                    "🟨 OVER 1.5 NEXT CARDS",
                 card_probability,
                 minute,
                 card_probability
@@ -1140,8 +1302,11 @@ def analyze_live_match(fixture):
             and best_pressure >= 68
             and corner_probability >= 75
         ):
-            return (
-                "🚩 OVER 1.5 NEXT CORNERS",
+            if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
+                print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
+            else:
+                return (
+                    "🚩 OVER 1.5 NEXT CORNERS",
                 corner_probability,
                 minute,
                 corner_probability
@@ -3814,10 +3979,20 @@ def analyze_prematch_match(match):
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
 
-        if home.endswith(" W"):
+        full_match_text = f"{country} {league} {home} {away}".lower()
+        women_words = [
+            "women", "woman", "female", "ladies", "femenina",
+            "feminine", "feminin", "femminile", "frauen", "damen",
+            "feminino"
+        ]
+        if any(word in full_match_text for word in women_words):
+            print("PREMATCH BLOCKED WOMEN:", home, away, league)
             return None
 
-        if away.endswith(" W"):
+        if home.strip().lower().endswith((" w", " women", " ladies")):
+            return None
+
+        if away.strip().lower().endswith((" w", " women", " ladies")):
             return None
 
         if " II" in home:
@@ -9248,7 +9423,7 @@ if __name__ == "__main__":
 
         live_loop()                               
 
-        time.sleep(300)                     
+        time.sleep(300)                    
                          
 
 
