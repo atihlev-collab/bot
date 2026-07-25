@@ -4448,7 +4448,179 @@ def confidence_from_score(score):
 
         return 60                     
 
-    return 50                                     
+    return 50       
+
+
+# =========================================================   
+# INJURIES & SUSPENSIONS ENGINE                               
+# =========================================================  
+
+injuries_cache = {}                                          
+
+
+def get_team_absences(                                      
+    fixture_id,                                               
+    team_id                                                  
+):                                                            
+
+    cache_key = f"{fixture_id}_{team_id}"                    
+
+    if cache_key in injuries_cache:                          
+
+        cache_time, cached_data = (                          
+            injuries_cache[cache_key]                         
+        )                                                     
+
+        if (                                                 
+            time.time()                                       
+            -                                                
+            cache_time                                        
+            < 1800                                           
+        ):                                                    
+            return cached_data                              
+
+
+    result = {                                               
+        "total": 0,                                           
+        "injuries": 0,                                       
+        "suspensions": 0,                                     
+        "adjustment": 0                                       
+    }                                                         
+
+
+    try:                                                     
+
+        response = requests.get(                             
+            f"{BASE_URL}/injuries",                           
+            headers=HEADERS,                                 
+            params={                                         
+                "fixture": fixture_id,                        
+                "team": team_id                               
+            },                                               
+            timeout=20                                        
+        ).json()                                              
+
+
+        players = response.get(                              
+            "response",                                       
+            []                                                
+        )                                                    
+
+
+        injuries = 0                                         
+        suspensions = 0                                      
+
+
+        for item in players:                                 
+
+            reason = str(                                     
+                item.get(                                    
+                    "player",                                
+                    {}                                       
+                ).get(                                       
+                    "reason",                               
+                    ""                                       
+                )                                            
+            ).lower()                                         
+
+
+            if (                                             
+                "suspension" in reason                       
+                or                                           
+                "suspended" in reason                         
+                or                                            
+                "red card" in reason                          
+            ):                                                
+
+                suspensions += 1                              
+
+            else:                                             
+
+                injuries += 1                                
+
+
+        total = (                                            
+            injuries                                         
+            +                                                
+            suspensions                                       
+        )                                                    
+
+
+        adjustment = 0                                       
+
+
+        if total >= 5:                                       
+            adjustment = -5                                   
+
+        elif total == 4:                                      
+            adjustment = -4                                   
+
+        elif total == 3:                                     
+            adjustment = -3                                 
+
+        elif total == 2:                                      
+            adjustment = -2                                   
+
+        elif total == 1:                                     
+            adjustment = -1                                   
+
+
+        if suspensions >= 2:                                  
+            adjustment -= 1                                   
+
+
+        adjustment = max(                                   
+            -5,                                              
+            min(                                              
+                0,                                            
+                adjustment                                    
+            )                                                 
+        )                                                     
+
+
+        result = {                                          
+            "total": total,                                  
+            "injuries": injuries,                             
+            "suspensions": suspensions,                      
+            "adjustment": adjustment                          
+        }                                                     
+
+
+        injuries_cache[cache_key] = (                        
+            time.time(),                                      
+            result                                            
+        )                                                    
+
+
+        print(                                              
+            "ABSENCES:",                                      
+            team_id,                                         
+            "TOTAL=",                                         
+            total,                                          
+            "INJ=",                                          
+            injuries,                                         
+            "SUSP=",                                         
+            suspensions,                                     
+            "ADJ=",                                          
+            adjustment                                        
+        )                                                    
+
+
+        return result                                       
+
+
+    except Exception as e:                                    
+
+        print(                                               
+            "ABSENCES ERROR:",                                
+            team_id,                                          
+            repr(e)                                          
+        )                                                     
+
+        return result                                        
+
+
+
 # =========================================================
 # PREMATCH ANALYSIS
 # =========================================================
