@@ -4754,6 +4754,59 @@ def analyze_prematch_match(match):
         home_id = match["teams"]["home"]["id"]
         away_id = match["teams"]["away"]["id"]
 
+
+        # =================================================   
+        # INJURIES & SUSPENSIONS                               
+        # =================================================   
+
+        home_absences = get_team_absences(                    
+            fixture_id,                                       
+            home_id                                           
+        )                                                     
+
+        away_absences = get_team_absences(                    
+            fixture_id,                                       
+            away_id                                            
+        )                                                    
+
+
+        home_absence_adjustment = home_absences.get(           
+            "adjustment",                                     
+            0                                                  
+        )                                                      
+
+        away_absence_adjustment = away_absences.get(            
+            "adjustment",                                     
+            0                                                  
+        )                                                    
+
+
+        print(                                               
+            "HOME ABSENCES:",                                  
+            home,                                              
+            "TOTAL=",                                        
+            home_absences.get("total", 0),                    
+            "INJ=",                                           
+            home_absences.get("injuries", 0),                 
+            "SUSP=",                                           
+            home_absences.get("suspensions", 0),              
+            "ADJ=",                                            
+            home_absence_adjustment                            
+        )                                                      
+
+        print(                                                
+            "AWAY ABSENCES:",                                 
+            away,                                              
+            "TOTAL=",                                         
+            away_absences.get("total", 0),                     
+            "INJ=",                                           
+            away_absences.get("injuries", 0),                  
+            "SUSP=",                                           
+            away_absences.get("suspensions", 0),              
+            "ADJ=",                                           
+            away_absence_adjustment                            
+        )                                                      
+
         league_id = match["league"]["id"]          
 
         season = match["league"]["season"]        
@@ -5082,7 +5135,21 @@ def analyze_prematch_match(match):
             home_fatigue,                                     
             "SCORE=",                                         
             round(home_score, 2)                               
-        )                                                      
+        )             
+
+
+        # HOME INJURIES & SUSPENSIONS                         
+
+        home_score += home_absence_adjustment                
+
+        print(                                                
+            "HOME ABSENCE SCORE:",                             
+            home,                                             
+            "ADJ=",                                           
+            home_absence_adjustment,                          
+            "SCORE=",                                         
+            round(home_score, 2)                             
+        )                                                                                                  
 
 
         if (                                 
@@ -7020,7 +7087,21 @@ def analyze_prematch_match(match):
             away_fatigue,                                     
             "SCORE=",                                          
             round(away_score, 2)                               
-        )                                                      
+        )      
+
+
+        # AWAY INJURIES & SUSPENSIONS                          
+
+        away_score += away_absence_adjustment                  
+
+        print(                                                
+            "AWAY ABSENCE SCORE:",                            
+            away,                                              
+            "ADJ=",                                           
+            away_absence_adjustment,                          
+            "SCORE=",                                          
+            round(away_score, 2)                              
+        )                                                     
 
         # AWAY EASY GOALS PENALTY          
 
