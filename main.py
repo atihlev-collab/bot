@@ -1300,65 +1300,168 @@ def analyze_live_match(fixture):
         if minute < 25:
             return None
 
-        # 🚩 FIRST HALF OVER 1.5 CORNERS            
+        # =================================================    
+        # FIRST HALF OVER 1.5 CORNERS - QUALITY              
+        # =================================================  
 
-        first_half_corner = False         
+        first_half_corner = False                             
 
-        if (                               
+        fh_total_corners = (                                  
+            home_corners                                       
+            +                                                  
+            away_corners                                       
+        )                                                    
 
-            35 <= minute <= 45              
-            and                             
+        fh_total_shots_on = (                                 
+            home_shots_on                                     
+            +                                                 
+            away_shots_on                                      
+        )                                                     
 
-            max(                            
+        fh_total_shots = (                                    
+            home_total_shots                                  
+            +                                                  
+            away_total_shots                                  
+        )                                                     
 
-                home_pressure,             
-                away_pressure               
+        fh_max_pressure = max(                                 
+            home_pressure,                                    
+            away_pressure                                      
+        )                                                      
 
-            ) >= 78                        
-            and                            
 
-            max(                            
+        # -------------------------------------------------    
+        # CORNER PROBABILITY                                  
+        # -------------------------------------------------    
 
-                home_shots_on,             
-                away_shots_on              
+        fh_corner_probability = 45                             
 
-            ) >= 4                          
-            and                             
 
-            (                             
+        # PRESSURE                                           
 
-                home_corners              
-                +                          
-                away_corners              
+        if fh_max_pressure >= 85:                             
+            fh_corner_probability += 18                       
 
-            ) <= 7                        
+        elif fh_max_pressure >= 78:                           
+            fh_corner_probability += 14                        
 
-        ):                                 
+        elif fh_max_pressure >= 72:                           
+            fh_corner_probability += 9                        
 
-            first_half_corner = True        
 
-            print(                         
+        # CORNERS ALREADY GENERATED                            
 
-                "FIRST HALF CORNER MODE",   
+        if fh_total_corners >= 6:                            
+            fh_corner_probability += 10                       
 
-                fixture_id,                
+        elif fh_total_corners >= 4:                           
+            fh_corner_probability += 7                        
 
-                minute,                     
+        elif fh_total_corners >= 2:                           
+            fh_corner_probability += 4                        
 
-                home_corners,              
 
-                away_corners                
+        # SHOTS ON TARGET                                     
 
-            )                             
-     
+        if fh_total_shots_on >= 6:                           
+            fh_corner_probability += 9                        
 
-        print(
-            "PASSED MINUTE:",
-            fixture_id
-        )
+        elif fh_total_shots_on >= 4:                          
+            fh_corner_probability += 6                         
 
-        if minute > 90:
-            return None
+        elif fh_total_shots_on >= 3:                          
+            fh_corner_probability += 3                        
+
+
+        # TOTAL ATTACKING ACTIVITY                            
+
+        if fh_total_shots >= 14:                              
+            fh_corner_probability += 8                         
+
+        elif fh_total_shots >= 10:                            
+            fh_corner_probability += 5                         
+
+        elif fh_total_shots >= 7:                              
+            fh_corner_probability += 3                      
+
+
+        # BOTH TEAMS ACTIVE                                   
+
+        if (                                                   
+            home_pressure >= 55                                
+            and                                                
+            away_pressure >= 55                                
+        ):                                                     
+            fh_corner_probability += 4                        
+
+
+        # STRONG ONE-SIDED ATTACK                              
+
+        if shots_diff >= 4:                                   
+            fh_corner_probability += 3                        
+
+
+        fh_corner_probability = min(                          
+            95,                                                
+            max(                                              
+                50,                                            
+                fh_corner_probability                        
+            )                                                  
+        )                                                      
+
+
+        print(                                                
+            "FIRST HALF CORNER CHECK:",                       
+            home_team,                                         
+            away_team,                                         
+            "MIN=",                                           
+            minute,                                           
+            "PROB=",                                         
+            fh_corner_probability,                             
+            "PRESS=",                                         
+            home_pressure,                                   
+            away_pressure,                                    
+            "CORNERS=",                                       
+            fh_total_corners,                                 
+            "SOT=",                                           
+            fh_total_shots_on,                                
+            "SHOTS=",                                          
+            fh_total_shots                                    
+        )                                                     
+
+
+        # -------------------------------------------------    
+        # FINAL QUALITY FILTER                                 
+        # -------------------------------------------------   
+
+        if (                                                 
+            minute >= 32                                      
+            and                                                
+            minute <= 40                                      
+            and                                                
+            fh_max_pressure >= 72                              
+            and                                              
+            fh_total_corners >= 2                             
+            and                                                
+            fh_total_shots_on >= 3                            
+            and                                               
+            fh_total_shots >= 7                                
+            and                                                
+            fh_corner_probability >= 72                       
+        ):                                                    
+
+            first_half_corner = True                         
+
+            print(                                            
+                "FIRST HALF CORNER MODE:",                     
+                fixture_id,                                    
+                "MIN=",                                        
+                minute,                                        
+                "PROB=",                                       
+                fh_corner_probability,                         
+                "CORNERS=",                                    
+                fh_total_corners                               
+            )                                                 
 
         # CARD PRESSURE                     
 
@@ -1435,96 +1538,197 @@ def analyze_live_match(fixture):
 
             return (                            
 
-                "🟨 OVER 1.5 NEXT CARDS",       
+        # =================================================    
+        # OVER 1.5 NEXT CARDS - QUALITY                       
+        # =================================================    
 
-                88,                            
+        total_cards = (                                       
+            home_yellow                                       
+            +                                                 
+            away_yellow                                       
+        )                                                    
 
-                minute,                         
+        total_fouls = (                                       
+            home_fouls                                         
+            +                                                  
+            away_fouls                                        
+        )                                                      
 
-                card_probability                
+        total_shots = (                                        
+            home_total_shots                                  
+            +                                                  
+            away_total_shots                                  
+        )                                                      
 
-            )                                           
+        best_pressure = max(                                  
+            home_pressure,                                   
+            away_pressure                                     
+        )                                                     
 
-            
+
+        card_probability = 45                                 
 
 
-        best_pressure = max(         
+        # -------------------------------------------------   
+        # EXISTING CARDS                                       
+        # -------------------------------------------------    
 
-            home_pressure,            
+        if total_cards >= 5:                                  
+            card_probability += 14                            
 
-            away_pressure             
+        elif total_cards >= 3:                                
+            card_probability += 10                            
 
-        )                            
+        elif total_cards >= 2:                                
+            card_probability += 6                              
 
-        minimum_pressure = 50        
 
-        if minute >= 60:             
+        # -------------------------------------------------  
+        # FOUL INTENSITY                                      
+        # -------------------------------------------------   
 
-            minimum_pressure = 54     
+        if total_fouls >= 28:                                 
+            card_probability += 16                             
 
-        if minute >= 70:             
+        elif total_fouls >= 22:                               
+            card_probability += 12                            
 
-            minimum_pressure = 57     
+        elif total_fouls >= 17:                                
+            card_probability += 7                              
 
-        if (                         
 
-            best_pressure             
+        # -------------------------------------------------    
+        # PRESSURE / CONTESTED MATCH                          
+        # -------------------------------------------------    
 
-            <                         
+        if best_pressure >= 80:                               
+            card_probability += 8                             
 
-            minimum_pressure         
+        elif best_pressure >= 70:                             
+            card_probability += 5                              
 
-        ):                            
+        elif best_pressure >= 62:                              
+            card_probability += 3                              
 
-            return None               
 
-        if dominance < 7:            
+        # BOTH TEAMS INVOLVED                                 
 
-            return None               
+        if (                                                  
+            home_pressure >= 55                               
+            and                                               
+            away_pressure >= 55                               
+        ):                                                    
+            card_probability += 4                              
 
-        min_shots = 4               
 
-        if minute >= 60:              
+        # -------------------------------------------------   
+        # MATCH STILL COMPETITIVE                              
+        # -------------------------------------------------    
 
-            min_shots = 5             
+        home_goals = (                                         
+            fixture["goals"]["home"]                           
+            or                                                 
+            0                                                 
+        )                                                      
 
-        if minute >= 70:            
+        away_goals = (                                        
+            fixture["goals"]["away"]                          
+            or                                                 
+            0                                                 
+        )                                                     
 
-            min_shots = 5            
-     
+        goal_diff = abs(                                      
+            home_goals                                         
+            -                                                 
+            away_goals                                        
+        )                                                    
 
-        home = fixture["goals"]["home"] or 0     
-        away = fixture["goals"]["away"] or 0     
 
-        total = home + away                      
+        if goal_diff <= 1:                                   
+            card_probability += 7                             
 
-        if total >= 5:                            
-            min_shots -= 1                        
+        elif goal_diff == 2:                                   
+            card_probability += 2                             
 
-        if (                                     
+        else:                                                 
+            card_probability -= 5                             
 
-            max(                                  
 
-                home_shots_on,                   
+        # -------------------------------------------------    
+        # LATE MATCH                                           
+        # -------------------------------------------------    
 
-                away_shots_on                    
+        if (                                                   
+            minute >= 65                                      
+            and                                               
+            minute <= 82                                      
+            and                                               
+            goal_diff <= 1                                    
+        ):                                                     
+            card_probability += 5                              
 
-            )                                    
 
-            <                                     
+        # SOME ATTACKING ACTIVITY                            
 
-            min_shots                            
+        if total_shots >= 14:                                 
+            card_probability += 3                            
 
-        ):                                       
 
-            return None                           
+        card_probability = min(                               
+            95,                                               
+            max(                                               
+                50,                                            
+                card_probability                               
+            )                                                 
+        )                                                      
 
-        goal_diff = abs(                         
 
-            home - away                           
+        print(                                                
+            "NEXT CARDS CHECK:",                              
+            home_team,                                        
+            away_team,                                        
+            "MIN=",                                           
+            minute,                                           
+            "PROB=",                                           
+            card_probability,                                  
+            "CARDS=",                                         
+            total_cards,                                      
+            "FOULS=",                                        
+            total_fouls,                                     
+            "PRESS=",                                         
+            home_pressure,                                    
+            away_pressure,                                    
+            "GOAL_DIFF=",                                     
+            goal_diff                                         
+        )                                                     
 
-        )     
 
+        # -------------------------------------------------    
+        # FINAL QUALITY FILTER                                
+        # -------------------------------------------------   
+
+        if (                                                 
+            minute >= 55                                      
+            and                                               
+            minute <= 82                                      
+            and                                               
+            total_cards >= 2                                   
+            and                                                
+            total_fouls >= 17                                 
+            and                                                
+            best_pressure >= 62                              
+            and                                                
+            goal_diff <= 2                                     
+            and                                                
+            card_probability >= 76                            
+        ):                                                    
+
+            return (                                           
+                "🟨 OVER 1.5 NEXT CARDS",                     
+                card_probability,                             
+                minute,                                       
+                card_probability                               
+            )                                                 
 
         # CARD BONUS ENGINE              
 
@@ -1685,165 +1889,349 @@ def analyze_live_match(fixture):
 
   
      
-        # FAST GOALS OVERRIDE
+        # =================================================   
+        # FAST GOALS OVERRIDE - QUALITY                       
+        # =================================================   
 
-        if (
-            minute <= 40
-            and
-            total >= 2
-            and
-            goal_diff >= 2
-            and
-            max(
-                home_pressure,
-                away_pressure
-            ) >= 80
-        ):
+        fast_goal_probability = 50                            
 
-            if home > away:
+        best_pressure = max(                                  
+            home_pressure,                                     
+            away_pressure                                      
+        )                                                      
 
-                if not market_available(                  
-                    fixture_id,                           
-                    "Next Goal"                           
-                ):                                        
-                    return None                           
+        pressure_diff = abs(                                  
+            home_pressure                                      
+            -                                                  
+            away_pressure                                     
+        )                                                      
 
-                return (
+        total_shots_on = (                                    
+            home_shots_on                                      
+            +                                                 
+            away_shots_on                                     
+        )                                                     
 
-                    "🎯 NEXT GOAL HOME",
-                    90,
-                    minute,
-                    90
-
-                )
-
-            else:
-
-                if not market_available(                   
-                    fixture_id,                           
-                    "Next Goal"                           
-                ):                                        
-                    return None                           
-
-                return (
-
-                    "🎯 NEXT GOAL AWAY",
-                    90,
-                    minute,
-                    90
-
-                )         
-                   
-
-        print(
-            "OVER15 CHECK:",
-            home_team,
-            away_team,
-            minute,
-            home_pressure,
-            away_pressure,
-            home_shots_on,
-            away_shots_on,
-            home_corners,
-            away_corners
-        )       
+        total_corners = (                                     
+            home_corners                                      
+            +                                                
+            away_corners                                      
+        )                                                      
 
 
-                # NORMAL NEXT GOAL
+        # -------------------------------------------------   
+        # PROBABILITY                                          
+        # -------------------------------------------------    
 
-        if (                              
+        if best_pressure >= 90:                                
+            fast_goal_probability += 18                        
 
-            minute > 40                  
+        elif best_pressure >= 84:                             
+            fast_goal_probability += 14                        
 
-            and
+        elif best_pressure >= 78:                              
+            fast_goal_probability += 9                        
 
-            minute < 75                     
 
-            and
+        if total_shots_on >= 7:                               
+            fast_goal_probability += 10                        
 
-            max(                           
+        elif total_shots_on >= 5:                             
+            fast_goal_probability += 7                         
 
-                home_pressure,            
+        elif total_shots_on >= 4:                             
+            fast_goal_probability += 4                         
 
-                away_pressure              
 
-            ) >= 65                        
+        if total_corners >= 5:                                
+            fast_goal_probability += 5                        
 
-            and
+        elif total_corners >= 3:                               
+            fast_goal_probability += 3                        
 
-            max(                            
 
-                home_shots_on,              
+        if total >= 3:                                        
+            fast_goal_probability += 6                         
 
-                away_shots_on              
+        elif total >= 2:                                       
+            fast_goal_probability += 3                        
 
-            ) >= 4                         
 
-        ):                                  
+        if pressure_diff >= 20:                               
+            fast_goal_probability += 6                        
 
-            if home_pressure > away_pressure:   
+        elif pressure_diff >= 12:                             
+            fast_goal_probability += 3                        
 
-                if not market_available(                 
-                    fixture_id,                         
-                    "Next Goal"                            
-                ):                                         
-                    return None                            
 
-                return (                        
+        fast_goal_probability = min(                          
+            95,                                               
+            max(                                               
+                50,                                           
+                fast_goal_probability                          
+            )                                                  
+        )                                                      
 
-                    "🎯 NEXT GOAL HOME",         
 
-                    min(                         
+        print(                                               
+            "FAST GOALS CHECK:",                               
+            home_team,                                        
+            away_team,                                         
+            "MIN=",                                           
+            minute,                                           
+            "SCORE=",                                          
+            home,                                             
+            away,                                             
+            "PROB=",                                           
+            fast_goal_probability,                            
+            "PRESS=",                                          
+            home_pressure,                                     
+            away_pressure,                                     
+            "SOT=",                                           
+            total_shots_on,                                   
+            "CORNERS=",                                       
+            total_corners                                     
+        )                                                      
 
-                        95,                      
 
-                        home_pressure           
+        # -------------------------------------------------   
+        # FINAL FAST-GAME FILTER                              
+        # -------------------------------------------------    
 
-                    ),                          
+        if (                                                   
+            minute >= 20                                      
+            and                                               
+            minute <= 42                                      
+            and                                              
+            total >= 2                                        
+            and                                                
+            best_pressure >= 78                               
+            and                                               
+            total_shots_on >= 4                                
+            and                                              
+            fast_goal_probability >= 76                      
+        ):                                                    
 
-                    minute,                     
 
-                    min(                       
+            # ---------------------------------------------    
+            # HOME IS ACTUALLY DOMINATING                      
+            # ---------------------------------------------    
 
-                        95,                     
+            if (                                               
+                home_pressure                                
+                >=                                             
+                away_pressure + 10                             
+                and                                            
+                home_shots_on                                  
+                >=                                             
+                away_shots_on                                  
+            ):                                                 
 
-                        home_pressure            
+                if not market_available(                       
+                    fixture_id,                               
+                    "Next Goal"                              
+                ):                                             
+                    return None                               
 
-                    )                           
+                return (                                       
+                    "🎯 NEXT GOAL HOME",                      
+                    fast_goal_probability,                    
+                    minute,                                   
+                    fast_goal_probability                     
+                )                                             
 
-                )                                
 
-            elif away_pressure > home_pressure:  
+            # ---------------------------------------------   
+            # AWAY IS ACTUALLY DOMINATING                     
+            # ---------------------------------------------    
 
-                if not market_available(                  
-                    fixture_id,                            
-                    "Next Goal"                            
-                ):                                        
-                    return None                          
+            elif (                                            
+                away_pressure                                  
+                >=                                             
+                home_pressure + 10                            
+                and                                            
+                away_shots_on                                  
+                >=                                            
+                home_shots_on                                  
+            ):                                                 
 
-                return (                         
+                if not market_available(                      
+                    fixture_id,                              
+                    "Next Goal"                                
+                ):                                             
+                    return None                               
 
-                    "🎯 NEXT GOAL AWAY",         
+                return (                                      
+                    "🎯 NEXT GOAL AWAY",                      
+                    fast_goal_probability,                     
+                    minute,                                  
+                    fast_goal_probability                      
+                )                                              
 
-                    min(                        
 
-                        95,                      
+        # =================================================    
+        # NORMAL NEXT GOAL - QUALITY                          
+        # =================================================    
 
-                        away_pressure            
+        normal_goal_probability = 50                           
 
-                    ),                           
+        pressure_diff = abs(                                  
+            home_pressure                                     
+            -                                                 
+            away_pressure                                    
+        )                                                    
 
-                    minute,                     
+        total_shots_on = (                                     
+            home_shots_on                                     
+            +                                                 
+            away_shots_on                                    
+        )                                                     
 
-                    min(                        
+        total_corners = (                                     
+            home_corners                                      
+            +                                                 
+            away_corners                                      
+        )                                                    
 
-                        95,                      
+        best_pressure = max(                                  
+            home_pressure,                                    
+            away_pressure                                     
+        )                                                    
 
-                        away_pressure           
 
-                    )                           
+        # PRESSURE                                           
 
-                )                                
+        if best_pressure >= 85:                               
+            normal_goal_probability += 17                     
+
+        elif best_pressure >= 78:                            
+            normal_goal_probability += 13                     
+
+        elif best_pressure >= 70:                             
+            normal_goal_probability += 8                     
+
+
+        # SHOTS ON TARGET                                     
+
+        if total_shots_on >= 9:                                
+            normal_goal_probability += 12                     
+
+        elif total_shots_on >= 7:                             
+            normal_goal_probability += 9                      
+
+        elif total_shots_on >= 5:                             
+            normal_goal_probability += 5                      
+
+
+        # CORNERS                                              
+
+        if total_corners >= 8:                               
+            normal_goal_probability += 6                      
+
+        elif total_corners >= 5:                              
+            normal_goal_probability += 3                      
+
+
+        # CLEAR PRESSURE ADVANTAGE                            
+
+        if pressure_diff >= 20:                                
+            normal_goal_probability += 7                      
+
+        elif pressure_diff >= 12:                             
+            normal_goal_probability += 4                      
+
+
+        normal_goal_probability = min(                         
+            95,                                                
+            max(                                              
+                50,                                           
+                normal_goal_probability                      
+            )                                                 
+        )                                                     
+
+
+        print(                                                
+            "NORMAL NEXT GOAL CHECK:",                        
+            home_team,                                        
+            away_team,                                       
+            "MIN=",                                           
+            minute,                                           
+            "PROB=",                                           
+            normal_goal_probability,                           
+            "PRESS=",                                          
+            home_pressure,                                   
+            away_pressure,                                     
+            "SOT=",                                           
+            home_shots_on,                                     
+            away_shots_on,                                    
+            "CORNERS=",                                       
+            total_corners,                                    
+            "PRESS_DIFF=",                                     
+            pressure_diff                                      
+        )                                                     
+
+
+        # -------------------------------------------------    
+        # FINAL FILTER                                        
+        # -------------------------------------------------    
+
+        if (                                                  
+            minute > 40                                       
+            and                                              
+            minute < 75                                       
+            and                                               
+            best_pressure >= 70                               
+            and                                                
+            total_shots_on >= 5                                
+            and                                                
+            pressure_diff >= 10                               
+            and                                                
+            normal_goal_probability >= 76                     
+        ):                                                    
+
+
+            # HOME                                            
+
+            if (                                               
+                home_pressure >= away_pressure + 10             
+                and                                           
+                home_shots_on >= away_shots_on                  
+            ):                                                
+
+                if not market_available(                     
+                    fixture_id,                                
+                    "Next Goal"                                
+                ):                                             
+                    return None                               
+
+                return (                                      
+                    "🎯 NEXT GOAL HOME",                      
+                    normal_goal_probability,                  
+                    minute,                                    
+                    normal_goal_probability                    
+                )                                              
+
+
+            # AWAY                                             
+
+            elif (                                             
+                away_pressure >= home_pressure + 10             
+                and                                           
+                away_shots_on >= home_shots_on                  
+            ):                                                
+
+                if not market_available(                      
+                    fixture_id,                                
+                    "Next Goal"                              
+                ):                                             
+                    return None                              
+
+                return (                                      
+                    "🎯 NEXT GOAL AWAY",                    
+                    normal_goal_probability,                  
+                    minute,                                    
+                    normal_goal_probability                   
+                )                                                                        
 
         # =================================================   
         # OVER 1.5 REMAINING GOALS - STRICT                    
