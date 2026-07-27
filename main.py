@@ -1518,7 +1518,18 @@ def analyze_live_match(fixture):
                     late_goal_probability,                           
                     minute,                                        
                     late_goal_probability                           
-                )                                                  
+                )      
+
+        return None                                             
+
+    except Exception as e:                                      
+
+        print(                                                  
+            "LIVE ANALYZE ERROR:",                              
+            repr(e)                                             
+        )                                                       
+
+        return None                                             
 
 # =========================================================    
 # REST & FATIGUE ENGINE                                        
