@@ -1372,35 +1372,84 @@ def analyze_live_match(fixture):
                 minute,                                            
                 remaining_probability                                
             )                                                       
+        # =========================================================  
+        # OVER 1.5 NEXT CORNERS - QUALITY MODE                      
+        # =========================================================  
 
-        # =========================================================
-        # OVER 1.5 NEXT CORNERS
-        # =========================================================
-        corner_probability = 45
-        corner_probability += max(0, best_pressure - 60) * 0.55
-        corner_probability += min(14, total_corners * 1.2)
-        corner_probability += min(12, total_shots * 0.45)
-        corner_probability += min(6, total_shots_on * 0.6)
-        corner_probability = round(min(95, corner_probability), 1)
+        corner_probability = 43                                     
 
-        print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
+        corner_probability += (                                     
+            max(0, best_pressure - 65) * 0.50                       
+        )                                                           
 
-        if (
-            55 <= minute <= 82
-            and total_corners >= 5
-            and total_shots >= 12
-            and best_pressure >= 68
-            and corner_probability >= 75
-        ):
-            if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
-                print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🚩 OVER 1.5 NEXT CORNERS",
-                corner_probability,
-                minute,
-                corner_probability
-            )
+        corner_probability += min(                                  
+            13,                                                     
+            total_corners * 1.10                                    
+        )                                                           
+
+        corner_probability += min(                                 
+            11,                                                     
+            total_shots * 0.40                                     
+        )                                                           
+
+        corner_probability += min(                                  
+            7,                                                      
+            total_shots_on * 0.55                                   
+        )                                                           
+
+        corner_probability += min(                                  
+            6,                                                      
+            pressure_diff * 0.18                                    
+        )                                                           
+
+        corner_probability = round(                                 
+            min(95, corner_probability),                            
+            1                                                       
+        )                                                           
+
+
+        print(                                                      
+            "CORNER QUALITY:",                                      
+            home_team,                                              
+            away_team,                                              
+            minute,                                                 
+            "PROB=", corner_probability,                            
+            "CORNERS=", total_corners,                              
+            "SHOTS=", total_shots,                                  
+            "SOT=", total_shots_on,                                
+            "PRESS=", best_pressure,                               
+            "DIFF=", pressure_diff                                  
+        )                                                           
+
+
+        if (                                                        
+            55 <= minute <= 80                                      
+            and total_corners >= 6                                  
+            and total_shots >= 14                                  
+            and total_shots_on >= 5                                
+            and best_pressure >= 74                                 
+            and pressure_diff >= 10                                 
+            and corner_probability >= 79                            
+        ):                                                         
+
+            if not betano_live_market_available(                    
+                fixture_id,                                         
+                "NEXT_CORNERS"                                      
+            ):                                                     
+
+                print(                                              
+                    "SKIP NEXT CORNERS - MARKET NOT AVAILABLE:",   
+                    fixture_id                                     
+                )                                                  
+
+            else:                                                  
+
+                return (                                            
+                    "🚩 OVER 1.5 NEXT CORNERS",                      
+                    corner_probability,                              
+                    minute,                                         
+                    corner_probability                              
+                )                                                  
 
         # =========================================================  
         # LATE GOAL - QUALITY MODE                                  
