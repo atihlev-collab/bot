@@ -1125,52 +1125,100 @@ def analyze_live_match(fixture):
                     fh_corner_probability
                 )
 
-        # =========================================================
-        # OVER 1.5 NEXT CARDS
-        # =========================================================
-        card_probability = calculate_card_pressure(
-            minute,
-            home_fouls,
-            away_fouls,
-            home_yellow,
-            away_yellow,
-            home_red,
-            away_red,
-            home_pressure,
-            away_pressure
-        )
+        # =========================================================  
+        # OVER 1.5 NEXT CARDS - QUALITY MODE                        
+        # =========================================================  
 
-        if goal_diff <= 1:
-            card_probability += 4
-        if home == away:
-            card_probability += 3
-        if minute >= 70:
-            card_probability += 4
-        if total_fouls >= 28:
-            card_probability += 5
-        if total_cards >= 4:
-            card_probability += 6
+        card_probability = calculate_card_pressure(                 
+            minute,                                                 
+            home_fouls,                                             
+            away_fouls,                                             
+            home_yellow,                                            
+            away_yellow,                                            
+            home_red,                                               
+            away_red,                                               
+            home_pressure,                                          
+            away_pressure                                           
+        )                                                           
 
-        card_probability = min(95, card_probability)
 
-        print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
+        # Close score = more tension                                
+        if goal_diff <= 1:                                          
+            card_probability += 5                                  
 
-        if (
-            55 <= minute <= 84
-            and card_probability >= 84
-            and total_cards >= 2
-            and total_fouls >= 18
-            and goal_diff <= 2
-        ):
-            if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
-                print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🟨 OVER 1.5 NEXT CARDS",
-                card_probability,
-                minute,
-                card_probability
-            )
+        if home == away:                                            
+            card_probability += 3                                 
+
+
+        # Late-match tension                                        
+        if minute >= 68:                                            
+            card_probability += 3                                  
+
+        if minute >= 75:                                            
+            card_probability += 2                                  
+
+
+        # Fouls are important for this market                      
+        if total_fouls >= 24:                                      
+            card_probability += 3                                  
+
+        if total_fouls >= 30:                                      
+            card_probability += 3                                  
+
+
+        # Existing cards show referee / match intensity             
+        if total_cards >= 3:                                        
+            card_probability += 4                                  
+
+        if total_cards >= 5:                                        
+            card_probability += 3                                  
+
+
+        card_probability = round(                                   
+            min(95, card_probability),                              
+            1                                                       
+        )                                                           
+
+
+        print(                                                      
+            "CARD QUALITY:",                                        
+            home_team,                                              
+            away_team,                                             
+            minute,                                                 
+            "PROB=", card_probability,                              
+            "CARDS=", total_cards,                                  
+            "FOULS=", total_fouls,                                  
+            "DIFF=", goal_diff,                                     
+            "PRESS=", best_pressure                                 
+        )                                                           
+
+
+        if (                                                        
+            58 <= minute <= 82                                      
+            and card_probability >= 86                              
+            and total_cards >= 3                                    
+            and total_fouls >= 22                                   
+            and goal_diff <= 1                                      
+        ):                                                          
+
+            if not betano_live_market_available(                    
+                fixture_id,                                        
+                "NEXT_CARDS"                                       
+            ):                                                     
+
+                print(                                              
+                    "SKIP NEXT CARDS - MARKET NOT AVAILABLE:",      
+                    fixture_id                                      
+                )                                                   
+
+            else:                                                   
+
+                return (                                            
+                    "🟨 OVER 1.5 NEXT CARDS",                        
+                    card_probability,                                
+                    minute,                                         
+                    card_probability                                 
+                )                                                  
 
         # =========================================================  
         # FAST NEXT GOAL - QUALITY MODE                              
