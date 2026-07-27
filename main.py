@@ -1281,10 +1281,11 @@ def analyze_live_match(fixture):
                 and (home_xg + away_xg) >= 1.25                
                 and normal_goal_probability >= 80               
             ):                                                   
-                if (
-                    home_pressure >= away_pressure + 10
-                    and home_shots_on >= away_shots_on
-                ):
+                if (                                                
+                    home_pressure >= away_pressure + 14            
+                    and home_shots_on >= away_shots_on + 1          
+                    and home_xg >= away_xg + 0.25                    
+                ):                                                 
                     return (
                         "🎯 NEXT GOAL HOME",
                         normal_goal_probability,
@@ -1292,10 +1293,11 @@ def analyze_live_match(fixture):
                         normal_goal_probability
                     )
 
-                if (
-                    away_pressure >= home_pressure + 10
-                    and away_shots_on >= home_shots_on
-                ):
+                if (                                                
+                    away_pressure >= home_pressure + 14             
+                    and away_shots_on >= home_shots_on + 1         
+                    and away_xg >= home_xg + 0.25                   
+                ):                                                 
                     return (
                         "🎯 NEXT GOAL AWAY",
                         normal_goal_probability,
@@ -1303,34 +1305,73 @@ def analyze_live_match(fixture):
                         normal_goal_probability
                     )
 
-        # =========================================================
-        # OVER 1.5 REMAINING GOALS
-        # =========================================================
-        remaining_probability = 45
-        remaining_probability += max(0, best_pressure - 60) * 0.55
-        remaining_probability += min(15, total_shots_on * 1.4)
-        remaining_probability += min(8, total_corners * 0.7)
-        remaining_probability += min(10, (home_xg + away_xg) * 2.2)
-        if total >= 2:
-            remaining_probability += 4
-        remaining_probability = round(min(95, remaining_probability), 1)
+        # =========================================================  
+        # OVER 1.5 REMAINING GOALS - QUALITY MODE                   
+        # =========================================================  
 
-        print("OVER15 REMAINING CHECK:", minute, remaining_probability)
+        remaining_probability = 43                                  
 
-        if (
-            30 <= minute <= 65
-            and best_pressure >= 68
-            and total_shots_on >= 5
-            and total_shots >= 12
-            and (home_xg + away_xg) >= 1.5
-            and remaining_probability >= 76
-        ):
-            return (
-                "🚀 OVER 1.5 REMAINING GOALS",
-                remaining_probability,
-                minute,
-                remaining_probability
-            )
+        remaining_probability += (                                  
+            max(0, best_pressure - 65) * 0.55                       
+        )                                                          
+
+        remaining_probability += min(                               
+            14,                                                     
+            total_shots_on * 1.30                                   
+        )                                                           
+
+        remaining_probability += min(                               
+            7,                                                      
+            total_corners * 0.60                                   
+        )                                                           
+
+        remaining_probability += min(                               
+            11,                                                     
+            (home_xg + away_xg) * 2.2                               
+        )                                                           
+
+        remaining_probability += min(                               
+            6,                                                      
+            pressure_diff * 0.18                                    
+        )                                                          
+
+        remaining_probability = round(                              
+            min(95, remaining_probability),                         
+            1                                                       
+        )                                                           
+
+
+        print(                                                      
+            "OVER15 REMAINING QUALITY:",                            
+            home_team,                                              
+            away_team,                                              
+            minute,                                                 
+            "PROB=", remaining_probability,                         
+            "PRESS=", best_pressure,                                
+            "DIFF=", pressure_diff,                                 
+            "SOT=", total_shots_on,                                 
+            "SHOTS=", total_shots,                                  
+            "XG=", round(home_xg + away_xg, 2),                     
+            "CORNERS=", total_corners                               
+        )                                                           
+
+
+        if (                                                        
+            30 <= minute <= 62                                      
+            and best_pressure >= 75                                 
+            and total_shots_on >= 6                                 
+            and total_shots >= 14                                   
+            and total_corners >= 4                                 
+            and (home_xg + away_xg) >= 1.70                        
+            and remaining_probability >= 80                        
+        ):                                                          
+
+            return (                                                
+                "🚀 OVER 1.5 REMAINING GOALS",                      
+                remaining_probability,                              
+                minute,                                            
+                remaining_probability                                
+            )                                                       
 
         # =========================================================
         # OVER 1.5 NEXT CORNERS
@@ -1361,44 +1402,74 @@ def analyze_live_match(fixture):
                 corner_probability
             )
 
-        # =========================================================
-        # LATE GOAL
-        # =========================================================
-        if 75 <= minute <= 88:
-            late_goal_probability = 45
-            late_goal_probability += max(0, best_pressure - 60) * 0.65
-            late_goal_probability += min(15, total_shots_on * 1.3)
-            late_goal_probability += min(8, total_corners * 0.6)
-            late_goal_probability += min(10, (home_xg + away_xg) * 2)
+        # =========================================================  
+        # LATE GOAL - QUALITY MODE                                  
+        # =========================================================  
 
-            if goal_diff <= 1:
-                late_goal_probability += 5
+        if 76 <= minute <= 87:                                      
 
-            late_goal_probability = round(min(95, late_goal_probability), 1)
+            late_goal_probability = 45                             
 
-            print("LATE GOAL CHECK:", minute, late_goal_probability)
+            late_goal_probability += (                             
+                max(0, best_pressure - 65) * 0.60                   
+            )                                                       
 
-            if (
-                best_pressure >= 68
-                and total_shots_on >= 5
-                and total_shots >= 12
-                and total_corners >= 4
-                and (home_xg + away_xg) >= 1.4
-                and late_goal_probability >= 76
-            ):
-                return (
-                    "🔥 LATE GOAL",
-                    late_goal_probability,
-                    minute,
-                    late_goal_probability
-                )
+            late_goal_probability += min(                           
+                14,                                                
+                total_shots_on * 1.25                               
+            )                                                       
 
-        return None
+            late_goal_probability += min(                           
+                7,                                                  
+                total_corners * 0.55                                
+            )                                                       
 
-    except Exception as e:
-        print("LIVE ANALYSIS ERROR:", repr(e))
-        return None
+            late_goal_probability += min(                           
+                10,                                                 
+                (home_xg + away_xg) * 2                             
+            )                                                       
 
+            # Close matches have more late-goal urgency.             
+            if goal_diff <= 1:                                      
+                late_goal_probability += 4                          
+
+            late_goal_probability = round(                          
+                min(95, late_goal_probability),                     
+                1                                                   
+            )                                                      
+
+
+            print(                                                  
+                "LATE GOAL QUALITY:",                              
+                home_team,                                         
+                away_team,                                         
+                minute,                                            
+                "PROB=", late_goal_probability,                     
+                "PRESS=", best_pressure,                            
+                "SOT=", total_shots_on,                             
+                "SHOTS=", total_shots,                              
+                "XG=", round(home_xg + away_xg, 2),                 
+                "CORNERS=", total_corners,                          
+                "DIFF=", goal_diff                                  
+            )                                                       
+
+
+            if (                                                    
+                best_pressure >= 74                                 
+                and total_shots_on >= 6                             
+                and total_shots >= 15                               
+                and total_corners >= 5                              
+                and (home_xg + away_xg) >= 1.65                     
+                and goal_diff <= 1                                  
+                and late_goal_probability >= 80                     
+            ):                                                      
+
+                return (                                            
+                    "🔥 LATE GOAL",                                  
+                    late_goal_probability,                           
+                    minute,                                        
+                    late_goal_probability                           
+                )                                                  
 
 # =========================================================    
 # REST & FATIGUE ENGINE                                        
