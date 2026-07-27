@@ -1172,45 +1172,92 @@ def analyze_live_match(fixture):
                 card_probability
             )
 
-        # =========================================================
-        # FAST NEXT GOAL - 25 TO 42
-        # =========================================================
-        if 25 <= minute <= 42 and total >= 1:
-            fast_goal_probability = 50
-            fast_goal_probability += max(0, best_pressure - 65) * 0.65
-            fast_goal_probability += min(12, total_shots_on * 1.5)
-            fast_goal_probability += min(6, total_corners)
-            fast_goal_probability += min(8, total * 2)
-            fast_goal_probability += min(8, pressure_diff * 0.25)
-            fast_goal_probability = round(min(95, fast_goal_probability), 1)
+        # =========================================================  
+        # FAST NEXT GOAL - QUALITY MODE                              
+        # =========================================================  
 
-            if (
-                best_pressure >= 76
-                and total_shots_on >= 4
-                and pressure_diff >= 10
-                and fast_goal_probability >= 75
-            ):
-                if (
-                    home_pressure >= away_pressure + 10
-                    and home_shots_on >= away_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL HOME",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
+        if 25 <= minute <= 42 and total >= 1:                       
 
-                if (
-                    away_pressure >= home_pressure + 10
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
+            fast_goal_probability = 50                              
+
+            fast_goal_probability += (                              
+                max(0, best_pressure - 68) * 0.60                   
+            )                                                      
+
+            fast_goal_probability += min(                          
+                12,                                                 
+                total_shots_on * 1.4                                
+            )                                                       
+
+            fast_goal_probability += min(                           
+                5,                                                  
+                total_corners * 0.8                                
+            )                                                      
+
+            fast_goal_probability += min(                          
+                6,                                                 
+                total * 1.5                                        
+            )                                                       
+
+            fast_goal_probability += min(                          
+                8,                                                 
+                pressure_diff * 0.22                                
+            )                                                       
+
+            fast_goal_probability = round(                          
+                min(95, fast_goal_probability),                     
+                1                                                   
+            )                                                       
+
+
+            print(                                                 
+                "FAST GOAL QUALITY:",                               
+                home_team,                                          
+                away_team,                                          
+                minute,                                            
+                "PROB=", fast_goal_probability,                     
+                "PRESS=", best_pressure,                            
+                "DIFF=", pressure_diff,                             
+                "SOT=", total_shots_on,                            
+                "SHOTS=", total_shots,                              
+                "XG=", round(home_xg + away_xg, 2),                 
+                "CORNERS=", total_corners                           
+            )                                                       
+
+
+            if (                                                    
+                best_pressure >= 80                                 
+                and total_shots_on >= 5                             
+                and total_shots >= 10                               
+                and pressure_diff >= 14                             
+                and (home_xg + away_xg) >= 1.10                     
+                and fast_goal_probability >= 78                     
+            ):                                                     
+
+                if (                                               
+                    home_pressure >= away_pressure + 14            
+                    and home_shots_on >= away_shots_on + 1         
+                ):                                                 
+
+                    return (                                        
+                        "🎯 NEXT GOAL HOME",                        
+                        fast_goal_probability,                       
+                        minute,                                    
+                        fast_goal_probability                        
+                    )                                               
+
+
+                if (                                                
+                    away_pressure >= home_pressure + 14            
+                    and away_shots_on >= home_shots_on + 1         
+                ):                                                 
+
+                    return (                                       
+                        "🎯 NEXT GOAL AWAY",                        
+                        fast_goal_probability,                       
+                        minute,                                     
+                        fast_goal_probability                        
+                    )                                              
 
         # =========================================================
         # NORMAL NEXT GOAL - 41 TO 74
@@ -1226,12 +1273,14 @@ def analyze_live_match(fixture):
 
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
-            if (
-                best_pressure >= 70
-                and total_shots_on >= 5
-                and pressure_diff >= 10
-                and normal_goal_probability >= 76
-            ):
+            if (                                                
+                best_pressure >= 74                             
+                and total_shots_on >= 6                         
+                and total_shots >= 13                           
+                and pressure_diff >= 14                         
+                and (home_xg + away_xg) >= 1.25                
+                and normal_goal_probability >= 80               
+            ):                                                   
                 if (
                     home_pressure >= away_pressure + 10
                     and home_shots_on >= away_shots_on
