@@ -520,98 +520,156 @@ def extract(team, stat_name):
 # PRESSURE ENGINE
 # =========================================================
 
-def calculate_pressure(team):
+def calculate_pressure(team):                                  
 
-    pressure = 0
+    pressure = 0                                                
 
-    possession = extract(
-        team,
-        "Ball Possession"
-    )
 
-    shots_on = extract(
-        team,
-        "Shots on Goal"
-    )
+    # ========================================================= 
+    # POSSESSION                                               
+    # ========================================================= 
 
-    total_shots = extract(
-        team,
-        "Total Shots"
-    )
+    possession = team.get(                                     
+        "possession",                                           
+        0                                                       
+    )                                                           
 
-    corners = extract(
-        team,
-        "Corner Kicks"
-    )
+    if possession >= 70:                                       
+        pressure += 18                                          
 
-    attacks = extract(
-        team,
-        "Dangerous Attacks"
-    )
+    elif possession >= 65:                                     
+        pressure += 14                                          
 
-    if shots_on == 0 and attacks < 35:
-        return 0
+    elif possession >= 60:                                     
+        pressure += 10                                          
 
- 
-    # possession
+    elif possession >= 55:                                     
+        pressure += 6                                           
 
-    if possession >= 55:
-        pressure += 8
 
-    if possession >= 60:
-        pressure += 10
+    # ========================================================= 
+    # SHOTS ON TARGET                                          
+    # ========================================================= 
 
-    if possession >= 65:
-        pressure += 12
+    shots_on = team.get(                                       
+        "shots_on",                                             
+        0                                                       
+    )                                                           
 
-    # shots on target
+    if shots_on >= 7:                                          
+        pressure += 25                                          
 
-    if shots_on >= 3:
-        pressure += 18
+    elif shots_on >= 5:                                        
+        pressure += 18                                          
 
-    if shots_on >= 5:
-        pressure += 18
+    elif shots_on >= 3:                                        
+        pressure += 12                                          
 
-    if shots_on >= 7:
-        pressure += 25
+    elif shots_on >= 2:                                        
+        pressure += 7                                           
 
-    # total shots
 
-    if total_shots >= 8:
-        pressure += 8
+    # ========================================================= 
+    # TOTAL SHOTS                                              
+    # ========================================================= 
 
-    if total_shots >= 12:
-        pressure += 10
+    total_shots = team.get(                                    
+        "shots",                                                
+        0                                                       
+    )                                                           
 
-    if total_shots >= 16:
-        pressure += 12
+    if total_shots >= 18:                                      
+        pressure += 18                                          
 
-    # corners
+    elif total_shots >= 14:                                    
+        pressure += 14                                          
 
-    if corners >= 4:
-        pressure += 6
+    elif total_shots >= 10:                                    
+        pressure += 10                                          
 
-    if corners >= 7:
-        pressure += 8
+    elif total_shots >= 7:                                     
+        pressure += 6                                           
 
-    if corners >= 10:
-        pressure += 10
 
-    # dangerous attacks
+    # ========================================================= 
+    # CORNERS                                                  
+    # ========================================================= 
 
-    if attacks >= 15:
-        pressure += 18
+    corners = team.get(                                        
+        "corners",                                              
+        0                                                       
+    )                                                           
 
-    if attacks >= 25:
-        pressure += 18
+    if corners >= 9:                                           
+        pressure += 14                                          
 
-    if attacks >= 35:
-        pressure += 12
+    elif corners >= 7:                                         
+        pressure += 11                                          
 
-    return min(
-        pressure,
-        100
-    )
+    elif corners >= 5:                                         
+        pressure += 8                                           
+
+    elif corners >= 3:                                         
+        pressure += 5                                           
+
+
+    # ========================================================= 
+    # DANGEROUS ATTACKS                                        
+    # ========================================================= 
+
+    dangerous = team.get(                                      
+        "dangerous_attacks",                                    
+        0                                                       
+    )                                                           
+
+    if dangerous >= 70:                                        
+        pressure += 16                                          
+
+    elif dangerous >= 55:                                      
+        pressure += 12                                          
+
+    elif dangerous >= 40:                                      
+        pressure += 8                                           
+
+    elif dangerous >= 25:                                      
+        pressure += 4                                           
+
+
+    # ========================================================= 
+    # ATTACK BALANCE BONUS                                     
+    # ========================================================= 
+
+    # Reward teams creating several different types of threat. 
+    if (                                                        
+        shots_on >= 5                                           
+        and total_shots >= 12                                   
+        and corners >= 4                                        
+    ):                                                          
+        pressure += 5                                           
+
+
+    # Strong sustained attacking activity.                      
+    if (                                                        
+        shots_on >= 6                                           
+        and total_shots >= 15                                   
+        and possession >= 58                                    
+    ):                                                          
+        pressure += 4                                           
+
+
+    # ========================================================= 
+    # FINAL PRESSURE                                           
+    # ========================================================= 
+
+    pressure = min(                                             
+        100,                                                    
+        max(                                                    
+            0,                                                  
+            round(pressure)                                     
+        )                                                       
+    )                                                           
+
+    return pressure                                             
  
 
 # =========================================================
