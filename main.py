@@ -9069,201 +9069,201 @@ def analyze_prematch_match(match):
             )                                                                 
 
 
-# =========================================================
-# AI BET BUILDER SCORE
-# =========================================================
-
-builder_score = 0                                        
-
-for item in builder_markets:                             
-
-    score = (                                            
-        item["quality"] * 6                             
-        + item["prob"] * 0.60                            
-    )                                                   
-
-    item["score"] = round(score, 2)                      
-
-    builder_score += score                               
-
-builder_score = round(                                   
-    min(100, builder_score),                              
-    1                                                     
-)                                                        
-
-builder_markets.sort(                                    
-    key=lambda x: x["score"],                            
-    reverse=True                                         
-)                                                       
-
-print()                                                 
-print("AI BUILDER RANKING")                               
-
-for item in builder_markets:                             
-
-    print(                                               
-        item["market"],                                  
-        " SCORE=",                                       
-        item["score"],                                   
-        " QUALITY=",                                     
-        item["quality"],                                 
-        " PROB=",                                        
-        item["prob"]                                     
-    )                                                    
-
-print()                                                   
-print("BET BUILDER SCORE:", builder_score)        
-
-
-# =========================================================
-# AI BET BUILDER SELECTOR
-# =========================================================
-
-selected_builder = []                                    
-used_groups = set()                                      
-
-market_groups = {                                        
-    "⚽ OVER 2.5": "goals",                              
-    "🚀 OVER 3.5": "goals",                              
-    "🛡 UNDER 2.5": "under",                            
-    "💎 BTTS": "btts",                                 
-    "🏠 HOME OVER 1.5": "home_goals",                   
-    "✈️ AWAY OVER 1.5": "away_goals",                    
-}                                                       
-
-for item in builder_markets:                            
-
-    market = item["market"]                              
-    group = market_groups.get(                           
-        market,                                          
-        market                                            
-    )                                                   
-
-    if market == "🛡 UNDER 2.5":                        
-
-        if "goals" in used_groups:                      
-            continue                                     
-
-        if "btts" in used_groups:                       
-            continue                                     
-
-        if "home_goals" in used_groups:                  
-            continue                                     
-
-        if "away_goals" in used_groups:                  
-            continue                                     
-
-    if market == "⚽ OVER 2.5":                           
-
-        if "under" in used_groups:                      
-            continue                                      
-
-    if market == "🚀 OVER 3.5":                          
-
-        if "under" in used_groups:                       
-            continue                                     
-
-    if market == "💎 BTTS":                            
-
-        if "under" in used_groups:                       
-            continue                                     
-
-    selected_builder.append(item)                       
-
-    used_groups.add(group)                              
-
-    if len(selected_builder) >= 3:                     
-        break                                            
-
-print()                                                  
-print("SELECTED BUILDER")                                
-
-for item in selected_builder:                             
-
-    print(                                              
-        item["market"],                                
-        " SCORE=",                                       
-        item["score"],                                    
-        " Q=",                                          
-        item["quality"],                                 
-        " P=",                                           
-        item["prob"]                                    
-    )                                                     
+        # =========================================================
+        # AI BET BUILDER SCORE
+        # =========================================================
+        
+        builder_score = 0                                        
+        
+        for item in builder_markets:                             
+        
+            score = (                                            
+                item["quality"] * 6                             
+                + item["prob"] * 0.60                            
+            )                                                   
+        
+            item["score"] = round(score, 2)                      
+        
+            builder_score += score                               
+        
+        builder_score = round(                                   
+            min(100, builder_score),                              
+            1                                                     
+        )                                                        
+        
+        builder_markets.sort(                                    
+            key=lambda x: x["score"],                            
+            reverse=True                                         
+        )                                                       
+        
+        print()                                                 
+        print("AI BUILDER RANKING")                               
+        
+        for item in builder_markets:                             
+        
+            print(                                               
+                item["market"],                                  
+                " SCORE=",                                       
+                item["score"],                                   
+                " QUALITY=",                                     
+                item["quality"],                                 
+                " PROB=",                                        
+                item["prob"]                                     
+            )                                                    
+        
+        print()                                                   
+        print("BET BUILDER SCORE:", builder_score)        
 
 
-# =========================================================
-# BET BUILDER FINAL VALUES
-# =========================================================
+        # =========================================================
+        # AI BET BUILDER SELECTOR
+        # =========================================================
+        
+        selected_builder = []                                    
+        used_groups = set()                                      
+        
+        market_groups = {                                        
+            "⚽ OVER 2.5": "goals",                              
+            "🚀 OVER 3.5": "goals",                              
+            "🛡 UNDER 2.5": "under",                            
+            "💎 BTTS": "btts",                                 
+            "🏠 HOME OVER 1.5": "home_goals",                   
+            "✈️ AWAY OVER 1.5": "away_goals",                    
+        }                                                       
+        
+        for item in builder_markets:                            
+        
+            market = item["market"]                              
+            group = market_groups.get(                           
+                market,                                          
+                market                                            
+            )                                                   
+        
+            if market == "🛡 UNDER 2.5":                        
+        
+                if "goals" in used_groups:                      
+                    continue                                     
+        
+                if "btts" in used_groups:                       
+                    continue                                     
+        
+                if "home_goals" in used_groups:                  
+                    continue                                     
+        
+                if "away_goals" in used_groups:                  
+                    continue                                     
+        
+            if market == "⚽ OVER 2.5":                           
+        
+                if "under" in used_groups:                      
+                    continue                                      
+        
+            if market == "🚀 OVER 3.5":                          
+        
+                if "under" in used_groups:                       
+                    continue                                     
+        
+            if market == "💎 BTTS":                            
+        
+                if "under" in used_groups:                       
+                    continue                                     
+        
+            selected_builder.append(item)                       
+        
+            used_groups.add(group)                              
+        
+            if len(selected_builder) >= 3:                     
+                break                                            
+        
+        print()                                                  
+        print("SELECTED BUILDER")                                
+        
+        for item in selected_builder:                             
+        
+            print(                                              
+                item["market"],                                
+                " SCORE=",                                       
+                item["score"],                                    
+                " Q=",                                          
+                item["quality"],                                 
+                " P=",                                           
+                item["prob"]                                    
+            )                                                     
 
-builder_probability = 0                                  
-builder_quality = 0                                    
-builder_score_final = 0                                 
-builder_odds = 1.00                                      
 
-for item in selected_builder:                            
-
-    builder_probability += item["prob"]                 
-    builder_quality += item["quality"]                   
-    builder_score_final += item["score"]                
-
-    if item["odd"] is not None:                         
-        builder_odds *= float(item["odd"])               
-
-builder_count = max(                                     
-    1,                                                   
-    len(selected_builder)                               
-)                                                        
-
-builder_probability = round(                             
-    builder_probability / builder_count,                 
-    1                                                   
-)                                                        
-
-builder_quality = round(                                 
-    builder_quality / builder_count,                    
-    1                                                   
-)                                                       
-
-builder_score_final = round(                           
-    builder_score_final / builder_count,                
-    1                                                   
-)                                                       
-
-builder_odds = round(                                   
-    builder_odds,                                        
-    2                                                   
-)                                                      
-
-builder_confidence = round(                             
-    (                                                   
-        builder_probability * 0.45                       
-        + builder_quality * 5                            
-        + builder_score_final * 0.20                    
-    ),                                                  
-    1                                                   
-)                                                       
-
-builder_confidence = max(                               
-    5,                                                  
-    min(95, builder_confidence)                         
-)                                                       
-
-builder_ready = (                                       
-    len(selected_builder) >= 2                          
-    and builder_probability >= 70                       
-    and builder_quality >= 6                            
-    and builder_confidence >= 75                       
-    and 1.80 <= builder_odds <= 3.20                    
-)                                                       
-
-print()                                                 
-print("BET BUILDER FINAL")                             
-print("Markets:", len(selected_builder))                
-print("Probability:", builder_probability)             
-print("Quality:", builder_quality)                      
-print("Confidence:", builder_confidence)                
-print("Odds:", builder_odds)                            
-print("READY:", builder_ready)                          
+        # =========================================================
+        # BET BUILDER FINAL VALUES
+        # =========================================================
+        
+        builder_probability = 0                                  
+        builder_quality = 0                                    
+        builder_score_final = 0                                 
+        builder_odds = 1.00                                      
+        
+        for item in selected_builder:                            
+        
+            builder_probability += item["prob"]                 
+            builder_quality += item["quality"]                   
+            builder_score_final += item["score"]                
+        
+            if item["odd"] is not None:                         
+                builder_odds *= float(item["odd"])               
+        
+        builder_count = max(                                     
+            1,                                                   
+            len(selected_builder)                               
+        )                                                        
+        
+        builder_probability = round(                             
+            builder_probability / builder_count,                 
+            1                                                   
+        )                                                        
+        
+        builder_quality = round(                                 
+            builder_quality / builder_count,                    
+            1                                                   
+        )                                                       
+        
+        builder_score_final = round(                           
+            builder_score_final / builder_count,                
+            1                                                   
+        )                                                       
+        
+        builder_odds = round(                                   
+            builder_odds,                                        
+            2                                                   
+        )                                                      
+        
+        builder_confidence = round(                             
+            (                                                   
+                builder_probability * 0.45                       
+                + builder_quality * 5                            
+                + builder_score_final * 0.20                    
+            ),                                                  
+            1                                                   
+        )                                                       
+        
+        builder_confidence = max(                               
+            5,                                                  
+            min(95, builder_confidence)                         
+        )                                                       
+        
+        builder_ready = (                                       
+            len(selected_builder) >= 2                          
+            and builder_probability >= 70                       
+            and builder_quality >= 6                            
+            and builder_confidence >= 75                       
+            and 1.80 <= builder_odds <= 3.20                    
+        )                                                       
+        
+        print()                                                 
+        print("BET BUILDER FINAL")                             
+        print("Markets:", len(selected_builder))                
+        print("Probability:", builder_probability)             
+        print("Quality:", builder_quality)                      
+        print("Confidence:", builder_confidence)                
+        print("Odds:", builder_odds)                            
+        print("READY:", builder_ready)                          
  
 
         signals = signals[:10]        
