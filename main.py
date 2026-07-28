@@ -9583,7 +9583,98 @@ def analyze_prematch_match(match):
             league_bonus,                                             
             builder_quality                                            
         )                                                              
+
+
+        # =========================================================   
+        # AI LINEUP VALIDATOR                                       
+        # =========================================================    
+
+        lineup_bonus = 0                                              
+
+        if home_strength >= 80:                                       
+            lineup_bonus += 2                                          
+
+        if away_strength >= 80:                                       
+            lineup_bonus += 2                                           
+
+        if home_strength < 60:                                        
+            lineup_bonus -= 3                                         
+
+        if away_strength < 60:                                       
+            lineup_bonus -= 3                                           
+
+        builder_quality += lineup_bonus                               
+
+        builder_quality = max(0, min(95, builder_quality))            
+
+        print(                                                      
+            "LINEUP BONUS:",                                          
+            lineup_bonus,                                              
+            builder_quality                                            
+        )          
+
+
+        # =========================================================  
+        # AI FORM MOMENTUM                                            
+        # =========================================================   
+
+        form_bonus = 0                                                
+
+        if home_form["wins"] >= 4:                                    
+            form_bonus += 2                                            
+
+        if away_form["wins"] >= 4:                                    
+            form_bonus += 2                                           
+
+        if home_form["unbeaten_pct"] >= 80:                           
+            form_bonus += 2                                            
+
+        if away_form["unbeaten_pct"] >= 80:                          
+            form_bonus += 2                                            
+
+        builder_quality += form_bonus                                 
+
+        builder_quality = min(95, builder_quality)                    
      
+        # =========================================================   
+        # AI H2H BONUS                                               
+        # =========================================================    
+
+        h2h_bonus = 0                                                 
+
+        if h2h >= 70:                                                 
+            h2h_bonus += 3                                             
+
+        elif h2h <= 30:                                               
+            h2h_bonus -= 3                                             
+
+        builder_quality += h2h_bonus                                  
+
+        builder_quality = max(0, min(95, builder_quality))      
+
+
+        # =========================================================   
+        # GOAL TREND                                                   
+        # =========================================================    
+
+        trend_bonus = 0                                                
+
+        if home_form["avg_scored"] >= 2:                              
+            trend_bonus += 2                                           
+
+        if away_form["avg_scored"] >= 2:                             
+            trend_bonus += 2                                            
+
+        if home_form["avg_conceded"] >= 1.5:                          
+            trend_bonus += 1                                            
+
+        if away_form["avg_conceded"] >= 1.5:                          
+            trend_bonus += 1                                           
+
+        builder_quality += trend_bonus                                
+
+        builder_quality = min(95, builder_quality)                     
+
      
         signals = signals[:10]        
          
