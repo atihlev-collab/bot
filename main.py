@@ -9263,9 +9263,328 @@ def analyze_prematch_match(match):
         print("Quality:", builder_quality)                      
         print("Confidence:", builder_confidence)                
         print("Odds:", builder_odds)                            
-        print("READY:", builder_ready)                          
- 
+        print("READY:", builder_ready)         
 
+
+        # =========================================================   
+        # BET BUILDER TELEGRAM                                        
+        # =========================================================   
+
+        if (                                                           
+            len(selected_builder) >= 2                                
+            and builder_probability >= 75                              
+            and builder_quality >= 75                                
+        ):                                                             
+
+            message = (                                                 
+                "🔥 PREMATCH BET BUILDER\n\n"                         
+                f"🏆 {home} vs {away}\n\n"                             
+            )                                                         
+
+            total_odds = 1.0                                         
+
+            for item in selected_builder:                            
+
+                message += f"✅ {item['market']}\n"                   
+
+                if item.get("odd"):                                   
+                    total_odds *= item["odd"]                           
+
+            message += (                                                
+                f"\n💰 Total Odds: {round(total_odds,2)}"               
+                f"\n🎯 Probability: {builder_probability}%"            
+                f"\n💎 Confidence: {builder_quality}%"                 
+            )                                                        
+
+            print(message)                                            
+
+            send_telegram(message)       
+
+
+        # =========================================================    
+        # AI BET BUILDER FILTER                                       
+        # =========================================================   
+
+        if len(selected_builder) >= 2:                                
+
+            markets = [                                                
+                item["market"]                                          
+                for item in selected_builder                           
+            ]                                                           
+
+            # -----------------------------------------------------    
+            # IMPOSSIBLE COMBINATIONS                                 
+            # -----------------------------------------------------    
+
+            if (                                                     
+                "OVER 2.5" in markets                                  
+                and "UNDER 2.5" in markets                             
+            ):                                                          
+                selected_builder = []                                  
+
+            if (                                                      
+                "BTTS" in markets                                      
+                and "UNDER 2.5" in markets                              
+            ):                                                          
+                selected_builder = []                                 
+
+            if (                                                      
+                "HOME WIN" in markets                                  
+                and "AWAY WIN" in markets                              
+            ):                                                       
+                selected_builder = []                                  
+
+            if (                                                        
+                "HOME OVER 1.5" in markets                            
+                and "UNDER 2.5" in markets                              
+            ):                                                          
+                selected_builder = []                                   
+
+            if (                                                      
+                "AWAY OVER 1.5" in markets                              
+                and "UNDER 2.5" in markets                             
+            ):                                                        
+                selected_builder = []                                   
+
+            if len(selected_builder) < 2:                               
+                print("BET BUILDER FILTERED")    
+
+
+        # =========================================================    
+        # AI BET BUILDER HISTORY                                     
+        # =========================================================   
+
+        if len(selected_builder) >= 2:                                
+
+            history_bonus = 0                                          
+
+            for item in selected_builder:                               
+
+                market = item["market"]                                
+
+                if market == "OVER 2.5":                               
+                    history_bonus += 2                                 
+
+                elif market == "BTTS":                                
+                    history_bonus += 2                                
+
+                elif market == "HOME WIN":                             
+                    history_bonus += 1                                  
+
+                elif market == "AWAY WIN":                            
+                    history_bonus += 1                                  
+
+                elif market == "HOME OVER 1.5":                       
+                    history_bonus += 2                                
+
+                elif market == "AWAY OVER 1.5":                      
+                    history_bonus += 2                                 
+
+            builder_quality += history_bonus                         
+
+            builder_quality = min(95, builder_quality)                  
+
+            print(                                                     
+                "BET BUILDER HISTORY:",                                 
+                history_bonus,                                         
+                builder_quality                                         
+            )     
+         
+
+        # =========================================================    
+        # AI BET BUILDER CORRELATION                                 
+        # =========================================================   
+
+        if len(selected_builder) >= 2:                                 
+
+            markets = [item["market"] for item in selected_builder]    
+
+            correlation_bonus = 0                                      
+
+            # ---------- GOOD COMBINATIONS ----------                  
+
+            if (                                                        
+                "HOME WIN" in markets                                 
+                and "HOME OVER 1.5" in markets                          
+            ):                                                         
+                correlation_bonus += 5                                
+
+            if (                                                       
+                "AWAY WIN" in markets                                 
+                and "AWAY OVER 1.5" in markets                          
+            ):                                                          
+                correlation_bonus += 5                                 
+
+            if (                                                       
+                "OVER 2.5" in markets                                   
+                and "BTTS" in markets                                   
+            ):                                                          
+                correlation_bonus += 4                               
+
+            if (                                                      
+                "HOME WIN" in markets                                   
+                and "OVER 2.5" in markets                             
+            ):                                                         
+                correlation_bonus += 3                                
+
+            if (                                                       
+                "AWAY WIN" in markets                                  
+                and "OVER 2.5" in markets                              
+            ):                                                         
+                correlation_bonus += 3                                 
+
+            # ---------- BAD COMBINATIONS ----------                   
+
+            if (                                                       
+                "UNDER 2.5" in markets                                  
+                and "BTTS" in markets                                   
+            ):                                                          
+                correlation_bonus -= 6                               
+
+            if (                                                      
+                "UNDER 2.5" in markets                                 
+                and "HOME OVER 1.5" in markets                          
+            ):                                                          
+                correlation_bonus -= 5                                
+
+            if (                                                        
+                "UNDER 2.5" in markets                                  
+                and "AWAY OVER 1.5" in markets                          
+            ):                                                          
+                correlation_bonus -= 5                                 
+
+            if (                                                        
+                "HOME WIN" in markets                                  
+                and "AWAY WIN" in markets                              
+            ):                                                          
+                correlation_bonus -= 20                                
+
+            builder_quality += correlation_bonus                        
+
+            builder_quality = max(0, min(95, builder_quality))          
+
+            print(                                                      
+                "BET BUILDER CORRELATION:",                             
+                correlation_bonus,                                     
+                builder_quality                                         
+            )                                                          
+
+
+
+        # =========================================================   
+        # AI BET BUILDER CONFIDENCE VALIDATOR                        
+        # =========================================================   
+
+        if len(selected_builder) >= 2:                                
+
+            confidence_penalty = 0                                    
+
+            for item in selected_builder:                              
+
+                prob = item.get("probability", 70)                    
+
+                if prob >= 85:                                      
+                    confidence_penalty += 2                            
+
+                elif prob >= 80:                                      
+                    confidence_penalty += 1                          
+
+                elif prob < 65:                                       
+                    confidence_penalty -= 6                           
+
+                elif prob < 70:                                       
+                    confidence_penalty -= 3                          
+
+            builder_quality += confidence_penalty                      
+
+            builder_quality = max(0, min(95, builder_quality))         
+
+            if builder_quality < 70:                                  
+                selected_builder = []                                  
+
+            print(                                                   
+                "BET BUILDER CONFIDENCE:",                             
+                confidence_penalty,                                   
+                builder_quality                                       
+            )         
+
+
+        # =========================================================    
+        # AI BET BUILDER VALUE FILTER                                
+        # =========================================================   
+
+        if len(selected_builder) >= 2:                                 
+
+            total_probability = 1.0                                    
+            total_odds = 1.0                                           
+
+            for item in selected_builder:                             
+
+                prob = item.get("probability", 70) / 100               
+                odd = item.get("odd", 1.0)                            
+
+                total_probability *= prob                             
+                total_odds *= odd                                     
+
+            implied_probability = 1 / total_odds                      
+
+            value_edge = (                                             
+                total_probability - implied_probability                 
+            ) * 100                                                    
+
+            print(                                                      
+                "BET BUILDER VALUE:",                                   
+                round(value_edge,2)                                     
+            )                                                           
+
+            if value_edge >= 12:                                        
+                builder_quality += 5                                    
+
+            elif value_edge >= 8:                                       
+                builder_quality += 3                                    
+
+            elif value_edge < 0:                                        
+                selected_builder = []                                   
+
+            builder_quality = min(95, builder_quality)                  
+     
+
+
+        # =========================================================   
+        # AI LEAGUE RATING                                           
+        # =========================================================    
+
+        league_bonus = 0                                              
+
+        if country in TOP_GOAL_COUNTRIES:                              
+            league_bonus += 4                                          
+
+        if country in LOW_GOAL_COUNTRIES:                             
+            league_bonus -= 4                                           
+
+        if "Premier League" in league:                              
+            league_bonus += 3                                          
+
+        elif "Champions League" in league:                           
+            league_bonus += 4                                          
+
+        elif "Europa League" in league:                               
+            league_bonus += 3                                         
+
+        elif "Conference League" in league:                          
+            league_bonus += 2                                          
+
+        builder_quality += league_bonus                                
+
+        builder_quality = max(0, min(95, builder_quality))           
+
+        print(                                                       
+            "LEAGUE BONUS:",                                         
+            league_bonus,                                             
+            builder_quality                                            
+        )                                                              
+     
+     
         signals = signals[:10]        
          
         print(
