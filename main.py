@@ -9528,25 +9528,25 @@ def analyze_prematch_match(match):
 
             implied_probability = 1 / total_odds                      
 
-            value_edge = (                                             
-                total_probability - implied_probability                 
-            ) * 100                                                    
+            builder_value_edge = (
+                total_probability - implied_probability
+            ) * 100                                                 
 
-            print(                                                      
-                "BET BUILDER VALUE:",                                   
-                round(value_edge,2)                                     
-            )                                                           
+           print(
+               "BET BUILDER VALUE:",
+               round(builder_value_edge, 2)
+           )
+           
+           if builder_value_edge >= 12:
+               builder_quality += 5
+           
+           elif builder_value_edge >= 8:
+               builder_quality += 3
+           
+           elif builder_value_edge < 0:
+               selected_builder = []                       
 
-            if value_edge >= 12:                                        
-                builder_quality += 5                                    
-
-            elif value_edge >= 8:                                       
-                builder_quality += 3                                    
-
-            elif value_edge < 0:                                        
-                selected_builder = []                                   
-
-            builder_quality = min(95, builder_quality)                  
+           builder_quality = min(95, builder_quality)                  
      
 
 
