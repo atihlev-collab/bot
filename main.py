@@ -6382,7 +6382,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 62
+            home_score >= 58
             and
             home_odds_ok
             and
@@ -6394,7 +6394,7 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 3    
             and                         
-            home_edge >= 6.0                 
+            home_edge >= 4.0                 
             and
             form_gap >= 15
             and
@@ -6438,7 +6438,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 1.50      
             and
-            home_probability >= 75
+            home_probability >= 72
             and
             home_balance_ok 
             and
@@ -8514,7 +8514,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 62          
+            away_score >= 58          
             and
             away_odds_ok
             and
@@ -8526,7 +8526,7 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 3     
             and                        
-            away_edge >= 6.0                 
+            away_edge >= 4.0                 
             and
             away_score_gap >= 20
             and
@@ -8572,7 +8572,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 75
+            away_probability >= 72
             and
             away_balance_ok         
             and
