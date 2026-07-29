@@ -6402,14 +6402,14 @@ def analyze_prematch_match(match):
             and
             home_form["recent_form_pct"] >= 65                                                              
             and                                   
-            home_form["avg_scored"] >= 1.50
+            home_form["avg_scored"] >= 1.70
             and
           
             (
                 home_form["avg_scored"]
                 -
                 away_form["avg_scored"]
-            ) >= 0.50
+            ) >= 0.70
             and                           
 
             (
@@ -6426,17 +6426,17 @@ def analyze_prematch_match(match):
                 home_form["goal_diff"]
                 -
                 away_form["goal_diff"]
-            ) >= 2
+            ) >= 3
             and
-            home_form["recent_avg_scored"] >= 1.50
+            home_form["recent_avg_scored"] >= 1.70
             and                           
-            home_form["recent_goal_diff"] >= 3  
+            home_form["recent_goal_diff"] >= 4  
             and
             home_form["avg_conceded"] <= 1.30
             and
-            away_form["avg_conceded"] >= 1.20
+            away_form["avg_conceded"] >= 1.00
             and
-            away_form["recent_avg_conceded"] >= 0.80      
+            away_form["recent_avg_conceded"] >= 1.50      
             and
             home_probability >= 75
             and
@@ -8536,14 +8536,14 @@ def analyze_prematch_match(match):
             and                         
             away_form["recent_form_pct"] >= 65       
             and
-            away_form["avg_scored"] >= 1.50
+            away_form["avg_scored"] >= 1.70
             and
             
             (
                 away_form["avg_scored"]
                 -
                 home_form["avg_scored"]
-            ) >= 0.50
+            ) >= 0.70
             and                          
 
             (
@@ -8560,15 +8560,15 @@ def analyze_prematch_match(match):
                 away_form["goal_diff"]
                 -
                 home_form["goal_diff"]
-            ) >= 2
+            ) >= 3
             and                                   
             away_form["recent_avg_scored"] >= 1.50 
             and                          
-            away_form["recent_goal_diff"] >= 3  
+            away_form["recent_goal_diff"] >= 4 
             and
-            away_form["avg_conceded"] <= 1.20
+            away_form["avg_conceded"] <= 1.00
             and
-            home_form["avg_conceded"] >= 1.30
+            home_form["avg_conceded"] >= 1.50
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
