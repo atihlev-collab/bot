@@ -3940,41 +3940,21 @@ def calculate_final_score(
 # CONFIDENCE
 # =========================================================
 
-def confidence_from_score(score):     
+def confidence_from_score(score):
 
-    if (                              
+    if score >= 90:
+        return 95
 
-        score >= 85                    
+    elif score >= 80:
+        return 90
 
-    ):                                 
+    elif score >= 70:
+        return 80
 
-        return 90                    
+    elif score >= 60:
+        return 70
 
-    elif (                           
-
-        score >= 70                    
-
-    ):                                 
-
-        return 80                     
-
-    elif (                            
-
-        score >= 55                    
-
-    ):                                
-
-        return 70                     
-
-    elif (                             
-
-        score >= 40                   
-
-    ):                                 
-
-        return 60                     
-
-    return 50       
+    return 0
 
 
 # =========================================================   
@@ -6402,7 +6382,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 58
+            home_score >= 62
             and
             home_odds_ok
             and
@@ -6414,13 +6394,13 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 3    
             and                         
-            home_edge >= 4.0                 
+            home_edge >= 6.0                 
             and
             form_gap >= 15
             and
-            recent_gap >= 10
+            recent_gap >= 15
             and
-            home_form["recent_form_pct"] >= 55                                                              
+            home_form["recent_form_pct"] >= 65                                                              
             and                                   
             home_form["avg_scored"] >= 1.50
             and
@@ -6458,7 +6438,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 72
+            home_probability >= 75
             and
             home_balance_ok 
             and
@@ -8534,7 +8514,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 58          
+            away_score >= 62          
             and
             away_odds_ok
             and
@@ -8546,15 +8526,15 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 3     
             and                        
-            away_edge >= 4.0                 
+            away_edge >= 6.0                 
             and
-            away_score_gap >= 15
+            away_score_gap >= 20
             and
-            away_gap >= 15
+            away_gap >= 20
             and
-            recent_away_gap >= 10
+            recent_away_gap >= 15
             and                         
-            away_form["recent_form_pct"] >= 55       
+            away_form["recent_form_pct"] >= 65       
             and
             away_form["avg_scored"] >= 1.50
             and
@@ -8592,7 +8572,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 72
+            away_probability >= 75
             and
             away_balance_ok         
             and
