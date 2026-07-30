@@ -4914,87 +4914,7 @@ def analyze_prematch_match(match):
             home_score              
 
         )                            
-       
-
-        home_score += h2h  
-
-
-        # LEAGUE TABLE BONUS                    
-
-        if (                                  
-
-            home_rank                         
-            and                                 
-            away_rank                           
-
-        ):                                     
-
-            rank_gap = (                       
-
-                away_rank                      
-                -                               
-                home_rank                       
-
-            )                                
-
-            point_gap = (                      
-                home_points                   
-                -                              
-                away_points                    
-
-            )                                
-
-            goal_gap = (                       
-
-                table[home_id]["goal_diff"]    
-                -                               
-                table[away_id]["goal_diff"]    
-
-            )                                 
-
-            if rank_gap >= 8:                 
-
-                home_score += 6               
-
-            elif rank_gap >= 5:              
-
-                home_score += 3              
-
-            if point_gap >= 15:               
-
-                home_score += 4              
-
-            elif point_gap >= 8:             
-
-                home_score += 2              
-
-            if goal_gap >= 15:               
-
-                home_score += 3            
-
-            elif goal_gap >= 8:              
-
-                home_score += 2               
-
-            if (                              
-
-                table[home_id]["played"] >= 10 
-                and                            
-                table[away_id]["played"] >= 10 
-
-            ):                              
-
-                home_score += 2             
-
-            print(                           
-
-                "HOME TABLE BONUS:",         
-                rank_gap,                    
-                point_gap,                    
-                goal_gap,                    
-                home_score                   
-
-            )         
+                      
 
         # HOME ANOMALY FILTER                
 
@@ -5188,7 +5108,7 @@ def analyze_prematch_match(match):
                     home_form["home_games"]
                 )
 
-                * 3                       
+                * 2                       
 
             )                               
 
@@ -6705,14 +6625,7 @@ def analyze_prematch_match(match):
                 away_score                    
 
             )                               
-
-        if (                                  
-
-            home_rank                         
-            and                                 
-            away_rank                          
-
-        ):                                      
+         
 
             rank_gap = (                      
 
