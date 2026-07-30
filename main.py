@@ -9040,82 +9040,7 @@ def analyze_prematch_match(match):
                 item["quality"],                                 
                 " P=",                                           
                 item["prob"]                                    
-            )                                                     
-
-
-        # =========================================================
-        # BET BUILDER FINAL VALUES
-        # =========================================================
-        
-        builder_probability = 0                                  
-        builder_quality = 0                                    
-        builder_score_final = 0                                 
-        builder_odds = 1.00                                      
-        
-        for item in selected_builder:                            
-        
-            builder_probability += item["prob"]                 
-            builder_quality += item["quality"]                   
-            builder_score_final += item["score"]                
-        
-            if item["odd"] is not None:                         
-                builder_odds *= float(item["odd"])               
-        
-        builder_count = max(                                     
-            1,                                                   
-            len(selected_builder)                               
-        )                                                        
-        
-        builder_probability = round(                             
-            builder_probability / builder_count,                 
-            1                                                   
-        )                                                        
-        
-        builder_quality = round(                                 
-            builder_quality / builder_count,                    
-            1                                                   
-        )                                                       
-        
-        builder_score_final = round(                           
-            builder_score_final / builder_count,                
-            1                                                   
-        )                                                       
-        
-        builder_odds = round(                                   
-            builder_odds,                                        
-            2                                                   
-        )                                                      
-        
-        builder_confidence = round(                             
-            (                                                   
-                builder_probability * 0.45                       
-                + builder_quality * 5                            
-                + builder_score_final * 0.20                    
-            ),                                                  
-            1                                                   
-        )                                                       
-        
-        builder_confidence = max(                               
-            5,                                                  
-            min(95, builder_confidence)                         
-        )                                                       
-        
-        builder_ready = (                                       
-            len(selected_builder) >= 2                          
-            and builder_probability >= 70                       
-            and builder_quality >= 6                            
-            and builder_confidence >= 75                       
-            and 1.80 <= builder_odds <= 3.20                    
-        )                                                       
-        
-        print()                                                 
-        print("BET BUILDER FINAL")                             
-        print("Markets:", len(selected_builder))                
-        print("Probability:", builder_probability)             
-        print("Quality:", builder_quality)                      
-        print("Confidence:", builder_confidence)                
-        print("Odds:", builder_odds)                            
-        print("READY:", builder_ready)         
+            )                                                        
 
 
         # =========================================================   
@@ -9547,6 +9472,81 @@ def analyze_prematch_match(match):
         )
 
         return None
+
+        # =========================================================
+        # BET BUILDER FINAL VALUES
+        # =========================================================
+        
+        builder_probability = 0                                  
+        builder_quality = 0                                    
+        builder_score_final = 0                                 
+        builder_odds = 1.00                                      
+        
+        for item in selected_builder:                            
+        
+            builder_probability += item["prob"]                 
+            builder_quality += item["quality"]                   
+            builder_score_final += item["score"]                
+        
+            if item["odd"] is not None:                         
+                builder_odds *= float(item["odd"])               
+        
+        builder_count = max(                                     
+            1,                                                   
+            len(selected_builder)                               
+        )                                                        
+        
+        builder_probability = round(                             
+            builder_probability / builder_count,                 
+            1                                                   
+        )                                                        
+        
+        builder_quality = round(                                 
+            builder_quality / builder_count,                    
+            1                                                   
+        )                                                       
+        
+        builder_score_final = round(                           
+            builder_score_final / builder_count,                
+            1                                                   
+        )                                                       
+        
+        builder_odds = round(                                   
+            builder_odds,                                        
+            2                                                   
+        )                                                      
+        
+        builder_confidence = round(                             
+            (                                                   
+                builder_probability * 0.45                       
+                + builder_quality * 5                            
+                + builder_score_final * 0.20                    
+            ),                                                  
+            1                                                   
+        )                                                       
+        
+        builder_confidence = max(                               
+            5,                                                  
+            min(95, builder_confidence)                         
+        )                                                       
+        
+        builder_ready = (                                       
+            len(selected_builder) >= 2                          
+            and builder_probability >= 70                       
+            and builder_quality >= 6                            
+            and builder_confidence >= 75                       
+            and 1.80 <= builder_odds <= 3.20                    
+        )                                                       
+        
+        print()                                                 
+        print("BET BUILDER FINAL")                             
+        print("Markets:", len(selected_builder))                
+        print("Probability:", builder_probability)             
+        print("Quality:", builder_quality)                      
+        print("Confidence:", builder_confidence)                
+        print("Odds:", builder_odds)                            
+        print("READY:", builder_ready)         
+
         
 # =========================================================
 # SEND PREMATCH SIGNAL
