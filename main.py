@@ -6001,11 +6001,11 @@ def analyze_prematch_match(match):
 
         dominance_ok = (             
 
-            goal_gap >= 0.25          
+            goal_gap >= 0.10          
 
             and                       
 
-            defense_gap >= 0.15       
+            defense_gap >= 0.05       
 
         )       
 
@@ -6042,77 +6042,23 @@ def analyze_prematch_match(match):
 
         # ELITE HOME FILTER            
 
-        elite_home = (                 
-
-            home_form["form_pct"]       
-
-            >=                        
-
-            65                          
-
-            and                        
-
-            home_form["recent_form_pct"]
-
-            >=                         
-
-            60                         
-
-            and                         
-
-            home_form["avg_scored"]     
-
-            >=                          
-
-            1.60                       
-
-            and                         
-
-            home_form["avg_conceded"]   
-
-            <=                         
-
-            1.10                        
-
-            and                        
-
-            home_edge                   
-
-            >=                          
-
-            3                           
-
-            and                         
-
-            home_probability           
-
-            >=                         
-
-            70                         
-
-        )          
+        elite_home = (                        
+            home_form["form_pct"] >= 60       
+            and home_form["recent_form_pct"] >= 55    
+            and home_form["avg_scored"] >= 1.40         
+            and home_form["avg_conceded"] <= 1.30      
+            and home_edge >= 2                          
+            and home_probability >= 68                 
+        )                                              
 
 
         # DEFENSIVE COLLAPSE          
 
-        defense_ok = (             
-
-            home_form["recent_avg_conceded"]   
-
-            <=                                 
-
-            1.60                               
-
-            and                                 
-
-            away_form["recent_avg_scored"]     
-
-            <=                                
-
-            2.20                               
-
-        )               
-
+        defense_ok = (                               
+            home_form["recent_avg_conceded"] <= 1.80   
+            and                                       
+            away_form["recent_avg_scored"] <= 2.50     
+        )                                             
 
         # FALSE FAVOURITE FILTER     
 
@@ -6186,23 +6132,11 @@ def analyze_prematch_match(match):
 
         # RECENT GOALS FILTER         
 
-        recent_attack_ok = (          
-
-            home_form["recent_avg_scored"]   
-
-            >=                                
-
-            1.40                             
-
-            and                               
-
-            away_form["recent_avg_conceded"] 
-
-            >=                                
-
-            1.00                              
-
-        )         
+        recent_attack_ok = (                         
+            home_form["recent_avg_scored"] >= 1.20     
+            and                                        
+            away_form["recent_avg_conceded"] >= 0.90   
+        )                                              
 
 
         # DRAW RISK FILTER           
@@ -6283,82 +6217,50 @@ def analyze_prematch_match(match):
             )                                      
         )                                          
         
-        if (
-            not goal_match                       
-            and                                
-            home_score >= 58
-            and
-            home_odds_ok
-            and
-            home_form["unbeaten_pct"] >= 65
-            and
-            home_form["wins"] >= 3  
-            and                         
-            home_form["losses"] <= 2      
-            and                        
-            home_form["draws"] <= 3    
-            and                         
-            home_edge >= 4.0                 
-            and
-            form_gap >= 15
-            and
-            recent_gap >= 15
-            and
-            home_form["recent_form_pct"] >= 65                                                              
-            and                                   
-            home_form["avg_scored"] >= 1.70
-            and
-          
-            (
-                home_form["avg_scored"]
-                -
-                away_form["avg_scored"]
-            ) >= 0.70
-            and                           
-
-            (
-                home_form["avg_scored"]  
-
-                -
-
-                home_form["avg_conceded"] 
-
-            ) >= 0.30     
-            and
-
-            (
-                home_form["goal_diff"]
-                -
-                away_form["goal_diff"]
-            ) >= 3
-            and
-            home_form["recent_avg_scored"] >= 1.70
-            and                           
-            home_form["recent_goal_diff"] >= 4  
-            and
-            home_form["avg_conceded"] <= 1.30
-            and
-            away_form["avg_conceded"] >= 1.00
-            and
-            away_form["recent_avg_conceded"] >= 1.50      
-            and
-            home_probability >= 72
-            and
-            home_balance_ok 
-            and
-            dominance_ok
-            and
-            consistency_ok
-            and
-            market_ok       
-            and
-            defense_ok
-            and
-            not false_favourite        
-            and
-            not draw_risk
-        ):
-
+        if (                                                      
+            not goal_match                                        
+            and home_score >= 58                                
+            and home_odds_ok                                     
+            and home_form["unbeaten_pct"] >= 65                 
+            and home_form["wins"] >= 3                           
+            and home_form["losses"] <= 2                        
+            and home_form["draws"] <= 3                         
+            and home_edge >= 4.0                                
+            and form_gap >= 12                                 
+            and recent_gap >= 10                               
+            and home_form["recent_form_pct"] >= 60             
+            and home_form["avg_scored"] >= 1.60                 
+            and (                                               
+                home_form["avg_scored"]                         
+                -                                              
+                away_form["avg_scored"]                         
+            ) >= 0.50                                           
+            and (                                              
+                home_form["avg_scored"]                         
+                -                                              
+                home_form["avg_conceded"]                      
+            ) >= 0.20                                         
+            and (                                              
+                home_form["goal_diff"]                         
+                -                                               
+                away_form["goal_diff"]                         
+            ) >= 2                                              
+            and home_form["recent_avg_scored"] >= 1.50         
+            and home_form["recent_goal_diff"] >= 3              
+            and home_form["avg_conceded"] <= 1.40               
+            and away_form["avg_conceded"] >= 0.90              
+            and away_form["recent_avg_conceded"] >= 1.30      
+            and home_probability >= 70                       
+            and home_balance_ok                                
+            and consistency_ok                                
+            and not false_favourite                            
+            and not draw_risk                                  
+            and sum([                                         
+                dominance_ok,  
+                market_ok, 
+                defense_ok                                   
+            ]) >= 2                                           
+        ):                                                     
             print(
                 "HOME SIGNAL:",
                 home_score                
@@ -8027,11 +7929,11 @@ def analyze_prematch_match(match):
 
         dominance_ok = (             
 
-            goal_gap >= 0.25         
+            goal_gap >= 0.10         
 
             and                       
 
-            defense_gap >= 0.15       
+            defense_gap >= 0.05       
 
         )       
 
