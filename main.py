@@ -8631,91 +8631,91 @@ def analyze_prematch_match(match):
         # agreement points from independent indicators. This keeps signals
         # selective without one borderline stat killing an otherwise strong bet.
 
-        # ---------------------------------------------------------
-        # OVER 2.5
-        # ---------------------------------------------------------
-        over_league = league_score(country, "⚽ OVER 2.5")
-        over_value = expected_goals * 10
-        over_final = calculate_final_score(
-            form_score,
-            over_prob,
-            over_value,
-            over_league
-        )
-        
-        over_conf = confidence_from_score(over_final)
+        # ---------------------------------------------------------                         
+        # OVER 2.5                                                    
+        # ---------------------------------------------------------                    
+        over_league = league_score(country, "⚽ OVER 2.5")            
+        over_value = expected_goals * 10                             
+        over_final = calculate_final_score(                          
+            form_score,                                              
+            over_prob,                                               
+            over_value,                                              
+            over_league                                              
+        )                                                            
 
-        if over25_odd and under25_odd:                  
-            market_gap = over25_odd - under25_odd       
+        over_conf = confidence_from_score(over_final)                
 
-            if market_gap >= 0.80:                     
-                over_prob -= 10                         
-                over_conf -= 8                         
+        penalty = 0                                                 
 
-            elif market_gap >= 0.50:                    
-                over_prob -= 6                          
-                over_conf -= 4                         
+        if under25_odd and under25_odd <= 1.60:                    
+            penalty += 10                                            
+        elif under25_odd and under25_odd <= 1.70:                   
+            penalty += 6                                             
 
-            if under25_odd <= 1.60:                     
-                over_prob -= 8                          
-                over_conf -= 6                          
+        if over25_odd and over25_odd >= 2.30:                      
+            penalty += 3                                             
 
-            elif under25_odd <= 1.70:                  
-                over_prob -= 4                         
-                over_conf -= 3                         
+        if expected_goals < 2.90:                                   
+            penalty += 4                                             
 
-            if over25_odd >= 2.30:                      
-                over_prob -= 3                         
-                over_conf -= 2                         
+        if home_form["recent_over25"] + away_form["recent_over25"] < 4: 
+            penalty += 3                                             
 
-            over_prob = max(0, round(over_prob, 1))     
-            over_conf = max(0, round(over_conf, 1))     
+        if min(home_form["over25_pct"], away_form["over25_pct"]) < 50:  
+            penalty += 4                                             
 
-        over_quality = 0    
-     
-        if over_prob >= 75:
-            over_quality += 2
-        elif over_prob >= 70:
-            over_quality += 1
+        over_prob -= penalty                                        
+        over_conf -= round(penalty * 0.8)                            
 
-        if expected_goals >= 3.30:
-            over_quality += 2
-        elif expected_goals >= 2.90:
-            over_quality += 1
+        over_prob = max(0, min(100, round(over_prob, 1)))            
+        over_conf = max(0, min(100, round(over_conf, 1)))            
+
+        over_quality = 0                                            
+
+        if over_prob >= 75:                                          
+            over_quality += 2                                        
+        elif over_prob >= 70:                                        
+            over_quality += 1                                        
+
+        if expected_goals >= 3.30:                                   
+            over_quality += 2                                        
+        elif expected_goals >= 2.90:                                 
+            over_quality += 1                                       
 
         if home_form["avg_scored"] + away_form["avg_scored"] >= 2.70:
-            over_quality += 1
-        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] >= 2.70:
-            over_quality += 1
-        if home_form["avg_conceded"] + away_form["avg_conceded"] >= 2.10:
-            over_quality += 1
-        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 50:
-            over_quality += 1
-        if home_form["recent_over25"] + away_form["recent_over25"] >= 4:
-            over_quality += 1
-        if max(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) <= 60:
-            over_quality += 1
+            over_quality += 1                                        
+        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] >= 2.70: 
+            over_quality += 1                                        
+        if home_form["avg_conceded"] + away_form["avg_conceded"] >= 2.10: 
+            over_quality += 1                                        
+        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 50: 
+            over_quality += 1                                        
+        if home_form["recent_over25"] + away_form["recent_over25"] >= 4: 
+            over_quality += 1                                       
+        if max(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) <= 60: 
+            over_quality += 1                                        
 
-        print(
-            "OVER QUALITY:", home, away,
-            "PROB=", over_prob,
-            "CONF=", over_conf,
-            "xG=", expected_goals,
-            "Q=", over_quality
-             
-     
-        if (
-            over_prob >= 68
-            and over_conf >= 65
-            and expected_goals >= 2.75
-            and over_quality >= 6
-        ):
-            signals.append((
-                "⚽ OVER 2.5",
-                over_conf,
-                round(over_prob, 1)
-            ))
-            over_signal = True
+        print(                                                       
+            "OVER QUALITY:", home, away,                             
+            "PROB=", over_prob,                                     
+            "CONF=", over_conf,                                     
+            "xG=", expected_goals,                                  
+            "PENALTY=", penalty,                                    
+            "Q=", over_quality                                      
+        )                                                            
+
+        if (                                                         
+            over_prob >= 68                                          
+            and over_conf >= 65                                      
+            and expected_goals >= 2.75                              
+            and over_quality >= 6                                   
+        ):                                                           
+            signals.append((                                         
+                "⚽ OVER 2.5",                                       
+                over_conf,                                           
+                round(over_prob, 1)                                 
+            ))                                                       
+            over_signal = True                                       
 
         # ---------------------------------------------------------
         # BTTS
