@@ -8492,6 +8492,8 @@ def analyze_prematch_match(match):
         # agreement points from independent indicators. This keeps signals
         # selective without one borderline stat killing an otherwise strong bet.
 
+        over_signal = False
+
         # ---------------------------------------------------------                         
         # OVER 2.5                                                    
         # ---------------------------------------------------------                    
@@ -8898,6 +8900,8 @@ def analyze_prematch_match(match):
         # =========================================================
         # AI BET BUILDER CANDIDATES                               
         # ========================================================= 
+
+        over_signal = False
 
         builder_markets = []                                     
 
