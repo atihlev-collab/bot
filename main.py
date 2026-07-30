@@ -9122,35 +9122,31 @@ def analyze_prematch_match(match):
         # BET BUILDER TELEGRAM                                        
         # =========================================================   
 
-        if (                                                           
-            len(selected_builder) >= 2                                
-            and builder_probability >= 75                              
-            and builder_quality >= 75                                
-        ):                                                             
+        if builder_ready:                                             
 
-            message = (                                                 
-                "🔥 PREMATCH BET BUILDER\n\n"                         
-                f"🏆 {home} vs {away}\n\n"                             
-            )                                                         
-
-            total_odds = 1.0                                         
-
-            for item in selected_builder:                            
-
-                message += f"✅ {item['market']}\n"                   
-
-                if item.get("odd"):                                   
-                    total_odds *= item["odd"]                           
-
-            message += (                                                
-                f"\n💰 Total Odds: {round(total_odds,2)}"               
-                f"\n🎯 Probability: {builder_probability}%"            
-                f"\n💎 Confidence: {builder_quality}%"                 
-            )                                                        
-
-            print(message)                                            
-
-            send_telegram(message)       
+        message = (                                                
+            "🔥 PREMATCH BET BUILDER\n\n"                        
+            f"🏆 {home} vs {away}\n\n"                             
+        )                                                          
+    
+        total_odds = 1.0                                         
+    
+        for item in selected_builder:                              
+    
+            message += f"✅ {item['market']}\n"                    
+    
+            if item.get("odd"):                                    
+                total_odds *= item["odd"]                          
+    
+        message += (                                               
+            f"\n💰 Total Odds: {round(total_odds,2)}"             
+            f"\n🎯 Probability: {builder_probability}%"            
+            f"\n💎 Confidence: {builder_confidence}%"              
+        )                                                         
+    
+        print(message)                                             
+    
+        send_telegram(message)                                    
 
 
         # =========================================================    
