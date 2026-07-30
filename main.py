@@ -8648,12 +8648,10 @@ def analyze_prematch_match(match):
         penalty = 0                                                 
 
         if under25_odd and under25_odd <= 1.60:                    
-            penalty += 10                                            
+            penalty += 10   
+         
         elif under25_odd and under25_odd <= 1.70:                   
-            penalty += 6                                             
-
-        if over25_odd and over25_odd >= 2.30:                      
-            penalty += 3                                             
+            penalty += 6                                                                                                 
 
         if expected_goals < 2.90:                                   
             penalty += 4                                             
