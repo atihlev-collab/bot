@@ -8816,7 +8816,7 @@ def analyze_prematch_match(match):
         if (
             btts_prob >= 67
             and btts_conf >= 70
-            and expected_goals >= 2.60
+            and expected_goals >= 2.75
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 65
             and btts_quality >= 6
         ):
