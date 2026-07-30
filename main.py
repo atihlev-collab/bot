@@ -8970,6 +8970,58 @@ def analyze_prematch_match(match):
             )                                                                 
 
 
+        # =========================================================         
+        # AUTO BUILDER PAIR                                                 
+        # =========================================================         
+
+        if len(builder_markets) == 1:                                      
+
+            market = builder_markets[0]["market"]                           
+
+            # UNDER + HOME WIN                                             
+            if (                                                          
+                market == "🛡 UNDER 2.5"                                     
+                and home_score >= 55                                        
+                and home_probability >= 75                                
+                and match_odds[0]                                          
+                and match_odds[0] <= 2.20                                   
+            ):                                                             
+                builder_markets.append({                                   
+                    "market": "🏆 HOME WIN",                                
+                    "prob": home_probability,                              
+                    "quality": 7,                                          
+                    "odd": match_odds[0]                                    
+                })                                                         
+
+            # UNDER + AWAY WIN                                             
+            elif (                                                         
+                market == "🛡 UNDER 2.5"                                    
+                and away_score >= 55                                      
+                and away_probability >= 75                                 
+                and match_odds[2]                                          
+                and match_odds[2] <= 2.20                                  
+            ):                                                              
+                builder_markets.append({                                   
+                    "market": "✈️ AWAY WIN",                                
+                    "prob": away_probability,                              
+                    "quality": 7,                                           
+                    "odd": match_odds[2]                                    
+                })                                                       
+
+            # OVER + BTTS                                                 
+            elif (                                                          
+                market == "⚽ OVER 2.5"                                      
+                and btts_prob >= 70                                        
+                and btts_odd                                              
+            ):                                                              
+                builder_markets.append({                                    
+                    "market": "💎 BTTS",                                    
+                    "prob": btts_prob,                                     
+                    "quality": 7,                                           
+                    "odd": btts_odd                                         
+                })                                                          
+     
+
         # =========================================================
         # AI BET BUILDER SCORE
         # =========================================================
