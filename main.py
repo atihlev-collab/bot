@@ -8677,6 +8677,15 @@ def analyze_prematch_match(match):
         )
 
         over_signal = False
+
+
+        if (
+            under25_odd
+            and over25_odd
+            and under25_odd <= 1.60
+        ):
+            over_signal = False
+     
         if (
             over_prob >= 68
             and over_conf >= 65
