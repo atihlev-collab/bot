@@ -5353,7 +5353,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            home_score += 3           
+            home_score += 2           
 
         elif (                       
 
@@ -5371,7 +5371,7 @@ def analyze_prematch_match(match):
          
         ):                               
          
-            home_score += 4                 
+            home_score += 3                 
          
         elif (                             
          
@@ -5379,7 +5379,7 @@ def analyze_prematch_match(match):
          
         ):                               
          
-            home_score += 2                 
+            home_score += 1                 
        
 
         # MOMENTUM BONUS               
@@ -7223,7 +7223,7 @@ def analyze_prematch_match(match):
 
         ):                             
 
-            away_score += 3           
+            away_score += 2           
 
         elif (                         
 
@@ -7241,7 +7241,7 @@ def analyze_prematch_match(match):
       
         ):                                
       
-            away_score += 4                 
+            away_score += 3                 
       
         elif (                            
       
@@ -7249,7 +7249,7 @@ def analyze_prematch_match(match):
       
         ):                                
       
-            away_score += 2               
+            away_score += 1               
          
 
         # MOMENTUM BONUS                
