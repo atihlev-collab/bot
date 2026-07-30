@@ -9461,7 +9461,7 @@ def analyze_prematch_match(match):
 
             for item in selected_builder:                              
 
-                prob = item.get("probability", 70)                    
+                prob = item.get("prob", 70)                    
 
                 if prob >= 85:                                      
                     confidence_penalty += 2                            
@@ -9479,7 +9479,7 @@ def analyze_prematch_match(match):
 
             builder_quality = max(0, min(95, builder_quality))         
 
-            if builder_quality < 70:                                  
+            if builder_quality < 68:                                  
                 selected_builder = []                                  
 
             print(                                                   
@@ -9500,7 +9500,7 @@ def analyze_prematch_match(match):
 
             for item in selected_builder:                             
 
-                prob = item.get("probability", 70) / 100               
+                prob = item.get("prob", 70) / 100               
                 odd = item.get("odd", 1.0)                            
 
                 total_probability *= prob                             
