@@ -8679,9 +8679,9 @@ def analyze_prematch_match(match):
         elif over_prob >= 70:                                        
             over_quality += 1                                        
 
-        if expected_goals >= 3.30:                                   
+        if expected_goals >= 3.40:                                   
             over_quality += 2                                        
-        elif expected_goals >= 2.90:                                 
+        elif expected_goals >= 3.00:                                 
             over_quality += 1                                       
 
         if home_form["avg_scored"] + away_form["avg_scored"] >= 2.70:
@@ -8775,9 +8775,9 @@ def analyze_prematch_match(match):
         elif btts_prob >= 68:
             btts_quality += 1
 
-        if expected_goals >= 3.10:
+        if expected_goals >= 3.20:
             btts_quality += 2
-        elif expected_goals >= 2.70:
+        elif expected_goals >= 2.90:
             btts_quality += 1
 
         if min(home_form["scored_pct"], away_form["scored_pct"]) >= 75:
