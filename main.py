@@ -1335,13 +1335,13 @@ def analyze_live_match(fixture):
                 best_pressure >= 76                                 
                 and total_shots_on >= 5                             
                 and total_shots >= 10                               
-                and pressure_diff >= 12                             
+                and pressure_diff >= 10                             
                 and (home_xg + away_xg) >= 1.10                     
                 and fast_goal_probability >= 76                     
             ):                                                     
 
                 if (                                               
-                    home_pressure >= away_pressure + 12            
+                    home_pressure >= away_pressure + 10            
                     and home_shots_on >= away_shots_on + 1         
                 ):                                                 
 
@@ -1354,7 +1354,7 @@ def analyze_live_match(fixture):
 
 
                 if (                                                
-                    away_pressure >= home_pressure + 12            
+                    away_pressure >= home_pressure + 10           
                     and away_shots_on >= home_shots_on + 1         
                 ):                                                 
 
@@ -1383,12 +1383,12 @@ def analyze_live_match(fixture):
                 best_pressure >= 72                             
                 and total_shots_on >= 5                         
                 and total_shots >= 12                           
-                and pressure_diff >= 12                         
+                and pressure_diff >= 10                         
                 and (home_xg + away_xg) >= 1.20                
                 and normal_goal_probability >= 78               
             ):                                                   
                 if (                                                
-                    home_pressure >= away_pressure + 12            
+                    home_pressure >= away_pressure + 10           
                     and home_shots_on >= away_shots_on + 1          
                     and home_xg >= away_xg + 0.20                    
                 ):                                                 
@@ -1400,7 +1400,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (                                                
-                    away_pressure >= home_pressure + 12             
+                    away_pressure >= home_pressure + 10            
                     and away_shots_on >= home_shots_on + 1         
                     and away_xg >= home_xg + 0.20                   
                 ):                                                 
