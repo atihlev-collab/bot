@@ -6537,19 +6537,7 @@ def analyze_prematch_match(match):
             "SCORE=",                                          
             round(away_score, 2)                               
         )                                                     
-
-        # AWAY INJURIES & SUSPENSIONS                          
-
-        away_score += away_absence_adjustment                  
-
-        print(                                                
-            "AWAY ABSENCE SCORE:",                            
-            away,                                              
-            "ADJ=",                                           
-            away_absence_adjustment,                          
-            "SCORE=",                                          
-            round(away_score, 2)                              
-        )                                                     
+                                     
 
         # AWAY EASY GOALS PENALTY          
 
@@ -6836,9 +6824,7 @@ def analyze_prematch_match(match):
 
             away_score              
 
-        )                           
-
-        away_score -= h2h * 2    
+        )                                    
 
 
         # AWAY ANOMALY FILTER                  
@@ -7012,13 +6998,7 @@ def analyze_prematch_match(match):
             ):                          
 
                 away_score += 3         
-        
-        if h2h <= -4:
-             away_score += 4
-
-        elif h2h <= -2:
-             away_score += 2
-
+              
         if away_form["away_games"] > 0:   
 
             away_score += (               
@@ -7029,7 +7009,7 @@ def analyze_prematch_match(match):
                     away_form["away_games"] 
                 )
 
-                * 5                       
+                * 2                       
 
             )                            
 
