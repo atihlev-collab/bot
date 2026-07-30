@@ -8735,6 +8735,33 @@ def analyze_prematch_match(match):
         )
         btts_conf = confidence_from_score(btts_final)
 
+
+        btts_penalty = 0                                  
+
+        if min(                                           
+            home_form["recent_avg_scored"],               
+            away_form["recent_avg_scored"]                
+        ) < 1.00:                                         
+            btts_penalty += 5                             
+
+        if min(                                          
+            home_form["scored_pct"],                      
+            away_form["scored_pct"]                       
+        ) < 70:                                           
+            btts_penalty += 4                             
+
+        if max(                                           
+            home_form["clean_sheet_pct"],                 
+            away_form["clean_sheet_pct"]                  
+        ) >= 60:                                          
+            btts_penalty += 4                             
+
+        btts_prob -= btts_penalty                        
+        btts_conf -= round(btts_penalty * 0.8)            
+
+        btts_prob = max(0, min(100, btts_prob))           
+        btts_conf = max(0, min(100, btts_conf))           
+
         home_btts_rate = (
             home_form["btts"] / max(1, home_form["played"])
         )
