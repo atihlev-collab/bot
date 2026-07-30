@@ -8642,9 +8642,37 @@ def analyze_prematch_match(match):
             over_value,
             over_league
         )
+        
         over_conf = confidence_from_score(over_final)
 
-        over_quality = 0
+        if over25_odd and under25_odd:                  
+            market_gap = over25_odd - under25_odd       
+
+            if market_gap >= 0.80:                     
+                over_prob -= 10                         
+                over_conf -= 8                         
+
+            elif market_gap >= 0.50:                    
+                over_prob -= 6                          
+                over_conf -= 4                         
+
+            if under25_odd <= 1.60:                     
+                over_prob -= 8                          
+                over_conf -= 6                          
+
+            elif under25_odd <= 1.70:                  
+                over_prob -= 4                         
+                over_conf -= 3                         
+
+            if over25_odd >= 2.30:                      
+                over_prob -= 3                         
+                over_conf -= 2                         
+
+            over_prob = max(0, round(over_prob, 1))     
+            over_conf = max(0, round(over_conf, 1))     
+
+        over_quality = 0    
+     
         if over_prob >= 75:
             over_quality += 2
         elif over_prob >= 70:
@@ -8674,17 +8702,7 @@ def analyze_prematch_match(match):
             "CONF=", over_conf,
             "xG=", expected_goals,
             "Q=", over_quality
-        )
-
-        over_signal = False
-
-
-        if (
-            under25_odd
-            and over25_odd
-            and under25_odd <= 1.60
-        ):
-            over_signal = False
+             
      
         if (
             over_prob >= 68
