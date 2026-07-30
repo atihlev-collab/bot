@@ -4831,23 +4831,7 @@ def analyze_prematch_match(match):
 
             0.35                       
 
-        )                                
-
-        if (                            
-
-            strength_gap >= 25          
-
-        ):                              
-
-            home_score += 3              
-
-        elif (                           
-
-            strength_gap >= 15           
-
-        ):                              
-
-            home_score += 1       
+        )                                     
 
 
         # ATTACK / DEFENSE INDEX      
@@ -6743,23 +6727,7 @@ def analyze_prematch_match(match):
             0.35                        
 
         )                              
-
-        if (                            
-
-            strength_gap >= 25           
-
-        ):                              
-
-            away_score += 3              
-
-        elif (                           
-
-            strength_gap >= 15          
-
-        ):                              
-
-            away_score += 1     
-
+     
 
         # ATTACK / DEFENSE INDEX      
 
