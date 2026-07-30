@@ -5709,7 +5709,7 @@ def analyze_prematch_match(match):
 
         ):                          
 
-            home_score += 3         
+            home_score += 2         
 
 
         # EASY GOALS PENALTY        
@@ -8200,7 +8200,7 @@ def analyze_prematch_match(match):
 
         ):                          
 
-            away_score += 3         
+            away_score += 2         
 
 
         # FALSE FAVOURITE FILTER          
