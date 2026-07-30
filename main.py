@@ -9452,26 +9452,6 @@ def analyze_prematch_match(match):
 
         builder_quality = min(95, builder_quality)                     
 
-     
-        signals = signals[:10]        
-         
-        print(
-            "RETURN SIGNALS:", 
-            home, 
-            away, 
-            len(signals)
-        )
-     
-        return signals
-
-    except Exception as e:
-                           
-        print(
-            "PREMATCH ERROR:",
-            repr(e)
-        )
-
-        return None
 
         # =========================================================
         # BET BUILDER FINAL VALUES
@@ -9547,6 +9527,28 @@ def analyze_prematch_match(match):
         print("Odds:", builder_odds)                            
         print("READY:", builder_ready)         
 
+     
+        signals = signals[:10]        
+         
+        print(
+            "RETURN SIGNALS:", 
+            home, 
+            away, 
+            len(signals)
+        )
+     
+        return signals
+
+    except Exception as e:
+                           
+        print(
+            "PREMATCH ERROR:",
+            repr(e)
+        )
+
+        return None
+
+       
         
 # =========================================================
 # SEND PREMATCH SIGNAL
