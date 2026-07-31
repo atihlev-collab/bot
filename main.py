@@ -5205,7 +5205,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 3               
+            home_score += 4               
 
 
         # DEFENSIVE BONUS                
@@ -5216,7 +5216,7 @@ def analyze_prematch_match(match):
 
         ):                               
 
-            home_score += 2               
+            home_score += 3               
 
         elif (                           
 
@@ -5224,7 +5224,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 1                     
+            home_score += 2                     
 
         print(               
 
