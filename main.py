@@ -1332,12 +1332,12 @@ def analyze_live_match(fixture):
 
 
             if (                                                    
-                best_pressure >= 76                                 
-                and total_shots_on >= 5                             
-                and total_shots >= 10                               
-                and pressure_diff >= 10                             
-                and (home_xg + away_xg) >= 1.10                     
-                and fast_goal_probability >= 76                     
+                best_pressure >= 72                                 
+                and total_shots_on >= 4                             
+                and total_shots >= 9                               
+                and pressure_diff >= 8                             
+                and (home_xg + away_xg) >= 0.90                     
+                and fast_goal_probability >= 72                     
             ):                                                     
 
                 if (                                               
@@ -1380,12 +1380,12 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (                                                
-                best_pressure >= 72                             
-                and total_shots_on >= 5                         
-                and total_shots >= 12                           
-                and pressure_diff >= 10                         
-                and (home_xg + away_xg) >= 1.20                
-                and normal_goal_probability >= 78               
+                best_pressure >= 69                             
+                and total_shots_on >= 4                         
+                and total_shots >= 10                           
+                and pressure_diff >= 7                         
+                and (home_xg + away_xg) >= 1.00                
+                and normal_goal_probability >= 73               
             ):                                                   
                 if (                                                
                     home_pressure >= away_pressure + 10           
@@ -1464,12 +1464,12 @@ def analyze_live_match(fixture):
 
         if (                                                        
             30 <= minute <= 62                                      
-            and best_pressure >= 73                                 
-            and total_shots_on >= 5                                 
-            and total_shots >= 13                                   
-            and total_corners >= 4                                 
-            and (home_xg + away_xg) >= 1.55                        
-            and remaining_probability >= 78                        
+            and best_pressure >= 70                                 
+            and total_shots_on >= 4                                 
+            and total_shots >= 11                                   
+            and total_corners >= 3                                 
+            and (home_xg + away_xg) >= 1.30                        
+            and remaining_probability >= 73                        
         ):                                                          
 
             return (                                                
@@ -1610,13 +1610,13 @@ def analyze_live_match(fixture):
 
 
             if (                                                    
-                best_pressure >= 72                                 
-                and total_shots_on >= 5                             
-                and total_shots >= 14                               
-                and total_corners >= 4                              
-                and (home_xg + away_xg) >= 1.50                     
-                and goal_diff <= 1                                  
-                and late_goal_probability >= 78                     
+                best_pressure >= 68                                 
+                and total_shots_on >= 4                             
+                and total_shots >= 11                               
+                and total_corners >= 3                              
+                and (home_xg + away_xg) >= 1.20                     
+                and goal_diff <= 2                                  
+                and late_goal_probability >= 72                     
             ):                                                      
 
                 return (                                            
