@@ -9124,9 +9124,29 @@ def analyze_prematch_match(match):
 
         if builder_ready:                                           
 
-            message = (                                               
-                "🔥 PREMATCH BET BUILDER\n\n"                        
-                f"🏆 {home} vs {away}\n\n"                           
+            fixture_time = datetime.fromisoformat(
+    fixture["fixture"]["date"].replace("Z", "+00:00")
+).astimezone(TZ)
+
+kickoff = fixture_time.strftime("%H:%M")
+
+message = f"""
+🔥 PREMATCH BET BUILDER
+
+🌍 {country}
+🏆 {league}
+
+⚽ {home_team} vs {away_team}
+
+🕒 {kickoff} 🇧🇬
+
+✅ {selected_builder[0]["emoji"]} {selected_builder[0]["name"]}
+✅ {selected_builder[1]["emoji"]} {selected_builder[1]["name"]}
+
+💰 Total Odds: {builder_odds:.2f}
+🎯 Probability: {builder_probability:.1f}%
+💎 Confidence: {builder_confidence:.0f}%
+"""                           
             )                                                       
 
             total_odds = 1.0                                          
