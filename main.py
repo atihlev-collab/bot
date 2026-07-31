@@ -9493,10 +9493,10 @@ def analyze_prematch_match(match):
             lineup_bonus += 2                                           
 
         if home_strength < 60:                                        
-            lineup_bonus -= 3                                         
+            lineup_bonus -= 2                                         
 
         if away_strength < 60:                                       
-            lineup_bonus -= 3                                           
+            lineup_bonus -= 2                                           
 
         builder_quality += lineup_bonus                               
 
