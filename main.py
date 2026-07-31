@@ -9125,10 +9125,10 @@ def analyze_prematch_match(match):
         if builder_ready:                                           
 
             fixture_time = datetime.fromisoformat(
-    fixture["fixture"]["date"].replace("Z", "+00:00")
-).astimezone(TZ)
+                fixture["fixture"]["date"].replace("Z", "+00:00")
+            ).astimezone(TZ)
 
-kickoff = fixture_time.strftime("%H:%M")
+            kickoff = fixture_time.strftime("%H:%M")
 
 message = f"""
 🔥 PREMATCH BET BUILDER
