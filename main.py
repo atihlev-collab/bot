@@ -8726,6 +8726,11 @@ def analyze_prematch_match(match):
             under_quality += 1
         if min(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) >= 30:
             under_quality += 1
+        if (
+            home_form["avg_scored"] >= 1.80
+            and away_form["avg_scored"] >= 1.80
+        ):
+            under_quality -= 2
 
         print(
             "UNDER QUALITY:", home, away,
@@ -8735,10 +8740,19 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 58
-            and expected_goals <= 2.35
-            and under_quality >= 6
+            under_prob >= 62
+            and expected_goals <= 2.20
+            and under_quality >= 7
         ):
+
+            if under25_odd is not None:
+           
+                if under25_odd >= 2.10:
+                    under_prob = min(85, under_prob)
+           
+                elif under25_odd >= 1.90:
+                    under_prob = min(90, under_prob)
+         
             signals.append((
                 "🛡 UNDER 2.5",
                 confidence_from_score(under_prob),
