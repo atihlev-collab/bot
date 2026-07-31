@@ -9146,7 +9146,7 @@ message = f"""
 💰 Total Odds: {builder_odds:.2f}
 🎯 Probability: {builder_probability:.1f}%
 💎 Confidence: {builder_confidence:.0f}%
-"""                           
+"""
             )                                                       
 
             total_odds = 1.0                                          
