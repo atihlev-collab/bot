@@ -5272,19 +5272,19 @@ def analyze_prematch_match(match):
 
         if (                             
 
-            home_edge >= 4               
+            home_edge >= 5              
 
         ):                               
 
-            home_score += 3             
+            home_score += 4             
 
         elif (                           
 
-            home_edge >= 2              
+            home_edge >= 3              
 
         ):                              
 
-            home_score += 1              
+            home_score += 2             
 
         form_gap = (                         
             home_form["form_pct"]             
