@@ -8821,7 +8821,7 @@ def analyze_prematch_match(match):
                 "odd": over25_odd if 'over25_odd' in locals() else None 
             })                                                    
 
-        if btts_quality >= 6:                                    
+        if btts_quality >= 5:                                    
             builder_markets.append({                             
                 "market": "💎 BTTS",                             
                 "prob": btts_prob,                               
@@ -8845,7 +8845,7 @@ def analyze_prematch_match(match):
                 "odd": away_over15_odd if 'away_over15_odd' in locals() else None 
             })                                                    
 
-        if under_quality >= 6:                                  
+        if under_quality >= 5:                                  
             builder_markets.append({                             
                 "market": "🛡 UNDER 2.5",                        
                 "prob": under_prob,                              
@@ -8853,7 +8853,7 @@ def analyze_prematch_match(match):
                 "odd": under25_odd if 'under25_odd' in locals() else None 
             })                                                   
 
-        if over35_quality >= 6:                                   
+        if over35_quality >= 5:                                   
             builder_markets.append({                             
                 "market": "🚀 OVER 3.5",                          
                 "prob": over35_prob,                             
@@ -8888,8 +8888,8 @@ def analyze_prematch_match(match):
 
             if (                                                           
                 market == "🛡 UNDER 2.5"                                    
-                and home_probability >= 82                                 
-                and home_score >= 55                                       
+                and home_probability >= 78                                 
+                and home_score >= 50                                       
             ):                                                            
                 builder_markets.append({                                   
                     "market": "🏆 HOME WIN",                               
@@ -8900,8 +8900,8 @@ def analyze_prematch_match(match):
 
             elif (                                                         
                 market == "🛡 UNDER 2.5"                                     
-                and away_probability >= 82                                 
-                and away_score >= 55                                        
+                and away_probability >= 78                                 
+                and away_score >= 50                                        
             ):                                                             
                 builder_markets.append({                                    
                     "market": "✈️ AWAY WIN",                               
@@ -9102,10 +9102,10 @@ def analyze_prematch_match(match):
         
         builder_ready = (                                       
             len(selected_builder) >= 2                          
-            and builder_probability >= 70                       
+            and builder_probability >= 67                       
             and builder_quality >= 6                            
-            and builder_confidence >= 75                       
-            and 1.80 <= builder_odds <= 3.20                    
+            and builder_confidence >= 72                       
+            and 1.80 <= builder_odds <= 3.60                    
         )                                                       
         
         print()                                                 
@@ -9367,7 +9367,7 @@ def analyze_prematch_match(match):
 
             builder_quality = max(0, min(95, builder_quality))         
 
-            if builder_quality < 68:                                  
+            if builder_quality < 63:                                  
                 selected_builder = []                                  
 
             print(                                                   
@@ -9405,13 +9405,13 @@ def analyze_prematch_match(match):
                 round(builder_value_edge, 2)
             )
            
-            if builder_value_edge >= 12:
+            if builder_value_edge >= 10:
                 builder_quality += 5
            
-            elif builder_value_edge >= 8:
+            elif builder_value_edge >= 6:
                 builder_quality += 3
            
-            elif builder_value_edge < 0:
+            elif builder_value_edge < 3:
                 selected_builder = []                       
 
             builder_quality = min(95, builder_quality)                  
