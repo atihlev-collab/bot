@@ -3941,15 +3941,28 @@ def calculate_final_score(
 # =========================================================
 
 def confidence_from_score(score):
-
-    if score >= 90:
+    return max(60, min(95, round(score)))
+ 
+    if score >= 95:
         return 95
 
+    elif score >= 90:
+        return 92
+
+    elif score >= 85:
+        return 89
+
     elif score >= 80:
-        return 90
+        return 86
+
+    elif score >= 75:
+        return 82
 
     elif score >= 70:
-        return 80
+        return 78
+
+    elif score >= 65:
+        return 74
 
     elif score >= 60:
         return 70
