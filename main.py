@@ -2450,7 +2450,7 @@ def home_win_score(
         home_form["recent_goal_diff"]   
         -                              
         away_form["recent_goal_diff"]  
-    ) * 0.7                            
+    ) * 0.9                           
 
     score += (
         away_form["losses"]
@@ -2462,19 +2462,19 @@ def home_win_score(
         home_form["form_pct"]
         -
         away_form["form_pct"]
-    )* 0.4
+    )* 0.5
 
     score += (                         
         home_form["recent_form_pct"]    
         -                               
         away_form["recent_form_pct"]   
-    ) * 0.3    
+    ) * 0.5    
 
     score += (                     
         home_form["momentum"]       
         -                           
         away_form["momentum"]   
-    ) * 0.4                        
+    ) * 0.6                        
 
     score += (
         home_form["unbeaten_pct"]
@@ -2486,25 +2486,25 @@ def home_win_score(
         home_form["avg_scored"]
         -
         away_form["avg_scored"]
-    ) * 8
+    ) * 10
 
     score += (                               
         home_form["recent_avg_scored"]       
         -                                    
         away_form["recent_avg_scored"]        
-    ) * 6                                   
+    ) * 8                                   
 
     score += (
         away_form["avg_conceded"]
         -
         home_form["avg_conceded"]
-    ) * 5
+    ) * 6
 
     score += (                              
         away_form["recent_avg_conceded"]     
         -                                   
         home_form["recent_avg_conceded"]      
-    ) * 4           
+    ) * 5          
 
     print(                       
 
