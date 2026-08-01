@@ -9234,7 +9234,7 @@ def analyze_prematch_match(match):
         if builder_ready:                                           
 
             fixture_time = datetime.fromisoformat(
-                fixture["fixture"]["date"].replace("Z", "+00:00")
+                match["fixture"]["date"].replace("Z", "+00:00")
             ).astimezone(TZ)
 
             kickoff = fixture_time.strftime("%H:%M")
@@ -9245,7 +9245,7 @@ def analyze_prematch_match(match):
 🌍 {country}
 🏆 {league}
 
-⚽ {home_team} vs {away_team}
+⚽ {home} vs {away}
 
 🕒 {kickoff} 🇧🇬
 
