@@ -6291,9 +6291,8 @@ def analyze_prematch_match(match):
         # ---------------------------------------------------------
 
         home_block = (
-            home_probability >= 90
-            and home_odd >= 1.90
-            and home_score < 85
+            home_probability >= 95
+            and home_odd >= 2.20           
         )
 
         if home_block:
@@ -8403,9 +8402,8 @@ def analyze_prematch_match(match):
         # ---------------------------------------------------------
 
         away_block = (
-            away_probability >= 90
-            and away_odd >= 1.90
-            and away_score < 85
+            away_probability >= 95
+            and away_odd >= 2.20          
         )
 
         if away_block:
