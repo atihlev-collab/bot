@@ -1379,6 +1379,17 @@ def analyze_live_match(fixture):
 
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
+
+            print(
+                "LIVE CHECK:",
+                best_pressure,
+                total_shots_on,
+                total_shots,
+                pressure_diff,
+                round(home_xg + away_xg, 2),
+                normal_goal_probability
+            )
+
             if (                                                
                 best_pressure >= 67                             
                 and total_shots_on >= 3                         
