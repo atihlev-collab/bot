@@ -4160,7 +4160,34 @@ def analyze_prematch_match(match):
 
         home_odd = match_odds[0]                   
         draw_odd = match_odds[1]                   
-        away_odd = match_odds[2]                 
+        away_odd = match_odds[2]  
+
+
+        # =========================================================
+        # QUICK ODDS FILTER
+        # =========================================================
+        
+        if (
+            home_odd is None
+            or away_odd is None
+        ):
+            return None
+        
+        if (
+            home_odd > 2.40
+            and away_odd > 2.40
+        ):
+            print("SKIP NO FAVORITE:", home_odd, away_odd)
+            return None
+        
+        if (
+            home_odd < 1.20
+            or away_odd < 1.20
+        ):
+            print("SKIP EXTREME FAVORITE:", home_odd, away_odd)
+            return None
+
+     
         over25_odd = match_odds[3] 
         under25_odd = match_odds[4]
         btts_odd = match_odds[5]                  
