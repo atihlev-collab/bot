@@ -6285,6 +6285,29 @@ def analyze_prematch_match(match):
                 home_score                
             )
 
+
+        # ---------------------------------------------------------
+        # HOME WIN SAFETY FILTER
+        # ---------------------------------------------------------
+
+        home_block = (
+            home_probability >= 90
+            and home_odd >= 1.90
+            and home_score < 85
+        )
+
+        if home_block:
+
+            print(
+                "HOME FILTER:",
+                home,
+                away,
+                home_probability,
+                home_odd,
+                home_score
+            )
+
+        else:
                         
 
             signals.append(              
@@ -8372,8 +8395,31 @@ def analyze_prematch_match(match):
             print(                       
                 "AWAY SIGNAL:",          
                 away_score                
-            )     
+            )    
 
+  
+        # ---------------------------------------------------------
+        # AWAY WIN SAFETY FILTER
+        # ---------------------------------------------------------
+
+        away_block = (
+            away_probability >= 90
+            and away_odd >= 1.90
+            and away_score < 85
+        )
+
+        if away_block:
+
+            print(
+                "AWAY FILTER:",
+                home,
+                away,
+                away_probability,
+                away_odd,
+                away_score
+            )
+
+        else:
                        
         
             signals.append(              
