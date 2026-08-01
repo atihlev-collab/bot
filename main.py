@@ -1341,7 +1341,7 @@ def analyze_live_match(fixture):
             ):                                                     
 
                 if (                                               
-                    home_pressure >= away_pressure + 10            
+                    home_pressure >= away_pressure + 8            
                     and home_shots_on >= away_shots_on + 1         
                 ):                                                 
 
@@ -1399,9 +1399,9 @@ def analyze_live_match(fixture):
                 and normal_goal_probability >= 70               
             ):                                                   
                 if (                                                
-                    home_pressure >= away_pressure + 10           
+                    home_pressure >= away_pressure + 8           
                     and home_shots_on >= away_shots_on + 1          
-                    and home_xg >= away_xg + 0.20                    
+                    and home_xg >= away_xg + 0.10                    
                 ):                                                 
                     return (
                         "🎯 NEXT GOAL HOME",
