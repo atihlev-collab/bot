@@ -1015,7 +1015,7 @@ def analyze_live_match(fixture):
         fixture_id = fixture["fixture"]["id"]
         minute = fixture["fixture"]["status"].get("elapsed") or 0
 
-        if minute < 25 or minute > 90:
+        if minute < 20 or minute > 88:
             return None
 
         home_team = fixture["teams"]["home"]["name"]
@@ -1252,11 +1252,11 @@ def analyze_live_match(fixture):
 
 
         if (                                                        
-            58 <= minute <= 82                                      
-            and card_probability >= 86                              
-            and total_cards >= 3                                    
-            and total_fouls >= 22                                   
-            and goal_diff <= 1                                      
+            58 <= minute <= 85                                      
+            and card_probability >= 82                              
+            and total_cards >= 2                                    
+            and total_fouls >= 20                                   
+            and goal_diff <= 2                                      
         ):                                                          
 
             if not betano_live_market_available(                    
@@ -1332,12 +1332,12 @@ def analyze_live_match(fixture):
 
 
             if (                                                    
-                best_pressure >= 72                                 
-                and total_shots_on >= 4                             
-                and total_shots >= 9                               
-                and pressure_diff >= 8                             
-                and (home_xg + away_xg) >= 0.90                     
-                and fast_goal_probability >= 72                     
+                best_pressure >= 70                                 
+                and total_shots_on >= 3                             
+                and total_shots >= 8                               
+                and pressure_diff >= 6                             
+                and (home_xg + away_xg) >= 0.80                     
+                and fast_goal_probability >= 70                     
             ):                                                     
 
                 if (                                               
@@ -1380,12 +1380,12 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (                                                
-                best_pressure >= 69                             
-                and total_shots_on >= 4                         
-                and total_shots >= 10                           
-                and pressure_diff >= 7                         
-                and (home_xg + away_xg) >= 1.00                
-                and normal_goal_probability >= 73               
+                best_pressure >= 67                             
+                and total_shots_on >= 3                         
+                and total_shots >= 9                           
+                and pressure_diff >= 6                         
+                and (home_xg + away_xg) >= 0.90               
+                and normal_goal_probability >= 70               
             ):                                                   
                 if (                                                
                     home_pressure >= away_pressure + 10           
