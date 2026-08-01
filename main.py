@@ -295,7 +295,7 @@ def get_match_odds(fixture_id):
 
     if fixture_id in odds_cache:
         cache_time, data = odds_cache[fixture_id]
-        if time.time() - cache_time < 900:
+        if time.time() - cache_time < 1800:
             return data
 
     try:
@@ -724,7 +724,7 @@ def get_upcoming_matches():
                     fixture_time - now
                 ).total_seconds() / 3600
 
-                if 0 <= hours_left <= 12:
+                if 0 <= hours_left <= 6:
 
                     matches.append(
                         match
@@ -1805,7 +1805,7 @@ def get_team_form(team_id, venue=None):
 
         cache_time, data = team_form_cache[cache_key]
 
-        if time.time() - cache_time < 21600:
+        if time.time() - cache_time < 43200:
             return data
 
     try:
