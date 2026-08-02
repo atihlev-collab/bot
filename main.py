@@ -1332,16 +1332,15 @@ def analyze_live_match(fixture):
 
 
             if (                                                    
-                best_pressure >= 65                                 
+                best_pressure >= 60                                 
                 and total_shots_on >= 2                             
-                and total_shots >= 6                               
-                and pressure_diff >= 4                             
-                and (home_xg + away_xg) >= 0.60                     
-                and fast_goal_probability >= 65                     
+                and total_shots >= 5                                                                        
+                and (home_xg + away_xg) >= 0.50                     
+                and fast_goal_probability >= 60                     
             ):                                                     
 
                 if (                                               
-                    home_pressure >= away_pressure + 8            
+                    home_pressure > away_pressure            
                     and home_shots_on >= away_shots_on + 1         
                 ):                                                 
 
@@ -1354,7 +1353,7 @@ def analyze_live_match(fixture):
 
 
                 if (                                                
-                    away_pressure >= home_pressure + 10           
+                    away_pressure > home_pressure           
                     and away_shots_on >= home_shots_on + 1         
                 ):                                                 
 
@@ -1393,13 +1392,12 @@ def analyze_live_match(fixture):
             if (                                                
                 best_pressure >= 63                             
                 and total_shots_on >= 2                         
-                and total_shots >= 7                           
-                and pressure_diff >= 4                         
+                and total_shots >= 7                                                                  
                 and (home_xg + away_xg) >= 0.70               
                 and normal_goal_probability >= 66               
             ):                                                   
                 if (                                                
-                    home_pressure >= away_pressure + 8           
+                    home_pressure > away_pressure          
                     and home_shots_on >= away_shots_on + 1          
                     and home_xg >= away_xg + 0.10                    
                 ):                                                 
