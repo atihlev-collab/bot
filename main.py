@@ -1160,7 +1160,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
-        if 35 <= minute <= 43:
+        if 25 <= minute <= 43:
             fh_corner_probability = 50
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
@@ -1168,10 +1168,10 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 72
-                and total_shots >= 10
+                best_pressure >= 67
+                and total_shots >= 8
                 and total_corners >= 2
-                and fh_corner_probability >= 72
+                and fh_corner_probability >= 67
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1332,12 +1332,12 @@ def analyze_live_match(fixture):
 
 
             if (                                                    
-                best_pressure >= 70                                 
-                and total_shots_on >= 3                             
-                and total_shots >= 8                               
-                and pressure_diff >= 6                             
-                and (home_xg + away_xg) >= 0.80                     
-                and fast_goal_probability >= 70                     
+                best_pressure >= 65                                 
+                and total_shots_on >= 2                             
+                and total_shots >= 6                               
+                and pressure_diff >= 4                             
+                and (home_xg + away_xg) >= 0.60                     
+                and fast_goal_probability >= 65                     
             ):                                                     
 
                 if (                                               
@@ -1391,12 +1391,12 @@ def analyze_live_match(fixture):
             )
 
             if (                                                
-                best_pressure >= 67                             
-                and total_shots_on >= 3                         
-                and total_shots >= 9                           
-                and pressure_diff >= 6                         
-                and (home_xg + away_xg) >= 0.90               
-                and normal_goal_probability >= 70               
+                best_pressure >= 63                             
+                and total_shots_on >= 2                         
+                and total_shots >= 7                           
+                and pressure_diff >= 4                         
+                and (home_xg + away_xg) >= 0.70               
+                and normal_goal_probability >= 66               
             ):                                                   
                 if (                                                
                     home_pressure >= away_pressure + 8           
@@ -1474,13 +1474,13 @@ def analyze_live_match(fixture):
 
 
         if (                                                        
-            30 <= minute <= 62                                      
-            and best_pressure >= 70                                 
-            and total_shots_on >= 4                                 
-            and total_shots >= 11                                   
-            and total_corners >= 3                                 
-            and (home_xg + away_xg) >= 1.30                        
-            and remaining_probability >= 73                        
+            28 <= minute <= 68                                      
+            and best_pressure >= 65                                 
+            and total_shots_on >= 3                                 
+            and total_shots >= 9                                   
+            and total_corners >= 2                                 
+            and (home_xg + away_xg) >= 1.00                        
+            and remaining_probability >= 68                        
         ):                                                          
 
             return (                                                
@@ -1540,13 +1540,13 @@ def analyze_live_match(fixture):
 
 
         if (                                                        
-            55 <= minute <= 80                                      
-            and total_corners >= 6                                  
-            and total_shots >= 14                                  
-            and total_shots_on >= 5                                
-            and best_pressure >= 74                                 
-            and pressure_diff >= 10                                 
-            and corner_probability >= 79                            
+            50 <= minute <= 83                                      
+            and total_corners >= 5                                  
+            and total_shots >= 11                                  
+            and total_shots_on >= 4                                
+            and best_pressure >= 68                                 
+            and pressure_diff >= 6                                 
+            and corner_probability >= 72                            
         ):                                                         
 
             if not betano_live_market_available(                    
@@ -1621,13 +1621,13 @@ def analyze_live_match(fixture):
 
 
             if (                                                    
-                best_pressure >= 68                                 
-                and total_shots_on >= 4                             
-                and total_shots >= 11                               
-                and total_corners >= 3                              
-                and (home_xg + away_xg) >= 1.20                     
+                best_pressure >= 64                                 
+                and total_shots_on >= 3                             
+                and total_shots >= 9                               
+                and total_corners >= 2                              
+                and (home_xg + away_xg) >= 1.00                     
                 and goal_diff <= 2                                  
-                and late_goal_probability >= 72                     
+                and late_goal_probability >= 68                     
             ):                                                      
 
                 return (                                            
