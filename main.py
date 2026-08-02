@@ -5954,7 +5954,7 @@ def analyze_prematch_match(match):
 
                 round(                 
 
-                    50                 
+                    35                 
 
                     +
 
@@ -5964,7 +5964,7 @@ def analyze_prematch_match(match):
 
                         *              
 
-                        0.60           
+                        0.55           
 
                     ),                 
 
@@ -6086,11 +6086,11 @@ def analyze_prematch_match(match):
 
             >=                      
 
-            market_home + 5         
+            market_home + 3         
 
             and                      
 
-            home_edge >= 0.5            
+            home_edge >= 1.5            
 
         )       
 
@@ -6352,9 +6352,9 @@ def analyze_prematch_match(match):
 
 
             if (
-                home_probability >= 74
+                home_probability >= 80
                 and home_score >= 68
-                and home_edge >= 2
+                and home_edge >= 5
                 and not draw_risk
             ):
                 signals.append((
