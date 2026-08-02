@@ -6362,17 +6362,7 @@ def analyze_prematch_match(match):
                     confidence_from_score(home_score),
                     round(home_probability, 1)
                 ))
-
-                    round(                  
-                        home_probability,  
-                        1                  
-                    )                       
-
-                )                          
-
-            )        
-
-      
+                     
        
             home_signal = True
      
