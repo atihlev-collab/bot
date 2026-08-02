@@ -5822,32 +5822,38 @@ def analyze_prematch_match(match):
 
             and                          
 
-            home_edge >= 2             
+            home_edge >= 4             
 
         ):                               
 
-            home_score += 1             
+            home_score += 2             
 
-        # STRONG FAVOURITE BONUS                              
+        # STRONG FAVOURITE BONUS                       
 
-        if (                                                  
-            home_score >= 76                                   
-            and home_edge >= 4                                 
-            and home_form["wins"] >= 5                         
-            and home_form["losses"] == 0                       
-        ):                                                   
+        if (                                            
+            home_score >= 72                            
+            and home_edge >= 3                           
+            and home_form["wins"] >= 4                  
+            and home_form["losses"] <= 1                
+        ):                                              
 
-            home_score += 1                                   
+            home_score += 2                             
 
+        elif (                                          
+            home_score >= 66                             
+            and home_edge >= 2                          
+        ):                                              
+
+            home_score += 1                              
         # CONSENSUS BONUS             
 
         if (                         
 
-            home_score >= 65          
+            home_score >= 66          
 
             and                       
 
-            home_edge >= 3            
+            home_edge >= 2            
 
             and                        
 
@@ -5891,7 +5897,7 @@ def analyze_prematch_match(match):
 
             min(                      
 
-                80,                   
+                82,                   
 
                 round(                
 
@@ -5940,7 +5946,7 @@ def analyze_prematch_match(match):
 
                         *              
 
-                        0.53           
+                        0.55           
 
                     ),                 
 
@@ -6309,8 +6315,8 @@ def analyze_prematch_match(match):
         # ---------------------------------------------------------
 
         home_block = (
-            home_probability >= 90
-            and home_odd >= 2.00           
+            home_probability >= 92
+            and home_odd >= 2.50           
         )
 
         if home_block:
@@ -6328,9 +6334,9 @@ def analyze_prematch_match(match):
 
 
             if (
-                home_probability >= 80
-                and home_score >= 68
-                and home_edge >= 5
+                home_probability >= 74
+                and home_score >= 64
+                and home_edge >= 2
                 and not draw_risk
             ):
                 signals.append((
@@ -6340,7 +6346,7 @@ def analyze_prematch_match(match):
                 ))
                      
        
-            home_signal = True
+                home_signal = True
      
         # AWAY WIN
 
@@ -7886,11 +7892,11 @@ def analyze_prematch_match(match):
         #BONUS LIMIT
 
         if (                                                   
-            bonus_total > 26                                  
+            bonus_total > 28                                  
         ):                                                   
 
             home_score -= (                                  
-                bonus_total - 26                               
+                bonus_total - 28                               
             )                                                 
 
         away_score = max(              
@@ -8465,17 +8471,17 @@ def analyze_prematch_match(match):
 
         penalty = 0                                                 
 
-        if under25_odd and under25_odd <= 1.60:                    
-            penalty += 10   
+        if under25_odd and under25_odd <= 1.55:                    
+            penalty += 6   
          
         elif under25_odd and under25_odd <= 1.70:                   
-            penalty += 6                                                                                                 
+            penalty += 3                                                                                                 
 
-        if expected_goals < 2.50:
-            penalty += 6
-        elif expected_goals < 2.70:
-            penalty += 3
-        elif expected_goals < 2.90:
+        if expected_goals < 2.40:
+            penalty += 4
+        elif expected_goals < 2.60:
+            penalty += 2
+        elif expected_goals < 2.80:
             penalty += 1                                             
 
         if home_form["recent_over25"] + away_form["recent_over25"] < 3: 
