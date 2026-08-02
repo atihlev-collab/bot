@@ -4174,52 +4174,52 @@ def analyze_prematch_match(match):
         away_odd = match_odds[2]  
 
 
-# =========================================================   
-# QUICK ODDS FILTER                                           
-# =========================================================   
-
-if (                                                           
-    home_odd is None                                           
-    or draw_odd is None                                         
-    or away_odd is None                                         
-):                                                              
-    return None                                                
-
-# Skip matches without a clear favourite                       
-if (                                                          
-    home_odd > 2.60                                            
-    and away_odd > 2.60                                       
-):                                                             
-    print(                                                      
-        "SKIP NO FAVORITE:",                                    
-        home_odd,                                              
-        away_odd                                               
-    )                                                          
-    return None                                                
-
-# Skip extreme favourites                                      
-if (                                                           
-    home_odd < 1.25                                            
-    or away_odd < 1.25                                          
-):                                                              
-    print(                                                     
-        "SKIP EXTREME FAVORITE:",                              
-        home_odd,                                              
-        away_odd                                              
-    )                                                          
-    return None                                                
-
-# Skip very high odds                                          
-if (                                                           
-    home_odd > 6.50                                            
-    and away_odd > 6.50                                         
-):                                                              
-    print(                                                      
-        "SKIP OUTLIER:",                                        
-        home_odd,                                              
-        away_odd                                                
-    )                                                          
-    return None                                                
+        # =========================================================   
+        # QUICK ODDS FILTER                                           
+        # =========================================================   
+        
+        if (                                                           
+            home_odd is None                                           
+            or draw_odd is None                                         
+            or away_odd is None                                         
+        ):                                                              
+            return None                                                
+        
+        # Skip matches without a clear favourite                       
+        if (                                                          
+            home_odd > 2.60                                            
+            and away_odd > 2.60                                       
+        ):                                                             
+            print(                                                      
+                "SKIP NO FAVORITE:",                                    
+                home_odd,                                              
+                away_odd                                               
+            )                                                          
+            return None                                                
+        
+        # Skip extreme favourites                                      
+        if (                                                           
+            home_odd < 1.25                                            
+            or away_odd < 1.25                                          
+        ):                                                              
+            print(                                                     
+                "SKIP EXTREME FAVORITE:",                              
+                home_odd,                                              
+                away_odd                                              
+            )                                                          
+            return None                                                
+        
+        # Skip very high odds                                          
+        if (                                                           
+            home_odd > 6.50                                            
+            and away_odd > 6.50                                         
+        ):                                                              
+            print(                                                      
+                "SKIP OUTLIER:",                                        
+                home_odd,                                              
+                away_odd                                                
+            )                                                          
+            return None                                                
 
      
         over25_odd = match_odds[3] 
