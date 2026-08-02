@@ -4201,7 +4201,11 @@ def analyze_prematch_match(match):
      
         over25_odd = match_odds[3] 
         under25_odd = match_odds[4]
-        btts_odd = match_odds[5]                  
+        btts_odd = match_odds[5]       
+     
+        home_over15_odd = match_odds[6] if len(match_odds) > 6 else None
+        away_over15_odd = match_odds[7] if len(match_odds) > 7 else None
+        over35_odd = match_odds[8] if len(match_odds) > 8 else None
 
         market_prob = None                   
         market_home = None                  
@@ -9001,6 +9005,7 @@ def analyze_prematch_match(match):
         if (
             home_over15_probability >= 45
             and home_over15_quality >= 4
+            and 'home_over15_odd' in locals()
             and home_over15_odd is not None
         ):
             builder_markets.append({
@@ -9014,6 +9019,7 @@ def analyze_prematch_match(match):
         if (
             away_over15_probability >= 45
             and away_over15_quality >= 4
+            and 'away_over15_odd' in locals()
             and away_over15_odd is not None
         ):
             builder_markets.append({
