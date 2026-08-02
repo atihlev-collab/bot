@@ -8957,12 +8957,12 @@ def analyze_prematch_match(match):
             })
         
         # OVER 2.5
-       if (
-           over_prob >= 45
-           and over_quality >= 4
-           and over25_odd is not None
-           and over25_odd >= 1.40
-       ):
+        if (
+            over_prob >= 45
+            and over_quality >= 4
+            and over25_odd is not None
+            and over25_odd >= 1.40
+        ):
             builder_markets.append({
                 "market": "⚽ OVER 2.5",
                 "prob": over_prob,
