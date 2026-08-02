@@ -6351,27 +6351,17 @@ def analyze_prematch_match(match):
         else:
 
 
-            if (
-                home_probability >= 95
-                and home_odd >= 1.70
-            ):
-                home_probability = 90
-            
-            if (
-                home_probability >= 92
-                and home_odd >= 2.00
-            ):
-                home_probability = 87
-
-            signals.append(              
-
-                (                          
-
-                    "🏆 HOME WIN",          
-
-                    confidence_from_score(  
-                        home_score          
-                    ),                    
+           if (
+               home_probability >= 74
+               and home_score >= 68
+               and home_edge >= 2
+               and not draw_risk
+           ):
+               signals.append((
+                   "🏆 HOME WIN",
+                   confidence_from_score(home_score),
+                   round(home_probability, 1)
+               ))
 
                     round(                  
                         home_probability,  
@@ -8589,10 +8579,10 @@ def analyze_prematch_match(match):
         )                                                            
 
         if (                                                         
-            over_prob >= 68                                          
-            and over_conf >= 65                                      
-            and expected_goals >= 2.75                              
-            and over_quality >= 6                                   
+            over_prob >= 50                                          
+            and over_conf >= 50                                      
+            and expected_goals >= 2.45                              
+            and over_quality >= 5                                   
         ):                                                           
             signals.append((                                         
                 "⚽ OVER 2.5",                                       
@@ -8696,11 +8686,11 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 67
-            and btts_conf >= 70
-            and expected_goals >= 2.75
-            and min(home_form["scored_pct"], away_form["scored_pct"]) >= 65
-            and btts_quality >= 6
+            btts_prob >= 54
+            and btts_conf >= 55
+            and expected_goals >= 2.45
+            and min(home_form["scored_pct"], away_form["scored_pct"]) >= 60
+            and btts_quality >= 5
         ):
             signals.append((
                 "💎 BTTS",
@@ -8801,10 +8791,10 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 40
-            and away_over15_probability >= 65
-            and expected_goals >= 2.80
-            and away_over15_quality >= 6
+            away_score >= 35
+            and away_over15_probability >= 54
+            and expected_goals >= 2.50
+            and away_over15_quality >= 5
         ):
             signals.append((
                 "✈️ AWAY OVER 1.5",
@@ -8914,9 +8904,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over35_prob >= 55
-            and expected_goals >= 3.40
-            and over35_quality >= 6
+            over35_prob >= 45
+            and expected_goals >= 3.10
+            and over35_quality >= 5
         ):
             signals.append((
                 "🚀 OVER 3.5",
