@@ -9250,10 +9250,10 @@ def analyze_prematch_match(match):
         
         builder_ready = (                                       
             len(selected_builder) >= 2                          
-            and builder_probability >= 67                       
-            and builder_quality >= 6                            
-            and builder_confidence >= 72                       
-            and 1.80 <= builder_odds <= 3.60                    
+            and builder_probability >= 64                       
+            and builder_quality >= 5                            
+            and builder_confidence >= 68                       
+            and 1.80 <= builder_odds <= 4.20                    
         )                                                       
         
         print()                                                 
@@ -9525,7 +9525,7 @@ def analyze_prematch_match(match):
 
             builder_quality = max(0, min(95, builder_quality))         
 
-            if builder_quality < 63:                                  
+            if builder_quality < 55:                                  
                 selected_builder = []                                  
 
             print(                                                   
@@ -9569,8 +9569,8 @@ def analyze_prematch_match(match):
             elif builder_value_edge >= 6:
                 builder_quality += 3
            
-            elif builder_value_edge < 3:
-                selected_builder = []                       
+            elif builder_value_edge < 1:
+                builder_quality -= 2                     
 
             builder_quality = min(95, builder_quality)                  
      
