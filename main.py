@@ -8957,7 +8957,12 @@ def analyze_prematch_match(match):
             })
         
         # OVER 2.5
-        if over_prob >= 60 and over25_odd >= 1.40:
+       if (
+           over_prob >= 45
+           and over_quality >= 4
+           and over25_odd is not None
+           and over25_odd >= 1.40
+       ):
             builder_markets.append({
                 "market": "⚽ OVER 2.5",
                 "prob": over_prob,
@@ -8966,7 +8971,12 @@ def analyze_prematch_match(match):
             })
         
         # UNDER 2.5
-        if under_prob >= 65 and under25_odd >= 1.40:
+        if (
+            under_prob >= 55
+            and under_quality >= 4
+            and under25_odd is not None
+            and under25_odd >= 1.40
+        ):
             builder_markets.append({
                 "market": "🛡 UNDER 2.5",
                 "prob": under_prob,
@@ -8975,7 +8985,11 @@ def analyze_prematch_match(match):
             })
         
         # BTTS
-        if btts_prob >= 60 and btts_odd is not None:
+        if (
+            btts_prob >= 50
+            and btts_quality >= 4
+            and btts_odd is not None
+        ):
             builder_markets.append({
                 "market": "💎 BTTS",
                 "prob": btts_prob,
@@ -8984,7 +8998,11 @@ def analyze_prematch_match(match):
             })
         
         # HOME OVER 1.5
-        if home_over15_probability >= 60 and home_over15_odd is not None:
+        if (
+            home_over15_probability >= 45
+            and home_over15_quality >= 4
+            and home_over15_odd is not None
+        ):
             builder_markets.append({
                 "market": "🏠 HOME OVER 1.5",
                 "prob": home_over15_probability,
@@ -8993,7 +9011,11 @@ def analyze_prematch_match(match):
             })
         
         # AWAY OVER 1.5
-        if away_over15_probability >= 60 and away_over15_odd is not None:
+        if (
+            away_over15_probability >= 45
+            and away_over15_quality >= 4
+            and away_over15_odd is not None
+        ):
             builder_markets.append({
                 "market": "✈️ AWAY OVER 1.5",
                 "prob": away_over15_probability,
@@ -9002,7 +9024,11 @@ def analyze_prematch_match(match):
             })
         
         # OVER 3.5
-        if over35_prob >= 55 and over35_odd is not None:
+        if (
+            over35_prob >= 40
+            and over35_quality >= 4
+            and over35_odd is not None
+        ):
             builder_markets.append({
                 "market": "🚀 OVER 3.5",
                 "prob": over35_prob,
