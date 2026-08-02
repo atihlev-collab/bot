@@ -9243,6 +9243,16 @@ def analyze_prematch_match(match):
         # BET BUILDER TELEGRAM                                     
         # ========================================================= 
 
+
+        print(
+            "BUILDER DEBUG:",
+            "READY=", builder_ready,
+            "MARKETS=", len(selected_builder),
+            "CONF=", builder_confidence,
+            "PROB=", builder_probability,
+            "SCORE=", builder_score
+        )
+     
         if builder_ready:                                           
 
             fixture_time = datetime.fromisoformat(
