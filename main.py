@@ -9796,15 +9796,83 @@ def analyze_prematch_match(match):
 
         builder_quality = min(95, builder_quality)                     
 
+        signals = filtered
      
         signals = signals[:10]        
          
-        print(
+        
+        # =========================================================    
+        # FINAL SIGNAL FILTER                                         
+        # =========================================================    
+
+        filtered = []                                                 
+
+        for market, conf, prob in signals:                            
+
+            if (                                                       
+                market in [                                           
+                    "🏆 HOME WIN",                                     
+                    "✈️ AWAY WIN"                                     
+                ]                                                     
+            ):                                                       
+
+                if prob < 62:                                          
+                    continue                                           
+
+            elif (                                                     
+                market == "⚽ OVER 2.5"                               
+            ):                                                         
+
+                if prob < 61:                                         
+                    continue                                           
+
+            elif (                                                    
+                market == "💎 BTTS"                                    
+            ):                                                         
+
+                if prob < 60:                                         
+                    continue                                           
+
+            elif (                                                   
+                market == "🛡 UNDER 2.5"                             
+            ):                                                        
+
+                if prob < 66:                                         
+                    continue                                          
+
+            elif (                                                    
+                market == "🚀 OVER 3.5"                                
+            ):                                                        
+
+                if prob < 50:                                          
+                    continue                                          
+
+            elif (                                                    
+                market in [                                            
+                    "🏠 HOME OVER 1.5",                               
+                    "✈️ AWAY OVER 1.5"                                
+                ]                                                      
+            ):                                                        
+
+                if prob < 56:                                          
+                    continue                                           
+
+            filtered.append((                                          
+                market,                                               
+                conf,                                                  
+                prob                                                   
+            ))                                                        
+
+        signals = filtered       
+
+
+         print(
             "RETURN SIGNALS:", 
             home, 
             away, 
             len(signals)
         )
+     
      
         return signals
 
