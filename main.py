@@ -295,7 +295,7 @@ def get_match_odds(fixture_id):
 
     if fixture_id in odds_cache:
         cache_time, data = odds_cache[fixture_id]
-        if time.time() - cache_time < 1800:
+        if time.time() - cache_time < 900:
             return data
 
     try:
@@ -6345,7 +6345,19 @@ def analyze_prematch_match(match):
             )
 
         else:
-                        
+
+
+            if (
+                home_probability >= 95
+                and home_odd >= 1.70
+            ):
+                home_probability = 90
+            
+            if (
+                home_probability >= 92
+                and home_odd >= 2.00
+            ):
+                home_probability = 87
 
             signals.append(              
 
@@ -10029,6 +10041,27 @@ def prematch_loop():
                 and over35_odd is not None
             ):
                 odds_text = str(over35_odd)
+
+
+            # ---------------------------------------------------------
+            # MINIMUM ODDS FILTER
+            # ---------------------------------------------------------
+            
+            try:
+            
+                if float(odds_text) < 1.40:
+            
+                    print(
+                        "SKIP LOW ODDS:",
+                        market,
+                        odds_text
+                    )
+            
+                    continue
+            
+            except:
+            
+                pass
 
             # Never send a prematch recommendation without the actual
             # Betano price for that exact market.
