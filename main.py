@@ -8973,7 +8973,24 @@ def analyze_prematch_match(match):
                 "quality": under_quality,                        
                 "odd": under25_odd if 'under25_odd' in locals() else None 
             })                                                   
-        
+
+
+        if home_probability >= 72:
+            builder_markets.append({
+                "market": "🏆 HOME WIN",
+                "prob": home_probability,
+                "quality": 7,
+                "odd": home_odd
+            })
+
+        if away_probability >= 72:
+            builder_markets.append({
+                "market": "✈️ AWAY WIN",
+                "prob": away_probability,
+                "quality": 7,
+                "odd": away_odd
+            })
+     
      
         if over35_quality >= 5:                                   
             builder_markets.append({                             
