@@ -6351,17 +6351,17 @@ def analyze_prematch_match(match):
         else:
 
 
-           if (
-               home_probability >= 74
-               and home_score >= 68
-               and home_edge >= 2
-               and not draw_risk
-           ):
-               signals.append((
-                   "🏆 HOME WIN",
-                   confidence_from_score(home_score),
-                   round(home_probability, 1)
-               ))
+            if (
+                home_probability >= 74
+                and home_score >= 68
+                and home_edge >= 2
+                and not draw_risk
+            ):
+                signals.append((
+                    "🏆 HOME WIN",
+                    confidence_from_score(home_score),
+                    round(home_probability, 1)
+                ))
 
                     round(                  
                         home_probability,  
