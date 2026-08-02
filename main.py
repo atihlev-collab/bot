@@ -5639,7 +5639,7 @@ def analyze_prematch_match(match):
 
                     +
 
-                    home_edge * 2           
+                    home_edge * 1.5           
 
                     +
 
@@ -5649,7 +5649,7 @@ def analyze_prematch_match(match):
 
                         /
 
-                        10
+                        14
 
                     )                      
 
@@ -5669,7 +5669,7 @@ def analyze_prematch_match(match):
 
                         market_home           
 
-                    ) * 0.30                  
+                    ) * 0.20                  
 
                 )                         
 
@@ -5747,11 +5747,11 @@ def analyze_prematch_match(match):
 
             home_odds_ok = (               
 
-                1.30                       
+                1.35                       
                 <=                       
                 home_odd                  
                 <=                        
-                2.10                      
+                2.00                      
 
             )                            
      
@@ -5763,40 +5763,25 @@ def analyze_prematch_match(match):
         )       
       
 
-         # COMPLETE TEAM BONUS        
+        # COMPLETE TEAM BONUS                                
 
-        if (                          
+        if (                                               
+            home_form["avg_scored"] >= 2.0                    
+            and home_form["avg_conceded"] <= 0.80             
+            and home_form["clean_sheet_pct"] >= 50             
+        ):                                                    
 
-            home_form["avg_scored"] >= 1.8     
-
-            and
-
-            home_form["avg_conceded"] <= 0.9   
-
-            and
-
-            home_form["clean_sheet_pct"] >= 40 
-
-        ):                          
-
-            home_score += 2         
+            home_score += 1                                 
 
 
-        # EASY GOALS PENALTY        
+        # EASY GOALS PENALTY                                  
 
-        if (                         
+        if (                                                  
+            home_form["avg_scored"] >= 2.20                   
+            and home_form["avg_conceded"] >= 1.80             
+        ):                                                     
 
-            home_form["avg_scored"] >= 2.0     
-
-            and
-
-            home_form["avg_conceded"] >= 1.5    
-
-        ):                           
-
-            home_score -= 3           
-
-      
+            home_score -= 2                                   
 
                        
            
@@ -5906,7 +5891,7 @@ def analyze_prematch_match(match):
 
             min(                      
 
-                85,                   
+                80,                   
 
                 round(                
 
@@ -5945,7 +5930,7 @@ def analyze_prematch_match(match):
 
                 round(                 
 
-                    35                 
+                    33                 
 
                     +
 
@@ -5955,7 +5940,7 @@ def analyze_prematch_match(match):
 
                         *              
 
-                        0.55           
+                        0.53           
 
                     ),                 
 
@@ -7901,11 +7886,11 @@ def analyze_prematch_match(match):
         #BONUS LIMIT
 
         if (                                                   
-            bonus_total > 24                                  
+            bonus_total > 22                                  
         ):                                                   
 
             home_score -= (                                  
-                bonus_total - 24                               
+                bonus_total - 22                               
             )                                                 
 
         away_score = max(              
@@ -8486,18 +8471,18 @@ def analyze_prematch_match(match):
         elif under25_odd and under25_odd <= 1.70:                   
             penalty += 6                                                                                                 
 
-        if expected_goals < 2.60:
-            penalty += 8
-        elif expected_goals < 2.80:
-            penalty += 5
-        elif expected_goals < 3.00:
+        if expected_goals < 2.50:
+            penalty += 6
+        elif expected_goals < 2.70:
+            penalty += 3
+        elif expected_goals < 2.90:
+            penalty += 1                                             
+
+        if home_form["recent_over25"] + away_form["recent_over25"] < 3: 
             penalty += 2                                             
 
-        if home_form["recent_over25"] + away_form["recent_over25"] < 4: 
-            penalty += 3                                             
-
-        if min(home_form["over25_pct"], away_form["over25_pct"]) < 50:  
-            penalty += 4                                             
+        if min(home_form["over25_pct"], away_form["over25_pct"]) < 45:  
+            penalty += 2                                             
 
         over_prob -= penalty                                        
         over_conf -= round(penalty * 0.8)                            
@@ -8507,9 +8492,9 @@ def analyze_prematch_match(match):
 
         over_quality = 0                                            
 
-        if over_prob >= 75:                                          
+        if over_prob >= 68:                                          
             over_quality += 2                                        
-        elif over_prob >= 70:                                        
+        elif over_prob >= 60:                                        
             over_quality += 1                                        
 
         if expected_goals >= 3.40:                                   
@@ -8540,10 +8525,10 @@ def analyze_prematch_match(match):
         )                                                            
 
         if (                                                         
-            over_prob >= 50                                          
-            and over_conf >= 50                                      
-            and expected_goals >= 2.45                              
-            and over_quality >= 5                                   
+            over_prob >= 48                                          
+            and over_conf >= 48                                      
+            and expected_goals >= 2.35                              
+            and over_quality >= 4                                   
         ):                                                           
             signals.append((                                         
                 "⚽ OVER 2.5",                                       
@@ -8571,23 +8556,26 @@ def analyze_prematch_match(match):
 
         btts_penalty = 0                                  
 
-        if min(                                           
-            home_form["recent_avg_scored"],               
-            away_form["recent_avg_scored"]                
-        ) < 1.00:                                         
-            btts_penalty += 5                             
+        if (                                                    
+            min(                                                  
+                home_form["recent_avg_scored"],                  
+                away_form["recent_avg_scored"]                   
+            ) < 0.90                                             
+        ):                                                       
+            btts_penalty += 3                                                             
 
-        if min(                                          
-            home_form["scored_pct"],                      
-            away_form["scored_pct"]                       
-        ) < 70:                                           
-            btts_penalty += 4                             
-
+        if (                                                    
+            min(                                                 
+                home_form["scored_pct"],                          
+                away_form["scored_pct"]                           
+            ) < 60                                               
+        ):                                                        
+            btts_penalty += 2                                   
         if max(                                           
             home_form["clean_sheet_pct"],                 
             away_form["clean_sheet_pct"]                  
-        ) >= 60:                                          
-            btts_penalty += 4                             
+        ) >= 65:                                          
+            btts_penalty += 2                             
 
         btts_prob -= btts_penalty                        
         btts_conf -= round(btts_penalty * 0.8)            
@@ -8603,9 +8591,9 @@ def analyze_prematch_match(match):
         )
 
         btts_quality = 0
-        if btts_prob >= 74:
+        if btts_prob >= 68:
             btts_quality += 2
-        elif btts_prob >= 68:
+        elif btts_prob >= 60:
             btts_quality += 1
 
         if expected_goals >= 3.20:
@@ -8613,16 +8601,21 @@ def analyze_prematch_match(match):
         elif expected_goals >= 2.90:
             btts_quality += 1
 
-        if min(home_form["scored_pct"], away_form["scored_pct"]) >= 75:
-            btts_quality += 2
-        elif min(home_form["scored_pct"], away_form["scored_pct"]) >= 65:
-            btts_quality += 1
+        if (                                                    
+            min(                                                  
+                home_form["scored_pct"],                          
+                away_form["scored_pct"]                           
+            ) >= 70                                              
+        ):                                                        
+            btts_quality += 2                                     
 
-        if min(
-            home_form["recent_avg_scored"],
-            away_form["recent_avg_scored"]
-        ) >= 1.20:
-            btts_quality += 1
+        elif (                                                   
+            min(                                                  
+                home_form["scored_pct"],                         
+                away_form["scored_pct"]                           
+            ) >= 60                                              
+        ):                                                        
+            btts_quality += 1                                     
 
         if min(home_btts_rate, away_btts_rate) >= 0.60:
             btts_quality += 1
@@ -8646,123 +8639,181 @@ def analyze_prematch_match(match):
             "Q=", btts_quality
         )
 
-        if (
-            btts_prob >= 54
-            and btts_conf >= 55
-            and expected_goals >= 2.45
-            and min(home_form["scored_pct"], away_form["scored_pct"]) >= 60
-            and btts_quality >= 5
-        ):
+        if (                                                     
+            btts_prob >= 50                                      
+            and btts_conf >= 50                                  
+            and expected_goals >= 2.35                            
+            and min(                                              
+                home_form["scored_pct"],                          
+                away_form["scored_pct"]                            
+            ) >= 55                                               
+            and btts_quality >= 4                                 
+        ):                                                       
             signals.append((
                 "💎 BTTS",
                 btts_conf,
                 round(btts_prob, 1)
             ))
 
-        # ---------------------------------------------------------
-        # TEAM OVER 1.5 GOALS
-        # ---------------------------------------------------------
-        home_over15_probability = (
-            1
-            - poisson.pmf(0, home_attack)
-            - poisson.pmf(1, home_attack)
-        ) * 100
-        home_over15_probability = round(
-            max(5, min(95, home_over15_probability)), 1
-        )
+        # ---------------------------------------------------------      
+        # TEAM OVER 1.5 GOALS                                           
+        # ---------------------------------------------------------      
 
-        away_over15_probability = (
-            1
-            - poisson.pmf(0, away_attack)
-            - poisson.pmf(1, away_attack)
-        ) * 100
-        away_over15_probability = round(
-            max(5, min(95, away_over15_probability)), 1
-        )
+        home_over15_probability = (                                   
+            1                                                           
+            - poisson.pmf(0, home_attack)                               
+            - poisson.pmf(1, home_attack)                              
+        ) * 100                                                         
 
-        home_over15_quality = 0
-        if home_over15_probability >= 72:
-            home_over15_quality += 2
-        elif home_over15_probability >= 66:
-            home_over15_quality += 1
-        if home_form["avg_scored"] >= 1.80:
-            home_over15_quality += 1
-        if home_form["recent_avg_scored"] >= 1.70:
-            home_over15_quality += 1
-        if away_form["avg_conceded"] >= 1.30:
-            home_over15_quality += 1
-        if away_form["recent_avg_conceded"] >= 1.20:
-            home_over15_quality += 1
-        if home_form["scored_pct"] >= 80:
-            home_over15_quality += 1
-        if home_strength > away_strength:
-            home_over15_quality += 1
-        if home_edge >= 2:
-            home_over15_quality += 1
-        if home_form["recent_goal_diff"] >= 1:
-            home_over15_quality += 1
+        home_over15_probability = round(                               
+            max(5, min(95, home_over15_probability)),                   
+            1                                                          
+        )                                                              
 
-        print(
-            "HOME O1.5 QUALITY:", home, away,
-            "PROB=", home_over15_probability,
-            "Q=", home_over15_quality
-        )
+        away_over15_probability = (                                    
+            1                                                          
+            - poisson.pmf(0, away_attack)                             
+            - poisson.pmf(1, away_attack)                               
+        ) * 100                                                         
 
-        home_over15_signal = False
-        if (
-            home_score >= 40
-            and home_over15_probability >= 65
-            and expected_goals >= 2.80
-            and home_over15_quality >= 6
-        ):
-            signals.append((
-                "🏠 HOME OVER 1.5",
-                confidence_from_score(home_over15_probability),
-                round(home_over15_probability, 1)
-            ))
-            home_over15_signal = True
+        away_over15_probability = round(                               
+            max(5, min(95, away_over15_probability)),                   
+            1                                                           
+        )                                                              
 
-        away_over15_quality = 0
-        if away_over15_probability >= 72:
-            away_over15_quality += 2
-        elif away_over15_probability >= 66:
-            away_over15_quality += 1
-        if away_form["avg_scored"] >= 1.80:
-            away_over15_quality += 1
-        if away_form["recent_avg_scored"] >= 1.70:
-            away_over15_quality += 1
-        if home_form["avg_conceded"] >= 1.30:
-            away_over15_quality += 1
-        if home_form["recent_avg_conceded"] >= 1.20:
-            away_over15_quality += 1
-        if away_form["scored_pct"] >= 80:
-            away_over15_quality += 1
-        if away_strength > home_strength:
-            away_over15_quality += 1
-        if away_edge >= 2:
-            away_over15_quality += 1
-        if away_form["recent_goal_diff"] >= 1:
-            away_over15_quality += 1
 
-        print(
-            "AWAY O1.5 QUALITY:", home, away,
-            "PROB=", away_over15_probability,
-            "Q=", away_over15_quality
-        )
+        # HOME TEAM OVER 1.5                                           
 
-        away_over15_signal = False
-        if (
-            away_score >= 35
-            and away_over15_probability >= 54
-            and expected_goals >= 2.50
-            and away_over15_quality >= 5
-        ):
-            signals.append((
-                "✈️ AWAY OVER 1.5",
-                confidence_from_score(away_over15_probability),
-                round(away_over15_probability, 1)
-            ))
-            away_over15_signal = True
+        home_over15_quality = 0                                         
+
+        if home_over15_probability >= 68:                              
+            home_over15_quality += 2                                   
+        elif home_over15_probability >= 60:                             
+            home_over15_quality += 1                                    
+
+        if home_form["avg_scored"] >= 1.80:                            
+            home_over15_quality += 1                                   
+
+        if home_form["recent_avg_scored"] >= 1.60:                      
+            home_over15_quality += 1                                   
+
+        if away_form["avg_conceded"] >= 1.20:                          
+            home_over15_quality += 1                                   
+
+        if away_form["recent_avg_conceded"] >= 1.10:                   
+            home_over15_quality += 1                                    
+
+        if home_form["scored_pct"] >= 75:                              
+            home_over15_quality += 1                                    
+
+        if home_strength > away_strength:                              
+            home_over15_quality += 1                                    
+
+        if home_edge >= 2:                                             
+            home_over15_quality += 1                                   
+
+        if home_form["recent_goal_diff"] >= 1:                         
+            home_over15_quality += 1                                    
+
+        print(                                                         
+            "HOME O1.5 QUALITY:",                                       
+            home,                                                       
+            away,                                                      
+            "PROB=",                                                   
+            home_over15_probability,                                  
+            "Q=",                                                       
+            home_over15_quality                                         
+        )                                                             
+
+        home_over15_signal = False                                      
+
+        if (                                                           
+            home_score >= 38                                            
+            and home_over15_probability >= 58                           
+            and expected_goals >= 2.55                                
+            and home_over15_quality >= 5                                
+        ):                                                             
+
+            signals.append((                                           
+                "🏠 HOME OVER 1.5",                                     
+                confidence_from_score(                                 
+                    home_over15_probability                            
+                    + home_over15_quality                               
+                ),                                                     
+                round(                                                 
+                    home_over15_probability,                            
+                    1                                                  
+                )                                                      
+            ))                                                         
+
+            home_over15_signal = True                                  
+
+
+        # AWAY TEAM OVER 1.5                                           
+
+        away_over15_quality = 0                                         
+
+        if away_over15_probability >= 66:                               
+            away_over15_quality += 2                                    
+        elif away_over15_probability >= 58:                            
+            away_over15_quality += 1                                   
+
+        if away_form["avg_scored"] >= 1.80:                             
+            away_over15_quality += 1                                    
+
+        if away_form["recent_avg_scored"] >= 1.60:                      
+            away_over15_quality += 1                                   
+
+        if home_form["avg_conceded"] >= 1.20:                          
+            away_over15_quality += 1                                   
+
+        if home_form["recent_avg_conceded"] >= 1.10:                   
+            away_over15_quality += 1                                   
+
+        if away_form["scored_pct"] >= 75:                              
+            away_over15_quality += 1                                   
+
+        if away_strength > home_strength:                               
+            away_over15_quality += 1                                    
+
+        if away_edge >= 2:                                             
+            away_over15_quality += 1                                   
+
+        if away_form["recent_goal_diff"] >= 1:                         
+            away_over15_quality += 1                                   
+
+        print(                                                         
+            "AWAY O1.5 QUALITY:",                                      
+            home,                                                      
+            away,                                                      
+            "PROB=",                                                   
+            away_over15_probability,                                   
+            "Q=",                                                      
+            away_over15_quality                                        
+        )                                                              
+
+        away_over15_signal = False                                     
+
+        if (                                                           
+            away_score >= 32                                            
+            and away_over15_probability >= 52                         
+            and expected_goals >= 2.40                                
+            and away_over15_quality >= 4                                
+        ):                                                             
+
+            signals.append((                                            
+                "✈️ AWAY OVER 1.5",                                   
+                confidence_from_score(                                  
+                    away_over15_probability                            
+                    + away_over15_quality                              
+                ),                                                     
+                round(                                                 
+                    away_over15_probability,                           
+                    1                                                  
+                )                                                     
+            ))                                                         
+
+            away_over15_signal = True                                   
 
         # ---------------------------------------------------------
         # UNDER 2.5
@@ -8821,65 +8872,122 @@ def analyze_prematch_match(match):
                 round(under_prob, 1)
             ))
 
-        # ---------------------------------------------------------
-        # OVER 3.5
-        # ---------------------------------------------------------
-        over35_prob = 0
-        for h in range(8):
-            for a in range(8):
-                if h + a >= 4:
-                    over35_prob += (
-                        poisson.pmf(h, home_attack)
-                        * poisson.pmf(a, away_attack)
-                    )
+        # ---------------------------------------------------------     
+        # OVER 3.5                                                    
+        # ---------------------------------------------------------      
 
-        over35_prob = round(
-            max(5, min(95, over35_prob * 100)), 1
-        )
+        over35_prob = 0                                                
 
-        over35_quality = 0
-        if over35_prob >= 65:
-            over35_quality += 2
-        elif over35_prob >= 57:
-            over35_quality += 1
-        if expected_goals >= 4.10:
-            over35_quality += 2
-        elif expected_goals >= 3.60:
-            over35_quality += 1
-        if home_form["avg_scored"] + away_form["avg_scored"] >= 3.20:
-            over35_quality += 1
-        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] >= 3.20:
-            over35_quality += 1
-        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 60:
-            over35_quality += 1
-        if home_form["recent_over25"] + away_form["recent_over25"] >= 5:
-            over35_quality += 1
-        if home_form["avg_conceded"] + away_form["avg_conceded"] >= 2.40:
-            over35_quality += 1
+        for h in range(8):                                            
+            for a in range(8):                                         
 
-        print(
-            "OVER3.5 QUALITY:", home, away,
-            "PROB=", over35_prob,
-            "xG=", expected_goals,
-            "Q=", over35_quality
-        )
+                if h + a >= 4:                                         
 
-        if (
-            over35_prob >= 45
-            and expected_goals >= 3.10
-            and over35_quality >= 5
-        ):
-            signals.append((
-                "🚀 OVER 3.5",
-                confidence_from_score(over35_prob),
-                round(over35_prob, 1)
-            ))
+                    over35_prob += (                                 
+                        poisson.pmf(h, home_attack)                     
+                        *                                              
+                        poisson.pmf(a, away_attack)                    
+                    )                                                 
 
-        print(
-            "SIGNAL:",
-            signals
-        )
+        over35_prob = round(                                          
+            max(5, min(95, over35_prob * 100)),                        
+            1                                                          
+        )                                                             
 
+
+        over35_quality = 0                                            
+
+        if over35_prob >= 60:                                          
+            over35_quality += 2                                        
+        elif over35_prob >= 52:                                        
+            over35_quality += 1                                      
+
+        if expected_goals >= 3.80:                                    
+            over35_quality += 2                                       
+        elif expected_goals >= 3.30:                                  
+            over35_quality += 1                                       
+
+        if (                                                          
+            home_form["avg_scored"]                                    
+            + away_form["avg_scored"]                                 
+            >= 3.00                                                   
+        ):                                                            
+            over35_quality += 1                                       
+
+        if (                                                          
+            home_form["recent_avg_scored"]                             
+            + away_form["recent_avg_scored"]                          
+            >= 3.00                                                   
+        ):                                                             
+            over35_quality += 1                                       
+
+        if (                                                         
+            min(                                                     
+                home_form["over25_pct"],                              
+                away_form["over25_pct"]                               
+            ) >= 55                                                   
+        ):                                                            
+            over35_quality += 1                                        
+
+        if (                                                           
+            home_form["recent_over25"]                                
+            + away_form["recent_over25"]                              
+            >= 4                                                      
+        ):                                                             
+            over35_quality += 1                                      
+
+        if (                                                          
+            home_form["avg_conceded"]                                 
+            + away_form["avg_conceded"]                               
+            >= 2.20                                                    
+        ):                                                            
+            over35_quality += 1                                       
+
+        if (                                                          
+            max(                                                      
+                home_form["clean_sheet_pct"],                        
+                away_form["clean_sheet_pct"]                          
+            ) <= 50                                                   
+        ):                                                            
+            over35_quality += 1                                        
+
+
+        print(                                                        
+            "OVER3.5 QUALITY:",                                       
+            home,                                                     
+            away,                                                     
+            "PROB=",                                                  
+            over35_prob,                                              
+            "xG=",                                                    
+            expected_goals,                                           
+            "Q=",                                                     
+            over35_quality                                            
+        )                                                             
+
+
+        if (                                                          
+            over35_prob >= 42                                         
+            and expected_goals >= 3.00                                
+            and over35_quality >= 4                                 
+        ):                                                            
+
+            signals.append((                                          
+                "🚀 OVER 3.5",                                        
+                confidence_from_score(                                 
+                    over35_prob                                       
+                    + over35_quality                                  
+                ),                                                     
+                round(                                               
+                    over35_prob,                                      
+                    1                                                 
+                )                                                     
+            ))                                                         
+
+
+        print(                                                       
+            "SIGNAL:",                                                 
+            signals                                                    
+        )                                                              
 
         # =========================================================
         # AI BET BUILDER CANDIDATES                               
