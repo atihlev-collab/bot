@@ -5210,15 +5210,21 @@ def analyze_prematch_match(match):
         )
 
                 
-        # FORM COLLAPSE BONUS
+        # FORM COLLAPSE BONUS                                  
 
-        if (
-            away_form["losses"] >= 5
-            or
-            away_form["form_pct"] <= 35
-        ):
+        if (                                                    
+            away_form["losses"] >= 6                             
+            or away_form["form_pct"] <= 25                       
+        ):                                                     
 
-            home_score += 6
+            home_score += 3                                      
+
+        elif (                                                   
+            away_form["losses"] >= 4                             
+            or away_form["form_pct"] <= 40                      
+        ):                                                       
+
+            home_score += 1                                      
 
      
 
@@ -5240,35 +5246,21 @@ def analyze_prematch_match(match):
 
             home_score += 3       
 
-        # EXPECTED GOALS BONUS         
+        # EXPECTED GOALS BONUS                                  
 
-        if (                            
+        if (                                                    
+            expected_goals >= 3.40                              
+            and home_form["avg_scored"] >= 2.00                 
+            and away_form["avg_conceded"] >= 1.50             
+        ):                                                      
 
-            expected_goals >= 3.2       
+            home_score += 2                                     
 
-            and                        
+        elif (                                                 
+            expected_goals >= 3.10                              
+        ):                                                       
 
-            home_form["avg_scored"]    
-            >=                          
-            1.8                        
-
-            and                        
-
-            away_form["avg_conceded"]   
-            >=                         
-            1.3                        
-
-        ):                             
-
-            home_score += 4             
-
-        elif (                         
-
-            expected_goals >= 3.0       
-
-        ):                             
-
-            home_score += 2             
+            home_score += 1                                        
      
 
         # SUPER FORM BONUS                
@@ -5684,7 +5676,7 @@ def analyze_prematch_match(match):
 
                 if (                             
 
-                    value_score >= 28             
+                    value_score >= 32             
 
                     and                          
 
@@ -5694,18 +5686,18 @@ def analyze_prematch_match(match):
 
                         home_score + 50          
 
-                    ) >= 70                      
+                    ) >= 75                      
 
                 ):                               
 
                     home_super_value = True       
 
-                    home_score += 4              
+                    home_score += 2              
 
 
                 elif (                           
 
-                    value_score >= 22            
+                    value_score >= 25            
 
                     and                         
 
@@ -5715,13 +5707,13 @@ def analyze_prematch_match(match):
 
                         home_score + 50         
 
-                    ) >= 65                     
+                    ) >= 68                     
 
                 ):                             
 
                     home_value = True           
 
-                    home_score += 2             
+                    home_score += 1             
 
                 print(                    
 
@@ -5833,7 +5825,7 @@ def analyze_prematch_match(match):
 
         ):                              
 
-            home_score += 3             
+            home_score += 2             
 
         elif (                           
 
@@ -5851,40 +5843,16 @@ def analyze_prematch_match(match):
 
             home_score += 1             
 
-        # STRONG FAVOURITE BONUS        
+        # STRONG FAVOURITE BONUS                              
 
-        if (                        
+        if (                                                  
+            home_score >= 76                                   
+            and home_edge >= 4                                 
+            and home_form["wins"] >= 5                         
+            and home_form["losses"] == 0                       
+        ):                                                   
 
-            home_score >= 72         
-
-            and                       
-
-            home_edge >= 3           
-
-            and                       
-
-            home_form["wins"] >= 4     
-
-            and                       
-
-            home_form["losses"] <= 1   
-
-        ):                             
-
-            home_score += 1           
-
-        elif (                         
-
-            home_score >= 68           
-
-            and                       
-
-            home_edge >= 2             
-
-        ):                           
-
-            home_score += 2            
-
+            home_score += 1                                   
 
         # CONSENSUS BONUS             
 
@@ -5902,7 +5870,7 @@ def analyze_prematch_match(match):
 
         ):                           
 
-            home_score += 2           
+            home_score += 1           
 
 
         bonus_total = (               
@@ -7928,37 +7896,17 @@ def analyze_prematch_match(match):
 
         ):                            
 
-            away_score += 2            
+            away_score += 2        
+      
+        #BONUS LIMIT
 
+        if (                                                   
+            bonus_total > 24                                  
+        ):                                                   
 
-        # BONUS LIMIT                 
-
-        bonus_total = (               
-
-            away_score                 
-
-            -                          
-
-            debug_base                 
-
-        )                            
-
-        if (                          
-
-            bonus_total > 30           
-
-        ):                             
-
-            away_score -= (            
-
-                bonus_total            
-
-                -                      
-
-                28                     
-
-            )                         
-
+            home_score -= (                                  
+                bonus_total - 24                               
+            )                                                 
 
         away_score = max(              
 
