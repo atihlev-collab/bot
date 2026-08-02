@@ -4784,7 +4784,7 @@ def analyze_prematch_match(match):
 
             elif point_gap >= 8:             
 
-                home_score += 2           
+                home_score += 3           
 
 
             goal_gap = (                     
@@ -5692,7 +5692,7 @@ def analyze_prematch_match(match):
 
                     home_super_value = True       
 
-                    home_score += 2              
+                    home_score += 3              
 
 
                 elif (                           
@@ -7886,11 +7886,11 @@ def analyze_prematch_match(match):
         #BONUS LIMIT
 
         if (                                                   
-            bonus_total > 22                                  
+            bonus_total > 26                                  
         ):                                                   
 
             home_score -= (                                  
-                bonus_total - 22                               
+                bonus_total - 26                               
             )                                                 
 
         away_score = max(              
