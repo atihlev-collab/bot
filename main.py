@@ -9283,7 +9283,7 @@ def analyze_prematch_match(match):
         builder_ready = (                                       
             len(selected_builder) >= 2                          
             and builder_probability >= 64                       
-            and builder_quality >= 5                            
+            and builder_quality >= 4.5                            
             and builder_confidence >= 68                       
             and 1.80 <= builder_odds <= 4.20                    
         )                                                       
