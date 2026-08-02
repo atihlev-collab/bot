@@ -6248,7 +6248,7 @@ def analyze_prematch_match(match):
             min(                                   
                 95,                                
                 round(                             
-                    50 + (home_score * 0.60),      
+                    35 + (home_score * 0.55),      
                     1                              
                 )                                  
             )                                      
@@ -6263,7 +6263,7 @@ def analyze_prematch_match(match):
             and home_form["losses"] <= 2                           
             and home_form["draws"] <= 3                            
             and (                                                 
-                home_edge >= 4.0                                   
+                home_edge >= 3.0                                   
                 or home_probability >= 90                         
             )                                                     
             and form_gap >= 12                                     
