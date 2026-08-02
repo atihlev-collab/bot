@@ -9866,7 +9866,7 @@ def analyze_prematch_match(match):
         signals = filtered       
 
 
-         print(
+        print(
             "RETURN SIGNALS:", 
             home, 
             away, 
