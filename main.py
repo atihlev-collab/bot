@@ -8974,6 +8974,23 @@ def analyze_prematch_match(match):
                 "odd": under25_odd if 'under25_odd' in locals() else None 
             })                                                   
 
+
+        if home_signal:
+            builder_markets.append({
+                "market": "🏆 HOME WIN",
+                "prob": home_probability,
+                "quality": 7,
+                "odd": home_odd
+            })
+
+        if away_signal:
+            builder_markets.append({
+                "market": "✈️ AWAY WIN",
+                "prob": away_probability,
+                "quality": 7,
+                "odd": away_odd
+            })
+     
         if over35_quality >= 5:                                   
             builder_markets.append({                             
                 "market": "🚀 OVER 3.5",                          
@@ -9009,8 +9026,8 @@ def analyze_prematch_match(match):
 
             if (                                                           
                 market == "🛡 UNDER 2.5"                                    
-                and home_probability >= 78                                 
-                and home_score >= 50                                       
+                and home_probability >= 72                                 
+                and home_score >= 40                                       
             ):                                                            
                 builder_markets.append({                                   
                     "market": "🏆 HOME WIN",                               
@@ -9021,8 +9038,8 @@ def analyze_prematch_match(match):
 
             elif (                                                         
                 market == "🛡 UNDER 2.5"                                     
-                and away_probability >= 78                                 
-                and away_score >= 50                                        
+                and away_probability >= 72                                 
+                and away_score >= 40                                        
             ):                                                             
                 builder_markets.append({                                    
                     "market": "✈️ AWAY WIN",                               
