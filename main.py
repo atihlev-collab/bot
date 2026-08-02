@@ -8928,78 +8928,87 @@ def analyze_prematch_match(match):
 
         # =========================================================
         # AI BET BUILDER CANDIDATES                               
-        # ========================================================= 
+        # =========================================================        
+     
+        over_signal = (
+            "⚽ OVER 2.5",
+            confidence_from_score(over_prob),
+            round(over_prob, 1)
+        ) in signals
 
-        over_signal = False
+        builder_markets = []
 
-        builder_markets = []                                     
-
-        if over_signal:                                          
-            builder_markets.append({                              
-                "market": "⚽ OVER 2.5",                          
-                "prob": over_prob,                               
-                "quality": over_quality,                         
-                "odd": over25_odd if 'over25_odd' in locals() else None 
-            })                                                    
-
-        if btts_quality >= 5:                                    
-            builder_markets.append({                             
-                "market": "💎 BTTS",                             
-                "prob": btts_prob,                               
-                "quality": btts_quality,                         
-                "odd": btts_odd if 'btts_odd' in locals() else None 
-            })                                                   
-
-        if home_over15_signal:                                   
-            builder_markets.append({                              
-                "market": "🏠 HOME OVER 1.5",                    
-                "prob": home_over15_probability,                  
-                "quality": home_over15_quality,                   
-                "odd": home_over15_odd if 'home_over15_odd' in locals() else None 
-            })                                                    
-
-        if away_over15_signal:                                  
-            builder_markets.append({                              
-                "market": "✈️ AWAY OVER 1.5",                    
-                "prob": away_over15_probability,                 
-                "quality": away_over15_quality,                   
-                "odd": away_over15_odd if 'away_over15_odd' in locals() else None 
-            })                                                    
-
-        if under_quality >= 5:                                  
-            builder_markets.append({                             
-                "market": "🛡 UNDER 2.5",                        
-                "prob": under_prob,                              
-                "quality": under_quality,                        
-                "odd": under25_odd if 'under25_odd' in locals() else None 
-            })                                                   
-
-
-        if home_probability >= 72:
+        # HOME WIN
+        if home_probability >= 72 and home_odd >= 1.40:
             builder_markets.append({
                 "market": "🏆 HOME WIN",
                 "prob": home_probability,
-                "quality": 7,
+                "quality": max(5, int(home_score / 15)),
                 "odd": home_odd
             })
-
-        if away_probability >= 72:
+        
+        # AWAY WIN
+        if away_probability >= 72 and away_odd >= 1.40:
             builder_markets.append({
                 "market": "✈️ AWAY WIN",
                 "prob": away_probability,
-                "quality": 7,
+                "quality": max(5, int(away_score / 15)),
                 "odd": away_odd
             })
-     
-     
-        if over35_quality >= 5:                                   
-            builder_markets.append({                             
-                "market": "🚀 OVER 3.5",                          
-                "prob": over35_prob,                             
-                "quality": over35_quality,                        
-                "odd": over35_odd if 'over35_odd' in locals() else None 
-            })                                                   
-
+        
+        # OVER 2.5
+        if over_prob >= 60 and over25_odd >= 1.40:
+            builder_markets.append({
+                "market": "⚽ OVER 2.5",
+                "prob": over_prob,
+                "quality": max(4, over_quality),
+                "odd": over25_odd
+            })
+        
+        # UNDER 2.5
+        if under_prob >= 65 and under25_odd >= 1.40:
+            builder_markets.append({
+                "market": "🛡 UNDER 2.5",
+                "prob": under_prob,
+                "quality": max(4, under_quality),
+                "odd": under25_odd
+            })
+        
+        # BTTS
+        if btts_prob >= 60 and btts_odd is not None:
+            builder_markets.append({
+                "market": "💎 BTTS",
+                "prob": btts_prob,
+                "quality": max(4, btts_quality),
+                "odd": btts_odd
+            })
+        
+        # HOME OVER 1.5
+        if home_over15_probability >= 60 and home_over15_odd is not None:
+            builder_markets.append({
+                "market": "🏠 HOME OVER 1.5",
+                "prob": home_over15_probability,
+                "quality": max(4, home_over15_quality),
+                "odd": home_over15_odd
+            })
+        
+        # AWAY OVER 1.5
+        if away_over15_probability >= 60 and away_over15_odd is not None:
+            builder_markets.append({
+                "market": "✈️ AWAY OVER 1.5",
+                "prob": away_over15_probability,
+                "quality": max(4, away_over15_quality),
+                "odd": away_over15_odd
+            })
+        
+        # OVER 3.5
+        if over35_prob >= 55 and over35_odd is not None:
+            builder_markets.append({
+                "market": "🚀 OVER 3.5",
+                "prob": over35_prob,
+                "quality": max(4, over35_quality),
+                "odd": over35_odd
+            })
         builder_markets.sort(                                   
             key=lambda x: (x["quality"], x["prob"]),             
             reverse=True                                         
