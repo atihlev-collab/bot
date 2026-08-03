@@ -1102,17 +1102,17 @@ def analyze_live_match(fixture):
         # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
-        if 35 <= minute <= 43:
-            fh_corner_probability = 50
+        if 30 <= minute <= 43:
+            fh_corner_probability = 55
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 72
+                best_pressure >= 75
                 and total_shots >= 10
-                and total_corners >= 2
+                and total_corners >= 3
                 and fh_corner_probability >= 72
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
@@ -1157,9 +1157,9 @@ def analyze_live_match(fixture):
 
         if (
             55 <= minute <= 84
-            and card_probability >= 84
-            and total_cards >= 2
-            and total_fouls >= 18
+            and card_probability >= 86
+            and total_cards >= 3
+            and total_fouls >= 20
             and goal_diff <= 2
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1185,10 +1185,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 76
-                and total_shots_on >= 4
+                best_pressure >= 78
+                and total_shots_on >= 5
                 and pressure_diff >= 10
-                and fast_goal_probability >= 75
+                and fast_goal_probability >= 77
             ):
                 if (
                     home_pressure >= away_pressure + 10
@@ -1227,10 +1227,10 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 70
-                and total_shots_on >= 5
-                and pressure_diff >= 10
-                and normal_goal_probability >= 76
+                best_pressure >= 75
+                and total_shots_on >= 6
+                and pressure_diff >= 11
+                and normal_goal_probability >= 78
             ):
                 if (
                     home_pressure >= away_pressure + 10
@@ -1270,11 +1270,11 @@ def analyze_live_match(fixture):
 
         if (
             30 <= minute <= 65
-            and best_pressure >= 68
-            and total_shots_on >= 5
-            and total_shots >= 12
+            and best_pressure >= 70
+            and total_shots_on >= 6
+            and total_shots >= 13
             and (home_xg + away_xg) >= 1.5
-            and remaining_probability >= 76
+            and remaining_probability >= 78
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1297,10 +1297,10 @@ def analyze_live_match(fixture):
 
         if (
             55 <= minute <= 82
-            and total_corners >= 5
-            and total_shots >= 12
-            and best_pressure >= 68
-            and corner_probability >= 75
+            and total_corners >= 6
+            and total_shots >= 13
+            and best_pressure >= 70
+            and corner_probability >= 77
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
                 print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
