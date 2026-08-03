@@ -6116,11 +6116,11 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 58
+            home_score >= 62
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 65
+            home_form["unbeaten_pct"] >= 67
             and
             home_form["wins"] >= 3  
             and                         
@@ -6128,11 +6128,11 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 3    
             and                         
-            home_edge >= 4.0                 
+            home_edge >= 5.0                 
             and
-            form_gap >= 15
+            form_gap >= 17
             and
-            recent_gap >= 10
+            recent_gap >= 11
             and
             home_form["recent_form_pct"] >= 55                                                              
             and                                   
@@ -6172,7 +6172,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 72
+            home_probability >= 75
             and
             home_balance_ok 
             and
@@ -8248,11 +8248,11 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 58          
+            away_score >= 62          
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 65
+            away_form["unbeaten_pct"] >= 67
             and
             away_form["wins"] >= 3
             and                          
@@ -8696,9 +8696,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over35_prob >= 55
-            and expected_goals >= 3.40
-            and over35_quality >= 6
+            over35_prob >= 50
+            and expected_goals >= 3.20
+            and over35_quality >= 5
         ):
             signals.append((
                 "🚀 OVER 3.5",
