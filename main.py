@@ -1102,18 +1102,18 @@ def analyze_live_match(fixture):
         # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
-        if 30 <= minute <= 43:
-            fh_corner_probability = 55
+        if 20 <= minute <= 43:
+            fh_corner_probability = 53
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 75
-                and total_shots >= 10
+                best_pressure >= 73
+                and total_shots >= 8
                 and total_corners >= 3
-                and fh_corner_probability >= 72
+                and fh_corner_probability >= 70
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1175,8 +1175,8 @@ def analyze_live_match(fixture):
         # =========================================================
         # FAST NEXT GOAL - 25 TO 42
         # =========================================================
-        if 25 <= minute <= 42 and total >= 1:
-            fast_goal_probability = 50
+        if 20 <= minute <= 42 and total >= 1:
+            fast_goal_probability = 46
             fast_goal_probability += max(0, best_pressure - 65) * 0.65
             fast_goal_probability += min(12, total_shots_on * 1.5)
             fast_goal_probability += min(6, total_corners)
@@ -1185,10 +1185,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 78
-                and total_shots_on >= 5
-                and pressure_diff >= 10
-                and fast_goal_probability >= 77
+                best_pressure >= 70
+                and total_shots_on >= 4
+                and pressure_diff >= 8
+                and fast_goal_probability >= 72
             ):
                 if (
                     home_pressure >= away_pressure + 10
@@ -1216,7 +1216,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 74
         # =========================================================
         if 41 <= minute <= 74:
-            normal_goal_probability = 48
+            normal_goal_probability = 50
             normal_goal_probability += max(0, best_pressure - 65) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -1227,13 +1227,13 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 75
-                and total_shots_on >= 6
-                and pressure_diff >= 11
-                and normal_goal_probability >= 78
+                best_pressure >= 78
+                and total_shots_on >= 7
+                and pressure_diff >= 12
+                and normal_goal_probability >= 80
             ):
                 if (
-                    home_pressure >= away_pressure + 10
+                    home_pressure >= away_pressure + 12
                     and home_shots_on >= away_shots_on
                 ):
                     return (
@@ -1244,7 +1244,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 10
+                    away_pressure >= home_pressure + 12
                     and away_shots_on >= home_shots_on
                 ):
                     return (
@@ -1257,7 +1257,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 REMAINING GOALS
         # =========================================================
-        remaining_probability = 45
+        remaining_probability = 43
         remaining_probability += max(0, best_pressure - 60) * 0.55
         remaining_probability += min(15, total_shots_on * 1.4)
         remaining_probability += min(8, total_corners * 0.7)
@@ -1269,12 +1269,12 @@ def analyze_live_match(fixture):
         print("OVER15 REMAINING CHECK:", minute, remaining_probability)
 
         if (
-            30 <= minute <= 65
-            and best_pressure >= 70
-            and total_shots_on >= 6
-            and total_shots >= 13
-            and (home_xg + away_xg) >= 1.5
-            and remaining_probability >= 78
+            30 <= minute <= 62
+            and best_pressure >= 65
+            and total_shots_on >= 5
+            and total_shots >= 11
+            and (home_xg + away_xg) >= 1.3
+            and remaining_probability >= 75
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1286,7 +1286,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 45
+        corner_probability = 48
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1297,10 +1297,10 @@ def analyze_live_match(fixture):
 
         if (
             55 <= minute <= 82
-            and total_corners >= 6
-            and total_shots >= 13
+            and total_corners >= 7
+            and total_shots >= 15
             and best_pressure >= 70
-            and corner_probability >= 77
+            and corner_probability >= 80
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
                 print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1316,7 +1316,7 @@ def analyze_live_match(fixture):
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
-            late_goal_probability = 45
+            late_goal_probability = 43
             late_goal_probability += max(0, best_pressure - 60) * 0.65
             late_goal_probability += min(15, total_shots_on * 1.3)
             late_goal_probability += min(8, total_corners * 0.6)
@@ -1330,12 +1330,12 @@ def analyze_live_match(fixture):
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 68
+                best_pressure >= 65
                 and total_shots_on >= 5
                 and total_shots >= 12
                 and total_corners >= 4
-                and (home_xg + away_xg) >= 1.4
-                and late_goal_probability >= 76
+                and (home_xg + away_xg) >= 1.2
+                and late_goal_probability >= 74
             ):
                 return (
                     "🔥 LATE GOAL",
@@ -6116,13 +6116,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 62
+            home_score >= 65
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 67
+            home_form["unbeaten_pct"] >= 69
             and
-            home_form["wins"] >= 3  
+            home_form["wins"] >= 4  
             and                         
             home_form["losses"] <= 2      
             and                        
@@ -6134,7 +6134,7 @@ def analyze_prematch_match(match):
             and
             recent_gap >= 11
             and
-            home_form["recent_form_pct"] >= 55                                                              
+            home_form["recent_form_pct"] >= 57                                                              
             and                                   
             home_form["avg_scored"] >= 1.50
             and
@@ -6172,7 +6172,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 75
+            home_probability >= 78
             and
             home_balance_ok 
             and
@@ -8248,13 +8248,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 62          
+            away_score >= 65          
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 67
+            away_form["unbeaten_pct"] >= 69
             and
-            away_form["wins"] >= 3
+            away_form["wins"] >= 4
             and                          
             away_form["losses"] <= 2    
             and                         
@@ -8306,7 +8306,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 72
+            away_probability >= 75
             and
             away_balance_ok         
             and
@@ -8555,10 +8555,10 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 40
-            and home_over15_probability >= 65
-            and expected_goals >= 2.80
-            and home_over15_quality >= 6
+            home_score >= 38
+            and home_over15_probability >= 63
+            and expected_goals >= 2.60
+            and home_over15_quality >= 5
         ):
             signals.append((
                 "🏠 HOME OVER 1.5",
@@ -8597,10 +8597,10 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 40
-            and away_over15_probability >= 65
-            and expected_goals >= 2.80
-            and away_over15_quality >= 6
+            away_score >= 38
+            and away_over15_probability >= 63
+            and expected_goals >= 2.60
+            and away_over15_quality >= 5
         ):
             signals.append((
                 "✈️ AWAY OVER 1.5",
@@ -8642,8 +8642,8 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 58
-            and expected_goals <= 2.35
+            under_prob >= 60
+            and expected_goals <= 2.45
             and under_quality >= 6
         ):
             signals.append((
