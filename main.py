@@ -666,7 +666,7 @@ def get_upcoming_matches():
                     fixture_time - now
                 ).total_seconds() / 3600
 
-                if 0 <= hours_left <= 12:
+                if 0 <= hours_left <= 6:
 
                     matches.append(
                         match
@@ -9165,7 +9165,7 @@ def prematch_loop():
             fixture_id                      
         )                                   
 
-        if len(top_signals) >= 15:           
+        if len(top_signals) >= 10:           
             break                           
 
     for (
