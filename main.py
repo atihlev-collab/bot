@@ -3867,6 +3867,9 @@ def get_team_absences(
 
 def analyze_prematch_match(match):
 
+home_over15_probability = 0
+away_over15_probability = 0
+
     try:
 
         fixture_id = match["fixture"]["id"]
@@ -8511,7 +8514,7 @@ def analyze_prematch_match(match):
         # ---------------------------------------------------------
         # TEAM OVER 1.5 GOALS
         # ---------------------------------------------------------
-        home_over13_probability = (
+        home_over15_probability = (
             1
             - poisson.pmf(0, home_attack)
             - poisson.pmf(1, home_attack)
@@ -8525,7 +8528,7 @@ def analyze_prematch_match(match):
             - poisson.pmf(0, away_attack)
             - poisson.pmf(1, away_attack)
         ) * 100
-        away_over13_probability = round(
+        away_over15_probability = round(
             max(5, min(95, away_over15_probability)), 1
         )
 
