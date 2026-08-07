@@ -3867,8 +3867,8 @@ def get_team_absences(
 
 def analyze_prematch_match(match):
 
-home_over15_probability = 0
-away_over15_probability = 0
+    home_over15_probability = 0
+    away_over15_probability = 0
 
     try:
 
