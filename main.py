@@ -6119,13 +6119,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 68
+            home_score >= 70
             and
             away_form["clean_sheet_pct"] <= 35           
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 67
+            home_form["unbeaten_pct"] >= 68
             and
             home_form["wins"] >= 4 
             and                         
@@ -6177,7 +6177,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 76
+            home_probability >= 80
             and
             home_balance_ok 
             and
