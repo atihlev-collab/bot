@@ -6116,27 +6116,29 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 67
+            home_score >= 72
+            and
+            away_form["clean_sheet_pct"] <= 35           
             and
             home_odds_ok
             and
             home_form["unbeaten_pct"] >= 67
             and
-            home_form["wins"] >= 4  
+            home_form["wins"] >= 5  
             and                         
-            home_form["losses"] <= 2      
+            home_form["losses"] <= 1     
             and                        
-            home_form["draws"] <= 3    
+            home_form["draws"] <= 2   
             and                         
-            home_edge >= 4.0                 
+            home_edge >= 5.0                 
             and
-            form_gap >= 16
+            form_gap >= 20
             and
-            recent_gap >= 12
+            recent_gap >= 15
             and
-            home_form["recent_form_pct"] >= 60                                                             
+            home_form["recent_form_pct"] >= 70                                                             
             and                                   
-            home_form["avg_scored"] >= 1.50
+            home_form["avg_scored"] >= 1.60
             and
           
             (
@@ -6166,13 +6168,13 @@ def analyze_prematch_match(match):
             and                           
             home_form["recent_goal_diff"] >= 3  
             and
-            home_form["avg_conceded"] <= 1.30
+            home_form["avg_conceded"] <= 1.20
             and
-            away_form["avg_conceded"] >= 1.20
+            away_form["avg_conceded"] >= 1.30
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 78
+            home_probability >= 82
             and
             home_balance_ok 
             and
