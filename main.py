@@ -666,7 +666,7 @@ def get_upcoming_matches():
                     fixture_time - now
                 ).total_seconds() / 3600
 
-                if 0 <= hours_left <= 6:
+                if 0 <= hours_left <= 12:
 
                     matches.append(
                         match
