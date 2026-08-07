@@ -8402,9 +8402,9 @@ def analyze_prematch_match(match):
             over_quality += 1
         if home_form["avg_conceded"] + away_form["avg_conceded"] >= 2.10:
             over_quality += 1
-        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 50:
+        if min(home_form["over25_pct"], away_form["over25_pct"]) >= 60:
             over_quality += 1
-        if home_form["recent_over25"] + away_form["recent_over25"] >= 4:
+        if home_form["recent_over25"] + away_form["recent_over25"] >= 5:
             over_quality += 1
         if max(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) <= 45:
             over_quality += 1
@@ -8419,10 +8419,12 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 76
+            over_prob >= 80
             and over_conf >= 72
-            and expected_goals >= 3.00
-            and over_quality >= 7
+            and expected_goals >= 3.20
+            and over_quality >= 8          
+            and home_form["avg_scored"] >= 1.40         
+            and away_form["avg_scored"] >= 1.20
         ):
             signals.append((
                 "⚽ OVER 2.5",
