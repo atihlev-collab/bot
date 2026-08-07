@@ -1156,10 +1156,10 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            55 <= minute <= 84
-            and card_probability >= 84
+            55 <= minute <= 82
+            and card_probability >= 82
             and total_cards >= 3
-            and total_fouls >= 18
+            and total_fouls >= 16
             and goal_diff <= 2
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1185,10 +1185,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 65
+                best_pressure >= 63
                 and total_shots_on >= 3
-                and pressure_diff >= 7
-                and fast_goal_probability >= 65
+                and pressure_diff >= 6
+                and fast_goal_probability >= 63
             ):
                 if (
                     home_pressure >= away_pressure + 10
@@ -1216,7 +1216,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 74
         # =========================================================
         if 41 <= minute <= 74:
-            normal_goal_probability = 55
+            normal_goal_probability = 60
             normal_goal_probability += max(0, best_pressure - 67) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -1227,13 +1227,13 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 82
-                and total_shots_on >= 7
-                and pressure_diff >= 15
-                and normal_goal_probability >= 84
+                best_pressure >= 84
+                and total_shots_on >= 8
+                and pressure_diff >= 18
+                and normal_goal_probability >= 86
             ):
                 if (
-                    home_pressure >= away_pressure + 13
+                    home_pressure >= away_pressure + 14
                     and home_shots_on >= away_shots_on
                 ):
                     return (
@@ -1244,7 +1244,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 13
+                    away_pressure >= home_pressure + 14
                     and away_shots_on >= home_shots_on
                 ):
                     return (
@@ -1270,11 +1270,11 @@ def analyze_live_match(fixture):
 
         if (
             30 <= minute <= 60
-            and best_pressure >= 63
+            and best_pressure >= 61
             and total_shots_on >= 4
-            and total_shots >= 9
+            and total_shots >= 8
             and (home_xg + away_xg) >= 1.3
-            and remaining_probability >= 71
+            and remaining_probability >= 68
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1323,19 +1323,19 @@ def analyze_live_match(fixture):
             late_goal_probability += min(10, (home_xg + away_xg) * 2)
 
             if goal_diff <= 1:
-                late_goal_probability += 5
+                late_goal_probability += 4
 
             late_goal_probability = round(min(95, late_goal_probability), 1)
 
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 60
-                and total_shots_on >= 5
-                and total_shots >= 9
+                best_pressure >= 58
+                and total_shots_on >= 4
+                and total_shots >= 8
                 and total_corners >= 4
                 and (home_xg + away_xg) >= 1.2
-                and late_goal_probability >= 70
+                and late_goal_probability >= 65
             ):
                 return (
                     "🔥 LATE GOAL",
@@ -6116,11 +6116,11 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 70
+            home_score >= 67
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 70
+            home_form["unbeaten_pct"] >= 67
             and
             home_form["wins"] >= 4  
             and                         
@@ -6128,9 +6128,9 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 3    
             and                         
-            home_edge >= 5.0                 
+            home_edge >= 4.0                 
             and
-            form_gap >= 18
+            form_gap >= 16
             and
             recent_gap >= 12
             and
@@ -6172,7 +6172,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 82
+            home_probability >= 78
             and
             home_balance_ok 
             and
@@ -8248,13 +8248,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 70          
+            away_score >= 67         
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 70
+            away_form["unbeaten_pct"] >= 68
             and
-            away_form["wins"] >= 4
+            away_form["wins"] >= 3
             and                          
             away_form["losses"] <= 2    
             and                         
@@ -8306,7 +8306,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 79
+            away_probability >= 75
             and
             away_balance_ok         
             and
