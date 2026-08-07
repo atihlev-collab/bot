@@ -6119,7 +6119,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 70
+            home_score >= 68
             and
             away_form["clean_sheet_pct"] <= 35           
             and
@@ -6127,19 +6127,19 @@ def analyze_prematch_match(match):
             and
             home_form["unbeaten_pct"] >= 67
             and
-            home_form["wins"] >= 5  
+            home_form["wins"] >= 4 
             and                         
             home_form["losses"] <= 1     
             and                        
             home_form["draws"] <= 2   
             and                         
-            home_edge >= 5.0                 
+            home_edge >= 4.0                 
             and
-            form_gap >= 18
+            form_gap >= 16
             and
-            recent_gap >= 13
+            recent_gap >= 12
             and
-            home_form["recent_form_pct"] >= 70                                                             
+            home_form["recent_form_pct"] >= 67                                                            
             and                                   
             home_form["avg_scored"] >= 1.60
             and
@@ -6177,7 +6177,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 80
+            home_probability >= 76
             and
             home_balance_ok 
             and
@@ -8253,25 +8253,25 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 70       
+            away_score >= 68      
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >= 75
+            away_form["unbeaten_pct"] >= 72
             and
-            away_form["wins"] >= 4
+            away_form["wins"] >= 3
             and                          
             away_form["losses"] <= 1   
             and                         
             away_form["draws"] <= 2     
             and                        
-            away_edge >= 5               
+            away_edge >= 4              
             and
-            away_score_gap >= 20
+            away_score_gap >= 18
             and
-            away_gap >= 18
+            away_gap >= 16
             and
-            recent_away_gap >= 15
+            recent_away_gap >= 13
             and                         
             away_form["recent_form_pct"] >= 65      
             and
@@ -8311,7 +8311,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 78
+            away_probability >= 75
             and
             away_balance_ok         
             and
@@ -8535,7 +8535,7 @@ def analyze_prematch_match(match):
         )
 
         home_over15_quality = 0
-        if home_over15_probability >= 65:
+        if home_over15_probability >= 60:
             home_over15_quality += 2
         elif home_over15_probability >= 62:
             home_over15_quality += 1
@@ -8543,7 +8543,7 @@ def analyze_prematch_match(match):
             home_over15_quality += 1
         if home_form["recent_avg_scored"] >= 1.70:
             home_over15_quality += 1
-        if away_form["avg_conceded"] >= 1.50:
+        if away_form["avg_conceded"] >= 1.30:
             home_over15_quality += 1
         if away_form["recent_avg_conceded"] >= 1.20:
             home_over15_quality += 1
@@ -8564,10 +8564,10 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 45
-            and home_over15_probability >= 62
+            home_score >= 40
+            and home_over15_probability >= 60
             and expected_goals >= 2.60
-            and home_over15_quality >= 5
+            and home_over15_quality >= 4
         ):
             signals.append((
                 "🏠 HOME OVER 1.5",
@@ -8606,10 +8606,10 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 45
-            and away_over15_probability >= 63
-            and expected_goals >= 2.80
-            and away_over15_quality >= 5
+            away_score >= 40
+            and away_over15_probability >= 60
+            and expected_goals >= 2.60
+            and away_over15_quality >= 4
         ):
             signals.append((
                 "✈️ AWAY OVER 1.5",
@@ -8651,8 +8651,8 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 68
-            and expected_goals <= 2.25
+            under_prob >= 66
+            and expected_goals <= 2.35
             and under_quality >= 6
             and home_form["avg_scored"] <= 1.50
             and away_form["avg_scored"] <= 1.50
