@@ -9166,7 +9166,7 @@ def prematch_loop():
             fixture_id                      
         )                                   
 
-        if len(top_signals) >= 5:           
+        if len(top_signals) >= 20:           
             break                           
 
     for (
