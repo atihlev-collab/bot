@@ -6119,13 +6119,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 74
+            home_score >= 78
             and
             away_form["clean_sheet_pct"] <= 35           
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 70
+            home_form["unbeaten_pct"] >= 75
             and
             home_form["wins"] >= 4 
             and                         
@@ -6135,9 +6135,9 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 5.0                 
             and
-            form_gap >= 20
+            form_gap >= 25
             and
-            recent_gap >= 15
+            recent_gap >= 18
             and
             home_form["recent_form_pct"] >= 70                                                           
             and                                   
@@ -6171,9 +6171,9 @@ def analyze_prematch_match(match):
             and                           
             home_form["recent_goal_diff"] >= 3  
             and
-            home_form["avg_conceded"] <= 1.20
+            home_form["avg_conceded"] <= 1.10
             and
-            away_form["avg_conceded"] >= 1.30
+            away_form["avg_conceded"] >= 1.40
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
@@ -8267,11 +8267,11 @@ def analyze_prematch_match(match):
             and                        
             away_edge >= 4              
             and
-            away_score_gap >= 16
+            away_score_gap >= 12
             and
             away_gap >= 15
             and
-            recent_away_gap >= 12
+            recent_away_gap >= 10
             and                         
             away_form["recent_form_pct"] >= 63     
             and
@@ -8282,7 +8282,7 @@ def analyze_prematch_match(match):
                 away_form["avg_scored"]
                 -
                 home_form["avg_scored"]
-            ) >= 0.50
+            ) >= 0.30
             and                          
 
             (
