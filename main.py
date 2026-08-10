@@ -1103,7 +1103,7 @@ def analyze_live_match(fixture):
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 20 <= minute <= 43:
-            fh_corner_probability = 55
+            fh_corner_probability = 58
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
@@ -1113,7 +1113,7 @@ def analyze_live_match(fixture):
                 best_pressure >= 72
                 and total_shots >= 7
                 and total_corners >= 3
-                and fh_corner_probability >= 67
+                and fh_corner_probability >= 68
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1156,10 +1156,10 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            55 <= minute <= 8
-            and card_probability >= 80
+            55 <= minute <= 80
+            and card_probability >= 78
             and total_cards >= 4
-            and total_fouls >= 16
+            and total_fouls >= 15
             and goal_diff <= 2
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1185,10 +1185,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 61
+                best_pressure >= 58
                 and total_shots_on >= 3
                 and pressure_diff >= 6
-                and fast_goal_probability >= 61
+                and fast_goal_probability >= 60
             ):
                 if (
                     home_pressure >= away_pressure + 9
@@ -1216,7 +1216,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 74
         # =========================================================
         if 41 <= minute <= 76:
-            normal_goal_probability = 67
+            normal_goal_probability = 68
             normal_goal_probability += max(0, best_pressure - 67) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -6119,13 +6119,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 80
+            home_score >= 78
             and
-            away_form["clean_sheet_pct"] <= 37          
+            away_form["clean_sheet_pct"] <= 35        
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 76
+            home_form["unbeaten_pct"] >= 72
             and
             home_form["wins"] >= 4 
             and                         
@@ -6133,13 +6133,13 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 2   
             and                         
-            home_edge >= 5.0                 
+            home_edge >= 4.0                 
             and
-            form_gap >= 25
+            form_gap >= 24
             and
-            recent_gap >= 18
+            recent_gap >= 17
             and
-            home_form["recent_form_pct"] >= 70                                                           
+            home_form["recent_form_pct"] >= 68                                                          
             and                                   
             home_form["avg_scored"] >= 1.60
             and
@@ -6177,7 +6177,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 86
+            home_probability >= 80
             and
             home_balance_ok 
             and
@@ -8253,11 +8253,11 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 72     
+            away_score >= 68   
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >=70
+            away_form["unbeaten_pct"] >=68
             and
             away_form["wins"] >= 3
             and                          
@@ -8311,7 +8311,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 74
+            away_probability >= 70
             and
             away_balance_ok         
             and
@@ -8420,10 +8420,10 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 82
-            and over_conf >= 72
+            over_prob >= 80
+            and over_conf >= 70
             and expected_goals >= 3.30
-            and over_quality >= 8         
+            and over_quality >= 7         
             and home_form["avg_scored"] >= 1.40         
             and away_form["avg_scored"] >= 1.20
         ):
@@ -8458,7 +8458,7 @@ def analyze_prematch_match(match):
         )
 
         btts_quality = 0
-        if btts_prob >= 72:
+        if btts_prob >= 70:
             btts_quality += 2
         elif btts_prob >= 64:
             btts_quality += 1
@@ -8502,8 +8502,8 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 61
-            and btts_conf >= 62
+            btts_prob >= 58
+            and btts_conf >= 60
             and expected_goals >= 2.30
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 63
             and btts_quality >= 4
@@ -8625,7 +8625,7 @@ def analyze_prematch_match(match):
         under_prob = 100 - over_prob
         under_quality = 0
 
-        if under_prob >= 80:
+        if under_prob >= 78:
             under_quality += 2
         elif under_prob >= 64:
             under_quality += 1
@@ -8652,7 +8652,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 80
+            under_prob >= 78 
             and expected_goals <= 2.45
             and under_quality >= 7
             and home_form["avg_scored"] <= 1.50
@@ -8686,7 +8686,7 @@ def analyze_prematch_match(match):
         )
 
         over35_quality = 0
-        if over35_prob >= 63:
+        if over35_prob >= 61:
             over35_quality += 2
         elif over35_prob >= 55:
             over35_quality += 1
@@ -8713,7 +8713,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over35_prob >= 46
+            over35_prob >= 44
             and expected_goals >= 3.4
             and over35_quality >= 4
         ):
