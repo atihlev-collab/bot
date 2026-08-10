@@ -6119,13 +6119,13 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 75
+            home_score >= 74
             and
             away_form["clean_sheet_pct"] <= 35        
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 68
+            home_form["unbeaten_pct"] >= 70
             and
             home_form["wins"] >= 4 
             and                         
@@ -6133,13 +6133,13 @@ def analyze_prematch_match(match):
             and                        
             home_form["draws"] <= 2   
             and                         
-            home_edge >= 4.0                 
+            home_edge >= 5.0                 
             and
-            form_gap >= 24
+            form_gap >= 20
             and
-            recent_gap >= 17
+            recent_gap >= 15
             and
-            home_form["recent_form_pct"] >= 68                                                          
+            home_form["recent_form_pct"] >= 65                                                        
             and                                   
             home_form["avg_scored"] >= 1.60
             and
@@ -6177,7 +6177,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 75
+            home_probability >= 82
             and
             home_balance_ok 
             and
@@ -8253,7 +8253,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 66  
+            away_score >= 68 
             and
             away_odds_ok
             and
@@ -8311,7 +8311,7 @@ def analyze_prematch_match(match):
             and                                   
             home_form["recent_avg_conceded"] >= 0.80     
             and
-            away_probability >= 68
+            away_probability >= 72
             and
             away_balance_ok         
             and
