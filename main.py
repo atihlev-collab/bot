@@ -8652,9 +8652,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 78
+            under_prob >= 76
             and expected_goals <= 2.00
-            and under_quality >= 7
+            and under_quality >= 6
             and home_form["avg_scored"] <= 1.40
             and away_form["avg_scored"] <= 1.40
             and home_form["recent_avg_scored"] <= 1.20
@@ -9168,7 +9168,7 @@ def prematch_loop():
             fixture_id                      
         )                                   
 
-        if len(top_signals) >= 20:           
+        if len(top_signals) >= 10:           
             break                           
 
     for (
