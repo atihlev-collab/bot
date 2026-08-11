@@ -8384,9 +8384,9 @@ def analyze_prematch_match(match):
         over_conf = confidence_from_score(over_final)
 
         over_quality = 0
-        if over_prob >= 74:
+        if over_prob >= 80:
             over_quality += 3
-        elif over_prob >= 74:
+        elif over_prob >= 76:
             over_quality += 2
         elif over_prob >= 72:
              over_quality += 1
@@ -8420,10 +8420,10 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 80
-            and over_conf >= 72
-            and expected_goals >= 3.50
-            and over_quality >= 6        
+            over_prob >= 82
+            and over_conf >= 74
+            and expected_goals >= 3.30
+            and over_quality >= 7        
             and home_form["avg_scored"] >= 1.40         
             and away_form["avg_scored"] >= 1.20
         ):
