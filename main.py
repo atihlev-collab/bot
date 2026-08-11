@@ -8639,7 +8639,7 @@ def analyze_prematch_match(match):
             under_quality += 1
         if home_form["avg_conceded"] + away_form["avg_conceded"] <= 2.40:
             under_quality += 1
-        if max(home_form["over25_pct"], away_form["over25_pct"]) <= 50:
+        if max(home_form["over25_pct"], away_form["over25_pct"]) <= 60:
             under_quality += 1
         if min(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) >= 30:
             under_quality += 1
@@ -8652,11 +8652,13 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 74
-            and expected_goals <= 2.25
-            and under_quality >= 6
-            and home_form["avg_scored"] <= 1.50
-            and away_form["avg_scored"] <= 1.50
+            under_prob >= 78
+            and expected_goals <= 2.00
+            and under_quality >= 7
+            and home_form["avg_scored"] <= 1.40
+            and away_form["avg_scored"] <= 1.40
+            and home_form["recent_avg_scored"] <= 1.20
+            and away_form["recent_avg_scored"] <= 1.20
             and (
                 home_form["avg_conceded"]
                 +
