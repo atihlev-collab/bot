@@ -8652,7 +8652,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 76
+            under_prob >= 78
             and expected_goals <= 2.00
             and under_quality >= 6
             and home_form["avg_scored"] <= 1.40
