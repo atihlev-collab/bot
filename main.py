@@ -1216,7 +1216,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 74
         # =========================================================
         if 41 <= minute <= 76:
-            normal_goal_probability = 68
+            normal_goal_probability = 70
             normal_goal_probability += max(0, best_pressure - 67) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -1286,7 +1286,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 62
+        corner_probability = 64
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
