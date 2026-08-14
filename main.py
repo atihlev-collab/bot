@@ -1110,7 +1110,7 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 75
+                best_pressure >= 77
                 and total_shots >= 8
                 and total_corners >= 3
                 and fh_corner_probability >= 68
@@ -1216,7 +1216,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 74
         # =========================================================
         if 41 <= minute <= 76:
-            normal_goal_probability = 70
+            normal_goal_probability = 74
             normal_goal_probability += max(0, best_pressure - 67) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -1227,10 +1227,10 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 86
-                and total_shots_on >= 11
-                and pressure_diff >= 22
-                and normal_goal_probability >= 86
+                best_pressure >= 88
+                and total_shots_on >= 12
+                and pressure_diff >= 24
+                and normal_goal_probability >= 88
             ):
                 if (
                     home_pressure >= away_pressure + 14
@@ -1287,7 +1287,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 64
+        corner_probability = 66
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1298,10 +1298,10 @@ def analyze_live_match(fixture):
 
         if (
             65 <= minute <= 84
-            and total_corners >= 10
-            and total_shots >= 20
-            and best_pressure >= 76
-            and corner_probability >= 84
+            and total_corners >= 11
+            and total_shots >= 22
+            and best_pressure >= 78
+            and corner_probability >= 86
             and total_corners <= 13
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
