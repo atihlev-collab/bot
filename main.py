@@ -8639,7 +8639,7 @@ def analyze_prematch_match(match):
             under_quality += 1
         if home_form["avg_conceded"] + away_form["avg_conceded"] <= 2.40:
             under_quality += 1
-        if min(home_form["under25_pct"],away_form["under25_pct"]) >= 60:
+        if max(home_form["over25_pct"], away_form["over25_pct"]) <= 50:
             under_quality += 1
         if min(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) >= 30:
             under_quality += 1
