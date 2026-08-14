@@ -1257,7 +1257,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 REMAINING GOALS
         # =========================================================
-        remaining_probability = 41
+        remaining_probability = 45
         remaining_probability += max(0, best_pressure - 55) * 0.55
         remaining_probability += min(15, total_shots_on * 1.4)
         remaining_probability += min(8, total_corners * 0.7)
@@ -1269,12 +1269,13 @@ def analyze_live_match(fixture):
         print("OVER15 REMAINING CHECK:", minute, remaining_probability)
 
         if (
-            30 <= minute <= 60
+            25 <= minute <= 65
             and best_pressure >= 59
             and total_shots_on >= 4
-            and total_shots >= 8
+            and total_shots >= 7
             and (home_xg + away_xg) >= 1.3
-            and remaining_probability >= 66
+            and remaining_probability >= 64
+            and total <= 1
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1296,11 +1297,12 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            70 <= minute <= 84
-            and total_corners >= 11
-            and total_shots >= 22
-            and best_pressure >= 78
-            and corner_probability >= 86
+            65 <= minute <= 84
+            and total_corners >= 10
+            and total_shots >= 20
+            and best_pressure >= 76
+            and corner_probability >= 84
+            and total_corners <= 13
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
                 print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1331,11 +1333,11 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 56
-                and total_shots_on >= 4
-                and total_shots >= 8
+                and total_shots_on >= 3
+                and total_shots >= 7
                 and total_corners >= 4
                 and (home_xg + away_xg) >= 1.2
-                and late_goal_probability >= 63
+                and late_goal_probability >= 60
             ):
                 return (
                     "🔥 LATE GOAL",
