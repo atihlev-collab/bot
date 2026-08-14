@@ -8627,7 +8627,7 @@ def analyze_prematch_match(match):
         under_prob = 100 - over_prob
         under_quality = 0
 
-        if under_prob >= 70:
+        if under_prob >= 74:
             under_quality += 2
         elif under_prob >= 64:
             under_quality += 1
@@ -8660,9 +8660,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 78
+            under_prob >= 80
             and expected_goals <= 2.00
-            and under_quality >= 7
+            and under_quality >= 8
             and home_form["avg_scored"] <= 1.40
             and away_form["avg_scored"] <= 1.40    
             and home_form["recent_avg_scored"] <= 1.20
