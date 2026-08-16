@@ -1270,11 +1270,11 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 59
+            and best_pressure >= 62
             and total_shots_on >= 4
             and total_shots >= 7
-            and (home_xg + away_xg) >= 1.3
-            and remaining_probability >= 64
+            and (home_xg + away_xg) >= 1.5
+            and remaining_probability >= 66
             and total <= 1
         ):
             return (
@@ -6121,7 +6121,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 86
+            home_score >= 88
             and
             away_form["clean_sheet_pct"] <= 35        
             and
@@ -8422,8 +8422,8 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 85
-            and over_conf >= 77
+            over_prob >= 86
+            and over_conf >= 78
             and expected_goals >= 3.60
             and over_quality >= 7        
             and home_form["avg_scored"] >= 1.40         
@@ -8504,11 +8504,11 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 58
+            btts_prob >= 60
             and btts_conf >= 60
-            and expected_goals >= 2.30
+            and expected_goals >= 2.50
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 63
-            and btts_quality >= 4
+            and btts_quality >= 5
         ):
             signals.append((
                 "💎 BTTS",
@@ -8567,9 +8567,9 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 44
-            and home_over15_probability >= 62
-            and expected_goals >= 2.60
+            home_score >= 47
+            and home_over15_probability >= 64
+            and expected_goals >= 2.80
             and home_over15_quality >= 4
         ):
             signals.append((
@@ -8609,7 +8609,7 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 42
+            away_score >= 45
             and away_over15_probability >= 62
             and expected_goals >= 2.60
             and away_over15_quality >= 4
@@ -8660,7 +8660,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 83
+            under_prob >= 85
             and expected_goals <= 1.80
             and under_quality >= 8
             and home_form["avg_scored"] <= 1.40
