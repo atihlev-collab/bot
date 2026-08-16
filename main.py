@@ -1103,17 +1103,17 @@ def analyze_live_match(fixture):
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 20 <= minute <= 43:
-            fh_corner_probability = 55
+            fh_corner_probability = 58
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 77
+                best_pressure >= 79
                 and total_shots >= 8
                 and total_corners >= 3
-                and fh_corner_probability >= 68
+                and fh_corner_probability >= 70
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1216,7 +1216,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 74
         # =========================================================
         if 41 <= minute <= 76:
-            normal_goal_probability = 74
+            normal_goal_probability = 76
             normal_goal_probability += max(0, best_pressure - 67) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -1287,7 +1287,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 66
+        corner_probability = 70
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1297,7 +1297,7 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            65 <= minute <= 84
+            65 <= minute <= 86
             and total_corners >= 11
             and total_shots >= 22
             and best_pressure >= 78
@@ -6121,7 +6121,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 84
+            home_score >= 86
             and
             away_form["clean_sheet_pct"] <= 35        
             and
@@ -8422,9 +8422,9 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 84
-            and over_conf >= 76
-            and expected_goals >= 3.50
+            over_prob >= 85
+            and over_conf >= 77
+            and expected_goals >= 3.60
             and over_quality >= 7        
             and home_form["avg_scored"] >= 1.40         
             and away_form["avg_scored"] >= 1.20
@@ -8627,7 +8627,7 @@ def analyze_prematch_match(match):
         under_prob = 100 - over_prob
         under_quality = 0
 
-        if under_prob >= 80:
+        if under_prob >= 82:
             under_quality += 2
         elif under_prob >= 64:
             under_quality += 1
@@ -8660,8 +8660,8 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 82
-            and expected_goals <= 1.90
+            under_prob >= 83
+            and expected_goals <= 1.80
             and under_quality >= 8
             and home_form["avg_scored"] <= 1.40
             and away_form["avg_scored"] <= 1.40    
@@ -8723,8 +8723,8 @@ def analyze_prematch_match(match):
         )
 
         if (
-            over35_prob >= 42
-            and expected_goals >= 3.3
+            over35_prob >= 40
+            and expected_goals >= 3.1
             and over35_quality >= 4
         ):
             signals.append((
