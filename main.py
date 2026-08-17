@@ -1102,7 +1102,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
-        if 20 <= minute <= 43:
+        if 20 <= minute <= 40:
             fh_corner_probability = 58
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
@@ -1156,7 +1156,7 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            55 <= minute <= 80
+            65 <= minute <= 84
             and card_probability >= 82
             and total_cards >= 4
             and total_fouls >= 20
@@ -1270,11 +1270,11 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 62
+            and best_pressure >= 60
             and total_shots_on >= 4
             and total_shots >= 7
-            and (home_xg + away_xg) >= 1.5
-            and remaining_probability >= 66
+            and (home_xg + away_xg) >= 1.4
+            and remaining_probability >= 64
             and total <= 1
         ):
             return (
@@ -1297,7 +1297,7 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            65 <= minute <= 86
+            70 <= minute <= 85
             and total_corners >= 11
             and total_shots >= 22
             and best_pressure >= 78
