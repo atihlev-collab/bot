@@ -8422,8 +8422,8 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 86
-            and over_conf >= 78
+            over_prob >= 84
+            and over_conf >= 76
             and expected_goals >= 3.60
             and over_quality >= 6        
             and home_form["avg_scored"] >= 1.40         
@@ -8504,9 +8504,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 63
-            and btts_conf >= 63
-            and expected_goals >= 2.60
+            btts_prob >= 66
+            and btts_conf >= 66
+            and expected_goals >= 2.70
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 63
             and btts_quality >= 5
         ):
@@ -8660,7 +8660,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 85
+            under_prob >= 83
             and expected_goals <= 1.80
             and under_quality >= 7
             and home_form["avg_scored"] <= 1.40
