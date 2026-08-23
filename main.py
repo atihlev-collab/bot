@@ -6121,7 +6121,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 88
+            home_score >= 86
             and
             away_form["clean_sheet_pct"] <= 35        
             and
@@ -6179,7 +6179,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 88
+            home_probability >= 86
             and
             home_balance_ok 
             and
@@ -8504,7 +8504,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 78
+            btts_prob >= 80
             and btts_conf >= 78
             and expected_goals >= 2.80
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 63
@@ -8567,8 +8567,8 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 70
-            and home_over15_probability >= 66
+            home_score >= 72
+            and home_over15_probability >= 68
             and expected_goals >= 2.90
             and home_over15_quality >= 4
         ):
@@ -8660,7 +8660,7 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 78
+            under_prob >= 80
             and expected_goals <= 1.80
             and under_quality >= 7
             and home_form["avg_scored"] <= 1.40
