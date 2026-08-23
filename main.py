@@ -6121,7 +6121,7 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 80
+            home_score >= 86
             and
             away_form["clean_sheet_pct"] <= 35        
             and
@@ -6179,7 +6179,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 85
+            home_probability >= 88
             and
             home_balance_ok 
             and
@@ -8422,8 +8422,8 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 82
-            and over_conf >= 76
+            over_prob >= 84
+            and over_conf >= 78
             and expected_goals >= 3.80
             and over_quality >= 6        
             and home_form["avg_scored"] >= 1.40         
