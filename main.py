@@ -8504,11 +8504,11 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 66
-            and btts_conf >= 66
-            and expected_goals >= 2.70
+            btts_prob >= 70
+            and btts_conf >= 70
+            and expected_goals >= 2.80
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 63
-            and btts_quality >= 5
+            and btts_quality >= 6
         ):
             signals.append((
                 "💎 BTTS",
