@@ -1110,7 +1110,7 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 73
+                best_pressure >= 76
                 and total_shots >= 6
                 and total_corners >= 3
                 and fh_corner_probability >= 66
@@ -1227,13 +1227,13 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 84
-                and total_shots_on >= 11
-                and pressure_diff >= 22
+                best_pressure >= 86
+                and total_shots_on >= 12
+                and pressure_diff >= 25
                 and normal_goal_probability >= 85
             ):
                 if (
-                    home_pressure >= away_pressure + 13
+                    home_pressure >= away_pressure + 14
                     and home_shots_on >= away_shots_on
                 ):
                     return (
@@ -1244,7 +1244,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 13
+                    away_pressure >= home_pressure + 14
                     and away_shots_on >= home_shots_on
                 ):
                     return (
@@ -8504,8 +8504,8 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 80
-            and btts_conf >= 78
+            btts_prob >= 78
+            and btts_conf >= 76
             and expected_goals >= 2.80
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 63
             and btts_quality >= 7
@@ -8567,7 +8567,7 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 76
+            home_score >= 78
             and home_over15_probability >= 70
             and expected_goals >= 2.90
             and home_over15_quality >= 4
@@ -8609,7 +8609,7 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 74
+            away_score >= 76
             and away_over15_probability >= 66
             and expected_goals >= 2.60
             and away_over15_quality >= 4
