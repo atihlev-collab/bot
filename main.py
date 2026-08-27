@@ -1,5 +1,5 @@
 # =========================================================
-# MAIN V5
+# MAIN V4
 # AI BETTING SYSTEM
 # VERSION 4.0
 # =========================================================
@@ -20744,6 +20744,445 @@ if __name__ == "__main__":
     startup()
 
     main_loop()
+
+
+
+   
+
+
+# =========================================================
+# V5 FINAL — VALUE / BUILDER / DUPLICATE SAFETY LAYER
+# =========================================================
+
+V5_FINAL_MIN_EDGE_PP = 5.0
+V5_FINAL_MIN_CONFIDENCE = 70.0
+V5_FINAL_MAX_RISK = 35.0
+V5_FINAL_MIN_ODD = 1.20
+V5_FINAL_MAX_ODD = 5.00
+
+# Do not treat these as independent events:
+# Under X and Under a higher X, Over X and Over a lower X, etc.
+V5_NESTED_MARKET_GROUPS = (
+    ("corner", "under"),
+    ("corner", "over"),
+    ("card", "under"),
+    ("card", "over"),
+    ("goal", "under"),
+    ("goal", "over"),
+)
+
+
+def v5_final_market_probability(odd):
+    try:
+        odd = float(odd)
+        if odd <= 1:
+            return 0.0
+        return 100.0 / odd
+    except Exception:
+        return 0.0
+
+
+def v5_final_edge_pp(model_probability, odd):
+    """Edge in percentage points, not the misleading relative %."""
+    try:
+        return round(
+            float(model_probability)
+            - v5_final_market_probability(odd),
+            2,
+        )
+    except Exception:
+        return 0.0
+
+
+def v5_final_fair_odds(model_probability):
+    try:
+        p = float(model_probability)
+        if p <= 0:
+            return 99.99
+        return round(100.0 / p, 2)
+    except Exception:
+        return 99.99
+
+
+def v5_final_normalize_market(market):
+    return re.sub(
+        r"\s+",
+        " ",
+        str(market or "").strip().lower(),
+    )
+
+
+def v5_final_market_family(market):
+    m = v5_final_normalize_market(market)
+
+    if "corner" in m:
+        sport = "corner"
+    elif "card" in m:
+        sport = "card"
+    elif "goal" in m or "btts" in m:
+        sport = "goal"
+    else:
+        sport = "other"
+
+    if "under" in m:
+        side = "under"
+    elif "over" in m:
+        side = "over"
+    else:
+        side = "other"
+
+    return sport, side
+
+
+def v5_final_extract_line(market):
+    """Extract a line such as 9.5, 10.5, 2.5 from a market label."""
+    try:
+        matches = re.findall(r"(\d+(?:\.\d+)?)", str(market))
+        if not matches:
+            return None
+        return float(matches[-1])
+    except Exception:
+        return None
+
+
+def v5_final_is_nested_market(market_a, market_b):
+    """
+    Detect nested same-family markets.
+
+    Example:
+      Corner Under 9.5
+      Corner Under 10.5
+
+    These are not independent events.
+    """
+    sport_a, side_a = v5_final_market_family(market_a)
+    sport_b, side_b = v5_final_market_family(market_b)
+
+    if sport_a == "other" or sport_b == "other":
+        return False
+
+    if sport_a != sport_b or side_a != side_b:
+        return False
+
+    line_a = v5_final_extract_line(market_a)
+    line_b = v5_final_extract_line(market_b)
+
+    if line_a is None or line_b is None:
+        return False
+
+    return line_a != line_b
+
+
+def v5_final_builder_valid(legs):
+    """
+    Validate a builder before presenting a joint probability.
+
+    Rejects nested same-family lines because multiplying their
+    individual probabilities would double-count the same outcome.
+    """
+    if not isinstance(legs, (list, tuple)):
+        return False, "INVALID_LEGS"
+
+    clean = [
+        x for x in legs
+        if isinstance(x, dict)
+    ]
+
+    if len(clean) < 2:
+        return False, "NOT_A_BUILDER"
+
+    for i in range(len(clean)):
+        for j in range(i + 1, len(clean)):
+            ma = clean[i].get("market", "")
+            mb = clean[j].get("market", "")
+
+            if v5_final_is_nested_market(ma, mb):
+                return False, "NESTED_MARKETS"
+
+    return True, "OK"
+
+
+def v5_final_joint_probability(legs):
+    """
+    Calculate joint probability only for legs that survive the
+    dependency check. This multiplication is still an approximation;
+    correlated but non-nested markets should be treated conservatively.
+    """
+    valid, reason = v5_final_builder_valid(legs)
+
+    if not valid:
+        return None, reason
+
+    probability = 1.0
+
+    for leg in legs:
+        try:
+            p = float(
+                leg.get(
+                    "probability",
+                    leg.get("model_probability", 0),
+                )
+            )
+        except Exception:
+            return None, "BAD_PROBABILITY"
+
+        if p <= 0 or p > 100:
+            return None, "BAD_PROBABILITY"
+
+        probability *= p / 100.0
+
+    return round(probability * 100.0, 2), "OK"
+
+
+def v5_final_signal_allowed(signal):
+    """
+    Final V5 value gate.
+
+    A signal needs both model confidence and positive market value.
+    """
+    if not isinstance(signal, dict):
+        return False
+
+    try:
+        probability = float(signal.get("probability", 0))
+        confidence = float(signal.get("confidence", 0))
+        risk = float(signal.get("risk", 999))
+        odd = float(signal.get("odd", 0))
+    except Exception:
+        return False
+
+    if not (
+        V5_FINAL_MIN_ODD
+        <= odd
+        <= V5_FINAL_MAX_ODD
+    ):
+        return False
+
+    if confidence < V5_FINAL_MIN_CONFIDENCE:
+        return False
+
+    if risk > V5_FINAL_MAX_RISK:
+        return False
+
+    edge = v5_final_edge_pp(probability, odd)
+
+    return (
+        probability > 50.0
+        and edge >= V5_FINAL_MIN_EDGE_PP
+    )
+
+
+def v5_final_score(signal):
+    try:
+        probability = float(signal.get("probability", 0))
+        confidence = float(signal.get("confidence", 0))
+        risk = float(signal.get("risk", 50))
+        odd = float(signal.get("odd", 1))
+    except Exception:
+        return 0.0
+
+    edge = v5_final_edge_pp(probability, odd)
+
+    # Reward value and confidence, penalize risk.
+    return round(
+        probability * 0.30
+        + confidence * 0.30
+        + max(0.0, edge) * 2.00
+        - risk * 0.40,
+        2,
+    )
+
+
+def v5_final_rank_signals(signals):
+    valid = []
+
+    for signal in signals or []:
+        if not v5_final_signal_allowed(signal):
+            continue
+
+        item = dict(signal)
+        item["v5_edge_pp"] = v5_final_edge_pp(
+            item.get("probability", 0),
+            item.get("odd", 0),
+        )
+        item["v5_market_probability"] = round(
+            v5_final_market_probability(
+                item.get("odd", 0)
+            ),
+            2,
+        )
+        item["v5_fair_odds"] = v5_final_fair_odds(
+            item.get("probability", 0)
+        )
+        item["v5_quality"] = v5_final_score(item)
+
+        valid.append(item)
+
+    return sorted(
+        valid,
+        key=lambda x: (
+            x.get("v5_quality", 0),
+            x.get("v5_edge_pp", 0),
+            x.get("confidence", 0),
+        ),
+        reverse=True,
+    )
+
+
+class V5DuplicateGuard:
+    """
+    In-memory duplicate protection.
+
+    Key = fixture + market + line.
+    A new signal can only be emitted once per cooldown window.
+    """
+
+    def __init__(self, cooldown_seconds=1800):
+        self.cooldown_seconds = int(cooldown_seconds)
+        self._sent = {}
+
+    def _key(self, signal):
+        fixture = (
+            signal.get("fixture_id")
+            or signal.get("match_id")
+            or signal.get("id")
+            or ""
+        )
+
+        market = v5_final_normalize_market(
+            signal.get("market")
+            or signal.get("selection")
+            or ""
+        )
+
+        line = v5_final_extract_line(market)
+
+        return (
+            str(fixture),
+            market,
+            line,
+        )
+
+    def allow(self, signal, now=None):
+        import time
+
+        if now is None:
+            now = time.time()
+
+        key = self._key(signal)
+        previous = self._sent.get(key)
+
+        if previous is not None:
+            if now - previous < self.cooldown_seconds:
+                return False
+
+        self._sent[key] = now
+        return True
+
+    def clear_old(self, now=None):
+        import time
+
+        if now is None:
+            now = time.time()
+
+        cutoff = now - self.cooldown_seconds
+
+        self._sent = {
+            key: timestamp
+            for key, timestamp in self._sent.items()
+            if timestamp >= cutoff
+        }
+
+
+V5_FINAL_DUPLICATE_GUARD = V5DuplicateGuard(
+    cooldown_seconds=1800
+)
+
+
+def v5_final_prepare_signal(signal):
+    """
+    Attach transparent V5 fields without inventing data.
+    """
+    if not isinstance(signal, dict):
+        return signal
+
+    result = dict(signal)
+
+    try:
+        odd = float(result.get("odd", 0))
+        probability = float(result.get("probability", 0))
+    except Exception:
+        return result
+
+    result["v5_market_probability"] = round(
+        v5_final_market_probability(odd),
+        2,
+    )
+    result["v5_edge_pp"] = v5_final_edge_pp(
+        probability,
+        odd,
+    )
+    result["v5_fair_odds"] = v5_final_fair_odds(
+        probability
+    )
+    result["v5_quality"] = v5_final_score(result)
+
+    if result["v5_edge_pp"] >= 15:
+        result["v5_value_level"] = "🔥 SUPER VALUE"
+    elif result["v5_edge_pp"] >= 10:
+        result["v5_value_level"] = "💎 STRONG VALUE"
+    elif result["v5_edge_pp"] >= 5:
+        result["v5_value_level"] = "💰 VALUE"
+    else:
+        result["v5_value_level"] = "WATCH"
+
+    return result
+
+
+def v5_final_builder_report(legs, combined_odds=None):
+    """
+    Safe builder report.
+
+    Returns no fake 98-99% joint probability for nested markets.
+    """
+    valid, reason = v5_final_builder_valid(legs)
+
+    if not valid:
+        return {
+            "valid": False,
+            "reason": reason,
+            "joint_probability": None,
+            "combined_odds": None,
+        }
+
+    joint, _ = v5_final_joint_probability(legs)
+
+    if combined_odds is None:
+        combined = 1.0
+        for leg in legs:
+            try:
+                combined *= float(leg.get("odd", 0))
+            except Exception:
+                return {
+                    "valid": False,
+                    "reason": "BAD_ODDS",
+                    "joint_probability": None,
+                    "combined_odds": None,
+                }
+        combined_odds = round(combined, 2)
+
+    return {
+        "valid": True,
+        "reason": "OK",
+        "joint_probability": joint,
+        "combined_odds": combined_odds,
+        "fair_odds": (
+            v5_final_fair_odds(joint)
+            if joint is not None
+            else None
+        ),
+    }
+
 
 
    
