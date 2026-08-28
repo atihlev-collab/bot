@@ -17346,23 +17346,27 @@ def live_market_probability(match, market, stats):
         if abs(hg-ag)<=1: p+=5
         return round(max(0,min(94,p)),1)
 
-    if market=='🚩 OVER 1.5 CORNERS':
-        if corners>=2: return 99.0
-        remaining=max(0,95-minute)
-        p=45 + activity*0.25 + remaining*0.20
-        return round(max(0,min(95,p)),1)
+    if market == '🚩 OVER 1.5 CORNERS':
+        if corners >= 2:
+            return 99.0
+        remaining = max(0, 95 - minute)
+        p = 45 + activity * 0.25 + remaining * 0.20
+        return round(max(0, min(95, p)), 1)
 
-    if market=='🚩 FIRST HALF OVER 1.5 CORNERS':
-        if minute>45: return 0
-        remaining=max(0,45-minute)
-        p=42 + corners*10 + activity*0.18 + remaining*0.35
-        return round(max(0,min(94,p)),1)
+    if market == '🚩 FIRST HALF OVER 1.5 CORNERS':
+        if minute > 45:
+            return 0
+        remaining = max(0, 45 - minute)
+        p = 42 + corners * 10 + activity * 0.18 + remaining * 0.35
+        return round(max(0, min(94, p)), 1)
 
-    if market=='🟨 OVER 1.5 CARDS':
-        if yellow>=2: return 99.0
-        remaining=max(0,95-minute)
-        p=35 + yellow*18 + remaining*0.35 + (8 if abs(hg-ag)<=1 else 0)
-        return round(max(0,min(94,p)),1)
+    if market == '🟨 OVER 1.5 CARDS':
+        if yellow >= 2:
+            return 99.0
+        remaining = max(0, 95 - minute)
+        p = 35 + yellow * 18 + remaining * 0.35 + (8 if abs(hg - ag) <= 1 else 0)
+        return round(max(0, min(94, p)), 1)
+
     return 0
 
 
