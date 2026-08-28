@@ -1,5 +1,5 @@
-import json
-import os
+Main5 ML layer: BTTS and Over 2.5 specialist models."""
+import json, os
 import joblib
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -13,70 +13,51 @@ over_model = None
 
 def load_model():
     global btts_model, over_model
-
     if os.path.exists(BTTS_MODEL):
-        btts_model = joblib.load(BTTS_MODEL)
-
+        try: btts_model = joblib.load(BTTS_MODEL)
+        except Exception: btts_model = None
     if os.path.exists(OVER_MODEL):
-        over_model = joblib.load(OVER_MODEL)
-
-    print("🔥 AI v1000 READY")
-
+        try: over_model = joblib.load(OVER_MODEL)
+        except Exception: over_model = None
+    print("рџ”Ґ Main5 ML READY")
 
 def make_features(d):
-    return [
-        d["shots_h"],
-        d["shots_a"],
-        d["att_h"],
-        d["att_a"],
-        d["goals"],
-        d["shots_h"] + d["shots_a"],
-        d["att_h"] + d["att_a"],
-        abs(d["shots_h"] - d["shots_a"])
-    ]
-
+    def n(k):
+        try: return float(d.get(k, 0) or 0)
+        except Exception: return 0.0
+    sh, sa, ah, aa, goals = n("shots_h"), n("shots_a"), n("att_h"), n("att_a"), n("goals")
+    return [sh, sa, ah, aa, goals, sh+sa, ah+aa, abs(sh-sa)]
 
 def train_model():
-
     if not os.path.exists(DATA_FILE):
-        print("❌ no dataset")
-        return
-
-    data = json.load(open(DATA_FILE))
-
-    if len(data) < 100:
-        print("⚠️ need 100+ samples")
-        return
-
-    X, y_btts, y_over = [], [], []
-
+        return False
+    try: data = json.load(open(DATA_FILE, encoding="utf-8"))
+    except Exception: return False
+    if len(data) < 100: return False
+    X, yb, yo = [], [], []
     for d in data:
-        X.append(make_features(d))
-        y_btts.append(d["btts"])
-        y_over.append(d["over25"])
+        try:
+            X.append(make_features(d)); yb.append(int(d["btts"])); yo.append(int(d["over25"]))
+        except Exception: continue
+    if len(X) < 100: return False
+    X = np.asarray(X)
+    btts = RandomForestClassifier(n_estimators=200, random_state=42, class_weight="balanced")
+    over = RandomForestClassifier(n_estimators=200, random_state=42, class_weight="balanced")
+    btts.fit(X, yb); over.fit(X, yo)
+    joblib.dump(btts, BTTS_MODEL); joblib.dump(over, OVER_MODEL)
+    return True
 
-    X = np.array(X)
-
-    btts = RandomForestClassifier(n_estimators=120)
-    btts.fit(X, y_btts)
-    joblib.dump(btts, BTTS_MODEL)
-
-    over = RandomForestClassifier(n_estimators=120)
-    over.fit(X, y_over)
-    joblib.dump(over, OVER_MODEL)
-
-    print("🔥 MODELS TRAINED")
-
+def _predict(model, features):
+    if model is None: return None
+    try:
+        classes = list(model.classes_)
+        if 1 not in classes: return 0.0
+        return float(model.predict_proba([features])[0][classes.index(1)])
+    except Exception:
+        return None
 
 def predict_btts(sh, sa, ah, aa, goals):
-    if btts_model is None:
-        return None
-    d = {"shots_h": sh, "shots_a": sa, "att_h": ah, "att_a": aa, "goals": goals}
-    return btts_model.predict_proba([make_features(d)])[0][1]
-
+    return _predict(btts_model, make_features({"shots_h":sh,"shots_a":sa,"att_h":ah,"att_a":aa,"goals":goals}))
 
 def predict_over(sh, sa, ah, aa, goals):
-    if over_model is None:
-        return None
-    d = {"shots_h": sh, "shots_a": sa, "att_h": ah, "att_a": aa, "goals": goals}
-    return over_model.predict_proba([make_features(d)])[0][1]
+    return _predict(over_model, make_features({"shots_h":sh,"shots_a":sa,"att_h":aa,"att_a":aa,"goals":goals}))
