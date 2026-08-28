@@ -1,4 +1,4 @@
-Main5 ML layer: BTTS and Over 2.5 specialist models."""
+"""Main5 ML layer: BTTS and Over 2.5 specialist models."""
 import json, os
 import joblib
 import numpy as np
@@ -19,7 +19,7 @@ def load_model():
     if os.path.exists(OVER_MODEL):
         try: over_model = joblib.load(OVER_MODEL)
         except Exception: over_model = None
-    print("рџ”Ґ Main5 ML READY")
+    print("🔥 Main5 ML READY")
 
 def make_features(d):
     def n(k):
