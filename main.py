@@ -14210,7 +14210,7 @@ def build_live_signal(
 
     # Do not force huge value.
     # Probability + confidence are more important.
-    if edge < -3:
+    if edge < -0:
 
         return None
 
@@ -17079,7 +17079,7 @@ ODDS_DROP_MIN_PCT = 6.0
 BET_BUILDER_MIN_ODD = 1.50
 BET_BUILDER_MAX_ODD = 4.50
 BET_BUILDER_MIN_LEGS = 2
-BET_BUILDER_MAX_LEGS = 4
+BET_BUILDER_MAX_LEGS = 5
 # =========================================================
 # BET BUILDER V2 - STATISTICAL ENGINE
 # =========================================================
@@ -17903,7 +17903,7 @@ def build_best_bet_builder(match):
             score = (
                 joint_pct * 1.5
                 + max(-20.0, min(20.0, edge)) * 2.0
-                - (n - 2) * 2.0
+                - (n - 2) * 0.75
             )
 
             if best is None or score > best[0]:
@@ -19707,8 +19707,8 @@ def startup():
 V4_LIVE_SPECIALIST_MINUTE = 55
 V4_LIVE_SPECIALIST_MAX_MINUTE = 88
 
-V4_CARDS_MIN_PROB = 69.0
-V4_CARDS_MIN_CONF = 73.0
+V4_CARDS_MIN_PROB = 66.0
+V4_CARDS_MIN_CONF = 72.0
 V4_CARDS_MAX_RISK = 34.0
 
 V4_CORNERS_MIN_PROB = 66.0
