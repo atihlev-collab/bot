@@ -18047,13 +18047,29 @@ def get_best_prematch_signals(matches):
     used_fixtures=set()
     for s in candidates:
         fid=s.get('fixture_id')
-        if fid in used_fixtures:
-            continue
-        selected.append(s)
-        used_fixtures.add(fid)
-        if len(selected) >= MAX_PREMATCH_SIGNALS_PER_SCAN:
-            break
-    return selected
+        selected = []
+        used_fixtures = set()
+        used_markets = set()
+
+        for s in candidates:
+            fid = s.get("fixture_id")
+            market = str(s.get("market") or "").strip().upper()
+
+            if fid in used_fixtures:
+                 continue
+
+    if market in used_markets:
+        continue
+
+    selected.append(s)
+    used_fixtures.add(fid)
+    used_markets.add(market)
+
+    if len(selected) >= MAX_PREMATCH_SIGNALS_PER_SCAN:
+        break
+
+return selected
+    
 
 
 # =========================================================
