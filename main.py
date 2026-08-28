@@ -20637,6 +20637,13 @@ def build_live_market_candidates(match):
 
     stats = get_live_market_stats(match)
     odds = get_live_betano_markets(fid) or []
+
+    print(
+        f"LIVE ODDS DEBUG | "
+        f"{match.get('teams',{}).get('home',{}).get('name','HOME')} - "
+        f"{match.get('teams',{}).get('away',{}).get('name','AWAY')} | "
+        f"fixture={fid} | odds={len(odds)}"
+    )
     
     if not odds:
         print(
