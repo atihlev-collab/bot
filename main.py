@@ -17347,6 +17347,7 @@ def live_market_probability(match, market, stats):
         return round(max(0,min(94,p)),1)
 
     if market == '🚩 OVER 1.5 CORNERS':
+            if market == '🚩 OVER 1.5 CORNERS':
         if corners >= 2:
             return 99.0
         remaining = max(0, 95 - minute)
