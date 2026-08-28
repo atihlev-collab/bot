@@ -17371,11 +17371,6 @@ def live_market_probability(match, market, stats):
 # BLOCK: LIVE MARKET CONFIDENCE
 # =========================================================
 
-
-# =========================================================
-# BLOCK: LIVE MARKET CONFIDENCE
-# =========================================================
-
 def live_market_confidence(probability, market, minute, stats):
     corners=_stat_total(stats,'corner kicks')
     yellow=_stat_total(stats,'yellow cards') + _stat_total(stats,'yellow card')
