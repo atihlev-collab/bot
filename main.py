@@ -19704,23 +19704,23 @@ def startup():
 #   4) Rank by quality/value instead of firing every possible market.
 #   5) Keep the existing V4 database + Telegram pipeline.
 
-V4_LIVE_SPECIALIST_MINUTE = 65
-V4_LIVE_SPECIALIST_MAX_MINUTE = 82
+V4_LIVE_SPECIALIST_MINUTE = 55
+V4_LIVE_SPECIALIST_MAX_MINUTE = 88
 
-V4_CARDS_MIN_PROB = 72.0
-V4_CARDS_MIN_CONF = 78.0
-V4_CARDS_MAX_RISK = 30.0
+V4_CARDS_MIN_PROB = 69.0
+V4_CARDS_MIN_CONF = 73.0
+V4_CARDS_MAX_RISK = 34.0
 
-V4_CORNERS_MIN_PROB = 70.0
-V4_CORNERS_MIN_CONF = 76.0
-V4_CORNERS_MAX_RISK = 30.0
+V4_CORNERS_MIN_PROB = 66.0
+V4_CORNERS_MIN_CONF = 72.0
+V4_CORNERS_MAX_RISK = 34.0
 
-V4_NEXT_GOAL_MIN_PROB = 78.0
-V4_NEXT_GOAL_MIN_CONF = 85.0
-V4_NEXT_GOAL_MAX_RISK = 25.0
+V4_NEXT_GOAL_MIN_PROB = 72.0
+V4_NEXT_GOAL_MIN_CONF = 78.0
+V4_NEXT_GOAL_MAX_RISK = 32.0
 
-V4_LIVE_MIN_ODD = 1.30
-V4_LIVE_MAX_ODD = 4.00
+V4_LIVE_MIN_ODD = 1.25
+V4_LIVE_MAX_ODD = 4.50
 
 
 def _v4_live_int(value, default=0):
@@ -19940,7 +19940,7 @@ def build_live_market_candidates(match):
     )
 
     # No live signal immediately after kick-off.
-    if minute < 25:
+    if minute < 10:
         return []
 
     stats = get_live_market_stats(match)
