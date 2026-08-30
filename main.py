@@ -22135,6 +22135,16 @@ def get_match_odds(fixture_id):
     try:
         print("GET ODDS FOR:", fixture_id)
 
+
+         def clean_text(value):
+            return " ".join(str(value or "").strip().lower().replace("_", " ").split())
+
+        def safe_float(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
         odds = get_odds(fixture_id)
         if not odds:
             return None
@@ -22194,14 +22204,7 @@ def get_match_odds(fixture_id):
         away_over15_odd = None
         over35_odd = None
 
-        def clean_text(value):
-            return " ".join(str(value or "").strip().lower().replace("_", " ").split())
-
-        def safe_float(value):
-            try:
-                return float(value)
-            except (TypeError, ValueError):
-                return None
+       
 
         for bet in bets:
             bet_name_raw = bet.get("name", "")
