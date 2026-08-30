@@ -24443,7 +24443,7 @@ def analyze_live_match(fixture):
             form_bonus = (
                 home_form["form_pct"] * 0.40
                 + home_form["recent_form_pct"] * 0.30
-                + home_form["unbeaten_pct"] * 0.20
+                + home_form.get("unbeaten_pct", 0) * 0.20
                 + (home_form["avg_scored"] * 100 / 3) * 0.10
             )
             home_pressure += min(12, round(form_bonus / 10))
@@ -24452,7 +24452,7 @@ def analyze_live_match(fixture):
             form_bonus = (
                 away_form["form_pct"] * 0.40
                 + away_form["recent_form_pct"] * 0.30
-                + away_form["unbeaten_pct"] * 0.20
+                + away_form.get("unbeaten_pct", 0) * 0.20
                 + (away_form["avg_scored"] * 100 / 3) * 0.10
             )
             away_pressure += min(12, round(form_bonus / 10))
