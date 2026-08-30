@@ -23284,53 +23284,6 @@ def live_loop():
 )          
 
 
-
-# ============================================================
-# FINAL LIVE WRAPPER — USE PROVEN LIVE ENGINE
-# ============================================================
-
-def _final_live_scan():
-    try:
-        matches = get_live_matches() or []
-        candidates = []
-
-        for m in matches:
-            try:
-                fixture = m.get('fixture', {}) or {}
-                status = fixture.get('status', {}) or {}
-                minute = int(_v7_num(status.get('elapsed'), 0) or 0)
-
-                if not fixture.get('id'):
-                    continue
-                if minute < LIVE_MINUTE or minute > LIVE_MAX_MINUTE:
-                    continue
-
-                signal = get_best_live_signal(m)
-                if signal and live_signal_quality_filter(signal):
-                    candidates.append(signal)
-            except Exception as e:
-                logging.warning('LIVE MATCH ERROR: %s', repr(e))
-
-        ranked = rank_live_signals(candidates)
-        sent = 0
-        for signal in ranked:
-            try:
-                if send_live_signal(signal):
-                    sent += 1
-            except Exception as e:
-                logging.warning('LIVE SEND ERROR: %s', repr(e))
-
-        print(
-            f"LIVE DEBUG | matches={len(matches)} | candidates={len(candidates)} | "
-            f"qualified={len(ranked)} | sent={sent}"
-        )
-        return sent
-
-    except Exception as e:
-        logging.exception('LIVE FINAL ERROR: %s', repr(e))
-        return 0
-
-
 # ============================================================
 # FINAL SINGLE SCHEDULER — FINAL ENGINES ONLY
 # ============================================================
