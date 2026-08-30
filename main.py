@@ -22136,7 +22136,7 @@ def get_match_odds(fixture_id):
         print("GET ODDS FOR:", fixture_id)
 
 
-         def clean_text(value):
+        def clean_text(value):
             return " ".join(str(value or "").strip().lower().replace("_", " ").split())
 
         def safe_float(value):
