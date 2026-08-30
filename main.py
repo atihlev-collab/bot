@@ -20042,17 +20042,51 @@ def get_v7_prematch_markets(fixture_id):
 
 
 def _v7_find_market(markets, family, target=None, half=False):
-    for name,vals in markets:
-        if family=='goals' and 'goal' not in name: continue
-        if family=='corners' and 'corner' not in name: continue
-        if family=='cards' and not any(x in name for x in ('card','booking')): continue
-        if family=='btts' and not ('both teams to score' in name or name=='btts'): continue
-        is_half=any(x in name for x in ('1st half','first half','1h'))
-        if half != is_half: continue
-        for value,odd in vals:
-            if target is None or value.startswith(clean_text(target)):
-                return value,odd
-    return None,None
+    target_clean = clean_text(target) if target else None
+
+    for name, vals in markets:
+
+        if family == "goals" and "goal" not in name:
+            continue
+
+        if family == "corners" and "corner" not in name:
+            continue
+
+        if family == "cards" and not any(
+            x in name for x in ("card", "booking")
+        ):
+            continue
+
+        if family == "btts" and not (
+            "both teams to score" in name or name == "btts"
+        ):
+            continue
+
+        is_half = any(
+            x in name for x in ("1st half", "first half", "1h")
+        )
+
+        if half != is_half:
+            continue
+
+        for value, odd in vals:
+
+            value_clean = clean_text(value)
+
+            # =================================================
+            # STRICT MARKET + LINE MATCH
+            # =================================================
+            if target_clean is not None:
+
+                if value_clean != target_clean:
+                    continue
+
+            if odd is None or odd <= 1.01:
+                continue
+
+            return value_clean, float(odd)
+
+    return None, None
 
 # ============================================================
 # RECENT CORNER/CARD HISTORY
@@ -20074,50 +20108,216 @@ def _v7_fixture_stat_value(fixture, team_id, wanted):
 
 
 def get_v7_market_history(team_id, venue=None):
-    key=(team_id,venue)
-    cached=DETAIL_HISTORY_CACHE.get(key)
-    if cached and time.time()-cached[0]<DETAIL_HISTORY_CACHE_TTL:
+    key = (team_id, venue)
+
+    cached = DETAIL_HISTORY_CACHE.get(key)
+    if cached and time.time() - cached[0] < DETAIL_HISTORY_CACHE_TTL:
         return cached[1]
+
+    empty_result = {
+        'games': 0,
+        'corners_avg': None,
+        'cards_avg': None,
+        'corners': [],
+        'cards': [],
+        'corners_for_avg': None,
+        'cards_for_avg': None,
+        'corners_recent_avg': None,
+        'cards_recent_avg': None,
+    }
+
     try:
-        last=10 if venue else 8
-        data=api_get('fixtures',{'team':team_id,'last':last}) or {}
-        games=data.get('response',[]) or []
-        selected=[]
+        # --------------------------------------------------------
+        # Take more history so one unusual match does not dominate
+        # --------------------------------------------------------
+        last = 15 if venue else 12
+
+        data = api_get(
+            'fixtures',
+            {
+                'team': team_id,
+                'last': last
+            }
+        ) or {}
+
+        games = data.get('response', []) or []
+
+        selected = []
+
         for g in games:
-            h=g.get('teams',{}).get('home',{}).get('id')
-            if venue=='home' and h!=team_id: continue
-            if venue=='away' and h==team_id: continue
+
+            h = (
+                g.get('teams', {})
+                 .get('home', {})
+                 .get('id')
+            )
+
+            # Home/away split
+            if venue == 'home' and h != team_id:
+                continue
+
+            if venue == 'away' and h == team_id:
+                continue
+
+            # Ignore unfinished/cancelled fixtures
+            status = (
+                g.get('fixture', {})
+                 .get('status', {})
+                 .get('short')
+            )
+
+            if status in (
+                'CANC',
+                'PST',
+                'ABD',
+                'AWD',
+                'WO'
+            ):
+                continue
+
             selected.append(g)
-            if len(selected)>=5: break
-        corners=[]; cards=[]
+
+            if len(selected) >= 10:
+                break
+
+        corners = []
+        cards = []
+
         for g in selected:
-            c=_v7_fixture_stat_value(g,team_id,'corner kicks')
-            y=_v7_fixture_stat_value(g,team_id,'yellow cards')
-            if c is not None: corners.append(c)
-            if y is not None: cards.append(y)
-        result={
-            'games':len(selected),
-            'corners_avg':sum(corners)/len(corners) if corners else None,
-            'cards_avg':sum(cards)/len(cards) if cards else None,
-            'corners':corners,
-            'cards':cards,
+
+            c = _v7_fixture_stat_value(
+                g,
+                team_id,
+                'corner kicks'
+            )
+
+            y = _v7_fixture_stat_value(
+                g,
+                team_id,
+                'yellow cards'
+            )
+
+            if c is not None and c >= 0:
+                corners.append(float(c))
+
+            if y is not None and y >= 0:
+                cards.append(float(y))
+
+        # --------------------------------------------------------
+        # Recent form gets slightly more weight.
+        #
+        # We keep the raw arrays because the PREMATCH engine
+        # already expects them.
+        # --------------------------------------------------------
+
+        def weighted_recent_average(values):
+            if not values:
+                return None
+
+            if len(values) == 1:
+                return values[0]
+
+            # Newest result first.
+            weights = list(
+                range(len(values), 0, -1)
+            )
+
+            return (
+                sum(v * w for v, w in zip(values, weights))
+                / sum(weights)
+            )
+
+        corners_avg = (
+            sum(corners) / len(corners)
+            if corners else None
+        )
+
+        cards_avg = (
+            sum(cards) / len(cards)
+            if cards else None
+        )
+
+        corners_recent_avg = weighted_recent_average(
+            corners
+        )
+
+        cards_recent_avg = weighted_recent_average(
+            cards
+        )
+
+        # --------------------------------------------------------
+        # Blend normal average + recent weighted average.
+        #
+        # This prevents one extreme recent match from completely
+        # changing the model while still reacting to current form.
+        # --------------------------------------------------------
+
+        if corners_avg is not None and corners_recent_avg is not None:
+            corners_for_avg = (
+                corners_avg * 0.60
+                + corners_recent_avg * 0.40
+            )
+        else:
+            corners_for_avg = corners_avg
+
+        if cards_avg is not None and cards_recent_avg is not None:
+            cards_for_avg = (
+                cards_avg * 0.60
+                + cards_recent_avg * 0.40
+            )
+        else:
+            cards_for_avg = cards_avg
+
+        result = {
+            'games': len(selected),
+
+            # Existing fields — keep them for compatibility.
+            'corners_avg': corners_for_avg,
+            'cards_avg': cards_for_avg,
+
+            # Raw observations.
+            'corners': corners,
+            'cards': cards,
+
+            # Explicit statistical values for the improved model.
+            'corners_for_avg': corners_for_avg,
+            'cards_for_avg': cards_for_avg,
+
+            'corners_recent_avg': corners_recent_avg,
+            'cards_recent_avg': cards_recent_avg,
         }
-        DETAIL_HISTORY_CACHE[key]=(time.time(),result)
+
+        DETAIL_HISTORY_CACHE[key] = (
+            time.time(),
+            result
+        )
+
         return result
+
     except Exception as e:
-        logging.warning('MARKET HISTORY ERROR: %s',repr(e))
-        return {'games':0,'corners_avg':None,'cards_avg':None,'corners':[],'cards':[]}
+        logging.warning(
+            'MARKET HISTORY ERROR: %s',
+            repr(e)
+        )
+
+        return empty_result
 
 
-def _v7_total_market_history(home_id,away_id,market):
-    h=get_v7_market_history(home_id,'home'); a=get_v7_market_history(away_id,'away')
-    if market=='corners':
-        vals=[x for x in (h.get('corners_avg'),a.get('corners_avg')) if x is not None]
+def _v7_total_market_history(home_id, away_id, market):
+    h = get_v7_market_history(home_id, 'home')
+    a = get_v7_market_history(away_id, 'away')
+
+    if market == 'corners':
+        h_avg = h.get('corners_for_avg')
+        a_avg = a.get('corners_for_avg')
     else:
-        vals=[x for x in (h.get('cards_avg'),a.get('cards_avg')) if x is not None]
-    if len(vals)<2: return None
-    return sum(vals)
+        h_avg = h.get('cards_for_avg')
+        a_avg = a.get('cards_for_avg')
 
+    if h_avg is None or a_avg is None:
+        return None
+
+    return h_avg + a_avg
 # ============================================================
 # PREMATCH STATISTICAL CANDIDATES
 # ============================================================
@@ -20207,29 +20407,400 @@ def _v7_prematch_candidates(match, detailed=False):
         h,d,a,*_=odds
         add('🏆 HOME WIN',h,probs.get('HOME win',0),'🏆 HOME WIN')
         add('✈️ AWAY WIN',a,probs.get('AWAY win',0),'✈️ AWAY WIN')
-    # Detailed corners/cards only for shortlisted fixtures.
+        
+    # ============================================================
+    # DETAILED CORNERS / CARDS
+    # ============================================================
+    #
+    # IMPORTANT:
+    # We DO NOT hard-code betting lines anymore.
+    #
+    # Betano is the source of the available lines.
+    # The model evaluates every REAL line offered by Betano.
+    # ============================================================
+
     if detailed:
-        total_c=_v7_total_market_history(home['id'],away['id'],'corners')
-        total_y=_v7_total_market_history(home['id'],away['id'],'cards')
+
+        # --------------------------------------------------------
+        # CORNERS
+        # --------------------------------------------------------
+
+        total_c = _v7_total_market_history(
+            home['id'],
+            away['id'],
+            'corners'
+        )
+
         if total_c is not None:
-            for target in ('under 12.5','under 11.5','under 10.5','over 7.5','over 8.5','over 9.5'):
-                val,odd=_v7_find_market(markets,'corners',target)
-                if odd:
-                    line=_v7_num(target.split()[-1],0)
-                    # Empirical normal approximation around recent total average.
-                    sd=max(1.8,math.sqrt(max(1,total_c))*0.65)
-                    if target.startswith('under'): p=0.5*(1+math.erf((line+0.5-total_c)/(sd*math.sqrt(2))))*100
-                    else: p=(1-0.5*(1+math.erf((line-0.5-total_c)/(sd*math.sqrt(2)))))*100
-                    add('🚩 CORNER '+target.upper(),odd,p,'🚩 CORNER '+target.upper())
+
+            for market_name, values in markets:
+
+                if 'corner' not in market_name:
+                    continue
+
+                # Ignore first-half / half-time corner markets.
+                if any(
+                    x in market_name
+                    for x in ('1st half', 'first half', '1h')
+                ):
+                    continue
+
+                for value, odd in values:
+
+                    value_clean = clean_text(value)
+
+                    # ------------------------------------------------
+                    # Accept ONLY total corner lines:
+                    # over X.5 / under X.5
+                    # ------------------------------------------------
+
+                    if not (
+                        value_clean.startswith('over ')
+                        or value_clean.startswith('under ')
+                    ):
+                        continue
+
+                    parts = value_clean.split()
+
+                    if len(parts) != 2:
+                        continue
+
+                    line = _v7_num(parts[1], None)
+
+                    if line is None:
+                        continue
+
+                    # Only half-goal lines.
+                    if abs(line - (math.floor(line) + 0.5)) > 0.01:
+                        continue
+
+                    odd = _v7_num(odd, None)
+
+                    if odd is None or odd <= 1.01:
+                        continue
+
+                    # ------------------------------------------------
+                    # Empirical distribution around recent total.
+                    # ------------------------------------------------
+
+                    # ====================================================
+                    # CORNER PROBABILITY
+                    # ====================================================
+                    # Use the actual historical distribution when
+                    # enough observations exist.
+                    # Fall back to a conservative variance estimate
+                    # when history is limited.
+                    # ====================================================
+
+                    history = (
+                        get_v7_market_history(
+                            home['id'],
+                            'home'
+                        ).get('corners', [])
+                        +
+                        get_v7_market_history(
+                            away['id'],
+                            'away'
+                        ).get('corners', [])
+                    )
+
+                    if len(history) >= 6:
+
+                        mean = sum(history) / len(history)
+
+                        variance = (
+                            sum(
+                                (x - mean) ** 2
+                                for x in history
+                            )
+                            / max(1, len(history) - 1)
+                        )
+
+                        sd = max(
+                            1.50,
+                            math.sqrt(max(0.01, variance))
+                        )
+
+                    else:
+
+                        mean = total_c
+
+                        sd = max(
+                            1.80,
+                            math.sqrt(max(1.0, mean)) * 0.65
+                        )
+
+                    # Continuity correction for half-point lines.
+                    if value_clean.startswith('under '):
+
+                        z = (
+                            (line + 0.5 - mean)
+                            / (sd * math.sqrt(2.0))
+                        )
+
+                        p = (
+                            0.5
+                            * (1.0 + math.erf(z))
+                            * 100.0
+                        )
+
+                    else:
+
+                        z = (
+                            (line - 0.5 - mean)
+                            / (sd * math.sqrt(2.0))
+                        )
+
+                        p = (
+                            (
+                                1.0
+                                - 0.5 * (1.0 + math.erf(z))
+                            )
+                            * 100.0
+                        )
+
+                    # Do NOT force everything to 95%.
+                    p = max(5.0, min(92.0, p))
+
+                    if value_clean.startswith('under '):
+
+                        p = (
+                            0.5
+                            * (
+                                1
+                                + math.erf(
+                                    (
+                                        line + 0.5 - total_c
+                                    )
+                                    / (
+                                        sd * math.sqrt(2)
+                                    )
+                                )
+                            )
+                            * 100
+                        )
+
+                    else:
+
+                        p = (
+                            (
+                                1
+                                - 0.5
+                                * (
+                                    1
+                                    + math.erf(
+                                        (
+                                            line - 0.5 - total_c
+                                        )
+                                        / (
+                                            sd * math.sqrt(2)
+                                        )
+                                    )
+                                )
+                            )
+                            * 100
+                        )
+
+                    label = (
+                        '🚩 CORNER '
+                        + value_clean.upper()
+                    )
+
+                    add(
+                        label,
+                        odd,
+                        p,
+                        label
+                    )
+
+        # --------------------------------------------------------
+        # CARDS
+        # --------------------------------------------------------
+
+        total_y = _v7_total_market_history(
+            home['id'],
+            away['id'],
+            'cards'
+        )
+
         if total_y is not None:
-            for target in ('over 2.5','over 3.5','over 4.5','over 5.5','under 5.5','under 6.5'):
-                val,odd=_v7_find_market(markets,'cards',target)
-                if odd:
-                    line=_v7_num(target.split()[-1],0)
-                    sd=max(1.2,math.sqrt(max(1,total_y))*0.55)
-                    if target.startswith('under'): p=0.5*(1+math.erf((line+0.5-total_y)/(sd*math.sqrt(2))))*100
-                    else: p=(1-0.5*(1+math.erf((line-0.5-total_y)/(sd*math.sqrt(2)))))*100
-                    add('🟨 CARD '+target.upper(),odd,p,'🟨 CARD '+target.upper())
+
+            for market_name, values in markets:
+
+                if not any(
+                    x in market_name
+                    for x in ('card', 'booking')
+                ):
+                    continue
+
+                # Ignore first-half / half-time card markets.
+                if any(
+                    x in market_name
+                    for x in ('1st half', 'first half', '1h')
+                ):
+                    continue
+
+                for value, odd in values:
+
+                    value_clean = clean_text(value)
+
+                    # ------------------------------------------------
+                    # Accept ONLY total card lines:
+                    # over X.5 / under X.5
+                    # ------------------------------------------------
+
+                    if not (
+                        value_clean.startswith('over ')
+                        or value_clean.startswith('under ')
+                    ):
+                        continue
+
+                    parts = value_clean.split()
+
+                    if len(parts) != 2:
+                        continue
+
+                    line = _v7_num(parts[1], None)
+
+                    if line is None:
+                        continue
+
+                    # Only half-goal lines.
+                    if abs(line - (math.floor(line) + 0.5)) > 0.01:
+                        continue
+
+                    odd = _v7_num(odd, None)
+
+                    if odd is None or odd <= 1.01:
+                        continue
+
+                    # ------------------------------------------------
+                    # Empirical distribution around recent total.
+                    # ------------------------------------------------
+
+                    # ====================================================
+                    # CARD PROBABILITY
+                    # ====================================================
+
+                    history = (
+                        get_v7_market_history(
+                            home['id'],
+                            'home'
+                        ).get('cards', [])
+                        +
+                        get_v7_market_history(
+                            away['id'],
+                            'away'
+                        ).get('cards', [])
+                    )
+
+                    if len(history) >= 6:
+
+                        mean = sum(history) / len(history)
+
+                        variance = (
+                            sum(
+                                (x - mean) ** 2
+                                for x in history
+                            )
+                            / max(1, len(history) - 1)
+                        )
+
+                        sd = max(
+                            1.00,
+                            math.sqrt(max(0.01, variance))
+                        )
+
+                    else:
+
+                        mean = total_y
+
+                        sd = max(
+                            1.20,
+                            math.sqrt(max(1.0, mean)) * 0.55
+                        )
+
+                    if value_clean.startswith('under '):
+
+                        z = (
+                            (line + 0.5 - mean)
+                            / (sd * math.sqrt(2.0))
+                        )
+
+                        p = (
+                            0.5
+                            * (1.0 + math.erf(z))
+                            * 100.0
+                        )
+
+                    else:
+
+                        z = (
+                            (line - 0.5 - mean)
+                            / (sd * math.sqrt(2.0))
+                        )
+
+                        p = (
+                            (
+                                1.0
+                                - 0.5 * (1.0 + math.erf(z))
+                            )
+                            * 100.0
+                        )
+
+                    # Conservative ceiling.
+                    p = max(5.0, min(92.0, p))
+
+                    if value_clean.startswith('under '):
+
+                        p = (
+                            0.5
+                            * (
+                                1
+                                + math.erf(
+                                    (
+                                        line + 0.5 - total_y
+                                    )
+                                    / (
+                                        sd * math.sqrt(2)
+                                    )
+                                )
+                            )
+                            * 100
+                        )
+
+                    else:
+
+                        p = (
+                            (
+                                1
+                                - 0.5
+                                * (
+                                    1
+                                    + math.erf(
+                                        (
+                                            line - 0.5 - total_y
+                                        )
+                                        / (
+                                            sd * math.sqrt(2)
+                                        )
+                                    )
+                                )
+                            )
+                            * 100
+                        )
+
+                    label = (
+                        '🟨 CARD '
+                        + value_clean.upper()
+                    )
+
+                    add(
+                        label,
+                        odd,
+                        p,
+                        label
+                    )
     return out
 
 
@@ -21684,6 +22255,24 @@ def get_match_odds(fixture_id):
 
         bets = betano.get("bets", [])
         print("USING BOOKMAKER:", betano.get("id"), betano.get("name"))
+
+
+        # REAL BETANO MARKET CATALOG: market -> exact selection -> odd
+        betano_markets = {}
+
+        for bet in bets:
+            market_name = clean_text(bet.get("name"))
+            selections = {}
+
+            for value in bet.get("values", []):
+                selection = clean_text(value.get("value"))
+                odd = safe_float(value.get("odd"))
+
+                if selection and odd is not None and odd > 1.01:
+                    selections[selection] = odd
+
+            if market_name and selections:
+                betano_markets[market_name] = selections
 
         home_odd = None
         draw_odd = None
