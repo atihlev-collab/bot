@@ -22809,15 +22809,13 @@ def main_loop():
         now = time.time()
 
         if now - last_prematch_scan >= PREMATCH_INTERVAL:
+        
             try:
-                check_prematch_results()
+                scan_prematch()
             except Exception as e:
-                logging.warning("PREMATCH RESULTS ERROR: %s", repr(e))
-
-            try:
-                market_roi_report()
-            except Exception as e:
-                logging.warning("ROI REPORT ERROR: %s", repr(e))
+                logging.exception("PREMATCH LOOP ERROR: %s", repr(e))
+        
+            last_prematch_scan = now
 
             try:
                 scan_prematch()
