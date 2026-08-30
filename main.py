@@ -23325,7 +23325,7 @@ def main_loop():
         now = time.time()
         if now - last_live >= LIVE_INTERVAL:
             try:
-                sent = _final_live_scan()
+                sent = scan_live_matches()
                 print("LIVE SIGNALS SENT:", sent)
             except Exception as e:
                 logging.exception("LIVE FINAL LOOP ERROR: %s", repr(e))
