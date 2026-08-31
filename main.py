@@ -22558,62 +22558,109 @@ def _v7_fixture_stat_value(fixture, team_id, wanted):
 
 
 def get_v7_market_history(team_id, venue=None):
-    key=(team_id,venue)
-    cached=DETAIL_HISTORY_CACHE.get(key)
-    if cached and time.time()-cached[0]<DETAIL_HISTORY_CACHE_TTL:
+    key = (team_id, venue)
+
+    cached = DETAIL_HISTORY_CACHE.get(key)
+    if cached and time.time() - cached[0] < CACHE_TIME_FORM:
         return cached[1]
+
     try:
-        last=10 if venue else 8
-        data=api_get('fixtures',{'team':team_id,'last':last}) or {}
-        games=data.get('response',[]) or []
-        selected=[]
-        for g in games:
-            h=g.get('teams',{}).get('home',{}).get('id')
-            if venue=='home' and h!=team_id: continue
-            if venue=='away' and h==team_id: continue
+        fixtures = get_team_recent_fixtures(team_id, 10)
+
+        selected = []
+
+        for g in fixtures:
+            if venue == 'home':
+                if g.get('teams', {}).get('home', {}).get('id') != team_id:
+                    continue
+
+            elif venue == 'away':
+                if g.get('teams', {}).get('away', {}).get('id') != team_id:
+                    continue
+
             selected.append(g)
-            if len(selected)>=5: break
-            corners_for=[]
-            corners_against=[]
-            cards=[]
+
+        selected = selected[:5]
+
+        corners_for = []
+        corners_against = []
+
+        cards_for = []
+        cards_against = []
+
         for g in selected:
-            c=_v7_fixture_stat_value(g,team_id,'corner kicks')
-            opponent_id = (
-                g.get('teams',{}).get('away',{}).get('id')
-                if g.get('teams',{}).get('home',{}).get('id') == team_id
-                else g.get('teams',{}).get('home',{}).get('id')
+
+            home_id = g.get('teams', {}).get('home', {}).get('id')
+            away_id = g.get('teams', {}).get('away', {}).get('id')
+
+            if home_id == team_id:
+                opponent_id = away_id
+            else:
+                opponent_id = home_id
+
+            # -------------------------
+            # CORNERS
+            # -------------------------
+
+            c_for = _v7_fixture_stat_value(
+                g,
+                team_id,
+                'corner kicks'
             )
-            
+
             c_against = (
                 _v7_fixture_stat_value(
                     g,
                     opponent_id,
                     'corner kicks'
                 )
-            if opponent_id else None
+                if opponent_id else None
             )
-            if c is not None:
-                corners_for.append(c)
-            
+
+            if c_for is not None:
+                corners_for.append(c_for)
+
             if c_against is not None:
                 corners_against.append(c_against)
-                
-            y = _v7_fixture_stat_value(g, team_id, 'yellow cards')
-           
-            if y is not None:
-                cards.append(y)
-                
+
+            # -------------------------
+            # CARDS
+            # -------------------------
+
+            y_for = _v7_fixture_stat_value(
+                g,
+                team_id,
+                'yellow cards'
+            )
+
+            y_against = (
+                _v7_fixture_stat_value(
+                    g,
+                    opponent_id,
+                    'yellow cards'
+                )
+                if opponent_id else None
+            )
+
+            if y_for is not None:
+                cards_for.append(y_for)
+
+            if y_against is not None:
+                cards_against.append(y_against)
+
         result = {
             'games': len(selected),
-            
+
             'corners_for_avg': (
                 sum(corners_for) / len(corners_for)
                 if corners_for else None
             ),
+
             'corners_against_avg': (
                 sum(corners_against) / len(corners_against)
                 if corners_against else None
             ),
+
             'corners_avg': (
                 (
                     sum(corners_for) / len(corners_for)
@@ -22623,37 +22670,114 @@ def get_v7_market_history(team_id, venue=None):
                 if corners_for and corners_against
                 else None
             ),
-            'cards_avg':sum(cards)/len(cards) if cards else None,
-            'corners':corners_for,
-            'cards':cards,
+
+            'cards_for_avg': (
+                sum(cards_for) / len(cards_for)
+                if cards_for else None
+            ),
+
+            'cards_against_avg': (
+                sum(cards_against) / len(cards_against)
+                if cards_against else None
+            ),
+
+            'cards_avg': (
+                (
+                    sum(cards_for) / len(cards_for)
+                    +
+                    sum(cards_against) / len(cards_against)
+                ) / 2
+                if cards_for and cards_against
+                else None
+            ),
+
+            'corners': corners_for,
+            'cards': cards_for,
         }
-        DETAIL_HISTORY_CACHE[key]=(time.time(),result)
+
+        DETAIL_HISTORY_CACHE[key] = (
+            time.time(),
+            result
+        )
+
         return result
+
     except Exception as e:
-        logging.warning('MARKET HISTORY ERROR: %s',repr(e))
-        return {'games':0,'corners_avg':None,'cards_avg':None,'corners':[],'cards':[]}
+        logging.warning(
+            'MARKET HISTORY ERROR: %s',
+            repr(e)
+        )
+
+        return {
+            'games': 0,
+            'corners_for_avg': None,
+            'corners_against_avg': None,
+            'corners_avg': None,
+            'cards_for_avg': None,
+            'cards_against_avg': None,
+            'cards_avg': None,
+            'corners': [],
+            'cards': []
+        }
 
 
-def _v7_total_market_history(home_id,away_id,market):
-    h=get_v7_market_history(home_id,'home'); a=get_v7_market_history(away_id,'away')
-   
+def _v7_total_market_history(home_id, away_id, market):
+    h = get_v7_market_history(home_id, 'home')
+    a = get_v7_market_history(away_id, 'away')
+
     if market == 'corners':
+
         h_for = h.get('corners_for_avg')
         h_against = h.get('corners_against_avg')
+
         a_for = a.get('corners_for_avg')
         a_against = a.get('corners_against_avg')
 
-        if None in (h_for, h_against, a_for, a_against):
+        if None in (
+            h_for,
+            h_against,
+            a_for,
+            a_against
+        ):
             return None
 
-        home_expected = (h_for + a_against) / 2
-        away_expected = (a_for + h_against) / 2      
-    
+        home_expected = (
+            h_for + a_against
+        ) / 2
+
+        away_expected = (
+            a_for + h_against
+        ) / 2
+
         return home_expected + away_expected
-    else:
-        vals=[x for x in (h.get('cards_avg'),a.get('cards_avg')) if x is not None]
-    if len(vals)<2: return None
-    return sum(vals)
+
+    if market == 'cards':
+
+        h_for = h.get('cards_for_avg')
+        h_against = h.get('cards_against_avg')
+
+        a_for = a.get('cards_for_avg')
+        a_against = a.get('cards_against_avg')
+
+        if None in (
+            h_for,
+            h_against,
+            a_for,
+            a_against
+        ):
+            return None
+
+        home_expected = (
+            h_for + a_against
+        ) / 2
+
+        away_expected = (
+            a_for + h_against
+        ) / 2
+
+        return home_expected + away_expected
+
+    return None
 
 # ============================================================
 # PREMATCH STATISTICAL CANDIDATES
