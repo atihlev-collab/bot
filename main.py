@@ -22778,38 +22778,101 @@ def analyze_prematch(match):
 # ============================================================
 
 def build_best_bet_builder(match, detailed=True):
-    candidates=_v7_prematch_candidates(match,detailed=detailed)
-    if len(candidates)<2: return None
-    # Never use two legs from the same market family.
-    candidates=[c for c in candidates if c.get('probability',0)>=BUILDER_MIN_LEG_PROB and c.get('confidence',0)>=BUILDER_MIN_CONFIDENCE]
-    best=None
-    for n in range(2, min(5, len(candidates)) + 1):
+    candidates = _v7_prematch_candidates(match, detailed=detailed)
+
+    candidates = [
+        c for c in candidates
+        if c.get('probability', 0) >= BUILDER_MIN_LEG_PROB
+        and c.get('confidence', 0) >= BUILDER_MIN_CONFIDENCE
+    ]
+
+    if len(candidates) < 2:
+        return None
+
+    best = None
+
+    max_legs = min(5, len(candidates))
+
+    for n in range(2, max_legs + 1):
         for combo in combinations(candidates, n):
-        if a['family']==b['family']: continue
-        odd=a['odd']*b['odd']
-        if odd<BUILDER_MIN_ODD or odd>BUILDER_MAX_ODD: continue
-        # Joint probability is deliberately conservative: correlation penalty.
-        p1=a['probability']/100; p2=b['probability']/100
-        joint=p1*p2
-        if a['family']=='goals' and b['family']=='btts': joint*=0.92
-        elif a['family'] in ('corners','cards') and b['family'] in ('corners','cards'): joint*=0.96
-        joint_pct=joint*100
-        # Do not let a model probability above 90 create a fake 99% builder.
-        joint_pct=min(joint_pct,92.0)
-        conf=min(a['confidence'],b['confidence'])
-        risk=max(a['risk'],b['risk'])+int(max(0,75-joint_pct)*0.20)
-        score=joint_pct*0.65 + conf*0.20 + max(0,(odd-1.0))*8 - risk*0.25
-        if best is None or score>best[0]: best=(score,a,b,odd,joint_pct,conf,risk)
-    if not best: return None
-    _,a,b,odd,joint,conf,risk=best
-    fixture=match.get('fixture',{}); teams=match.get('teams',{}); league=match.get('league',{})
+
+            # Never use two legs from the same market family.
+            families = [c.get('family') for c in combo]
+
+            if len(set(families)) != len(families):
+                continue
+
+            odd = 1.0
+            for leg in combo:
+                odd *= float(leg.get('odd', 0) or 0)
+
+            if odd < BUILDER_MIN_ODD or odd > BUILDER_MAX_ODD:
+                continue
+
+            # Conservative joint probability.
+            joint = 1.0
+
+            for leg in combo:
+                joint *= float(leg.get('probability', 0) or 0) / 100.0
+
+            families_set = set(families)
+
+            # Correlation penalties.
+            if 'goals' in families_set and 'btts' in families_set:
+                joint *= 0.92
+
+            if (
+                'corners' in families_set
+                and 'cards' in families_set
+            ):
+                joint *= 0.96
+
+            joint_pct = min(joint * 100, 92.0)
+
+            conf = min(
+                float(leg.get('confidence', 0) or 0)
+                for leg in combo
+            )
+
+            risk = max(
+                float(leg.get('risk', 100) or 100)
+                for leg in combo
+            )
+
+            risk += int(
+                max(0, 75 - joint_pct) * 0.20
+            )
+
+            score = (
+                joint_pct * 0.65
+                + conf * 0.20
+                + max(0, odd - 1.0) * 8
+                - risk * 0.25
+            )
+
+            if best is None or score > best[0]:
+                best = (
+                    score,
+                    combo,
+                    odd,
+                    joint_pct,
+                    conf,
+                    risk
+                )
+
+    if not best:
+        return None
+
+    score, combo, odd, joint_pct, conf, risk = best
+
     return {
-        'fixture_id':fixture.get('id'),'home_team':teams.get('home',{}).get('name','HOME'),'away_team':teams.get('away',{}).get('name','AWAY'),
-        'country':league.get('country',''),'league':league.get('name',''),'market':'🧩 BET BUILDER',
-        'probability':round(joint,1),'confidence':round(conf,1),'risk':int(_v7_clamp(risk,8,38)),'odd':round(odd,2),
-        'edge':round(joint-100/odd,1),'ev':round(joint/100*odd-1,3),'score':round(_,2),
-        'builder_legs':[{'market':a['market'],'odd':a['odd'],'probability':a['probability']},{'market':b['market'],'odd':b['odd'],'probability':b['probability']}],
-        'match_date':fixture.get('date')
+        'market': '🧩 BET BUILDER',
+        'legs': list(combo),
+        'odd': round(odd, 2),
+        'probability': round(joint_pct, 1),
+        'confidence': round(conf, 1),
+        'risk': round(risk, 1),
+        'score': round(score, 1),
     }
 
 # ============================================================
