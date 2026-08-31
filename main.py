@@ -7729,119 +7729,6 @@ def create_prematch_candidate(
 
     }
 
-
-# =========================================================
-# PREMATCH CONFIDENCE
-# =========================================================
-
-# BLOCK: PREMATCH_CONFIDENCE
-def prematch_confidence(
-
-    home_form,
-
-    away_form,
-
-    probability
-
-):
-
-    confidence = 50
-
-    form_gap = abs(
-
-        home_form["form_pct"]
-
-        -
-
-        away_form["form_pct"]
-
-    )
-
-    recent_gap = abs(
-
-        home_form["recent_form_pct"]
-
-        -
-
-        away_form["recent_form_pct"]
-
-    )
-
-    # Strong probability
-
-    if probability >= 80:
-
-        confidence += 15
-
-    elif probability >= 75:
-
-        confidence += 11
-
-    elif probability >= 70:
-
-        confidence += 7
-
-    # Form difference
-
-    if form_gap >= 20:
-
-        confidence += 8
-
-    elif form_gap >= 12:
-
-        confidence += 5
-
-    elif form_gap >= 7:
-
-        confidence += 2
-
-    # Recent form
-
-    if recent_gap >= 20:
-
-        confidence += 6
-
-    elif recent_gap >= 10:
-
-        confidence += 3
-
-    # Goal difference
-
-    goal_diff_gap = abs(
-
-        home_form["goal_diff"]
-
-        -
-
-        away_form["goal_diff"]
-
-    )
-
-    if goal_diff_gap >= 10:
-
-        confidence += 5
-
-    elif goal_diff_gap >= 5:
-
-        confidence += 2
-
-    # Avoid exaggerated confidence.
-
-    return round(
-
-        min(
-
-            95,
-
-            confidence
-
-        ),
-
-        1
-
-    )
-
-
 # =========================================================
 # PREMATCH SIGNAL DEDUPLICATION
 # =========================================================
@@ -15481,319 +15368,305 @@ def prematch_goal_model(
 
 # BLOCK: PREMATCH_CONFIDENCE
 def prematch_confidence(
-
     probability,
-
     form,
-
     opponent_form,
-
     market,
-
     league_score=50
-
 ):
-
-    confidence = 50
-
-    # =====================================================
-    # PROBABILITY
-    # =====================================================
-
-    confidence += (
-
-        probability
-
-        -
-
-        60
-
-    ) * 0.45
+    confidence = 50.0
 
     # =====================================================
-    # TEAM FORM
+    # MODEL PROBABILITY
+    # Reduced influence so confidence does not become
+    # artificially high just because probability is high.
     # =====================================================
 
     confidence += (
+        probability - 60
+    ) * 0.25
 
-        form["recent_form_pct"]
+    # =====================================================
+    # TEAM RECENT FORM
+    # =====================================================
 
-        -
+    recent = form.get(
+        "recent_form_pct",
+        0
+    )
 
-        60
-
-    ) * 0.12
+    if recent >= 80:
+        confidence += 4
+    elif recent >= 70:
+        confidence += 2
+    elif recent < 55:
+        confidence -= 5
 
     # =====================================================
     # FORM DIFFERENCE
     # =====================================================
 
-    form_difference = (
-
-        form["form_pct"]
-
+    form_difference = abs(
+        form.get("form_pct", 0)
         -
-
-        opponent_form["form_pct"]
-
+        opponent_form.get("form_pct", 0)
     )
 
-    if abs(form_difference) >= 15:
-
-        confidence += 4
-
-    elif abs(form_difference) >= 8:
-
-        confidence += 2
+    if form_difference >= 15:
+        confidence += 3
+    elif form_difference >= 8:
+        confidence += 1
+    elif form_difference < 5:
+        confidence -= 2
 
     # =====================================================
     # MARKET SUPPORT
     # =====================================================
 
     if market in (
-
         "🚀 OVER 2.5",
-
         "💎 BTTS YES"
-
     ):
-
-        if league_score >= 75:
-
-            confidence += 4
-
-        elif league_score <= 55:
-
-            confidence -= 4
+        if league_score >= 80:
+            confidence += 3
+        elif league_score >= 70:
+            confidence += 1
+        elif league_score < 55:
+            confidence -= 3
 
     # =====================================================
-    # STRONG RECENT FORM
+    # CORNERS / CARDS
+    #
+    # Do not give these markets an artificial confidence
+    # bonus from the general goal/form model.
     # =====================================================
 
-    if form["recent_form_pct"] >= 75:
+    market_text = str(
+        market or ""
+    ).lower()
 
-        confidence += 3
+    if (
+        "corner" in market_text
+        or "card" in market_text
+        or "booking" in market_text
+    ):
+        confidence -= 2
 
     # =====================================================
-    # CONSISTENT SCORING
+    # FINAL LIMIT
     # =====================================================
-
-    if form["scored_pct"] >= 80:
-
-        confidence += 2
 
     return round(
-
-        min(
-
-            95,
-
-            max(
-
-                0,
-
+        max(
+            0,
+            min(
+                88,
                 confidence
-
             )
-
         ),
-
         1
-
     )
-
-
 # =========================================================
 # PREMATCH RISK
 # =========================================================
 
 # BLOCK: PREMATCH_RISK
 def prematch_risk(
-
     probability,
-
     confidence,
-
     form,
-
     opponent_form
-
 ):
-
     risk = 0
 
-    # =====================================================
-    # LOW PROBABILITY
-    # =====================================================
+    # -----------------------------------------------------
+    # PROBABILITY
+    # -----------------------------------------------------
 
     if probability < 65:
-
-        risk += 15
-
+        risk += 18
     elif probability < 70:
-
-        risk += 8
-
-    # =====================================================
-    # CONFIDENCE
-    # =====================================================
-
-    if confidence < 75:
-
-        risk += 15
-
-    elif confidence < 80:
-
-        risk += 8
-
-    # =====================================================
-    # CLOSE TEAMS
-    # =====================================================
-
-    form_difference = abs(
-
-        form["form_pct"]
-
-        -
-
-        opponent_form["form_pct"]
-
-    )
-
-    if form_difference < 5:
-
         risk += 10
+    elif probability < 75:
+        risk += 5
 
-    # =====================================================
-    # WEAK SCORING
-    # =====================================================
+    # -----------------------------------------------------
+    # CONFIDENCE
+    # -----------------------------------------------------
 
-    if form["scored_pct"] < 60:
+    if confidence < 70:
+        risk += 18
+    elif confidence < 75:
+        risk += 10
+    elif confidence < 80:
+        risk += 5
 
-        risk += 8
+    # -----------------------------------------------------
+    # FORM DIFFERENCE
+    # -----------------------------------------------------
+
+    if form and opponent_form:
+        form_difference = abs(
+            form.get("form_pct", 0)
+            -
+            opponent_form.get("form_pct", 0)
+        )
+
+        if form_difference < 5:
+            risk += 10
+        elif form_difference < 10:
+            risk += 5
+
+    # -----------------------------------------------------
+    # RECENT FORM
+    # -----------------------------------------------------
+
+    if form:
+        recent = form.get(
+            "recent_form_pct",
+            0
+        )
+
+        if recent < 55:
+            risk += 12
+        elif recent < 65:
+            risk += 6
+
+    # -----------------------------------------------------
+    # SCORING CONSISTENCY
+    # -----------------------------------------------------
+
+    if form:
+        scored = form.get(
+            "scored_pct",
+            0
+        )
+
+        if scored < 55:
+            risk += 10
+        elif scored < 65:
+            risk += 5
+
+    # -----------------------------------------------------
+    # SAFETY
+    # -----------------------------------------------------
 
     return min(
-
         100,
-
-        risk
-
+        max(
+            0,
+            round(risk, 1)
+        )
     )
-
-
 # =========================================================
 # PREMATCH SIGNAL
 # =========================================================
 
 # BLOCK: CREATE_PREMATCH_SIGNAL
 def create_prematch_signal(
-
     market,
-
     probability,
-
     confidence,
-
     risk,
-
     odd,
-
     home,
-
     away,
-
     league
-
 ):
-
     if odd is None:
-
         return None
 
-    if probability < PREMATCH_MIN_PROBABILITY:
+    # -----------------------------------------------------
+    # SAFE VALUES
+    # -----------------------------------------------------
 
+    try:
+        probability = float(probability)
+        confidence = float(confidence)
+        risk = float(risk)
+        odd = float(odd)
+    except (TypeError, ValueError):
+        return None
+
+    if odd <= 1.01:
+        return None
+
+    # -----------------------------------------------------
+    # BASIC QUALITY FILTERS
+    # -----------------------------------------------------
+
+    if probability < PREMATCH_MIN_PROBABILITY:
         return None
 
     if confidence < PREMATCH_MIN_CONFIDENCE:
-
         return None
 
     if risk > PREMATCH_MAX_RISK:
-
         return None
 
-    # =====================================================
+    # -----------------------------------------------------
     # VALUE
-    # =====================================================
+    # -----------------------------------------------------
 
     edge = value_edge(
-
         probability,
-
         odd
-
     )
 
-    # Don't require huge value.
-    # We want quality first.
+    # -----------------------------------------------------
+    # REQUIRE REAL POSITIVE VALUE
+    #
+    # Do not allow a negative-value signal to pass.
+    # -----------------------------------------------------
 
-    if edge < -2:
-
+    if edge < 1.0:
         return None
 
+    # -----------------------------------------------------
+    # EXTRA PROTECTION FOR EXTREME MODEL PROBABILITIES
+    # -----------------------------------------------------
+
+    if probability >= 85 and edge < 3.0:
+        return None
+
+    if probability >= 80 and edge < 2.0:
+        return None
+
+    # -----------------------------------------------------
+    # FINAL SIGNAL
+    # -----------------------------------------------------
+
     return {
+        "market": market,
 
-        "market":
+        "probability": round(
+            probability,
+            1
+        ),
 
-            market,
+        "confidence": round(
+            confidence,
+            1
+        ),
 
-        "probability":
-
-            round(
-
-                probability,
-
-                1
-
-            ),
-
-        "confidence":
-
-            round(
-
-                confidence,
-
-                1
-
-            ),
-
-        "risk":
-
+        "risk": round(
             risk,
+            1
+        ),
 
-        "odd":
+        "odd": odd,
 
-            odd,
-
-        "edge":
-
+        "edge": round(
             edge,
+            1
+        ),
 
-        "home_team":
+        "home_team": home,
 
-            home,
+        "away_team": away,
 
-        "away_team":
-
-            away,
-
-        "league":
-
-            league
-
+        "league": league
     }
-
-
 # =========================================================
 # PREMATCH ANALYZER V4
 # =========================================================
@@ -19305,29 +19178,22 @@ def prematch_signal_score(
 def get_best_prematch_signals(
     matches
 ):
-
     candidates = []
 
     for match in matches:
-
         try:
-
             signals = analyze_prematch(
                 match
             )
 
             if not signals:
-
                 continue
 
             if isinstance(
                 signals,
                 dict
             ):
-
-                signals = [
-                    signals
-                ]
+                signals = [signals]
 
             for signal in signals:
 
@@ -19336,13 +19202,11 @@ def get_best_prematch_signals(
                 )
 
                 if signal is None:
-
                     continue
 
                 if not prematch_signal_allowed(
                     signal
                 ):
-
                     continue
 
                 fixture_id = signal.get(
@@ -19354,7 +19218,6 @@ def get_best_prematch_signals(
                 )
 
                 if fixture_id is None:
-
                     fixture_id = match.get(
                         "fixture",
                         {}
@@ -19362,21 +19225,66 @@ def get_best_prematch_signals(
                         "id"
                     )
 
-                    signal[
-                        "fixture_id"
-                    ] = fixture_id
+                    signal["fixture_id"] = fixture_id
 
                 if signal_already_sent(
                     fixture_id,
                     market
                 ):
-
                     continue
 
-                signal[
-                    "score"
-                ] = prematch_signal_score(
+                # -----------------------------------------
+                # FINAL QUALITY SCORE
+                # -----------------------------------------
+
+                score = prematch_signal_score(
                     signal
+                )
+
+                probability = float(
+                    signal.get(
+                        "probability",
+                        0
+                    ) or 0
+                )
+
+                confidence = float(
+                    signal.get(
+                        "confidence",
+                        0
+                    ) or 0
+                )
+
+                risk = float(
+                    signal.get(
+                        "risk",
+                        100
+                    ) or 100
+                )
+
+                edge = float(
+                    signal.get(
+                        "edge",
+                        0
+                    ) or 0
+                )
+
+                # Positive edge matters.
+                final_score = (
+                    score * 0.55
+                    +
+                    probability * 0.20
+                    +
+                    confidence * 0.15
+                    +
+                    edge * 2.0
+                    -
+                    risk * 0.30
+                )
+
+                signal["score"] = round(
+                    final_score,
+                    2
                 )
 
                 candidates.append(
@@ -19384,18 +19292,19 @@ def get_best_prematch_signals(
                 )
 
         except Exception as e:
-
             logging.warning(
-
                 "PREMATCH ANALYSIS ERROR: %s",
-
                 repr(e)
-
             )
+
+    # ---------------------------------------------
+    # BEST FIRST
+    # ---------------------------------------------
 
     candidates.sort(
         key=lambda x: (
             x.get("score", 0),
+            x.get("edge", 0),
             x.get("confidence", 0),
             x.get("probability", 0),
             -x.get("risk", 100)
@@ -19403,27 +19312,51 @@ def get_best_prematch_signals(
         reverse=True
     )
 
-    # V10 market-diversity selector.
-    # We want several strong blocks, not ten copies of the same market.
+    # ---------------------------------------------
+    # MARKET DIVERSITY
+    # ---------------------------------------------
+
     selected = []
+
     market_counts = {}
     builder_count = 0
 
     for signal in candidates:
-        market = signal.get("market", "UNKNOWN")
 
+        market = signal.get(
+            "market",
+            "UNKNOWN"
+        )
+
+        # Only one builder per scan.
         if market == "🧩 BET BUILDER":
+
             if builder_count >= 1:
                 continue
-        elif market_counts.get(market, 0) >= 2:
-            continue
 
-        selected.append(signal)
+        else:
+
+            # Maximum two signals from
+            # the same exact market.
+            if market_counts.get(
+                market,
+                0
+            ) >= 2:
+                continue
+
+        selected.append(
+            signal
+        )
 
         if market == "🧩 BET BUILDER":
             builder_count += 1
         else:
-            market_counts[market] = market_counts.get(market, 0) + 1
+            market_counts[market] = (
+                market_counts.get(
+                    market,
+                    0
+                ) + 1
+            )
 
         if len(selected) >= MAX_PREMATCH_SIGNALS_PER_SCAN:
             break
@@ -24234,69 +24167,415 @@ def rank_live_signals(signals):
 
 def _final_builder_2to5(match, detailed=True):
     try:
-        candidates = _v7_prematch_candidates(match, detailed=detailed) or []
-        candidates = [c for c in candidates
-                      if _v7_num(c.get('probability'),0) >= BUILDER_MIN_LEG_PROB
-                      and _v7_num(c.get('confidence'),0) >= BUILDER_MIN_CONFIDENCE]
-        # One leg per market family. This prevents nonsensical same-family stacks.
-        candidates.sort(key=lambda x: (x.get('score',0), x.get('probability',0)), reverse=True)
-        candidates = candidates[:12]
-        if len(candidates) < 2:
+        candidates = _v7_prematch_candidates(
+            match,
+            detailed=detailed
+        ) or []
+
+        candidates = [
+            c for c in candidates
+            if _v7_num(
+                c.get('probability'),
+                0
+            ) >= BUILDER_MIN_LEG_PROB
+            and
+            _v7_num(
+                c.get('confidence'),
+                0
+            ) >= BUILDER_MIN_CONFIDENCE
+        ]
+
+        if len(candidates) < BET_BUILDER_MIN_LEGS:
             return None
 
-        best=None
-        max_n=min(BET_BUILDER_MAX_LEGS, len(candidates))
-        for n in range(BET_BUILDER_MIN_LEGS, max_n+1):
-            for combo in combinations(candidates, n):
-                families=[
-                    'cards' if 'card' in str(x.get('market','')).lower() or 'booking' in str(x.get('market','')).lower()
-                    else x.get('family')
+        candidates.sort(
+            key=lambda x: (
+                x.get('score', 0),
+                x.get('probability', 0),
+                x.get('confidence', 0),
+                -x.get('risk', 100)
+            ),
+            reverse=True
+        )
+
+        candidates = candidates[:15]
+
+        best = None
+
+        max_n = min(
+            BET_BUILDER_MAX_LEGS,
+            len(candidates)
+        )
+
+        for n in range(
+            BET_BUILDER_MIN_LEGS,
+            max_n + 1
+        ):
+            for combo in combinations(
+                candidates,
+                n
+            ):
+
+                # =================================================
+                # ONE MARKET FAMILY ONLY
+                # =================================================
+
+                families = []
+
+                for x in combo:
+
+                    market = str(
+                        x.get(
+                            'market',
+                            ''
+                        )
+                    ).lower()
+
+                    family = str(
+                        x.get(
+                            'family',
+                            ''
+                        )
+                    ).lower()
+
+                    # Cards / bookings are ALWAYS one family.
+                    if (
+                        'card' in market
+                        or
+                        'booking' in market
+                    ):
+                        family = 'cards'
+
+                    # Corners are ALWAYS one family.
+                    elif (
+                        'corner' in market
+                    ):
+                        family = 'corners'
+
+                    # Goals are ALWAYS one family.
+                    elif (
+                        'goal' in market
+                    ):
+                        family = 'goals'
+
+                    # BTTS is ALWAYS one family.
+                    elif (
+                        'btts' in market
+                    ):
+                        family = 'btts'
+
+                    families.append(
+                        family
+                    )
+
+                # NEVER allow two legs from same family.
+                if (
+                    len(set(families))
+                    != len(families)
+                ):
+                    continue
+
+                # =================================================
+                # ODDS
+                # =================================================
+
+                odd = 1.0
+
+                for x in combo:
+                    odd *= _v7_num(
+                        x.get('odd'),
+                        0
+                    )
+
+                if (
+                    odd < BUILDER_MIN_ODD
+                    or
+                    odd > BUILDER_MAX_ODD
+                ):
+                    continue
+
+                # =================================================
+                # PROBABILITY
+                # =================================================
+
+                probs = [
+                    _v7_num(
+                        x.get(
+                            'probability'
+                        ),
+                        0
+                    ) / 100
                     for x in combo
                 ]
-                if len(set(families)) != len(families):
+
+                if not probs:
                     continue
-                odd=1.0
-                for x in combo: odd *= _v7_num(x.get('odd'),0)
-                if odd < BUILDER_MIN_ODD or odd > BUILDER_MAX_ODD:
+
+                if (
+                    min(probs) * 100
+                    < BUILDER_MIN_LEG_PROB
+                ):
                     continue
-                probs=[_v7_num(x.get('probability'),0)/100 for x in combo]
-                if min(probs)*100 < BUILDER_MIN_LEG_PROB:
+
+                # =================================================
+                # JOINT PROBABILITY
+                # =================================================
+
+                joint = 1.0
+
+                for p in probs:
+                    joint *= p
+
+                # Conservative correlation penalties.
+                if (
+                    'goals' in families
+                    and
+                    'btts' in families
+                ):
+                    joint *= 0.92
+
+                if (
+                    families.count('corners')
+                    +
+                    families.count('cards')
+                    >= 2
+                ):
+                    joint *= 0.96
+
+                joint_pct = min(
+                    92.0,
+                    joint * 100
+                )
+
+                # =================================================
+                # CONFIDENCE / RISK
+                # =================================================
+
+                conf = min(
+                    _v7_num(
+                        x.get(
+                            'confidence'
+                        ),
+                        0
+                    )
+                    for x in combo
+                )
+
+                risk = (
+                    max(
+                        _v7_num(
+                            x.get(
+                                'risk'
+                            ),
+                            100
+                        )
+                        for x in combo
+                    )
+                    +
+                    max(
+                        0,
+                        75 - joint_pct
+                    ) * 0.18
+                    +
+                    (n - 2) * 1.5
+                )
+
+                risk = int(
+                    _v7_clamp(
+                        risk,
+                        8,
+                        BUILDER_MAX_RISK
+                    )
+                )
+
+                if (
+                    conf < BUILDER_MIN_CONFIDENCE
+                    or
+                    risk > BUILDER_MAX_RISK
+                ):
                     continue
-                # Conservative joint probability with a correlation penalty.
-                joint=1.0
-                for p in probs: joint *= p
-                if 'goals' in families and 'btts' in families: joint *= .92
-                if families.count('corners') + families.count('cards') >= 2: joint *= .96
-                joint_pct=min(92.0, joint*100)
-                conf=min(_v7_num(x.get('confidence'),0) for x in combo)
-                risk=max(_v7_num(x.get('risk'),100) for x in combo) + max(0,75-joint_pct)*.18 + (n-2)*1.5
-                risk=int(_v7_clamp(risk,8,BUILDER_MAX_RISK))
-                if conf < BUILDER_MIN_CONFIDENCE or risk > BUILDER_MAX_RISK:
+
+                # =================================================
+                # VALUE
+                # =================================================
+
+                edge = (
+                    joint_pct
+                    -
+                    100 / odd
+                )
+
+                # Builder must have positive value.
+                if edge < 1.0:
                     continue
-                edge=joint_pct - 100/odd
-                score=joint_pct*.68 + conf*.20 + max(0,edge)*.12 - risk*.20 + n*.25
-                if best is None or score > best[0]:
-                    best=(score,combo,odd,joint_pct,conf,risk,edge)
+
+                # =================================================
+                # SCORE
+                # =================================================
+
+                score = (
+                    joint_pct * 0.50
+                    +
+                    conf * 0.20
+                    +
+                    max(
+                        0,
+                        edge
+                    ) * 2.0
+                    -
+                    risk * 0.25
+                    +
+                    n * 0.15
+                )
+
+                if (
+                    best is None
+                    or
+                    score > best[0]
+                ):
+                    best = (
+                        score,
+                        combo,
+                        odd,
+                        joint_pct,
+                        conf,
+                        risk,
+                        edge
+                    )
 
         if not best:
             return None
-        score,combo,odd,joint,conf,risk,edge=best
-        fixture=match.get('fixture',{}); teams=match.get('teams',{}); league=match.get('league',{})
+
+        (
+            score,
+            combo,
+            odd,
+            joint,
+            conf,
+            risk,
+            edge
+        ) = best
+
+        fixture = match.get(
+            'fixture',
+            {}
+        )
+
+        teams = match.get(
+            'teams',
+            {}
+        )
+
+        league = match.get(
+            'league',
+            {}
+        )
+
         return {
-            'fixture_id':fixture.get('id'),
-            'home_team':teams.get('home',{}).get('name','HOME'),
-            'away_team':teams.get('away',{}).get('name','AWAY'),
-            'country':league.get('country',''), 'league':league.get('name',''),
-            'market':'🧩 BET BUILDER', 'probability':round(joint,1),
-            'confidence':round(conf,1), 'risk':risk, 'odd':round(odd,2),
-            'edge':round(edge,1), 'ev':round(joint/100*odd-1,3),
-            'score':round(score,2),
-            'builder_legs':[{'market':x.get('market'),'odd':x.get('odd'),
-                             'probability':x.get('probability')} for x in combo],
-            'match_date':fixture.get('date')
+            'fixture_id':
+                fixture.get('id'),
+
+            'home_team':
+                teams.get(
+                    'home',
+                    {}
+                ).get(
+                    'name',
+                    'HOME'
+                ),
+
+            'away_team':
+                teams.get(
+                    'away',
+                    {}
+                ).get(
+                    'name',
+                    'AWAY'
+                ),
+
+            'country':
+                league.get(
+                    'country',
+                    ''
+                ),
+
+            'league':
+                league.get(
+                    'name',
+                    ''
+                ),
+
+            'market':
+                '🧩 BET BUILDER',
+
+            'probability':
+                round(
+                    joint,
+                    1
+                ),
+
+            'confidence':
+                round(
+                    conf,
+                    1
+                ),
+
+            'risk':
+                risk,
+
+            'odd':
+                round(
+                    odd,
+                    2
+                ),
+
+            'edge':
+                round(
+                    edge,
+                    1
+                ),
+
+            'ev':
+                round(
+                    joint / 100 * odd - 1,
+                    3
+                ),
+
+            'score':
+                round(
+                    score,
+                    2
+                ),
+
+            'builder_legs': [
+                {
+                    'market':
+                        x.get(
+                            'market'
+                        ),
+                    'odd':
+                        x.get(
+                            'odd'
+                        ),
+                    'probability':
+                        x.get(
+                            'probability'
+                        )
+                }
+                for x in combo
+            ],
+
+            'match_date':
+                fixture.get(
+                    'date'
+                )
         }
+
     except Exception as e:
-        logging.warning('FINAL BUILDER ERROR: %s', repr(e))
+        logging.warning(
+            'FINAL BUILDER ERROR: %s',
+            repr(e)
+        )
         return None
 
 
