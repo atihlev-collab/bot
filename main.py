@@ -24576,15 +24576,12 @@ def analyze_live_match(fixture):
             and total_fouls >= 20
             and goal_diff <= 2
         ):
-            if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
-                print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🟨 OVER 1.5 NEXT CARDS",
+            return (
+                "🟨 OVER 1.5 NEXT CARDS",
                 card_probability,
                 minute,
                 card_probability
-            )
+        )
 
         # =========================================================
         # FAST NEXT GOAL - 25 TO 40
@@ -24718,15 +24715,12 @@ def analyze_live_match(fixture):
             and corner_probability >= 78
             and total_corners <= 13
         ):
-            if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
-                print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🚩 OVER 1.5 NEXT CORNERS",
+            return (
+                "🚩 OVER 1.5 NEXT CORNERS",
                 corner_probability,
                 minute,
                 corner_probability
-            )
+        )
 
         # =========================================================
         # LATE GOAL
