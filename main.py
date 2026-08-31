@@ -22636,18 +22636,18 @@ def get_v7_market_history(team_id, venue=None):
 
 def _v7_total_market_history(home_id,away_id,market):
     h=get_v7_market_history(home_id,'home'); a=get_v7_market_history(away_id,'away')
-    if market=='corners':
+   
     if market == 'corners':
         h_for = h.get('corners_for_avg')
         h_against = h.get('corners_against_avg')
         a_for = a.get('corners_for_avg')
         a_against = a.get('corners_against_avg')
-    
+
         if None in (h_for, h_against, a_for, a_against):
             return None
-    
+
         home_expected = (h_for + a_against) / 2
-        away_expected = (a_for + h_against) / 2
+        away_expected = (a_for + h_against) / 2      
     
         return home_expected + away_expected
     else:
