@@ -22615,14 +22615,16 @@ def get_v7_market_history(team_id, venue=None):
                 if corners_against else None
             ),
             'corners_avg': (
-                (sum(corners_for) / len(corners_for)) +
-                (sum(corners_against) / len(corners_against))
-            ) / 2
+                (
+                    sum(corners_for) / len(corners_for)
+                    +
+                    sum(corners_against) / len(corners_against)
+                ) / 2
                 if corners_for and corners_against
                 else None
             ),
             'cards_avg':sum(cards)/len(cards) if cards else None,
-            'corners':corners,
+            'corners':corners_for,
             'cards':cards,
         }
         DETAIL_HISTORY_CACHE[key]=(time.time(),result)
