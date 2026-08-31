@@ -22729,7 +22729,6 @@ def _v7_total_market_history(home_id, away_id, market):
 
         h_for = h.get('corners_for_avg')
         h_against = h.get('corners_against_avg')
-
         a_for = a.get('corners_for_avg')
         a_against = a.get('corners_against_avg')
 
@@ -22755,7 +22754,6 @@ def _v7_total_market_history(home_id, away_id, market):
 
         h_for = h.get('cards_for_avg')
         h_against = h.get('cards_against_avg')
-
         a_for = a.get('cards_for_avg')
         a_against = a.get('cards_against_avg')
 
@@ -22869,28 +22867,128 @@ def _v7_prematch_candidates(match, detailed=False):
         add('🏆 HOME WIN',h,probs.get('HOME win',0),'🏆 HOME WIN')
         add('✈️ AWAY WIN',a,probs.get('AWAY win',0),'✈️ AWAY WIN')
     # Detailed corners/cards only for shortlisted fixtures.
-    if detailed:
+    if True:
         total_c=_v7_total_market_history(home['id'],away['id'],'corners')
         total_y=_v7_total_market_history(home['id'],away['id'],'cards')
         if total_c is not None:
-            for target in ('under 12.5','under 11.5','under 10.5','over 7.5','over 8.5','over 9.5'):
-                val,odd=_v7_find_market(markets,'corners',target)
-                if odd:
-                    line=_v7_num(target.split()[-1],0)
-                    # Empirical normal approximation around recent total average.
-                    sd=max(1.8,math.sqrt(max(1,total_c))*0.65)
-                    if target.startswith('under'): p=0.5*(1+math.erf((line+0.5-total_c)/(sd*math.sqrt(2))))*100
-                    else: p=(1-0.5*(1+math.erf((line-0.5-total_c)/(sd*math.sqrt(2)))))*100
-                    add('🚩 CORNER '+target.upper(),odd,p,'🚩 CORNER '+target.upper())
+            for target in (
+                'under 12.5',
+                'under 11.5',
+                'under 10.5',
+                'over 7.5',
+                'over 8.5',
+                'over 9.5'
+            ):
+                val, odd = _v7_find_market(
+                    markets,
+                    'corners',
+                    target
+                )
+
+                if not odd:
+                    continue
+
+                line = _v7_num(
+                    target.split()[-1],
+                    0
+                )
+
+                # Poisson model for total corners.
+                lam = max(
+                    2.0,
+                    min(16.0, total_c)
+                )
+
+                if target.startswith('over'):
+                    k = math.floor(line) + 1
+
+                    p = (
+                        1 -
+                        poisson.cdf(
+                            k - 1,
+                            lam
+                        )
+                    ) * 100
+
+                else:
+                    k = math.floor(line)
+
+                    p = (
+                        poisson.cdf(
+                            k,
+                            lam
+                        )
+                    ) * 100
+
+                p = 50 + (p - 50) * 0.70
+                p = _v7_clamp(p, 55, 88)
+
+                add(
+                    '🚩 CORNER ' + target.upper(),
+                    odd,
+                    p,
+                    '🚩 CORNER ' + target.upper()
+                )
+
         if total_y is not None:
-            for target in ('over 2.5','over 3.5','over 4.5','over 5.5','under 5.5','under 6.5'):
-                val,odd=_v7_find_market(markets,'cards',target)
-                if odd:
-                    line=_v7_num(target.split()[-1],0)
-                    sd=max(1.2,math.sqrt(max(1,total_y))*0.55)
-                    if target.startswith('under'): p=0.5*(1+math.erf((line+0.5-total_y)/(sd*math.sqrt(2))))*100
-                    else: p=(1-0.5*(1+math.erf((line-0.5-total_y)/(sd*math.sqrt(2)))))*100
-                    add('🟨 CARD '+target.upper(),odd,p,'🟨 CARD '+target.upper())
+            for target in (
+                'over 2.5',
+                'over 3.5',
+                'over 4.5',
+                'over 5.5',
+                'under 5.5',
+                'under 6.5'
+            ):
+                val, odd = _v7_find_market(
+                    markets,
+                    'cards',
+                    target
+                )
+
+                if not odd:
+                    continue
+
+                line = _v7_num(
+                    target.split()[-1],
+                    0
+                )
+
+                # Poisson model for total cards.
+                lam = max(
+                    1.0,
+                    min(12.0, total_y)
+                )
+
+                if target.startswith('over'):
+                    k = math.floor(line) + 1
+
+                    p = (
+                        1 -
+                        poisson.cdf(
+                            k - 1,
+                            lam
+                        )
+                    ) * 100
+
+                else:
+                    k = math.floor(line)
+
+                    p = (
+                        poisson.cdf(
+                            k,
+                            lam
+                        )
+                    ) * 100
+
+                p = 50 + (p - 50) * 0.70
+                p = _v7_clamp(p, 55, 88)
+
+                add(
+                    '🟨 CARD ' + target.upper(),
+                    odd,
+                    p,
+                    '🟨 CARD ' + target.upper()
+                )
     return out
 
 
