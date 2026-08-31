@@ -22590,18 +22590,22 @@ def get_v7_market_history(team_id, venue=None):
                     opponent_id,
                     'corner kicks'
                 )
-                if opponent_id else None
+            if opponent_id else None
             )
             if c is not None:
                 corners_for.append(c)
             
             if c_against is not None:
                 corners_against.append(c_against)
-            y=_v7_fixture_stat_value(g,team_id,'yellow cards')
+                
+            y = _v7_fixture_stat_value(g, team_id, 'yellow cards')
            
-            if y is not None: cards.append(y)
-        result={
-            'games':len(selected),
+            if y is not None:
+                cards.append(y)
+                
+        result = {
+            'games': len(selected),
+            
             'corners_for_avg': (
                 sum(corners_for) / len(corners_for)
                 if corners_for else None
