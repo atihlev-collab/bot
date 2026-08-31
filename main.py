@@ -19271,19 +19271,19 @@ def prematch_signal_score(
 
     score = (
 
-        probability * 0.35
+        probability * 0.30
 
         +
 
-        confidence * 0.35
+        confidence * 0.25
 
         +
 
-        quality * 0.15
+        quality * 0.20
 
         +
 
-        value * 0.15
+        value * 0.20
 
         -
 
@@ -22573,15 +22573,50 @@ def get_v7_market_history(team_id, venue=None):
             if venue=='away' and h==team_id: continue
             selected.append(g)
             if len(selected)>=5: break
-        corners=[]; cards=[]
+            corners_for=[]
+            corners_against=[]
+            cards=[]
         for g in selected:
             c=_v7_fixture_stat_value(g,team_id,'corner kicks')
+            opponent_id = (
+                g.get('teams',{}).get('away',{}).get('id')
+                if g.get('teams',{}).get('home',{}).get('id') == team_id
+                else g.get('teams',{}).get('home',{}).get('id')
+            )
+            
+            c_against = (
+                _v7_fixture_stat_value(
+                    g,
+                    opponent_id,
+                    'corner kicks'
+                )
+                if opponent_id else None
+            )
+            if c is not None:
+                corners_for.append(c)
+            
+            if c_against is not None:
+                corners_against.append(c_against)
             y=_v7_fixture_stat_value(g,team_id,'yellow cards')
-            if c is not None: corners.append(c)
+           
             if y is not None: cards.append(y)
         result={
             'games':len(selected),
-            'corners_avg':sum(corners)/len(corners) if corners else None,
+            'corners_for_avg': (
+                sum(corners_for) / len(corners_for)
+                if corners_for else None
+            ),
+            'corners_against_avg': (
+                sum(corners_against) / len(corners_against)
+                if corners_against else None
+            ),
+            'corners_avg': (
+                (sum(corners_for) / len(corners_for)) +
+                (sum(corners_against) / len(corners_against))
+            ) / 2
+                if corners_for and corners_against
+                else None
+            ),
             'cards_avg':sum(cards)/len(cards) if cards else None,
             'corners':corners,
             'cards':cards,
@@ -22596,7 +22631,19 @@ def get_v7_market_history(team_id, venue=None):
 def _v7_total_market_history(home_id,away_id,market):
     h=get_v7_market_history(home_id,'home'); a=get_v7_market_history(away_id,'away')
     if market=='corners':
-        vals=[x for x in (h.get('corners_avg'),a.get('corners_avg')) if x is not None]
+    if market == 'corners':
+        h_for = h.get('corners_for_avg')
+        h_against = h.get('corners_against_avg')
+        a_for = a.get('corners_for_avg')
+        a_against = a.get('corners_against_avg')
+    
+        if None in (h_for, h_against, a_for, a_against):
+            return None
+    
+        home_expected = (h_for + a_against) / 2
+        away_expected = (a_for + h_against) / 2
+    
+        return home_expected + away_expected
     else:
         vals=[x for x in (h.get('cards_avg'),a.get('cards_avg')) if x is not None]
     if len(vals)<2: return None
@@ -22730,7 +22777,8 @@ def build_best_bet_builder(match, detailed=True):
     # Never use two legs from the same market family.
     candidates=[c for c in candidates if c.get('probability',0)>=BUILDER_MIN_LEG_PROB and c.get('confidence',0)>=BUILDER_MIN_CONFIDENCE]
     best=None
-    for a,b in combinations(candidates,2):
+    for n in range(2, min(5, len(candidates)) + 1):
+        for combo in combinations(candidates, n):
         if a['family']==b['family']: continue
         odd=a['odd']*b['odd']
         if odd<BUILDER_MIN_ODD or odd>BUILDER_MAX_ODD: continue
