@@ -23909,11 +23909,11 @@ def _final_builder_2to5(match, detailed=True):
         max_n=min(BET_BUILDER_MAX_LEGS, len(candidates))
         for n in range(BET_BUILDER_MIN_LEGS, max_n+1):
             for combo in combinations(candidates, n):
-            families=[
-                'cards' if 'card' in str(x.get('market','')).lower() or 'booking' in str(x.get('market','')).lower()
-                else x.get('family')
-                for x in combo
-           ]
+                families=[
+                    'cards' if 'card' in str(x.get('market','')).lower() or 'booking' in str(x.get('market','')).lower()
+                    else x.get('family')
+                    for x in combo
+                ]
                 if len(set(families)) != len(families):
                     continue
                 odd=1.0
