@@ -22324,7 +22324,7 @@ BUILDER_MIN_CONFIDENCE = 70.0
 BUILDER_MAX_RISK = 32.0
 
 BUILDER_MIN_ODD = 1.45
-BUILDER_MAX_ODD = 6.00)
+BUILDER_MAX_ODD = 6.00
 
 # ============================================================
 # GENERAL HELPERS
