@@ -23500,12 +23500,7 @@ def _v7_live_signal(match):
         ):
             return None
 
-if (
-    p < LIVE_MIN_PROBABILITY
-    or confidence < LIVE_MIN_CONFIDENCE
-    or risk > LIVE_MAX_RISK
-):
-    return None
+        
 
         market = '🎯 NEXT GOAL HOME' if side == 'home' else '🎯 NEXT GOAL AWAY'
         return {
