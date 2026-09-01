@@ -22491,72 +22491,7 @@ def _v7_fixture_stat_value(fixture, team_id, wanted):
                     return _v7_num(st.get('value'),None)
     except Exception:
         return None
-    return None
-
-
-corners_against else None
-            ),
-
-            'corners_avg': (
-                (
-                    sum(corners_for) / len(corners_for)
-                    +
-                    sum(corners_against) / len(corners_against)
-                ) / 2
-                if corners_for and corners_against
-                else None
-            ),
-
-            'cards_for_avg': (
-                sum(cards_for) / len(cards_for)
-                if cards_for else None
-            ),
-
-            'cards_against_avg': (
-                sum(cards_against) / len(cards_against)
-                if cards_against else None
-            ),
-
-            'cards_avg': (
-                (
-                    sum(cards_for) / len(cards_for)
-                    +
-                    sum(cards_against) / len(cards_against)
-                ) / 2
-                if cards_for and cards_against
-                else None
-            ),
-
-            'corners': corners_for,
-            'cards': cards_for,
-        }
-
-        DETAIL_HISTORY_CACHE[key] = (
-            time.time(),
-            result
-        )
-
-        return result
-
-    except Exception as e:
-        logging.warning(
-            'MARKET HISTORY ERROR: %s',
-            repr(e)
-        )
-
-        return {
-            'games': 0,
-            'corners_for_avg': None,
-            'corners_against_avg': None,
-            'corners_avg': None,
-            'cards_for_avg': None,
-            'cards_against_avg': None,
-            'cards_avg': None,
-            'corners': [],
-            'cards': []
-        }
-                
-
+    
 
 def _v7_total_market_history(home_id, away_id, market):
     h = get_v7_market_history(home_id, 'home')
