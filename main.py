@@ -22494,108 +22494,7 @@ def _v7_fixture_stat_value(fixture, team_id, wanted):
     return None
 
 
-def get_v7_market_history(team_id, venue=None):
-    key = (team_id, venue)
-
-    cached = DETAIL_HISTORY_CACHE.get(key)
-    if cached and time.time() - cached[0] < CACHE_TIME_FORM:
-        return cached[1]
-
-    try:
-        fixtures = get_team_recent_fixtures(team_id, 10)
-
-        selected = []
-
-        for g in fixtures:
-            if venue == 'home':
-                if g.get('teams', {}).get('home', {}).get('id') != team_id:
-                    continue
-
-            elif venue == 'away':
-                if g.get('teams', {}).get('away', {}).get('id') != team_id:
-                    continue
-
-            selected.append(g)
-
-        selected = selected[:5]
-
-        corners_for = []
-        corners_against = []
-
-        cards_for = []
-        cards_against = []
-
-        for g in selected:
-
-            home_id = g.get('teams', {}).get('home', {}).get('id')
-            away_id = g.get('teams', {}).get('away', {}).get('id')
-
-            if home_id == team_id:
-                opponent_id = away_id
-            else:
-                opponent_id = home_id
-
-            # -------------------------
-            # CORNERS
-            # -------------------------
-
-            c_for = _v7_fixture_stat_value(
-                g,
-                team_id,
-                'corner kicks'
-            )
-
-            c_against = (
-                _v7_fixture_stat_value(
-                    g,
-                    opponent_id,
-                    'corner kicks'
-                )
-                if opponent_id else None
-            )
-
-            if c_for is not None:
-                corners_for.append(c_for)
-
-            if c_against is not None:
-                corners_against.append(c_against)
-
-            # -------------------------
-            # CARDS
-            # -------------------------
-
-            y_for = _v7_fixture_stat_value(
-                g,
-                team_id,
-                'yellow cards'
-            )
-
-            y_against = (
-                _v7_fixture_stat_value(
-                    g,
-                    opponent_id,
-                    'yellow cards'
-                )
-                if opponent_id else None
-            )
-
-            if y_for is not None:
-                cards_for.append(y_for)
-
-            if y_against is not None:
-                cards_against.append(y_against)
-
-        result = {
-            'games': len(selected),
-
-            'corners_for_avg': (
-                sum(corners_for) / len(corners_for)
-                if corners_for else None
-            ),
-
-            'corners_against_avg': (
-                sum(corners_against) / len(corners_against)
-                if corners_against else None
+corners_against else None
             ),
 
             'corners_avg': (
@@ -22656,6 +22555,7 @@ def get_v7_market_history(team_id, venue=None):
             'corners': [],
             'cards': []
         }
+                
 
 
 def _v7_total_market_history(home_id, away_id, market):
