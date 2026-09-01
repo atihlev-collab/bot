@@ -26021,77 +26021,118 @@ def analyze_live_match(fixture):
         print("LIVE ANALYSIS ERROR:", repr(e))
         return None
 
+
+# ============================================================
+# FINAL LIVE SCAN — STRICT QUALITY ENTRY POINT
+# ============================================================
+
 def _final_live_scan():
-    """Run the proven LIVE V3 analyzer without touching PREMATCH/Builder."""
     try:
         matches = get_live_matches() or []
+
+        candidates = []
+
         checked = 0
-        signals = 0
-        sent = 0
+        generated = 0
+
+        # ----------------------------------------------------
+        # BUILD RICH LIVE MARKET CANDIDATES
+        # ----------------------------------------------------
+
         for match in matches:
+
             try:
-                fixture = match.get("fixture", {}) or {}
-                if not fixture.get("id"):
+                fixture = match.get(
+                    'fixture',
+                    {}
+                ) or {}
+
+                if not fixture.get('id'):
                     continue
-                signal = analyze_live_match(match)
+
                 checked += 1
-                if not signal:
+
+                signals = (
+                    build_live_market_candidates(
+                        match
+                    )
+                    or []
+                )
+
+                if not signals:
                     continue
-                signals += 1
-                fixture_id = fixture["id"]
-                home = match["teams"]["home"]["name"]
-                away = match["teams"]["away"]["name"]
-                country = match.get("league", {}).get("country", "")
-                league = match.get("league", {}).get("name", "")
-                minute = signal[2]
-                probability = signal[1]
-                score_home = match.get("goals", {}).get("home") or 0
-                score_away = match.get("goals", {}).get("away") or 0
-                key = f"live_{fixture_id}_{score_home}_{score_away}_{signal[0]}"
-                if key in sent_live:
-                    continue
-                odds_text = "-"
-                try:
-                    odds = get_match_odds(fixture_id)
-                    if odds:
-                        home_odd = odds[0] if len(odds) > 0 else None
-                        away_odd = odds[2] if len(odds) > 2 else None
-                        if "HOME" in signal[0] and home_odd is not None:
-                            odds_text = str(home_odd)
-                        elif "AWAY" in signal[0] and away_odd is not None:
-                            odds_text = str(away_odd)
-                except Exception as e:
-                    logging.warning("LIVE ODDS ERROR: %s", repr(e))
-                send_telegram(f"""🔥 LIVE SIGNAL
 
-🏆 {home} vs {away}
+                generated += len(
+                    signals
+                )
 
-🌍 {country}
-🏟 {league}
+                candidates.extend(
+                    signals
+                )
 
-📊 Score:
-{score_home} - {score_away}
-
-⏱ Minute: {minute}
-
-🔥{signal[0]}🔥
-
-💰 Odds:
-{odds_text}
-
-💎 Confidence: {signal[1]}%
-
-🎯 Goal Probability:
-{probability}%
-""")
-                sent_live[key] = time.time()
-                sent += 1
             except Exception as e:
-                logging.warning("LIVE MATCH ERROR: %s", repr(e))
-        print(f"LIVE FINAL | matches={len(matches)} | checked={checked} | signals={signals} | sent={sent}")
+
+                logging.warning(
+                    'LIVE CANDIDATE ERROR: %s',
+                    repr(e)
+                )
+
+        # ----------------------------------------------------
+        # QUALITY FILTER + RANKING
+        # ----------------------------------------------------
+
+        ranked = rank_live_signals(
+            candidates
+        )
+
+        # ----------------------------------------------------
+        # MAX 3 STRONGEST LIVE SIGNALS
+        # ----------------------------------------------------
+
+        ranked = ranked[
+            :3
+        ]
+
+        sent = 0
+
+        # ----------------------------------------------------
+        # SEND
+        # ----------------------------------------------------
+
+        for signal in ranked:
+
+            try:
+
+                if send_live_signal(
+                    signal
+                ):
+                    sent += 1
+
+            except Exception as e:
+
+                logging.warning(
+                    'LIVE SEND ERROR: %s',
+                    repr(e)
+                )
+
+        print(
+            'LIVE FINAL | '
+            f'matches={len(matches)} | '
+            f'checked={checked} | '
+            f'candidates={generated} | '
+            f'qualified={len(ranked)} | '
+            f'sent={sent}'
+        )
+
         return sent
+
     except Exception as e:
-        logging.exception("LIVE FINAL ERROR: %s", repr(e))
+
+        logging.exception(
+            'LIVE FINAL ERROR: %s',
+            repr(e)
+        )
+
         return 0
 
 # ============================================================
