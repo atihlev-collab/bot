@@ -115,6 +115,7 @@ sent_prematch = {}
 
 team_form_cache = {}
 odds_cache = {}
+RAW_ODDS_CACHE = {}
 standings_cache = {}
 statistics_cache = {}
 betano_market_cache = {}
