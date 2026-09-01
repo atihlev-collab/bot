@@ -24586,37 +24586,179 @@ def build_best_bet_builder(match, detailed=True):
 
 
 def _final_prematch_select(matches):
-    allc=[]
+    allc = []
+
+    # =====================================================
+    # COLLECT ALL PREMATCH CANDIDATES
+    # =====================================================
+
     for m in matches or []:
         try:
-            allc.extend(_v7_prematch_candidates(m, detailed=False) or [])
+            allc.extend(
+                _v7_prematch_candidates(
+                    m,
+                    detailed=False
+                ) or []
+            )
         except Exception as e:
-            logging.warning('PREMATCH MODEL ERROR: %s', repr(e))
-    allc.sort(key=lambda x:(x.get('score',0),x.get('probability',0),x.get('confidence',0)), reverse=True)
-    # Enrich only the best fixtures, not the whole day's slate.
-    top=[]; seen=set()
+            logging.warning(
+                'PREMATCH MODEL ERROR: %s',
+                repr(e)
+            )
+
+    if not allc:
+        return []
+
+    # =====================================================
+    # ENRICH BEST FIXTURES
+    # =====================================================
+
+    allc.sort(
+        key=lambda x: (
+            x.get('score', 0),
+            x.get('edge', 0),
+            x.get('probability', 0),
+            x.get('confidence', 0),
+            -x.get('risk', 100)
+        ),
+        reverse=True
+    )
+
+    top_fixtures = []
+    seen_fixtures = set()
+
     for c in allc:
-        fid=c.get('fixture_id')
-        if fid in seen: continue
-        seen.add(fid); top.append(c)
-        if len(top)>=20: break
-    enriched=[]
-    for c in top:
-        m=next((x for x in matches if x.get('fixture',{}).get('id')==c.get('fixture_id')),None)
-        if m:
-            try: enriched.extend(_v7_prematch_candidates(m, detailed=True) or [])
-            except Exception as e: logging.warning('PREMATCH DETAIL ERROR: %s',repr(e))
-    pool=allc+enriched
-    best={}
+        fid = c.get('fixture_id')
+
+        if fid in seen_fixtures:
+            continue
+
+        seen_fixtures.add(fid)
+        top_fixtures.append(fid)
+
+        if len(top_fixtures) >= 20:
+            break
+
+    enriched = []
+
+    for fid in top_fixtures:
+        m = next(
+            (
+                x for x in matches
+                if x.get(
+                    'fixture',
+                    {}
+                ).get('id') == fid
+            ),
+            None
+        )
+
+        if not m:
+            continue
+
+        try:
+            enriched.extend(
+                _v7_prematch_candidates(
+                    m,
+                    detailed=True
+                ) or []
+            )
+        except Exception as e:
+            logging.warning(
+                'PREMATCH DETAIL ERROR: %s',
+                repr(e)
+            )
+
+    # =====================================================
+    # MERGE BEST VERSION OF EACH MARKET
+    # =====================================================
+
+    pool = allc + enriched
+
+    best = {}
+
     for c in pool:
-        key=(c.get('fixture_id'),c.get('family'))
-        if key not in best or c.get('score',0)>best[key].get('score',0): best[key]=c
-    result=[]; used=set()
-    for c in sorted(best.values(), key=lambda x:(x.get('score',0),x.get('probability',0)), reverse=True):
-        fid=c.get('fixture_id')
-        if fid in used: continue
-        result.append(c); used.add(fid)
-        if len(result)>=MAX_PREMATCH_SIGNALS_PER_SCAN: break
+
+        fid = c.get(
+            'fixture_id'
+        )
+
+        market = c.get(
+            'market',
+            ''
+        )
+
+        key = (
+            fid,
+            market
+        )
+
+        if (
+            key not in best
+            or
+            c.get('score', 0)
+            >
+            best[key].get(
+                'score',
+                0
+            )
+        ):
+            best[key] = c
+
+    # =====================================================
+    # FINAL QUALITY RANKING
+    # =====================================================
+
+    ranked = list(
+        best.values()
+    )
+
+    ranked.sort(
+        key=lambda x: (
+            x.get('score', 0),
+            x.get('edge', 0),
+            x.get('probability', 0),
+            x.get('confidence', 0),
+            -x.get('risk', 100)
+        ),
+        reverse=True
+    )
+
+    # =====================================================
+    # TOP 3 FOR THE DAY
+    #
+    # Any market is allowed.
+    # Maximum 2 signals from the same fixture.
+    # =====================================================
+
+    result = []
+    fixture_counts = {}
+
+    for c in ranked:
+
+        fid = c.get(
+            'fixture_id'
+        )
+
+        count = fixture_counts.get(
+            fid,
+            0
+        )
+
+        if count >= 2:
+            continue
+
+        result.append(
+            c
+        )
+
+        fixture_counts[fid] = (
+            count + 1
+        )
+
+        if len(result) >= 3:
+            break
+
     return result
 
 
