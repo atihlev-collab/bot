@@ -24511,61 +24511,673 @@ def rank_live_signals(signals):
         if len(out)>=MAX_LIVE_SIGNALS_PER_SCAN: break
     return out
 
+# ============================================================
+# FINAL BET BUILDER 2-5 LEGS
+# SMART VALUE + CORRELATION CONTROL
+# ============================================================
 
+def _final_builder_2to5(match, detailed=True):
+    try:
+        candidates = _v7_prematch_candidates(
+            match,
+            detailed=detailed
+        ) or []
 
-                
-        
+        if not candidates:
+            return None
 
-    
-                # =================================================
+        # ----------------------------------------------------
+        # QUALITY FILTER
+        # ----------------------------------------------------
+
+        candidates = [
+            x for x in candidates
+            if safe_float(
+                x.get('probability'),
+                0
+            ) >= BUILDER_MIN_LEG_PROB
+            and safe_float(
+                x.get('confidence'),
+                0
+            ) >= BUILDER_MIN_CONFIDENCE
+        ]
+
+        if len(candidates) < BET_BUILDER_MIN_LEGS:
+            return None
+
+        # ----------------------------------------------------
+        # MARKET FAMILY
+        # ----------------------------------------------------
+
+        def family_of(x):
+            market = str(
+                x.get('market', '')
+            ).lower()
+
+            if (
+                'card' in market
+                or 'booking' in market
+            ):
+                return 'cards'
+
+            if 'corner' in market:
+                return 'corners'
+
+            if 'btts' in market:
+                return 'btts'
+
+            if 'goal' in market:
+                return 'goals'
+
+            if (
+                'home win' in market
+                or 'away win' in market
+                or 'draw' in market
+            ):
+                return 'result'
+
+            return str(
+                x.get('family', 'other')
+            ).lower()
+
+        # ----------------------------------------------------
+        # CORRELATION PENALTY
+        # ----------------------------------------------------
+
+        def pair_penalty(a, b):
+            ma = str(
+                a.get('market', '')
+            ).lower()
+
+            mb = str(
+                b.get('market', '')
+            ).lower()
+
+            fa = family_of(a)
+            fb = family_of(b)
+
+            penalty = 1.0
+
+            # Same family is not allowed at all.
+            if fa == fb:
+                return 0.0
+
+            # Goals + BTTS are strongly related.
+            if {fa, fb} == {'goals', 'btts'}:
+                penalty *= 0.90
+
+            # Team goals + total goals.
+            if (
+                'home over 1.5' in ma
+                and 'over 2.5' in mb
+            ):
+                penalty *= 0.90
+
+            if (
+                'home over 1.5' in mb
+                and 'over 2.5' in ma
+            ):
+                penalty *= 0.90
+
+            if (
+                'away over 1.5' in ma
+                and 'over 2.5' in mb
+            ):
+                penalty *= 0.90
+
+            if (
+                'away over 1.5' in mb
+                and 'over 2.5' in ma
+            ):
+                penalty *= 0.90
+
+            # Team goals + BTTS.
+            if (
+                (
+                    'home over 1.5' in ma
+                    or
+                    'away over 1.5' in ma
+                )
+                and fb == 'btts'
+            ):
+                penalty *= 0.93
+
+            if (
+                (
+                    'home over 1.5' in mb
+                    or
+                    'away over 1.5' in mb
+                )
+                and fa == 'btts'
+            ):
+                penalty *= 0.93
+
+            # Result + team goals.
+            if (
+                fa == 'result'
+                and
+                (
+                    'home over' in mb
+                    or
+                    'away over' in mb
+                )
+            ):
+                penalty *= 0.94
+
+            if (
+                fb == 'result'
+                and
+                (
+                    'home over' in ma
+                    or
+                    'away over' in ma
+                )
+            ):
+                penalty *= 0.94
+
+            # Result + BTTS.
+            if (
+                {fa, fb}
+                ==
+                {'result', 'btts'}
+            ):
+                penalty *= 0.96
+
+            # Corners + cards have some relationship,
+            # but it is much weaker.
+            if (
+                {fa, fb}
+                ==
+                {'corners', 'cards'}
+            ):
+                penalty *= 0.97
+
+            return penalty
+
+        # ----------------------------------------------------
+        # STRONGEST CANDIDATES FIRST
+        # ----------------------------------------------------
+
+        candidates.sort(
+            key=lambda x: (
+                safe_float(x.get('score'), 0),
+                safe_float(x.get('edge'), 0),
+                safe_float(x.get('probability'), 0),
+                safe_float(x.get('confidence'), 0),
+                -safe_float(x.get('risk'), 100)
+            ),
+            reverse=True
+        )
+
+        # Avoid an enormous combination search.
+        candidates = candidates[:20]
+
+        from itertools import combinations
+
+        best = None
+
+        max_legs = min(
+            BET_BUILDER_MAX_LEGS,
+            len(candidates)
+        )
+
+        # ----------------------------------------------------
+        # TEST 2, 3, 4 AND 5 LEGS
+        # ----------------------------------------------------
+
+        for n in range(
+            BET_BUILDER_MIN_LEGS,
+            max_legs + 1
+        ):
+
+            for combo in combinations(
+                candidates,
+                n
+            ):
+
+                # ------------------------------------------------
                 # ONE MARKET FAMILY ONLY
-                # =================================================
+                # ------------------------------------------------
 
-                families = []
+                families = [
+                    family_of(x)
+                    for x in combo
+                ]
 
-                for x in combo:
+                if len(
+                    set(families)
+                ) != len(families):
+                    continue
 
-                    market = str(
+                # ------------------------------------------------
+                # TOTAL ODDS
+                # ------------------------------------------------
+
+                odd = 1.0
+
+                for leg in combo:
+
+                    leg_odd = safe_float(
+                        leg.get('odd'),
+                        0
+                    )
+
+                    if leg_odd <= 1.01:
+                        odd = 0
+                        break
+
+                    odd *= leg_odd
+
+                if odd <= 0:
+                    continue
+
+                if (
+                    odd < BUILDER_MIN_ODD
+                    or
+                    odd > BUILDER_MAX_ODD
+                ):
+                    continue
+
+                # ------------------------------------------------
+                # INDIVIDUAL LEG QUALITY
+                # ------------------------------------------------
+
+                probs = [
+                    safe_float(
+                        x.get(
+                            'probability'
+                        ),
+                        0
+                    )
+                    for x in combo
+                ]
+
+                if not probs:
+                    continue
+
+                if min(probs) < BUILDER_MIN_LEG_PROB:
+                    continue
+
+                avg_prob = (
+                    sum(probs)
+                    /
+                    len(probs)
+                )
+
+                if avg_prob < 70:
+                    continue
+
+                # ------------------------------------------------
+                # JOINT PROBABILITY
+                # ------------------------------------------------
+
+                joint = 1.0
+
+                for p in probs:
+                    joint *= (
+                        p / 100.0
+                    )
+
+                # ------------------------------------------------
+                # CORRELATION
+                # ------------------------------------------------
+
+                correlation = 1.0
+
+                for i in range(len(combo)):
+                    for j in range(
+                        i + 1,
+                        len(combo)
+                    ):
+                        pair = pair_penalty(
+                            combo[i],
+                            combo[j]
+                        )
+
+                        if pair <= 0:
+                            correlation = 0
+                            break
+
+                        correlation *= pair
+
+                    if correlation <= 0:
+                        break
+
+                if correlation <= 0:
+                    continue
+
+                # More legs = more uncertainty.
+                if n == 4:
+                    correlation *= 0.96
+
+                elif n == 5:
+                    correlation *= 0.92
+
+                joint *= correlation
+
+                joint_pct = (
+                    joint * 100
+                )
+
+                joint_pct = max(
+                    1,
+                    min(
+                        95,
+                        joint_pct
+                    )
+                )
+
+                # ------------------------------------------------
+                # CONFIDENCE
+                # ------------------------------------------------
+
+                confidence = min(
+                    safe_float(
+                        x.get(
+                            'confidence'
+                        ),
+                        0
+                    )
+                    for x in combo
+                )
+
+                if (
+                    confidence
+                    <
+                    BUILDER_MIN_CONFIDENCE
+                ):
+                    continue
+
+                # ------------------------------------------------
+                # RISK
+                # ------------------------------------------------
+
+                max_risk = max(
+                    safe_float(
+                        x.get(
+                            'risk'
+                        ),
+                        100
+                    )
+                    for x in combo
+                )
+
+                risk = (
+                    max_risk
+                    +
+                    (1 - correlation)
+                    * 30
+                    +
+                    max(
+                        0,
+                        75 - joint_pct
+                    )
+                    * 0.15
+                    +
+                    max(
+                        0,
+                        n - 2
+                    )
+                    * 1.5
+                )
+
+                risk = min(
+                    100,
+                    risk
+                )
+
+                if risk > BUILDER_MAX_RISK:
+                    continue
+
+                # ------------------------------------------------
+                # VALUE
+                # ------------------------------------------------
+
+                implied = (
+                    100.0
+                    /
+                    odd
+                )
+
+                edge = (
+                    joint_pct
+                    -
+                    implied
+                )
+
+                if edge < 1.0:
+                    continue
+
+                # ------------------------------------------------
+                # EV
+                # ------------------------------------------------
+
+                ev = (
+                    joint_pct
+                    /
+                    100.0
+                    *
+                    odd
+                    - 1
+                )
+
+                # ------------------------------------------------
+                # FINAL SCORE
+                # ------------------------------------------------
+
+                score = (
+                    joint_pct * 0.48
+                    +
+                    confidence * 0.20
+                    +
+                    max(
+                        0,
+                        edge
+                    ) * 2.20
+                    +
+                    max(
+                        0,
+                        ev
+                    ) * 10
+                    -
+                    risk * 0.30
+                )
+
+                # Reward useful extra legs,
+                # but only very slightly.
+                if n == 3:
+                    score += 1.5
+
+                elif n == 4:
+                    score += 1.0
+
+                elif n == 5:
+                    score += 0.5
+
+                # Strong correlation must hurt.
+                if correlation < 0.85:
+                    score -= 2
+
+                if correlation < 0.75:
+                    score -= 4
+
+                score = round(
+                    score,
+                    2
+                )
+
+                # ------------------------------------------------
+                # BEST BUILDER
+                # ------------------------------------------------
+
+                if (
+                    best is None
+                    or
+                    score > best[0]
+                ):
+                    best = (
+                        score,
+                        combo,
+                        odd,
+                        joint_pct,
+                        confidence,
+                        risk,
+                        edge,
+                        ev,
+                        correlation
+                    )
+
+        if not best:
+            return None
+
+        (
+            score,
+            combo,
+            odd,
+            probability,
+            confidence,
+            risk,
+            edge,
+            ev,
+            correlation
+        ) = best
+
+        fixture = match.get(
+            'fixture',
+            {}
+        )
+
+        teams = match.get(
+            'teams',
+            {}
+        )
+
+        league = match.get(
+            'league',
+            {}
+        )
+
+        return {
+            'fixture_id':
+                fixture.get('id'),
+
+            'home_team':
+                teams.get(
+                    'home',
+                    {}
+                ).get(
+                    'name',
+                    'HOME'
+                ),
+
+            'away_team':
+                teams.get(
+                    'away',
+                    {}
+                ).get(
+                    'name',
+                    'AWAY'
+                ),
+
+            'league':
+                league.get(
+                    'name',
+                    ''
+                ),
+
+            'country':
+                league.get(
+                    'country',
+                    ''
+                ),
+
+            'market':
+                '🧩 BET BUILDER',
+
+            'probability':
+                round(
+                    probability,
+                    1
+                ),
+
+            'confidence':
+                round(
+                    confidence,
+                    1
+                ),
+
+            'risk':
+                round(
+                    risk,
+                    1
+                ),
+
+            'odd':
+                round(
+                    odd,
+                    2
+                ),
+
+            'edge':
+                round(
+                    edge,
+                    1
+                ),
+
+            'ev':
+                round(
+                    ev,
+                    3
+                ),
+
+            'score':
+                round(
+                    score,
+                    2
+                ),
+
+            'builder_correlation':
+                round(
+                    correlation,
+                    3
+                ),
+
+            'builder_legs': [
+                {
+                    'market':
                         x.get(
                             'market',
                             ''
-                        )
-                    ).lower()
+                        ),
 
-                    family = str(
+                    'odd':
                         x.get(
-                            'family',
-                            ''
+                            'odd',
+                            0
+                        ),
+
+                    'probability':
+                        x.get(
+                            'probability',
+                            0
                         )
-                    ).lower()
+                }
+                for x in combo
+            ],
 
-                    # Cards / bookings are ALWAYS one family.
-                    if (
-                        'card' in market
-                        or
-                        'booking' in market
-                    ):
-                        family = 'cards'
+            'match_date':
+                fixture.get(
+                    'date'
+                )
+        }
 
-                    # Corners are ALWAYS one family.
-                    elif (
-                        'corner' in market
-                    ):
-                        family = 'corners'
-
-                    # Goals are ALWAYS one family.
-                    elif (
-                        'goal' in market
-                    ):
-                        family = 'goals'
-
-                    # BTTS is ALWAYS one family.
-                    elif (
-                        'btts' in market
-                    ):
-                        family = 'btts'
-
-
+    except Exception as e:
+        logging.warning(
+            'FINAL BUILDER ERROR: %s',
+            repr(e)
+        )
+        return None
+                                    
 
 def build_best_bet_builder(match, detailed=True):
     return _final_builder_2to5(match, detailed=detailed)
