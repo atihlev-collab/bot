@@ -23490,31 +23490,15 @@ def _v7_live_signal(match):
 
         edge = value_edge(p, odd)
 
-# --------------------------------------------------------
-# STRICT LIVE QUALITY CONFIRMATION
-# --------------------------------------------------------
+        
 
-strong_pressure = total_activity >= 55
-strong_shots = shots_on >= 3
-strong_xg = xg >= 0.60
-strong_danger = dangerous >= 30
-strong_dominance = dominance >= 0.18
-
-confirmations = sum([
-    strong_pressure,
-    strong_shots,
-    strong_xg,
-    strong_danger,
-    strong_dominance
-])
-
-# Require at least 3 independent confirmations.
-if confirmations < 3:
-    return None
-
-# Stronger value requirement.
-if edge < 2.5:
-    return None
+        if (
+            p < LIVE_MIN_PROBABILITY
+            or confidence < LIVE_MIN_CONFIDENCE
+            or risk > LIVE_MAX_RISK
+            or edge < 0
+        ):
+            return None
 
 if (
     p < LIVE_MIN_PROBABILITY
