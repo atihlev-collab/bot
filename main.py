@@ -22778,25 +22778,131 @@ def _v7_prematch_candidates(match, detailed=False):
     except Exception:
         pass
     out=[]
-    def add(label,odd,prob,market_name):
-        if odd is None: return
-        odd=_v7_num(odd,0)
-        prob=_v7_clamp(prob,5,95)
-        if odd<PREMATCH_MIN_ODD or odd>PREMATCH_MAX_ODD: return
-        implied=100/odd
-        edge=prob-implied
-        # Do not accept a high model probability without at least a small market sanity check.
-        if prob<PREMATCH_MIN_PROBABILITY or edge<-2: return
-        conf=_v7_market_confidence(prob,5,prob-implied, hf.get('recent_form_pct',0)+af.get('recent_form_pct',0))
-        risk=_v7_risk(prob,conf,edge,5)
-        if conf<PREMATCH_MIN_CONFIDENCE or risk>PREMATCH_MAX_RISK: return
+    def add(label, odd, prob, market_name):
+        if odd is None:
+            return
+
+        odd = _v7_num(odd, 0)
+        prob = _v7_clamp(prob, 5, 95)
+
+        if odd < PREMATCH_MIN_ODD or odd > PREMATCH_MAX_ODD:
+            return
+
+        implied = 100 / odd
+        edge = prob - implied
+
+        # ----------------------------------------------------
+        # MARKET SANITY
+        # ----------------------------------------------------
+        # Do not accept a high model probability when the
+        # bookmaker price strongly disagrees with it.
+        if prob < PREMATCH_MIN_PROBABILITY:
+            return
+
+        if edge < -2:
+            return
+
+        # ----------------------------------------------------
+        # CONFIDENCE / RISK
+        # ----------------------------------------------------
+        form_strength = (
+            hf.get('recent_form_pct', 0)
+            +
+            af.get('recent_form_pct', 0)
+        )
+
+        conf = _v7_market_confidence(
+            prob,
+            5,
+            edge,
+            form_strength
+        )
+
+        risk = _v7_risk(
+            prob,
+            conf,
+            edge,
+            5
+        )
+
+        if conf < PREMATCH_MIN_CONFIDENCE:
+            return
+
+        if risk > PREMATCH_MAX_RISK:
+            return
+
+        # ----------------------------------------------------
+        # VALUE SCORE
+        # ----------------------------------------------------
+        # Probability is important, but VALUE must be rewarded.
+        # Confidence supports the model.
+        # Risk reduces the final score.
+        #
+        # This prevents a very low-priced market with a high
+        # probability from automatically beating a genuinely
+        # valuable market.
+        value_component = max(
+            0,
+            min(30, edge * 1.50)
+        )
+
+        probability_component = (
+            max(0, prob - 50) * 0.70
+        )
+
+        confidence_component = (
+            max(0, conf - 50) * 0.45
+        )
+
+        risk_penalty = (
+            max(0, risk - 15) * 0.55
+        )
+
+        score = (
+            probability_component
+            +
+            value_component
+            +
+            confidence_component
+            -
+            risk_penalty
+        )
+
+        # Small bonus for genuinely strong value.
+        if edge >= 8:
+            score += 3
+
+        if edge >= 12:
+            score += 4
+
+        # Small bonus for very strong confidence.
+        if conf >= 82:
+            score += 2
+
+        if conf >= 88:
+            score += 2
+
+        score = round(
+            max(0, min(100, score)),
+            2
+        )
+
         out.append({
-            'fixture_id':fid,'home_team':home.get('name','HOME'),'away_team':away.get('name','AWAY'),
-            'country':league.get('country',''),'league':league.get('name',''),
-            'market':market_name,'probability':round(prob,1),'confidence':conf,'risk':risk,
-            'odd':odd,'edge':round(edge,1),'ev':round(prob/100*odd-1,3),
-            'family':_v7_family(market_name),'score':round(prob*0.62+conf*0.23+max(0,edge)*0.15-risk*0.15,2),
-            'match_date':fixture.get('date')
+            'fixture_id': fid,
+            'home_team': home.get('name', 'HOME'),
+            'away_team': away.get('name', 'AWAY'),
+            'country': league.get('country', ''),
+            'league': league.get('name', ''),
+            'market': market_name,
+            'probability': round(prob, 1),
+            'confidence': conf,
+            'risk': risk,
+            'odd': odd,
+            'edge': round(edge, 1),
+            'ev': round(prob / 100 * odd - 1, 3),
+            'family': _v7_family(market_name),
+            'score': score,
+            'match_date': fixture.get('date')
         })
     # Goals/BTTS/results.
     for name,target in [('🚀 OVER 2.5 GOALS','over 2.5'),('🛡 UNDER 2.5 GOALS','under 2.5'),('🔥 OVER 3.5 GOALS','over 3.5'),('🛡 UNDER 3.5 GOALS','under 3.5')]:
@@ -23059,44 +23165,257 @@ def build_best_bet_builder(match, detailed=True):
     }
 
 # ============================================================
-# PREMATCH DAILY SELECTION — WHOLE DAY, NOT NEXT 5
+# PREMATCH DAILY SELECTION — SMART QUALITY + MARKET DIVERSITY
 # ============================================================
 
 def _v7_select_normal(matches):
-    # First pass is cheap.  Select one best signal per fixture.
-    allc=[]
-    for m in matches:
-        try: allc.extend(_v7_prematch_candidates(m,False))
-        except Exception as e: logging.warning('PREMATCH MODEL ERROR: %s',repr(e))
-    allc.sort(key=lambda x:(x['score'],x['probability'],x['confidence']),reverse=True)
-    selected=[]; used_fixtures=set()
-    for c in allc:
-        if c['fixture_id'] in used_fixtures: continue
-        selected.append(c); used_fixtures.add(c['fixture_id'])
-        if len(selected)>=DETAIL_HISTORY_TOP_N: break
-    # Enrich only the strongest whole-day fixtures with corners/cards.
-    enriched=[]
-    for c in selected:
-        m=next((x for x in matches if x.get('fixture',{}).get('id')==c['fixture_id']),None)
-        if not m: continue
-        try: enriched.extend(_v7_prematch_candidates(m,True))
-        except Exception as e: logging.warning('DETAIL PREMATCH ERROR: %s',repr(e))
-    pool=allc+enriched
-    # Dedup same fixture + family, keep highest score.
-    best_by_key={}
-    for c in pool:
-        key=(c['fixture_id'],c['family'])
-        if key not in best_by_key or c['score']>best_by_key[key]['score']:
-            best_by_key[key]=c
-    pool=list(best_by_key.values())
-    pool.sort(key=lambda x:(x['score'],x['probability'],x['confidence']),reverse=True)
-    result=[]; used=set()
-    for c in pool:
-        if c['fixture_id'] in used: continue
-        result.append(c); used.add(c['fixture_id'])
-        if len(result)>=MAX_PREMATCH_SIGNALS_PER_SCAN: break
-    return result
+    # --------------------------------------------------------
+    # FIRST PASS
+    # --------------------------------------------------------
+    # Generate all available candidates for the whole day.
+    # We still keep only the strongest candidate from each
+    # fixture in the final portfolio.
+    # --------------------------------------------------------
 
+    allc = []
+
+    for m in matches:
+        try:
+            allc.extend(
+                _v7_prematch_candidates(
+                    m,
+                    False
+                )
+            )
+        except Exception as e:
+            logging.warning(
+                'PREMATCH MODEL ERROR: %s',
+                repr(e)
+            )
+
+    if not allc:
+        return []
+
+    # --------------------------------------------------------
+    # BASE RANKING
+    # --------------------------------------------------------
+
+    allc.sort(
+        key=lambda x: (
+            x.get('score', 0),
+            x.get('edge', 0),
+            x.get('probability', 0),
+            x.get('confidence', 0)
+        ),
+        reverse=True
+    )
+
+    # --------------------------------------------------------
+    # FIRST SHORTLIST
+    # --------------------------------------------------------
+    # Only one strongest candidate per fixture.
+    # This prevents several markets from the same match
+    # occupying the portfolio.
+    # --------------------------------------------------------
+
+    shortlist = []
+    used_fixtures = set()
+
+    for c in allc:
+
+        fid = c.get('fixture_id')
+
+        if not fid:
+            continue
+
+        if fid in used_fixtures:
+            continue
+
+        shortlist.append(c)
+        used_fixtures.add(fid)
+
+        if len(shortlist) >= DETAIL_HISTORY_TOP_N:
+            break
+
+    # --------------------------------------------------------
+    # DETAIL ENRICHMENT
+    # --------------------------------------------------------
+    # Recalculate the strongest fixtures with detailed
+    # corners/cards information.
+    # --------------------------------------------------------
+
+    enriched = []
+
+    for c in shortlist:
+
+        m = next(
+            (
+                x for x in matches
+                if x.get('fixture', {}).get('id')
+                == c.get('fixture_id')
+            ),
+            None
+        )
+
+        if not m:
+            continue
+
+        try:
+            enriched.extend(
+                _v7_prematch_candidates(
+                    m,
+                    True
+                )
+            )
+        except Exception as e:
+            logging.warning(
+                'DETAIL PREMATCH ERROR: %s',
+                repr(e)
+            )
+
+    # --------------------------------------------------------
+    # MERGE
+    # --------------------------------------------------------
+
+    pool = allc + enriched
+
+    # Same fixture + same market family:
+    # keep only the strongest version.
+    best_by_key = {}
+
+    for c in pool:
+
+        key = (
+            c.get('fixture_id'),
+            c.get('family')
+        )
+
+        if (
+            key not in best_by_key
+            or
+            c.get('score', 0)
+            > best_by_key[key].get('score', 0)
+        ):
+            best_by_key[key] = c
+
+    pool = list(
+        best_by_key.values()
+    )
+
+    # --------------------------------------------------------
+    # QUALITY RANKING
+    # --------------------------------------------------------
+
+    pool.sort(
+        key=lambda x: (
+            x.get('score', 0),
+            x.get('edge', 0),
+            x.get('probability', 0),
+            x.get('confidence', 0)
+        ),
+        reverse=True
+    )
+
+    # --------------------------------------------------------
+    # SMART PORTFOLIO SELECTION
+    # --------------------------------------------------------
+    #
+    # We do NOT force different market families.
+    #
+    # A clearly superior signal must still win.
+    #
+    # However, when two candidates are close in quality,
+    # the second candidate gets a preference if it comes
+    # from a different market family.
+    #
+    # This prevents a portfolio such as:
+    #
+    #   OVER 2.5
+    #   OVER 3.5
+    #   BTTS
+    #
+    # when equally strong CORNER / CARD / RESULT signals
+    # are available.
+    # --------------------------------------------------------
+
+    result = []
+    used_fixtures = set()
+    used_families = set()
+
+    QUALITY_TOLERANCE = 6.0
+
+    while len(result) < MAX_PREMATCH_SIGNALS_PER_SCAN:
+
+        available = [
+            c for c in pool
+            if c.get('fixture_id') not in used_fixtures
+        ]
+
+        if not available:
+            break
+
+        # Highest raw-quality candidate.
+        best_raw = max(
+            available,
+            key=lambda x: (
+                x.get('score', 0),
+                x.get('edge', 0),
+                x.get('probability', 0),
+                x.get('confidence', 0)
+            )
+        )
+
+        best_score = best_raw.get(
+            'score',
+            0
+        )
+
+        # Candidates close enough to the best signal
+        # are considered interchangeable for diversification.
+        close_candidates = [
+            c for c in available
+            if best_score - c.get('score', 0)
+            <= QUALITY_TOLERANCE
+        ]
+
+        # Prefer a new market family inside that quality band.
+        diversified = [
+            c for c in close_candidates
+            if c.get('family')
+            not in used_families
+        ]
+
+        if diversified:
+
+            chosen = max(
+                diversified,
+                key=lambda x: (
+                    x.get('score', 0),
+                    x.get('edge', 0),
+                    x.get('probability', 0),
+                    x.get('confidence', 0)
+                )
+            )
+
+        else:
+            # If no different family is good enough,
+            # take the absolute strongest signal.
+            chosen = best_raw
+
+        result.append(chosen)
+
+        used_fixtures.add(
+            chosen.get('fixture_id')
+        )
+
+        family = chosen.get('family')
+
+        if family:
+            used_families.add(
+                family
+            )
+
+    return result
 
 def _v7_select_builders(matches):
     # Build from the strongest 35 normal fixtures only to control API usage.
@@ -24193,56 +24512,6 @@ def rank_live_signals(signals):
     return out
 
 
-def _final_builder_2to5(match, detailed=True):
-    try:
-        candidates = _v7_prematch_candidates(
-            match,
-            detailed=detailed
-        ) or []
-
-        candidates = [
-            c for c in candidates
-            if _v7_num(
-                c.get('probability'),
-                0
-            ) >= BUILDER_MIN_LEG_PROB
-            and
-            _v7_num(
-                c.get('confidence'),
-                0
-            ) >= BUILDER_MIN_CONFIDENCE
-        ]
-
-        if len(candidates) < BET_BUILDER_MIN_LEGS:
-            return None
-
-        candidates.sort(
-            key=lambda x: (
-                x.get('score', 0),
-                x.get('probability', 0),
-                x.get('confidence', 0),
-                -x.get('risk', 100)
-            ),
-            reverse=True
-        )
-
-        candidates = candidates[:15]
-
-        best = None
-
-        max_n = min(
-            BET_BUILDER_MAX_LEGS,
-            len(candidates)
-        )
-
-        for n in range(
-            BET_BUILDER_MIN_LEGS,
-            max_n + 1
-        ):
-            for combo in combinations(
-                candidates,
-                n
-            ):
 
                 # =================================================
                 # ONE MARKET FAMILY ONLY
@@ -24292,155 +24561,9 @@ def _final_builder_2to5(match, detailed=True):
                     ):
                         family = 'btts'
 
-                    families.append(
-                        family
-                    )
+        
 
-                # NEVER allow two legs from same family.
-                if (
-                    len(set(families))
-                    != len(families)
-                ):
-                    continue
-
-                # =================================================
-                # ODDS
-                # =================================================
-
-                odd = 1.0
-
-                for x in combo:
-                    odd *= _v7_num(
-                        x.get('odd'),
-                        0
-                    )
-
-                if (
-                    odd < BUILDER_MIN_ODD
-                    or
-                    odd > BUILDER_MAX_ODD
-                ):
-                    continue
-
-                # =================================================
-                # PROBABILITY
-                # =================================================
-
-                probs = [
-                    _v7_num(
-                        x.get(
-                            'probability'
-                        ),
-                        0
-                    ) / 100
-                    for x in combo
-                ]
-
-                if not probs:
-                    continue
-
-                if (
-                    min(probs) * 100
-                    < BUILDER_MIN_LEG_PROB
-                ):
-                    continue
-
-                # =================================================
-                # JOINT PROBABILITY
-                # =================================================
-
-                joint = 1.0
-
-                for p in probs:
-                    joint *= p
-
-                # Conservative correlation penalties.
-                if (
-                    'goals' in families
-                    and
-                    'btts' in families
-                ):
-                    joint *= 0.92
-
-                if (
-                    families.count('corners')
-                    +
-                    families.count('cards')
-                    >= 2
-                ):
-                    joint *= 0.96
-
-                joint_pct = min(
-                    92.0,
-                    joint * 100
-                )
-
-                # =================================================
-                # CONFIDENCE / RISK
-                # =================================================
-
-                conf = min(
-                    _v7_num(
-                        x.get(
-                            'confidence'
-                        ),
-                        0
-                    )
-                    for x in combo
-                )
-
-                risk = (
-                    max(
-                        _v7_num(
-                            x.get(
-                                'risk'
-                            ),
-                            100
-                        )
-                        for x in combo
-                    )
-                    +
-                    max(
-                        0,
-                        75 - joint_pct
-                    ) * 0.18
-                    +
-                    (n - 2) * 1.5
-                )
-
-                risk = int(
-                    _v7_clamp(
-                        risk,
-                        8,
-                        BUILDER_MAX_RISK
-                    )
-                )
-
-                if (
-                    conf < BUILDER_MIN_CONFIDENCE
-                    or
-                    risk > BUILDER_MAX_RISK
-                ):
-                    continue
-
-                # =================================================
-                # VALUE
-                # =================================================
-
-                edge = (
-                    joint_pct
-                    -
-                    100 / odd
-                )
-
-                # Builder must have positive value.
-                if edge < 1.0:
-                    continue
-
-                # =================================================
-                # SCORE
-                # =================================================
-
+    
                 score = (
                     joint_pct * 0.50
                     +
@@ -24486,125 +24609,7 @@ def _final_builder_2to5(match, detailed=True):
 
         fixture = match.get(
             'fixture',
-            {}
-        )
-
-        teams = match.get(
-            'teams',
-            {}
-        )
-
-        league = match.get(
-            'league',
-            {}
-        )
-
-        return {
-            'fixture_id':
-                fixture.get('id'),
-
-            'home_team':
-                teams.get(
-                    'home',
-                    {}
-                ).get(
-                    'name',
-                    'HOME'
-                ),
-
-            'away_team':
-                teams.get(
-                    'away',
-                    {}
-                ).get(
-                    'name',
-                    'AWAY'
-                ),
-
-            'country':
-                league.get(
-                    'country',
-                    ''
-                ),
-
-            'league':
-                league.get(
-                    'name',
-                    ''
-                ),
-
-            'market':
-                '🧩 BET BUILDER',
-
-            'probability':
-                round(
-                    joint,
-                    1
-                ),
-
-            'confidence':
-                round(
-                    conf,
-                    1
-                ),
-
-            'risk':
-                risk,
-
-            'odd':
-                round(
-                    odd,
-                    2
-                ),
-
-            'edge':
-                round(
-                    edge,
-                    1
-                ),
-
-            'ev':
-                round(
-                    joint / 100 * odd - 1,
-                    3
-                ),
-
-            'score':
-                round(
-                    score,
-                    2
-                ),
-
-            'builder_legs': [
-                {
-                    'market':
-                        x.get(
-                            'market'
-                        ),
-                    'odd':
-                        x.get(
-                            'odd'
-                        ),
-                    'probability':
-                        x.get(
-                            'probability'
-                        )
-                }
-                for x in combo
-            ],
-
-            'match_date':
-                fixture.get(
-                    'date'
-                )
-        }
-
-    except Exception as e:
-        logging.warning(
-            'FINAL BUILDER ERROR: %s',
-            repr(e)
-        )
-        return None
+            {}     
 
 
 def build_best_bet_builder(match, detailed=True):
