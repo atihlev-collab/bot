@@ -23554,10 +23554,68 @@ def live_signal_quality_filter(signal):
             _v7_num(signal.get('edge'),-999)>=0)
 
 
+# ============================================================
+# LIVE RANKING — ONE BEST SIGNAL PER FIXTURE
+# ============================================================
+
 def rank_live_signals(signals):
-    valid=[s for s in signals if live_signal_quality_filter(s)]
-    valid.sort(key=lambda x:(x.get('score',0),x.get('probability',0),x.get('confidence',0)),reverse=True)
-    return valid[:MAX_LIVE_SIGNALS_PER_SCAN]
+
+    valid = []
+
+    for signal in signals or []:
+
+        if not live_signal_quality_filter(
+            signal
+        ):
+            continue
+
+        valid.append(
+            signal
+        )
+
+    # Strongest signals first.
+    valid.sort(
+        key=lambda x: (
+            x.get('score', 0),
+            x.get('edge', 0),
+            x.get('probability', 0),
+            x.get('confidence', 0),
+            -x.get('risk', 100)
+        ),
+        reverse=True
+    )
+
+    # --------------------------------------------------------
+    # ONE SIGNAL PER MATCH
+    # --------------------------------------------------------
+
+    result = []
+    used_fixtures = set()
+
+    for signal in valid:
+
+        fixture_id = signal.get(
+            'fixture_id'
+        )
+
+        if not fixture_id:
+            continue
+
+        if fixture_id in used_fixtures:
+            continue
+
+        result.append(
+            signal
+        )
+
+        used_fixtures.add(
+            fixture_id
+        )
+
+        if len(result) >= MAX_LIVE_SIGNALS_PER_SCAN:
+            break
+
+    return result
 
 
 def format_live_signal(signal):
