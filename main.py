@@ -18202,10 +18202,6 @@ def live_signal_score(
     risk
 ):
 
-    # Quality score:
-    # probability + confidence + real value,
-    # with a stronger penalty for risk.
-
     score = (
         probability * 0.35
         +
