@@ -23562,14 +23562,67 @@ def get_best_live_signal(match):
     return max(ss,key=lambda x:x.get('score',0)) if ss else None
 
 
+# ============================================================
+# FINAL LIVE SIGNAL QUALITY FILTER
+# ============================================================
+
 def live_signal_quality_filter(signal):
-    if not signal: return False
-    return (_v7_num(signal.get('probability'),0)>=LIVE_MIN_PROBABILITY and
-            _v7_num(signal.get('confidence'),0)>=LIVE_MIN_CONFIDENCE and
-            _v7_num(signal.get('risk'),100)<=LIVE_MAX_RISK and
-            _v7_num(signal.get('odd'),0)>=LIVE_MIN_ODD and
-            _v7_num(signal.get('odd'),0)<=LIVE_MAX_ODD and
-            _v7_num(signal.get('edge'),-999)>=0)
+    if not signal:
+        return False
+
+    probability = _v7_num(
+        signal.get('probability'),
+        0
+    )
+
+    confidence = _v7_num(
+        signal.get('confidence'),
+        0
+    )
+
+    risk = _v7_num(
+        signal.get('risk'),
+        100
+    )
+
+    edge = _v7_num(
+        signal.get('edge'),
+        -999
+    )
+
+    odd = _v7_num(
+        signal.get('odd'),
+        0
+    )
+
+    # --------------------------------------------------------
+    # CORE QUALITY
+    # --------------------------------------------------------
+    if probability < 70.0:
+        return False
+
+    if confidence < 76.0:
+        return False
+
+    if risk > 35.0:
+        return False
+
+    # --------------------------------------------------------
+    # REAL VALUE
+    # --------------------------------------------------------
+    if edge < 3.0:
+        return False
+
+    # --------------------------------------------------------
+    # ODDS RANGE
+    # --------------------------------------------------------
+    if odd < 1.30:
+        return False
+
+    if odd > 4.00:
+        return False
+
+    return True
 
 
 # ============================================================
