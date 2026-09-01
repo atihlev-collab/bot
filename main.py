@@ -24513,6 +24513,10 @@ def rank_live_signals(signals):
 
 
 
+                
+        
+
+    
                 # =================================================
                 # ONE MARKET FAMILY ONLY
                 # =================================================
@@ -24561,55 +24565,6 @@ def rank_live_signals(signals):
                     ):
                         family = 'btts'
 
-        
-
-    
-                score = (
-                    joint_pct * 0.50
-                    +
-                    conf * 0.20
-                    +
-                    max(
-                        0,
-                        edge
-                    ) * 2.0
-                    -
-                    risk * 0.25
-                    +
-                    n * 0.15
-                )
-
-                if (
-                    best is None
-                    or
-                    score > best[0]
-                ):
-                    best = (
-                        score,
-                        combo,
-                        odd,
-                        joint_pct,
-                        conf,
-                        risk,
-                        edge
-                    )
-
-        if not best:
-            return None
-
-        (
-            score,
-            combo,
-            odd,
-            joint,
-            conf,
-            risk,
-            edge
-        ) = best
-
-        fixture = match.get(
-            'fixture',
-            {}     
 
 
 def build_best_bet_builder(match, detailed=True):
