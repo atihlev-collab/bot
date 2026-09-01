@@ -18192,10 +18192,9 @@ def adjust_live_probability(
 
 
 # =========================================================
-# LIVE SIGNAL SCORE
+# LIVE SIGNAL SCORE — QUALITY FIRST
 # =========================================================
 
-# BLOCK: LIVE_SIGNAL_SCORE
 def live_signal_score(
     probability,
     confidence,
@@ -18203,32 +18202,24 @@ def live_signal_score(
     risk
 ):
 
+    # Quality score:
+    # probability + confidence + real value,
+    # with a stronger penalty for risk.
+
     score = (
-
-        probability * 0.40
-
+        probability * 0.35
         +
-
         confidence * 0.35
-
         +
-
-        max(
-            0,
-            edge
-        ) * 0.15
-
+        max(0, edge) * 0.20
         -
-
         risk * 0.10
-
     )
 
     return round(
         score,
         2
     )
-
 
 # =========================================================
 # FINAL LIVE SIGNAL
@@ -23502,8 +23493,39 @@ def _v7_live_signal(match):
             return None
 
         edge = value_edge(p, odd)
-        if p < LIVE_MIN_PROBABILITY or confidence < LIVE_MIN_CONFIDENCE or risk > LIVE_MAX_RISK or edge < 0:
-            return None
+
+# --------------------------------------------------------
+# STRICT LIVE QUALITY CONFIRMATION
+# --------------------------------------------------------
+
+strong_pressure = total_activity >= 55
+strong_shots = shots_on >= 3
+strong_xg = xg >= 0.60
+strong_danger = dangerous >= 30
+strong_dominance = dominance >= 0.18
+
+confirmations = sum([
+    strong_pressure,
+    strong_shots,
+    strong_xg,
+    strong_danger,
+    strong_dominance
+])
+
+# Require at least 3 independent confirmations.
+if confirmations < 3:
+    return None
+
+# Stronger value requirement.
+if edge < 2.5:
+    return None
+
+if (
+    p < LIVE_MIN_PROBABILITY
+    or confidence < LIVE_MIN_CONFIDENCE
+    or risk > LIVE_MAX_RISK
+):
+    return None
 
         market = '🎯 NEXT GOAL HOME' if side == 'home' else '🎯 NEXT GOAL AWAY'
         return {
