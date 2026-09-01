@@ -22286,43 +22286,45 @@ import re
 from itertools import combinations
 
 # -------------------------
-# FINAL CONFIG
+# FINAL CONFIG — QUALITY FIRST
 # -------------------------
+
 PREMATCH_SCAN_INTERVAL = 300
 LIVE_SCAN_INTERVAL = 60
-MAX_PREMATCH_SIGNALS_PER_SCAN = 5
-MAX_LIVE_SIGNALS_PER_SCAN = 5
 
+# Only the best signals.
+MAX_PREMATCH_SIGNALS_PER_SCAN = 3
+MAX_LIVE_SIGNALS_PER_SCAN = 3
+
+# Minimum quality.
 PREMATCH_MIN_PROBABILITY = 68.0
 PREMATCH_MIN_CONFIDENCE = 72.0
 PREMATCH_MAX_RISK = 32.0
 PREMATCH_MIN_ODD = 1.45
-PREMATCH_MAX_ODD = 3.50
+PREMATCH_MAX_ODD = 4.00
 
-LIVE_MINUTE = 25
-LIVE_MAX_MINUTE = 88
 LIVE_MIN_PROBABILITY = 68.0
-LIVE_MIN_CONFIDENCE = 76.0
-LIVE_MAX_RISK = 35.0
+LIVE_MIN_CONFIDENCE = 74.0
+LIVE_MAX_RISK = 32.0
 LIVE_MIN_ODD = 1.30
 LIVE_MAX_ODD = 4.00
-LIVE_COOLDOWN = 600
 
-BET_BUILDER_DAILY_TOP3 = 3
-BUILDER_MIN_LEG_PROB = 70.0
-BUILDER_MIN_CONFIDENCE = 72.0
+# ---------------------------------------------------------
+# BET BUILDER
+# ---------------------------------------------------------
+
+BET_BUILDER_MIN_LEGS = 2
+BET_BUILDER_MAX_LEGS = 5
+
+# Only the best 2 builders for the day.
+BET_BUILDER_DAILY_TOP3 = 2
+
+BUILDER_MIN_LEG_PROB = 68.0
+BUILDER_MIN_CONFIDENCE = 70.0
 BUILDER_MAX_RISK = 32.0
-BUILDER_MIN_ODD = 1.45
-BUILDER_MAX_ODD = 4.50
 
-# Detailed corner/card history is expensive.  Only the strongest
-# whole-day matches are enriched with it.
-DETAIL_HISTORY_TOP_N = 35
-DETAIL_HISTORY_CACHE_TTL = 12 * 3600
-DETAIL_HISTORY_CACHE = {}
-RAW_ODDS_CACHE = {}
-DAILY_NORMAL_SENT = set()
-DAILY_BUILDER_SENT = set()
+BUILDER_MIN_ODD = 1.45
+BUILDER_MAX_ODD = 6.00)
 
 # ============================================================
 # GENERAL HELPERS
