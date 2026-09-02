@@ -24602,6 +24602,217 @@ def _final_builder_2to5(match, detailed=True):
         if not candidates:
             return None
 
+
+        # ----------------------------------------------------
+        # FINAL EXACT BETANO VALIDATION
+        # ----------------------------------------------------
+        # Every Builder leg MUST exist exactly in the
+        # current Betano prematch feed.
+        #
+        # IMPORTANT:
+        # There is NO fallback to another line.
+        # Example:
+        # CARD OVER 2.5 missing -> do NOT use OVER 3.5.
+        # ----------------------------------------------------
+
+        markets = get_v7_prematch_markets(
+            match.get('fixture', {}).get('id')
+        )
+
+        if not markets:
+            return None
+
+        def _exact_builder_leg_exists(candidate):
+            market = str(
+                candidate.get('market', '')
+            ).lower().strip()
+
+            # -----------------------------
+            # CARDS
+            # -----------------------------
+            if (
+                'card' in market
+                or 'booking' in market
+            ):
+                parts = market.split()
+
+                direction = None
+                line = None
+
+                for p in parts:
+                    if p in ('over', 'under'):
+                        direction = p
+
+                    try:
+                        if '.' in p:
+                            float(p)
+                            line = p
+                    except Exception:
+                        pass
+
+                if direction is None or line is None:
+                    return False
+
+                target = f'{direction} {line}'
+
+                value, odd = _v7_find_market(
+                    markets,
+                    'cards',
+                    target,
+                    half=False
+                )
+
+                return (
+                    value is not None
+                    and odd is not None
+                    and clean_text(value) == clean_text(target)
+                )
+
+            # -----------------------------
+            # CORNERS
+            # -----------------------------
+            if 'corner' in market:
+                parts = market.split()
+
+                direction = None
+                line = None
+
+                for p in parts:
+                    if p in ('over', 'under'):
+                        direction = p
+
+                    try:
+                        if '.' in p:
+                            float(p)
+                            line = p
+                    except Exception:
+                        pass
+
+                if direction is None or line is None:
+                    return False
+
+                target = f'{direction} {line}'
+
+                value, odd = _v7_find_market(
+                    markets,
+                    'corners',
+                    target,
+                    half=False
+                )
+
+                return (
+                    value is not None
+                    and odd is not None
+                    and clean_text(value) == clean_text(target)
+                )
+
+            # -----------------------------
+            # GOALS
+            # -----------------------------
+            if 'goal' in market:
+                if 'home over 1.5' in market:
+                    for name, vals in markets:
+                        name = clean_text(name)
+
+                        if (
+                            'home' in name
+                            and 'goal' in name
+                        ):
+                            for value, odd in vals:
+                                if clean_text(value) == 'over 1.5':
+                                    return odd is not None
+
+                    return False
+
+                if 'away over 1.5' in market:
+                    for name, vals in markets:
+                        name = clean_text(name)
+
+                        if (
+                            'away' in name
+                            and 'goal' in name
+                        ):
+                            for value, odd in vals:
+                                if clean_text(value) == 'over 1.5':
+                                    return odd is not None
+
+                    return False
+
+                direction = None
+                line = None
+
+                for p in market.split():
+                    if p in ('over', 'under'):
+                        direction = p
+
+                    try:
+                        if '.' in p:
+                            float(p)
+                            line = p
+                    except Exception:
+                        pass
+
+                if direction is None or line is None:
+                    return False
+
+                target = f'{direction} {line}'
+
+                value, odd = _v7_find_market(
+                    markets,
+                    'goals',
+                    target,
+                    half=False
+                )
+
+                return (
+                    value is not None
+                    and odd is not None
+                    and clean_text(value) == clean_text(target)
+                )
+
+            # -----------------------------
+            # BTTS
+            # -----------------------------
+            if 'btts' in market:
+                value, odd = _v7_find_market(
+                    markets,
+                    'btts',
+                    'yes',
+                    half=False
+                )
+
+                return (
+                    value is not None
+                    and odd is not None
+                )
+
+            # Unknown market:
+            # NEVER allow it into Builder.
+            return False
+
+        # ----------------------------------------------------
+        # REMOVE ANY LEG NOT PRESENT EXACTLY IN BETANO
+        # ----------------------------------------------------
+
+        validated_candidates = []
+
+        for candidate in candidates:
+
+            if _exact_builder_leg_exists(candidate):
+                validated_candidates.append(candidate)
+
+            else:
+                logging.info(
+                    '[BUILDER SKIP] Betano market not found exactly: %s',
+                    candidate.get('market', 'UNKNOWN')
+                )
+
+        candidates = validated_candidates
+
+        if len(candidates) < BET_BUILDER_MIN_LEGS:
+            return None
+        
+
         # ----------------------------------------------------
         # QUALITY FILTER
         # ----------------------------------------------------
