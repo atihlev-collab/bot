@@ -23642,30 +23642,27 @@ def live_signal_quality_filter(signal):
     )
 
     # --------------------------------------------------------
-    # CORE QUALITY
+    # LIVE QUALITY — SOFT FILTER
+    # Do not kill good live signals only because
+    # of low odds or slightly lower confidence.
     # --------------------------------------------------------
-    if probability < 70.0:
+
+    if probability < 65.0:
         return False
 
-    if confidence < 76.0:
+    if risk > 45.0:
         return False
 
-    if risk > 35.0:
+    # If real edge is available, prefer positive value.
+    # Missing edge is allowed for live markets such as corners.
+    if edge != -999 and edge < -8.0:
         return False
 
-    # --------------------------------------------------------
-    # REAL VALUE
-    # --------------------------------------------------------
-    if edge < 3.0:
+    # Only reject obviously invalid odds.
+    if odd < 1.01:
         return False
 
-    # --------------------------------------------------------
-    # ODDS RANGE
-    # --------------------------------------------------------
-    if odd < 1.30:
-        return False
-
-    if odd > 4.00:
+    if odd > 6.00:
         return False
 
     return True
