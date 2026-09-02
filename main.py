@@ -20312,9 +20312,8 @@ def build_live_market_candidates(match):
         if odd is None:
             continue
 
-        if odd < LIVE_MIN_ODD:
-            continue
-
+        # Do not reject low live odds.
+        # Very strong LIVE signals can legitimately have odds below 1.30.
         if odd > LIVE_MAX_ODD:
             continue
 
@@ -26406,17 +26405,19 @@ def analyze_live_match(fixture):
 
 
 # ============================================================
-# FINAL LIVE SCAN — STRICT QUALITY ENTRY POINT
+# FINAL LIVE SCAN — RESTORE PROVEN V3 LIVE ENGINE
 # ============================================================
 
 def _final_live_scan():
     try:
-        matches = get_live_matches() or []
-
-        candidates = []
-
-        checked = 0
-        generated = 0
+        result = _oldv3_live_loop()
+        return result or 0
+    except Exception as e:
+        logging.exception(
+            "FINAL LIVE ERROR: %s",
+            repr(e)
+        )
+        return 0
 
         # ----------------------------------------------------
         # BUILD RICH LIVE MARKET CANDIDATES
