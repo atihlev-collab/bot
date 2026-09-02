@@ -22450,17 +22450,56 @@ def get_v7_prematch_markets(fixture_id):
 
 
 def _v7_find_market(markets, family, target=None, half=False):
-    for name,vals in markets:
-        if family=='goals' and 'goal' not in name: continue
-        if family=='corners' and 'corner' not in name: continue
-        if family=='cards' and not any(x in name for x in ('card','booking')): continue
-        if family=='btts' and not ('both teams to score' in name or name=='btts'): continue
-        is_half=any(x in name for x in ('1st half','first half','1h'))
-        if half != is_half: continue
-        for value,odd in vals:
-            if target is None or value.startswith(clean_text(target)):
-                return value,odd
-    return None,None
+    """
+    STRICT BETANO MARKET VALIDATION
+
+    A market is accepted only when:
+    - it belongs to the requested family
+    - it is from the Betano feed
+    - the requested line/value exists EXACTLY
+    """
+
+    target_clean = clean_text(target) if target is not None else None
+
+    for name, vals in markets or []:
+        name = clean_text(name)
+
+        if family == 'goals' and 'goal' not in name:
+            continue
+
+        if family == 'corners' and 'corner' not in name:
+            continue
+
+        if family == 'cards' and not any(
+            x in name for x in ('card', 'booking')
+        ):
+            continue
+
+        if family == 'btts' and not (
+            'both teams to score' in name
+            or name == 'btts'
+        ):
+            continue
+
+        is_half = any(
+            x in name
+            for x in ('1st half', 'first half', '1h')
+        )
+
+        if half != is_half:
+            continue
+
+        for value, odd in vals or []:
+            value_clean = clean_text(value)
+
+            # EXACT Betano value/line check.
+            if target_clean is None:
+                return value, odd
+
+            if value_clean == target_clean:
+                return value, odd
+
+    return None, None
 
 # ============================================================
 # RECENT CORNER/CARD HISTORY
@@ -22925,21 +22964,47 @@ def _v7_prematch_candidates(match, detailed=False):
         total_c=_v7_total_market_history(home['id'],away['id'],'corners')
         total_y=_v7_total_market_history(home['id'],away['id'],'cards')
         if total_c is not None:
-            for target in (
+            # ------------------------------------------------
+            # BETANO CORNER MARKET VALIDATION
+            # Only generate a signal when the EXACT line
+            # exists in Betano prematch markets.
+            # ------------------------------------------------
+            corner_targets = (
                 'under 12.5',
                 'under 11.5',
                 'under 10.5',
                 'over 7.5',
                 'over 8.5',
                 'over 9.5'
-            ):
+            )
+
+            for target in corner_targets:
+
                 val, odd = _v7_find_market(
                     markets,
                     'corners',
                     target
                 )
 
-                if not odd:
+                # Exact Betano line must exist.
+                if not val or odd is None:
+                    continue
+
+                betano_value = clean_text(val)
+                expected_value = clean_text(target)
+
+                if betano_value != expected_value:
+                    continue
+
+                odd = _v7_num(odd, 0)
+
+                if odd <= 1.01:
+                    continue
+
+                if (
+                    odd < PREMATCH_MIN_ODD
+                    or odd > PREMATCH_MAX_ODD
+                ):
                     continue
 
                 line = _v7_num(
@@ -22947,7 +23012,9 @@ def _v7_prematch_candidates(match, detailed=False):
                     0
                 )
 
-                # Poisson model for total corners.
+                # --------------------------------------------
+                # CORNER POISSON MODEL
+                # --------------------------------------------
                 lam = max(
                     2.0,
                     min(16.0, total_c)
@@ -22978,10 +23045,10 @@ def _v7_prematch_candidates(match, detailed=False):
                 p = _v7_clamp(p, 55, 88)
 
                 add(
-                    '🚩 CORNER ' + target.upper(),
+                    '🚩 CORNER ' + betano_value.upper(),
                     odd,
                     p,
-                    '🚩 CORNER ' + target.upper()
+                    '🚩 CORNER ' + betano_value.upper()
                 )
 
         if total_y is not None:
