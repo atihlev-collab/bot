@@ -581,14 +581,6 @@ def get_match_odds(fixture_id):
         return None
 
     # -----------------------------------------------------
-    # PREMATCH: ALWAYS GET FRESH ODDS
-    # -----------------------------------------------------
-
-    # Do NOT use cached odds here.
-    # The prematch signal must use a fresh odds response.
-
-
-    # -----------------------------------------------------
     # API
     # -----------------------------------------------------
 
@@ -613,13 +605,11 @@ def get_match_odds(fixture_id):
 
     for bookmaker in bookmakers:
 
-        bookmaker_id = bookmaker.get("id")
         bookmaker_name = clean_text(
             bookmaker.get("name")
         )
 
         if bookmaker_name == "betano":
-
             betano = bookmaker
             break
 
@@ -656,207 +646,6 @@ def get_match_odds(fixture_id):
 
     if not isinstance(bets, list):
         return None
-
-    for bet in bets:
-
-        if not isinstance(bet, dict):
-            continue
-
-        bet_name = clean_text(
-            bet.get("name")
-        )
-
-        values = bet.get(
-            "values",
-            []
-        )
-
-        if not isinstance(values, list):
-            continue
-
-        # =================================================
-        # 1X2
-        # =================================================
-
-        if bet_name in (
-            "match winner",
-            "winner",
-            "1x2"
-        ):
-
-            for value in values:
-
-                if not isinstance(value, dict):
-                    continue
-
-                name = clean_text(
-                    value.get("value")
-                )
-
-                odd = safe_float(
-                    value.get("odd")
-                )
-
-                if odd is None:
-                    continue
-
-                if name == "home":
-                    home = odd
-
-                elif name == "draw":
-                    draw = odd
-
-                elif name == "away":
-                    away = odd
-
-        # =================================================
-        # BTTS
-        # =================================================
-
-        elif (
-            "both teams to score" in bet_name
-            or bet_name == "btts"
-        ):
-
-            for value in values:
-
-                if not isinstance(value, dict):
-                    continue
-
-                name = clean_text(
-                    value.get("value")
-                )
-
-                if name == "yes":
-
-                    btts = safe_float(
-                        value.get("odd")
-                    )
-
-        # =================================================
-        # TOTAL GOALS
-        # =================================================
-
-        elif (
-            "goal" in bet_name
-            and "home" not in bet_name
-            and "away" not in bet_name
-        ):
-
-            for value in values:
-
-                if not isinstance(value, dict):
-                    continue
-
-                name = clean_text(
-                    value.get("value")
-                )
-
-                odd = safe_float(
-                    value.get("odd")
-                )
-
-                if odd is None:
-                    continue
-
-                if name.startswith("over 2.5"):
-                    over25 = odd
-
-                elif name.startswith("under 2.5"):
-                    under25 = odd
-
-                elif name.startswith("over 3.5"):
-                    over35 = odd
-
-                elif name.startswith("under 3.5"):
-                    under35 = odd
-
-        # =================================================
-        # HOME TEAM GOALS
-        # =================================================
-
-        elif (
-            "home" in bet_name
-            and "goal" in bet_name
-        ):
-
-            for value in values:
-
-                if not isinstance(value, dict):
-                    continue
-
-                name = clean_text(
-                    value.get("value")
-                )
-
-                if name.startswith("over 1.5"):
-
-                    home_over15 = safe_float(
-                        value.get("odd")
-                    )
-
-        # =================================================
-        # AWAY TEAM GOALS
-        # =================================================
-
-        elif (
-            "away" in bet_name
-            and "goal" in bet_name
-        ):
-
-            for value in values:
-
-                if not isinstance(value, dict):
-                    continue
-
-                name = clean_text(
-                    value.get("value")
-                )
-
-                if name.startswith("over 1.5"):
-
-                    away_over15 = safe_float(
-                        value.get("odd")
-                    )
-
-    # -----------------------------------------------------
-    # 1X2 IS REQUIRED
-    # -----------------------------------------------------
-
-    if (
-        home is None
-        or draw is None
-        or away is None
-    ):
-        return None
-
-    # -----------------------------------------------------
-    # RESULT
-    # -----------------------------------------------------
-
-    result = (
-        home,
-        draw,
-        away,
-        over25,
-        under25,
-        over35,
-        under35,
-        btts,
-        home_over15,
-        away_over15
-    )
-
-    # -----------------------------------------------------
-    # CACHE
-    # -----------------------------------------------------
-
-    odds_cache[fixture_id] = (
-        time.time(),
-        result
-    )
-
-    return result
 
 # =========================================================
 # TEAM FORM V4
