@@ -23802,13 +23802,84 @@ def _v7_fixture_date(signal): return signal.get('match_date')
 
 
 def send_prematch_signal(signal):
-    fid=signal.get('fixture_id')
-    market=signal.get('market')
+    fid = signal.get('fixture_id')
+    market = signal.get('market')
 
-    if not fid:
+    if not fid or not market:
         return False
 
-    if signal_already_sent(fid,market):
+    # =========================================================
+    # FINAL STRICT BETANO CHECK
+    # =========================================================
+    # The signal is allowed ONLY if the exact market/line
+    # exists in the latest Betano odds snapshot.
+    # =========================================================
+    try:
+        family = signal.get('family') or _v7_family(market)
+        market_text = clean_text(market)
+
+        # Only markets that depend on an exact bookmaker line.
+        if family in ('cards', 'corners', 'goals', 'btts'):
+
+            fresh_markets = get_v7_prematch_markets(fid)
+
+            if not fresh_markets:
+                logging.warning(
+                    'PREMATCH BLOCKED | no Betano markets | fixture=%s market=%s',
+                    fid, market
+                )
+                return False
+
+            target = None
+
+            # Extract exact line from the signal label.
+            for direction in ('over', 'under'):
+                if direction in market_text:
+                    parts = market_text.split()
+                    for i, p in enumerate(parts):
+                        if p == direction and i + 1 < len(parts):
+                            target = direction + ' ' + parts[i + 1]
+                            break
+                    if target:
+                        break
+
+            # BTTS YES
+            if family == 'btts':
+                target = 'yes'
+
+            # Exact Betano check.
+            value, current_odd = _v7_find_market(
+                fresh_markets,
+                family,
+                target,
+                half=False
+            )
+
+            if value is None or current_odd is None:
+                logging.warning(
+                    'PREMATCH BLOCKED | market NOT in Betano | '
+                    'fixture=%s | market=%s | target=%s',
+                    fid, market, target
+                )
+                return False
+
+            current_odd = _v7_num(current_odd, 0)
+
+            if current_odd <= 1.01:
+                return False
+
+            # Use the CURRENT Betano odd in the signal.
+            signal['odd'] = current_odd
+
+    except Exception as e:
+        logging.warning(
+            'PREMATCH BETANO FINAL CHECK ERROR: %s',
+            repr(e)
+        )
+        return False
+
+    # Existing duplicate protection.
+    if signal_already_sent(fid, market):
         return False
 
     if not send_telegram(format_prematch_signal(signal)):
@@ -23816,7 +23887,7 @@ def send_prematch_signal(signal):
 
     save_signal(signal)
     remember_signal(signal)
-    return True            
+    return True   
 
     
 
