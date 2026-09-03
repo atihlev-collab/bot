@@ -26450,11 +26450,65 @@ def analyze_live_match(fixture):
 
 def _final_live_scan():
     try:
-        result = _oldv3_live_loop()
-        return result or 0
+        matches = get_live_matches() or []
+
+        candidates = []
+        checked = 0
+        generated = 0
+
+        for match in matches:
+            try:
+                fixture = match.get('fixture', {}) or {}
+                if not fixture.get('id'):
+                    continue
+
+                checked += 1
+
+                signals = build_live_market_candidates(match) or []
+
+                if not signals:
+                    continue
+
+                generated += len(signals)
+                candidates.extend(signals)
+
+            except Exception as e:
+                logging.warning(
+                    'LIVE CANDIDATE ERROR: %s',
+                    repr(e)
+                )
+
+        ranked = rank_live_signals(candidates)
+
+        # Maximum 3 strongest LIVE signals per scan.
+        ranked = ranked[:3]
+
+        sent = 0
+
+        for signal in ranked:
+            try:
+                if send_live_signal(signal):
+                    sent += 1
+            except Exception as e:
+                logging.warning(
+                    'LIVE SEND ERROR: %s',
+                    repr(e)
+                )
+
+        print(
+            'LIVE FINAL | '
+            f'matches={len(matches)} | '
+            f'checked={checked} | '
+            f'candidates={generated} | '
+            f'qualified={len(ranked)} | '
+            f'sent={sent}'
+        )
+
+        return sent
+
     except Exception as e:
         logging.exception(
-            "FINAL LIVE ERROR: %s",
+            'LIVE FINAL ERROR: %s',
             repr(e)
         )
         return 0
