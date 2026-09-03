@@ -372,6 +372,23 @@ def api_get(endpoint, params=None):
 # BASIC HELPERS
 # =========================================================
 
+def _norm_market_text(value):
+    if value is None:
+        return ""
+
+    value = str(value).strip().lower()
+
+    replacements = {
+        "–": "-",
+        "—": "-",
+        "_": " ",
+    }
+
+    for old, new in replacements.items():
+        value = value.replace(old, new)
+
+    return " ".join(value.split())
+
 # BLOCK: BLOCKED_LEAGUE
 def blocked_league(name):
 
