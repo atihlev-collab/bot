@@ -22416,11 +22416,14 @@ def _v7_family(label):
 # ============================================================
 
 def get_v7_raw_odds(fixture_id):
-    if fixture_id in RAW_ODDS_CACHE:
-        return RAW_ODDS_CACHE[fixture_id]
-    data=get_odds(fixture_id)
-    RAW_ODDS_CACHE[fixture_id]=data or []
-    return RAW_ODDS_CACHE[fixture_id]
+    if not fixture_id:
+        return []
+
+    # ALWAYS fetch fresh Betano odds.
+    # Never reuse stale PREMATCH market data.
+    data = get_odds(fixture_id)
+
+    return data or []
 
 
 def _v7_betano_from_odds(data):
