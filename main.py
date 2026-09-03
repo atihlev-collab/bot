@@ -25686,8 +25686,6 @@ def _final_builder_select(matches):
     return out
 
 
-
-
 def _final_prematch_scan():
     try:
         matches=remove_started_matches(get_prematch_matches()) or []
@@ -25727,7 +25725,9 @@ builders = [
         print(f'PREMATCH FINAL | fixtures={len(matches)} | selected={len(normal)} | builder={len(builders)} | sent={sent+bs}')
         return sent+bs
     except Exception as e:
-        logging.exception('PREMATCH FINAL ERROR: %s',repr(e)); return 0
+        logging.exception('
+
+
 
 
 def print_system_status():
