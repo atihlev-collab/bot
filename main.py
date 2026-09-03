@@ -25685,49 +25685,36 @@ def _final_builder_select(matches):
         if len(out)>=BET_BUILDER_DAILY_TOP3: break
     return out
 
-
 def _final_prematch_scan():
     try:
         matches=remove_started_matches(get_prematch_matches()) or []
         if not matches:
-            print('PREMATCH FINAL | fixtures=0 | selected=0 | builder=0 | sent=0'); return 0
-    normal=_final_prematch_select(matches)
+            print('PREMATCH FINAL | fixtures=0 | selected=0 | builder=0 | sent=0')
+            return 0
 
-# PREMATCH normal signals: only send once per fixture/market.
-normal = [
-    s for s in normal
-    if not signal_already_sent(
-        s.get('fixture_id'),
-        s.get('market')
-    )
-]
-
-builders=_final_builder_select(matches)
-
-# Builders: only send once per fixture.
-builders = [
-    b for b in builders
-    if not signal_already_sent(
-        b.get('fixture_id'),
-        b.get('market')
-    )
-]
+        normal=_final_prematch_select(matches)
+        builders=_final_builder_select(matches)
         sent=0
+
         for s in normal:
             try:
                 if send_prematch_signal(s): sent += 1
-            except Exception as e: logging.warning('PREMATCH SEND ERROR: %s',repr(e))
+            except Exception as e:
+                logging.warning('PREMATCH SEND ERROR: %s',repr(e))
+
         bs=0
+
         for b in builders:
             try:
                 if send_prematch_signal(b): bs += 1
-            except Exception as e: logging.warning('BUILDER SEND ERROR: %s',repr(e))
+            except Exception as e:
+                logging.warning('BUILDER SEND ERROR: %s',repr(e))
+
         print(f'PREMATCH FINAL | fixtures={len(matches)} | selected={len(normal)} | builder={len(builders)} | sent={sent+bs}')
         return sent+bs
+
     except Exception as e:
-        logging.exception('
-
-
+        logging.exception('PREMATCH FINAL ERROR: %s',repr(e)); return 0
 
 
 def print_system_status():
