@@ -23065,7 +23065,19 @@ def _v7_prematch_candidates(match, detailed=False):
                     target
                 )
 
-                if not odd:
+                # EXACT BETANO CARD VALIDATION
+                if not val or odd is None:
+                    continue
+
+                betano_value = clean_text(val)
+                expected_value = clean_text(target)
+
+                if betano_value != expected_value:
+                    continue
+
+                odd = _v7_num(odd, 0)
+
+                if odd <= 1.01:
                     continue
 
                 line = _v7_num(
