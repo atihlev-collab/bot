@@ -14760,7 +14760,10 @@ def get_prematch_betano_builder_markets(fixture_id):
     are excluded here so later Builder code cannot accidentally reintroduce
     them.
     """
+    # FRESH PREMATCH BETANO ODDS
     odds = get_odds(fixture_id)
+
+   
     if not odds:
         return []
 
