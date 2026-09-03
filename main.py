@@ -23791,139 +23791,25 @@ def _v7_day_key(): return datetime.now(TIMEZONE).strftime('%Y-%m-%d')
 def _v7_fixture_date(signal): return signal.get('match_date')
 
 
+
 def send_prematch_signal(signal):
-    fid = signal.get('fixture_id')
-    market = clean_text(signal.get('market'))
+    fid=signal.get('fixture_id')
+    market=signal.get('market')
 
     if not fid:
         return False
 
-    # =========================================================
-    # FINAL EXACT BETANO VALIDATION
-    # =========================================================
-    # Do this immediately before sending the signal.
-    # This prevents stale/model-only markets from being sent.
-    # =========================================================
-
-    if market != '🧩 BET BUILDER':
-
-        try:
-            fresh_odds = get_odds(fid)
-            betano = _v7_betano_from_odds(fresh_odds)
-
-            if not betano:
-                logging.warning(
-                    'BETANO FINAL REJECT | fixture=%s | market=%s | bookmaker missing',
-                    fid,
-                    market
-                )
-                return False
-
-            markets = []
-
-            for bet in betano.get('bets', []) or []:
-                name = clean_text(bet.get('name'))
-                values = []
-
-                for v in bet.get('values', []) or []:
-                    odd = _v7_num(v.get('odd'), 0)
-                    value = clean_text(v.get('value'))
-
-                    if odd > 1.01 and value:
-                        values.append((value, odd))
-
-                if values:
-                    markets.append((name, values))
-
-            # -------------------------------------------------
-            # Detect market family + EXACT target line
-            # -------------------------------------------------
-
-            family = None
-            target = None
-
-            if 'CARD ' in market:
-                family = 'cards'
-                target = clean_text(
-                    market.split('CARD ', 1)[1]
-                ).lower()
-
-            elif 'CORNER ' in market:
-                family = 'corners'
-                target = clean_text(
-                    market.split('CORNER ', 1)[1]
-                ).lower()
-
-            elif 'GOAL ' in market:
-                family = 'goals'
-                target = clean_text(
-                    market.split('GOAL ', 1)[1]
-                ).lower()
-
-            elif market.startswith('BTTS'):
-                family = 'btts'
-                target = 'yes'
-
-            elif 'HOME OVER ' in market:
-                family = 'goals'
-                target = clean_text(
-                    market.split('HOME OVER ', 1)[1]
-                ).join(['over ', ''])
-
-            elif 'AWAY OVER ' in market:
-                family = 'goals'
-                target = clean_text(
-                    market.split('AWAY OVER ', 1)[1]
-                ).join(['over ', ''])
-
-            if family and target:
-
-                val, fresh_odd = _v7_find_market(
-                    markets,
-                    family,
-                    target
-                )
-
-                if val is None or fresh_odd is None:
-                    logging.warning(
-                        'BETANO FINAL REJECT | fixture=%s | market=%s | target=%s',
-                        fid,
-                        market,
-                        target
-                    )
-                    return False
-
-                # Use the freshly verified Betano price.
-                signal['odd'] = _v7_num(
-                    fresh_odd,
-                    signal.get('odd', 0)
-                )
-
-        except Exception as e:
-            logging.warning(
-                'BETANO FINAL VALIDATION ERROR | fixture=%s | market=%s | error=%s',
-                fid,
-                market,
-                repr(e)
-            )
-            return False
-
-    # =========================================================
-    # DUPLICATE CHECK + SEND
-    # =========================================================
-
-    if signal_already_sent(fid, market):
+    if signal_already_sent(fid,market):
         return False
 
-    if not send_telegram(
-        format_prematch_signal(signal)
-    ):
+    if not send_telegram(format_prematch_signal(signal)):
         return False
 
     save_signal(signal)
     remember_signal(signal)
+    return True            
 
-    return True
+    
 
 
 def process_prematch_matches(matches):
@@ -25807,8 +25693,27 @@ def _final_prematch_scan():
         matches=remove_started_matches(get_prematch_matches()) or []
         if not matches:
             print('PREMATCH FINAL | fixtures=0 | selected=0 | builder=0 | sent=0'); return 0
-        normal=_final_prematch_select(matches)
-        builders=_final_builder_select(matches)
+normal=_final_prematch_select(matches)
+
+# PREMATCH normal signals: only send once per fixture/market.
+normal = [
+    s for s in normal
+    if not signal_already_sent(
+        s.get('fixture_id'),
+        s.get('market')
+    )
+]
+
+builders=_final_builder_select(matches)
+
+# Builders: only send once per fixture.
+builders = [
+    b for b in builders
+    if not signal_already_sent(
+        b.get('fixture_id'),
+        b.get('market')
+    )
+]
         sent=0
         for s in normal:
             try:
