@@ -564,15 +564,12 @@ def get_match_odds(fixture_id):
         return None
 
     # -----------------------------------------------------
-    # CACHE
+    # PREMATCH: ALWAYS GET FRESH ODDS
     # -----------------------------------------------------
 
-    if fixture_id in odds_cache:
+    # Do NOT use cached odds here.
+    # The prematch signal must use a fresh odds response.
 
-        cache_time, data = odds_cache[fixture_id]
-
-        if time.time() - cache_time < CACHE_TIME_ODDS:
-            return data
 
     # -----------------------------------------------------
     # API
@@ -860,12 +857,12 @@ def get_team_form(team_id, venue=None):
     # CACHE
     # -----------------------------------------------------
 
-    if cache_key in team_form_cache:
+    odds_cache[fixture_id] = (
+        time.time(),
+        result
+    )
 
-        cache_time, data = team_form_cache[cache_key]
-
-        if time.time() - cache_time < CACHE_TIME_FORM:
-            return data
+    return result
 
     # -----------------------------------------------------
     # API
