@@ -22427,11 +22427,17 @@ def get_v7_raw_odds(fixture_id):
 
 
 def _v7_betano_from_odds(data):
-    if not data: return None
+    if not data:
+        return None
+
     for item in data:
-        for b in item.get('bookmakers',[]) or []:
-            if b.get('id')==32 or clean_text(b.get('name'))=='betano':
+        for b in item.get('bookmakers', []) or []:
+            name = clean_text(b.get('name'))
+
+            # STRICT: accept ONLY bookmaker explicitly named Betano.
+            if name == 'betano':
                 return b
+
     return None
 
 
