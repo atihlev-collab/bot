@@ -25693,7 +25693,7 @@ def _final_prematch_scan():
         matches=remove_started_matches(get_prematch_matches()) or []
         if not matches:
             print('PREMATCH FINAL | fixtures=0 | selected=0 | builder=0 | sent=0'); return 0
-normal=_final_prematch_select(matches)
+    normal=_final_prematch_select(matches)
 
 # PREMATCH normal signals: only send once per fixture/market.
 normal = [
