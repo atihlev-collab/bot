@@ -23755,23 +23755,7 @@ def send_live_signal(signal):
     return True
 
 
-def scan_live():
-    try:
-        matches=get_live_matches()
-        candidates=[]
-        for m in matches or []:
-            try:
-                s=get_best_live_signal(m)
-                if s: candidates.append(s)
-            except Exception as e: logging.warning('LIVE MATCH ERROR: %s',repr(e))
-        ranked=rank_live_signals(candidates)
-        sent=0
-        for s in ranked:
-            if send_live_signal(s): sent+=1
-        print(f'LIVE DEBUG | matches={len(matches or [])} | candidates={len(candidates)} | qualified={len(ranked)} | sent={sent}')
-        return sent
-    except Exception as e:
-        logging.warning('LIVE SCAN V7 ERROR: %s',repr(e)); return 0
+
 
 # ============================================================
 # PREMATCH SCAN — WHOLE DAY + SEPARATE BUILDER TOP3
