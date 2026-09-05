@@ -1,9 +1,9 @@
 # ============================================================
 # V9 QUALITY BLOCKS — existing market names preserved exactly
 # ============================================================
-PREMATCH_BLOCKS_V9 = [
-    '🏆 HOME WIN',
-    '✈️ AWAY WIN',
+PREMATCH_BLOCKS_V9 = [ефеф
+    '🏆 HOME WIN',феее
+    '✈️ AWAY WIN',ефе
     '🚀 OVER 2.5 GOALS',
     '🛡 UNDER 2.5 GOALS',
     '🔥 OVER 3.5 GOALS',
