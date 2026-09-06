@@ -19663,6 +19663,9 @@ def get_live_betano_markets(fixture_id):
         data = api_get("/odds/live", {"fixture": fixture_id})
 
         response = data.get("response", [])
+        print(f"ODDS DEBUG | fixture={fixture_id} | response_count={len(response)}")
+        print(f"ODDS DEBUG | fixture={fixture_id} | response={response[:1]}")
+        
         if not response:
             return []
 
