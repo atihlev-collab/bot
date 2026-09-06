@@ -19659,53 +19659,77 @@ def _betano_bookmaker(bookmakers):
 # =========================================================
 
 def get_live_betano_markets(fixture_id):
-    """Return normalized live Betano markets from API-Football /odds/live."""
-    if not fixture_id:
-        return []
-    now=time.time()
-    cached=LIVE_MARKET_CACHE.get(fixture_id)
-    if cached and now-cached[0] < 25:
-        return cached[1]
     try:
-        data=api_get('odds/live', {'fixture': fixture_id}) or {}
-        response=data.get('response', [])
-        bookmaker=None
-        for item in response:
-            if isinstance(item, dict) and item.get('bookmakers'):
-                bookmaker=_betano_bookmaker(item.get('bookmakers'))
-                if bookmaker:
-                    break
-            if isinstance(item, dict) and clean_text(item.get('name'))=='betano':
-                bookmaker=item
-                break
-        if not bookmaker:
-            LIVE_MARKET_CACHE[fixture_id]=(now,[])
+        data = api_get("/odds/live", {"fixture": fixture_id})
+
+        response = data.get("response", [])
+        if not response:
             return []
-        markets=[]
-        for bet in bookmaker.get('bets',[]) or []:
-            if not isinstance(bet,dict):
-                continue
-            bname=clean_text(bet.get('name'))
-            values=[]
-            for value in bet.get('values',[]) or []:
-                if not isinstance(value,dict):
+
+        # Prefer Betano
+        selected = None
+
+        for item in response:
+            bookmaker = item.get("bookmaker", {})
+            name = str(bookmaker.get("name", "")).lower()
+            bookmaker_id = bookmaker.get("id")
+
+            if bookmaker_id == 32 or "betano" in name:
+                selected = item
+                break
+
+        # Fallback: first bookmaker with available bets
+        if selected is None:
+            for item in response:
+                bookmaker = item.get("bookmaker", {})
+                bets = bookmaker.get("bets", [])
+
+                if bets:
+                    selected = item
+                    break
+
+        if selected is None:
+            return []
+
+        bookmaker = selected.get("bookmaker", {})
+        bookmaker_name = bookmaker.get("name", "unknown")
+
+        print(
+            f"LIVE ODDS BOOKMAKER | "
+            f"fixture={fixture_id} | "
+            f"bookmaker={bookmaker_name}"
+        )
+
+        markets = []
+
+        for bet in bookmaker.get("bets", []):
+            bet_name = bet.get("name", "")
+            values = bet.get("values", [])
+
+            for value in values:
+                odd = value.get("odd")
+
+                if odd is None:
                     continue
-                odd=safe_float(value.get('odd'))
-                if odd is None or odd <= 1.01:
+
+                try:
+                    odd = float(odd)
+                except (TypeError, ValueError):
                     continue
-                values.append({
-                    'value': clean_text(value.get('value')),
-                    'odd': odd,
-                    'stopped': bool(value.get('stopped',False)),
-                    'main': value.get('main')
+
+                if odd <= 1:
+                    continue
+
+                markets.append({
+                    "name": bet_name,
+                    "value": value.get("value"),
+                    "odd": odd
                 })
-            if values:
-                markets.append({'name':bname,'values':values})
-        LIVE_MARKET_CACHE[fixture_id]=(now,markets)
+
         return markets
+
     except Exception as e:
-        logging.warning('LIVE BETANO ODDS ERROR: %s',repr(e))
-        LIVE_MARKET_CACHE[fixture_id]=(now,[])
+        print(f"LIVE ODDS ERROR | fixture={fixture_id} | {e}")
         return []
 
 
