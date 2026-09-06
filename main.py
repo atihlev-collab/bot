@@ -19785,54 +19785,123 @@ def _value_odd(values, side=None, prefix=None, contains=None):
 
 
 def find_live_market_odd(markets, kind, side=None, half=False, target=None):
-    """Find a Betano live odd for the requested normalized market."""
-    for market in markets:
-        name=clean_text(market.get('name'))
-        vals=market.get('values',[])
-        if kind=='next_goal':
-            if 'next goal' not in name and 'next team to score' not in name:
-                continue
-            for v in vals:
-                n=clean_text(v.get('value'))
-                if side=='home' and n in ('home','1'):
-                    return v.get('odd')
-                if side=='away' and n in ('away','2'):
-                    return v.get('odd')
-        elif kind=='goals':
-            if 'goal' not in name or 'next goal' in name:
-                continue
-            if half and not any(x in name for x in ('1st half','first half','1h')):
-                continue
-            if not half and any(x in name for x in ('1st half','first half','1h')):
-                continue
-            for v in vals:
-                n=clean_text(v.get('value'))
-                if target and n.startswith(target):
-                    return v.get('odd')
-        elif kind=='corners':
-            if 'corner' not in name:
-                continue
-            if half and not any(x in name for x in ('1st half','first half','1h')):
-                continue
-            if not half and any(x in name for x in ('1st half','first half','1h')):
-                continue
-            for v in vals:
-                n=clean_text(v.get('value'))
-                if target and n.startswith(target):
-                    return v.get('odd')
-        elif kind=='cards':
-            if not any(x in name for x in ('card','yellow card','booking')):
-                continue
-            if half and not any(x in name for x in ('1st half','first half','1h')):
-                continue
-            if not half and any(x in name for x in ('1st half','first half','1h')):
-                continue
-            for v in vals:
-                n=clean_text(v.get('value'))
-                if target and n.startswith(target):
-                    return v.get('odd')
-    return None
+    """Find an odd from normalized live markets."""
 
+    for market in markets or []:
+        if not isinstance(market, dict):
+            continue
+
+        name = clean_text(market.get("name"))
+        value = clean_text(market.get("value"))
+        odd = safe_float(market.get("odd"))
+
+        if odd is None or odd <= 1:
+            continue
+
+        # -------------------------
+        # NEXT GOAL
+        # -------------------------
+        if kind == "next_goal":
+
+            if (
+                "next goal" not in name
+                and "next team to score" not in name
+            ):
+                continue
+
+            if side == "home" and value not in ("home", "1"):
+                continue
+
+            if side == "away" and value not in ("away", "2"):
+                continue
+
+            return odd
+
+        # -------------------------
+        # GOALS
+        # -------------------------
+        elif kind == "goals":
+
+            if "goal" not in name:
+                continue
+
+            if "next goal" in name:
+                continue
+
+            if half:
+                if not any(
+                    x in name
+                    for x in ("1st half", "first half", "1h")
+                ):
+                    continue
+            else:
+                if any(
+                    x in name
+                    for x in ("1st half", "first half", "1h")
+                ):
+                    continue
+
+            if target and not value.startswith(clean_text(target)):
+                continue
+
+            return odd
+
+        # -------------------------
+        # CORNERS
+        # -------------------------
+        elif kind == "corners":
+
+            if "corner" not in name:
+                continue
+
+            if half:
+                if not any(
+                    x in name
+                    for x in ("1st half", "first half", "1h")
+                ):
+                    continue
+            else:
+                if any(
+                    x in name
+                    for x in ("1st half", "first half", "1h")
+                ):
+                    continue
+
+            if target and not value.startswith(clean_text(target)):
+                continue
+
+            return odd
+
+        # -------------------------
+        # CARDS
+        # -------------------------
+        elif kind == "cards":
+
+            if not any(
+                x in name
+                for x in ("card", "yellow card", "booking")
+            ):
+                continue
+
+            if half:
+                if not any(
+                    x in name
+                    for x in ("1st half", "first half", "1h")
+                ):
+                    continue
+            else:
+                if any(
+                    x in name
+                    for x in ("1st half", "first half", "1h")
+                ):
+                    continue
+
+            if target and not value.startswith(clean_text(target)):
+                continue
+
+            return odd
+
+    return None
 
 # =========================================================
 # BLOCK: LIVE STATISTICS FOR CARDS/CORNERS
