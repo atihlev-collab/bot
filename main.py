@@ -20114,6 +20114,17 @@ def build_live_market_candidates(match):
             odd
         )
 
+        print(
+            f"LIVE CANDIDATE | "
+            f"{market} | "
+            f"odd={odd:.2f} | "
+            f"p={p:.1f} | "
+            f"c={c:.1f} | "
+            f"r={r:.1f} | "
+            f"edge={edge:.1f}"
+        )
+        
+
         # -----------------------------------------------
         # MAIN QUALITY FILTER
         # -----------------------------------------------
