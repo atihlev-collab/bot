@@ -17464,71 +17464,7 @@ def analyze_live_match(
 
         signals = []
 
-        # =================================================
-        # NEXT GOAL
-        # =================================================
-
-        # We use the stronger attacking side.
-        # No unnecessary bonuses.
-
-        if best_team == "HOME":
-
-            market = "🎯 NEXT GOAL HOME"
-
-            odd = None
-
-            # API-Football usually exposes
-            # live next-goal markets separately.
-            # If unavailable, do not invent an odd.
-
-        else:
-
-            market = "🎯 NEXT GOAL AWAY"
-
-            odd = None
-
-        # =================================================
-        # TEMPORARY LIVE ODDS
-        # =================================================
-
-        # Next-goal odds are intentionally left empty here.
-        # The live market parser will be connected separately.
-        #
-        # This prevents the system from using
-        # pre-match 1X2 odds as fake live odds.
-
-        if odd is not None:
-
-            signal = build_live_signal(
-
-                market,
-
-                probability,
-
-                confidence,
-
-                risk,
-
-                odd,
-
-                match,
-
-                minute,
-
-                best_attack,
-
-                best_pressure,
-
-                total_xg
-
-            )
-
-            if signal:
-
-                signals.append(
-                    signal
-                )
-
+      
         # =================================================
         # LIVE QUALITY CHECK
         # =================================================
