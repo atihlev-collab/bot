@@ -19744,81 +19744,84 @@ def get_live_betano_markets(fixture_id):
 # =========================================================
 
 def get_live_betano_markets(fixture_id):
+    """Return normalized live markets from API-Football /odds/live."""
+    if not fixture_id:
+        return []
+
+    now = time.time()
+    cached = LIVE_MARKET_CACHE.get(fixture_id)
+
+    if cached and now - cached[0] < 25:
+        return cached[1]
+
     try:
-        data = api_get("/odds/live", {"fixture": fixture_id})
-
+        data = api_get("odds/live", {"fixture": fixture_id}) or {}
         response = data.get("response", [])
-        print(f"ODDS DEBUG | fixture={fixture_id} | response_count={len(response)}")
-        print(f"ODDS DEBUG | fixture={fixture_id} | response={response[:1]}")
-        
+
         if not response:
+            LIVE_MARKET_CACHE[fixture_id] = (now, [])
             return []
-
-        # Prefer Betano
-        selected = None
-
-        for item in response:
-            bookmaker = item.get("bookmaker", {})
-            name = str(bookmaker.get("name", "")).lower()
-            bookmaker_id = bookmaker.get("id")
-
-            if bookmaker_id == 32 or "betano" in name:
-                selected = item
-                break
-
-        # Fallback: first bookmaker with available bets
-        if selected is None:
-            for item in response:
-                bookmaker = item.get("bookmaker", {})
-                bets = bookmaker.get("bets", [])
-
-                if bets:
-                    selected = item
-                    break
-
-        if selected is None:
-            return []
-
-        bookmaker = selected.get("bookmaker", {})
-        bookmaker_name = bookmaker.get("name", "unknown")
-
-        print(
-            f"LIVE ODDS BOOKMAKER | "
-            f"fixture={fixture_id} | "
-            f"bookmaker={bookmaker_name}"
-        )
 
         markets = []
 
-        for bet in bookmaker.get("bets", []):
-            bet_name = bet.get("name", "")
-            values = bet.get("values", [])
+        for event in response:
+            if not isinstance(event, dict):
+                continue
 
-            for value in values:
-                odd = value.get("odd")
+            status = event.get("status", {}) or {}
 
-                if odd is None:
+            if status.get("blocked") or status.get("finished"):
+                continue
+
+            # API-Football live odds are inside event["odds"]
+            for bet in event.get("odds", []) or []:
+                if not isinstance(bet, dict):
                     continue
 
-                try:
-                    odd = float(odd)
-                except (TypeError, ValueError):
-                    continue
+                bet_name = clean_text(bet.get("name"))
 
-                if odd <= 1:
-                    continue
+                for value in bet.get("values", []) or []:
+                    if not isinstance(value, dict):
+                        continue
 
-                markets.append({
-                    "name": bet_name,
-                    "value": value.get("value"),
-                    "odd": odd
-                })
+                    if value.get("suspended") is True:
+                        continue
+
+                    odd = safe_float(value.get("odd"))
+
+                    if odd is None or odd <= 1:
+                        continue
+
+                    markets.append({
+                        "name": bet_name,
+                        "value": value.get("value"),
+                        "odd": odd,
+                        "handicap": value.get("handicap"),
+                    })
+
+        if markets:
+            print(
+                f"LIVE ODDS OK | "
+                f"fixture={fixture_id} | "
+                f"markets={len(markets)}"
+            )
+        else:
+            print(
+                f"LIVE ODDS EMPTY | "
+                f"fixture={fixture_id}"
+            )
+
+        LIVE_MARKET_CACHE[fixture_id] = (now, markets)
 
         return markets
 
     except Exception as e:
-        print(f"LIVE ODDS ERROR | fixture={fixture_id} | {e}")
+        print(
+            f"LIVE ODDS ERROR | "
+            f"fixture={fixture_id} | {e}"
+        )
         return []
+
 
 
 def _value_odd(values, side=None, prefix=None, contains=None):
