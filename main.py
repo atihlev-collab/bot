@@ -19826,16 +19826,25 @@ def get_live_betano_markets(fixture_id):
 
 def _value_odd(values, side=None, prefix=None, contains=None):
     for v in values or []:
-        name=clean_text(v.get('value'))
+        if not isinstance(v, dict):
+            continue
+
+        name = clean_text(v.get("value"))
+
         if side and name != clean_text(side):
             continue
+
         if prefix and not name.startswith(prefix):
             continue
+
         if contains and contains not in name:
             continue
-        odd=safe_float(v.get('odd'))
-        if odd and not v.get('stopped'):
+
+        odd = safe_float(v.get("odd"))
+
+        if odd and not v.get("stopped") and not v.get("suspended"):
             return odd
+
     return None
 
 
