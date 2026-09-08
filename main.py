@@ -26477,7 +26477,7 @@ def main_loop():
                 datetime.now(TIMEZONE).strftime('%H:%M:%S'),
                 'LIVE SCAN'
             )
-            sent=_final_live_scan()
+            sent=run_live_scan()
             print('LIVE SIGNALS SENT:',sent)
             LAST_LIVE_SCAN=now
 
