@@ -26539,6 +26539,28 @@ def main_loop():
 
             LAST_RESULT_SCAN=now
 
+
+current_time = datetime.now(TIMEZONE)
+current_hour = current_time.hour
+current_minute = current_time.minute
+
+# PREMATCH — само в 11:00 и 21:00 BG
+if current_hour in (11, 21) and current_minute == 0:
+    print(
+        current_time.strftime("%H:%M:%S"),
+        "PREMATCH DAILY SCAN"
+    )
+
+    sent = _final_prematch_scan()
+
+    print(
+        "PREMATCH DAILY SIGNALS SENT:",
+        sent
+    )
+
+    # Не позволява повторно изпращане в същата минута
+    LAST_PREMATCH_SCAN = now
+
         time.sleep(5)
                 
 if __name__ == "__main__":
