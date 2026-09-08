@@ -26558,7 +26558,7 @@ if current_hour == 19 and current_minute == 10:
         sent
     )
 
-    # Не позволява повторно изпращане в същата минута
+    
     LAST_PREMATCH_SCAN = now
 
     time.sleep(5)
