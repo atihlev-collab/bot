@@ -26539,6 +26539,12 @@ def main_loop():
 
         time.sleep(5)
                 
-
+if __name__ == "__main__":
+    try:
+        main_loop()
+    except KeyboardInterrupt:
+        print("🛑 BOT STOPPED")
+    except Exception as e:
+        logging.exception("FATAL MAIN ERROR: %s", repr(e))
     
         
