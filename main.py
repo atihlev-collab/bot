@@ -26561,7 +26561,7 @@ if current_hour in (11, 21) and current_minute == 0:
     # Не позволява повторно изпращане в същата минута
     LAST_PREMATCH_SCAN = now
 
-        time.sleep(5)
+    time.sleep(5)
                 
 if __name__ == "__main__":
     try:
