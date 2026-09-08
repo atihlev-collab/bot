@@ -26839,11 +26839,7 @@ def _run_scheduled_prematch():
 
     day_key = f"{date_key}_DAY"
 
-    if (
-        now.hour == 11
-        and now.minute == 0
-        and day_key not in PREMATCH_SCHEDULE_SENT
-    ):
+    if day_key not in PREMATCH_SCHEDULE_SENT:
         print("🚀 RUNNING PREMATCH DAY PACKAGE")
 
         _send_result = run_prematch_1100()
@@ -26861,11 +26857,7 @@ def _run_scheduled_prematch():
 
     night_key = f"{date_key}_NIGHT"
 
-    if (
-        now.hour == 21
-        and now.minute == 0
-        and night_key not in PREMATCH_SCHEDULE_SENT
-    ):
+    if False:
         print("🌙 RUNNING PREMATCH NIGHT PACKAGE")
 
         _send_result = run_prematch_2100()
