@@ -26429,82 +26429,6 @@ def _final_live_scan():
 # All engines/functions above are now defined before startup.
 # PREMATCH/Builder and the merged proven LIVE engine are used here.
 
-# ============================================================
-# FINAL PREMATCH SCHEDULE — BULGARIA TIME
-# ============================================================
-# 11:00:
-#   TOP 3 PREMATCH for matches 11:00 -> 23:59
-#   TOP 2 BET BUILDER
-#
-# 21:00:
-#   TOP 3 PREMATCH for night matches 00:00 -> 08:00
-#
-# NO OTHER PREMATCH SIGNALS DURING THE DAY.
-# LIVE ENGINE IS NOT AFFECTED.
-# ============================================================
-
-PREMATCH_MORNING_HOUR = 11
-PREMATCH_NIGHT_HOUR = 21
-
-PREMATCH_DAY_TOP = 3
-PREMATCH_BUILDER_TOP = 2
-PREMATCH_NIGHT_TOP = 3
-
-PREMATCH_SCHEDULE_CHECK_INTERVAL = 5
-
-
-def _prematch_bg_now():
-    """Current time in the configured Bulgaria timezone."""
-    return datetime.now(TIMEZONE)
-
-
-def _prematch_schedule_key():
-    """
-    Unique key for each scheduled PREMATCH package.
-
-    Example:
-        2026-09-08_DAY
-        2026-09-08_NIGHT
-    """
-    now = _prematch_bg_now()
-
-    if now.hour >= PREMATCH_MORNING_HOUR:
-        return now.strftime("%Y-%m-%d") + "_DAY"
-
-    return (now - timedelta(days=1)).strftime("%Y-%m-%d") + "_NIGHT"
-
-
-def _prematch_get_day_matches():
-    """
-    Get today's prematch fixtures.
-
-    Existing get_prematch_matches() is used so the current
-    API/Betano/data pipeline remains unchanged.
-    """
-    try:
-        matches = get_prematch_matches() or []
-        return remove_started_matches(matches) or []
-    except Exception as e:
-        logging.warning(
-            "SCHEDULED PREMATCH FIXTURE ERROR: %s",
-            repr(e)
-        )
-        return []
-
-
-def _prematch_match_datetime(match):
-    """
-    Safely extract fixture datetime.
-
-    Returns None when the existing fixture does not contain
-    a usable datetime.
-    """
-    try:
-        fixture = match.get("fixture", {})
-        date_value = fixture.get("date")
-
-        if not date_value:
-            return None
 
         if isinstance(date_value, datetime):
             dt = date_value
@@ -26522,483 +26446,58 @@ def _prematch_match_datetime(match):
     except Exception:
         return None
 
-
-def _prematch_filter_window(matches, start_hour, end_hour):
-    """
-    Filter matches by Bulgaria local time.
-
-    Handles the normal same-day window:
-        11:00 -> 00:00
-
-    and the overnight window:
-        00:00 -> 08:00
-    """
-    result = []
-
-    now = _prematch_bg_now()
-    today = now.date()
-
-    for match in matches or []:
-        dt = _prematch_match_datetime(match)
-
-        if dt is None:
-            continue
-
-        local_dt = dt.astimezone(TIMEZONE)
-
-        if start_hour < end_hour:
-            # Same day: 11:00 -> 00:00
-            if (
-                local_dt.date() == today
-                and start_hour <= local_dt.hour < end_hour
-            ):
-                result.append(match)
-
-        else:
-            # Overnight window: 00:00 -> 08:00
-            if (
-                local_dt.date() == today
-                and start_hour <= local_dt.hour
-            ):
-                result.append(match)
-
-    return result
-
-
-def _scheduled_prematch_select_normal(matches, limit):
-    """
-    Use the existing final PREMATCH ranking.
-
-    We deliberately do NOT create a new prediction model here.
-    """
-    try:
-        selected = _final_prematch_select(matches) or []
-    except Exception as e:
-        logging.warning(
-            "SCHEDULED PREMATCH SELECT ERROR: %s",
-            repr(e)
-        )
-        selected = []
-
-    return selected[:limit]
-
-
-def _scheduled_prematch_select_builders(matches, limit):
-    """
-    Existing Builder engine, limited to TOP 2.
-    """
-    builders = []
-
-    try:
-        for match in matches or []:
-            try:
-                builder = _final_builder_2to5(
-                    match,
-                    detailed=True
-                )
-
-                if builder:
-                    builders.append(builder)
-
-            except Exception as e:
-                logging.warning(
-                    "SCHEDULED BUILDER MATCH ERROR: %s",
-                    repr(e)
-                )
-
-    except Exception as e:
-        logging.warning(
-            "SCHEDULED BUILDER SELECT ERROR: %s",
-            repr(e)
-        )
-
-    builders.sort(
-        key=lambda x: (
-            x.get("score", 0),
-            x.get("probability", 0),
-            x.get("confidence", 0),
-            -x.get("risk", 100)
-        ),
-        reverse=True
-    )
-
-    # One builder per fixture
-    output = []
-    seen = set()
-
-    for builder in builders:
-        fixture_id = builder.get("fixture_id")
-
-        if not fixture_id:
-            continue
-
-        if fixture_id in seen:
-            continue
-
-        seen.add(fixture_id)
-        output.append(builder)
-
-        if len(output) >= limit:
-            break
-
-    return output
-
-
-def _send_scheduled_prematch_package(
-    matches,
-    normal_limit,
-    builder_limit=0
-):
-    """
-    Send one complete scheduled PREMATCH package.
-
-    No continuous scanning.
-    No repeated signals.
-    Existing Betano verification remains active through
-    send_prematch_signal().
-    """
-
-    if not matches:
-        print(
-            "SCHEDULED PREMATCH | fixtures=0 | "
-            "normal=0 | builders=0 | sent=0"
-        )
-        return 0
-
-    normal = _scheduled_prematch_select_normal(
-        matches,
-        normal_limit
-    )
-
-    builders = []
-
-    if builder_limit > 0:
-        builders = _scheduled_prematch_select_builders(
-            matches,
-            builder_limit
-        )
-
-    sent_normal = 0
-    sent_builder = 0
-
-    # --------------------------------------------------------
-    # TOP PREMATCH
-    # --------------------------------------------------------
-
-    for signal in normal:
-        try:
-            if send_prematch_signal(signal):
-                sent_normal += 1
-        except Exception as e:
-            logging.warning(
-                "SCHEDULED PREMATCH SEND ERROR: %s",
-                repr(e)
-            )
-
-    # --------------------------------------------------------
-    # TOP BET BUILDER
-    # --------------------------------------------------------
-
-    for builder in builders:
-        try:
-            if send_prematch_signal(builder):
-                sent_builder += 1
-        except Exception as e:
-            logging.warning(
-                "SCHEDULED BUILDER SEND ERROR: %s",
-                repr(e)
-            )
-
-    print(
-        "SCHEDULED PREMATCH | "
-        f"fixtures={len(matches)} | "
-        f"normal={len(normal)} | "
-        f"builders={len(builders)} | "
-        f"sent={sent_normal + sent_builder}"
-    )
-
-    return sent_normal + sent_builder
-
-
-# ============================================================
-# DAY PACKAGE — 11:00
-# ============================================================
-
-def run_prematch_1100():
-    """
-    11:00 Bulgaria time.
-
-    Select:
-        TOP 3 PREMATCH
-        TOP 2 BET BUILDER
-
-    Only matches from:
-        11:00 -> 23:59 Bulgaria time
-    """
-
-    now = _prematch_bg_now()
-
-    print(
-        f"🕚 PREMATCH 11:00 PACKAGE | "
-        f"{now.strftime('%Y-%m-%d %H:%M:%S')}"
-    )
-
-    all_matches = _prematch_get_day_matches()
-
-    matches = _prematch_filter_window(
-        all_matches,
-        11,
-        24
-    )
-
-    return _send_scheduled_prematch_package(
-        matches=matches,
-        normal_limit=PREMATCH_DAY_TOP,
-        builder_limit=PREMATCH_BUILDER_TOP
-    )
-
-
-# ============================================================
-# NIGHT PACKAGE — 21:00
-# ============================================================
-
-def run_prematch_2100():
-    """
-    21:00 Bulgaria time.
-
-    Select:
-        TOP 3 PREMATCH
-
-    Only matches from:
-        00:00 -> 08:00 next morning.
-
-    No Builder package here.
-    """
-
-    now = _prematch_bg_now()
-
-    print(
-        f"🌙 PREMATCH 21:00 NIGHT PACKAGE | "
-        f"{now.strftime('%Y-%m-%d %H:%M:%S')}"
-    )
-
-    all_matches = _prematch_get_day_matches()
-
-    # IMPORTANT:
-    # For the night package we need tomorrow's fixtures too.
-    # Therefore use the complete API result and select the
-    # overnight period belonging to the next calendar day.
-    night_matches = []
-
-    today = now.date()
-    tomorrow = today + timedelta(days=1)
-
-    for match in all_matches:
-        dt = _prematch_match_datetime(match)
-
-        if dt is None:
-            continue
-
-        local_dt = dt.astimezone(TIMEZONE)
-
-        if (
-            local_dt.date() == tomorrow
-            and 0 <= local_dt.hour < 8
-        ):
-            night_matches.append(match)
-
-    return _send_scheduled_prematch_package(
-        matches=night_matches,
-        normal_limit=PREMATCH_NIGHT_TOP,
-        builder_limit=0
-    )
-
-
-# ============================================================
-# PREMATCH SCHEDULE ROUTER
-# ============================================================
-
-PREMATCH_SCHEDULE_SENT = set()
-
-
-def _run_scheduled_prematch():
-    """
-    Called frequently by main_loop, but it ONLY executes
-    at 11:00 and 21:00.
-
-    Everything else is ignored.
-    """
-
-    now = _prematch_bg_now()
-
-    date_key = now.strftime("%Y-%m-%d")
-
-    # --------------------------------------------------------
-    # 11:00 PACKAGE
-    # --------------------------------------------------------
-
-    day_key = f"{date_key}_DAY"
-
-    if day_key not in PREMATCH_SCHEDULE_SENT:
-        print("🚀 RUNNING PREMATCH DAY PACKAGE")
-
-        _send_result = run_prematch_1100()
-
-        PREMATCH_SCHEDULE_SENT.add(day_key)
-
-        print(
-            f"✅ PREMATCH DAY PACKAGE COMPLETE | "
-            f"sent={_send_result}"
-        )
-
-    # --------------------------------------------------------
-    # 21:00 PACKAGE
-    # --------------------------------------------------------
-
-    night_key = f"{date_key}_NIGHT"
-
-    if False:
-        print("🌙 RUNNING PREMATCH NIGHT PACKAGE")
-
-        _send_result = run_prematch_2100()
-
-        PREMATCH_SCHEDULE_SENT.add(night_key)
-
-        print(
-            f"✅ PREMATCH NIGHT PACKAGE COMPLETE | "
-            f"sent={_send_result}"
-        )
-
-    # Keep memory small.
-    if len(PREMATCH_SCHEDULE_SENT) > 10:
-        PREMATCH_SCHEDULE_SENT.clear()
-
-
-# ============================================================
-# FINAL MAIN LOOP OVERRIDE
-# ============================================================
-
 def main_loop():
-    """
-    FINAL MAIN LOOP.
-
-    LIVE:
-        continues normally
-
-    RESULTS:
-        continues normally
-
-    PREMATCH:
-        ONLY 11:00 and 21:00 Bulgaria time
-    """
-
-    global LAST_LIVE_SCAN
-    global LAST_RESULT_SCAN
-
-    try:
-        initialize_all_databases()
+    global LAST_LIVE_SCAN,LAST_PREMATCH_SCAN,LAST_RESULT_SCAN
+    try: initialize_all_databases()
     except Exception as e:
-        logging.warning(
-            "DATABASE INIT ERROR: %s",
-            repr(e)
-        )
+        logging.warning('DATABASE INIT ERROR: %s',repr(e))
         return
 
     print_system_status()
 
     if not api_health_check():
-        print("❌ API NOT AVAILABLE")
+        print('❌ API NOT AVAILABLE')
         return
 
-    print()
-    print("=" * 64)
-    print("🤖 AI FOOTBALL SYSTEM — SCHEDULED PREMATCH")
-    print("=" * 64)
-    print("🇧🇬 TIMEZONE:", TIMEZONE)
-    print("🕚 DAY PREMATCH: 11:00")
-    print("🎯 DAY TOP PREMATCH:", PREMATCH_DAY_TOP)
-    print("🧩 DAY TOP BUILDER:", PREMATCH_BUILDER_TOP)
-    print("🌙 NIGHT PREMATCH: 21:00")
-    print("🎯 NIGHT TOP PREMATCH:", PREMATCH_NIGHT_TOP)
-    print("🚫 OTHER PREMATCH: DISABLED")
-    print("🔥 LIVE: ENABLED")
-    print("=" * 64)
-    print()
+    print('✅ API CONNECTION OK')
 
-    LAST_LIVE_SCAN = 0
-    LAST_RESULT_SCAN = 0
+    LAST_LIVE_SCAN=LAST_PREMATCH_SCAN=LAST_RESULT_SCAN=0
 
     while True:
-        try:
-            now = time.time()
+        now=time.time()
+        cleanup_signal_memory()
 
-            cleanup_signal_memory()
-
-            # =================================================
-            # LIVE — UNCHANGED
-            # =================================================
-
-            if now - LAST_LIVE_SCAN >= LIVE_SCAN_INTERVAL:
-                try:
-                    print(
-                        datetime.now(TIMEZONE).strftime(
-                            "%H:%M:%S"
-                        ),
-                        "LIVE SCAN"
-                    )
-
-                    sent = _final_live_scan()
-
-                    print(
-                        "LIVE SIGNALS SENT:",
-                        sent
-                    )
-
-                except Exception as e:
-                    logging.warning(
-                        "LIVE LOOP ERROR: %s",
-                        repr(e)
-                    )
-
-                LAST_LIVE_SCAN = now
-
-            # =================================================
-            # PREMATCH — ONLY SCHEDULED TIMES
-            # =================================================
-
-            _run_scheduled_prematch()
-
-            # =================================================
-            # RESULTS — UNCHANGED
-            # =================================================
-
-            if now - LAST_RESULT_SCAN >= RESULT_SCAN_INTERVAL:
-                try:
-                    checked = check_pending_signals()
-
-                    if checked:
-                        print(
-                            "RESULTS UPDATED:",
-                            checked
-                        )
-
-                except Exception as e:
-                    logging.warning(
-                        "RESULT LOOP ERROR: %s",
-                        repr(e)
-                    )
-
-                LAST_RESULT_SCAN = now
-
-            time.sleep(PREMATCH_SCHEDULE_CHECK_INTERVAL)
-
-        except KeyboardInterrupt:
-            print("🛑 SYSTEM STOPPED")
-            break
-
-        except Exception as e:
-            logging.exception(
-                "MAIN LOOP ERROR: %s",
-                repr(e)
+        if now-LAST_LIVE_SCAN>=LIVE_SCAN_INTERVAL:
+            print(
+                datetime.now(TIMEZONE).strftime('%H:%M:%S'),
+                'LIVE SCAN'
             )
-            time.sleep(5)
+            sent=_final_live_scan()
+            print('LIVE SIGNALS SENT:',sent)
+            LAST_LIVE_SCAN=now
+
+        if now-LAST_PREMATCH_SCAN>=PREMATCH_SCAN_INTERVAL:
+            print(
+                datetime.now(TIMEZONE).strftime('%H:%M:%S'),
+                'PREMATCH SCAN'
+            )
+            sent=_final_prematch_scan()
+            print('PREMATCH SIGNALS SENT:',sent)
+            LAST_PREMATCH_SCAN=now
+
+        if now-LAST_RESULT_SCAN>=RESULT_SCAN_INTERVAL:
+            checked=check_pending_signals()
+
+            if checked:
+                print(
+                    'RESULTS UPDATED:',
+                    checked
+                )
+
+            LAST_RESULT_SCAN=now
+
+        time.sleep(5)
+                
+
+    
+        
