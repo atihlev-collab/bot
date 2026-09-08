@@ -26569,8 +26569,8 @@ def main_loop():
         )
 
         if (
-            current_hour == 22
-            and current_minute == 10
+            current_hour == 21
+            and current_minute == 0
             and last_prematch_slot != current_slot
         ):
 
