@@ -73,7 +73,7 @@ from zoneinfo import ZoneInfo
 import requests
 
 from scipy.stats import poisson
-from telegram import Bot
+
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
 
@@ -93,7 +93,7 @@ TIMEZONE = ZoneInfo("Europe/Sofia")
 REQUEST_TIMEOUT = 20
 API_RETRIES = 3
 
-bot = Bot(token=BOT_TOKEN)
+
 
 logging.basicConfig(
     level=logging.INFO,
