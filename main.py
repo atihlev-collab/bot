@@ -26465,6 +26465,9 @@ def main_loop():
 
     LAST_LIVE_SCAN=LAST_PREMATCH_SCAN=LAST_RESULT_SCAN=0
 
+    last_prematch_slot = None
+
+
     while True:
         now=time.time()
         cleanup_signal_memory()
@@ -26484,7 +26487,17 @@ def main_loop():
 
         bg_now = datetime.now(TIMEZONE)
 
-        if bg_now.hour == 11 and bg_now.minute == 0:
+        current_slot = (
+            bg_now.strftime("%Y-%m-%d-%H-%M")
+        )
+
+        if (
+            bg_now.hour == 11
+            and bg_now.minute == 0
+            and last_prematch_slot != current_slot
+        ):
+
+            
             print("🕚 PREMATCH 11:00 PACKAGE")
 
             try:
@@ -26523,6 +26536,8 @@ def main_loop():
 
                 LAST_PREMATCH_SCAN = now
 
+                last_prematch_slot = current_slot
+
             except Exception as e:
                 logging.exception(
                     "SCHEDULED PREMATCH ERROR: %s",
@@ -26548,7 +26563,15 @@ def main_loop():
         current_hour = current_time.hour
         current_minute = current_time.minute
 
-        if current_hour == 21 and current_minute == 0:
+        current_slot = (
+            current_time.strftime("%Y-%m-%d-%H-%M")
+        )
+
+        if (
+            current_hour == 21
+            and current_minute == 0
+            and last_prematch_slot != current_slot
+        ):
 
             print(
                 current_time.strftime("%H:%M:%S"),
@@ -26614,6 +26637,8 @@ def main_loop():
 
                 LAST_PREMATCH_SCAN = now
 
+                last_prematch_slot = current_slot
+
             except Exception as e:
 
                 logging.exception(
@@ -26621,7 +26646,7 @@ def main_loop():
                     repr(e)
                 )
 
-time.sleep(5)
+        time.sleep(5)
                 
 if __name__ == "__main__":
     try:
