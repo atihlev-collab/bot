@@ -26540,26 +26540,86 @@ def main_loop():
             LAST_RESULT_SCAN=now
 
 
-current_time = datetime.now(TIMEZONE)
-current_hour = current_time.hour
-current_minute = current_time.minute
+        # =====================================================
+        # 21:00 BG — NIGHT PREMATCH TOP 3
+        # =====================================================
 
-# PREMATCH — само в 11:00 и 21:00 BG
-if current_hour == 19 and current_minute == 10:
-    print(
-        current_time.strftime("%H:%M:%S"),
-        "PREMATCH DAILY SCAN"
-    )
+        current_time = datetime.now(TIMEZONE)
+        current_hour = current_time.hour
+        current_minute = current_time.minute
 
-    sent = _final_prematch_scan()
+        if current_hour == 21 and current_minute == 0:
 
-    print(
-        "PREMATCH DAILY SIGNALS SENT:",
-        sent
-    )
+            print(
+                current_time.strftime("%H:%M:%S"),
+                "🌙 PREMATCH NIGHT TOP 3"
+            )
 
-    
-    LAST_PREMATCH_SCAN = now
+            try:
+
+                tomorrow = (
+                    current_time + timedelta(days=1)
+                ).strftime("%Y-%m-%d")
+
+                night_data = api_get(
+                    "fixtures",
+                    {
+                        "date": tomorrow,
+                        "timezone": str(TIMEZONE)
+                    }
+                )
+
+                night_matches = (
+                    night_data.get("response", [])
+                    or []
+                )
+
+                night_matches = remove_started_matches(
+                    night_matches
+                ) or []
+
+                print(
+                    f"NIGHT PREMATCH FIXTURES: "
+                    f"{len(night_matches)}"
+                )
+
+                # ONLY TOP 3 PREMATCH
+                normal = _final_prematch_select(
+                    night_matches
+                )[:3]
+
+                sent = 0
+
+                for signal in normal:
+
+                    try:
+
+                        if send_prematch_signal(
+                            signal
+                        ):
+                            sent += 1
+
+                    except Exception as e:
+
+                        logging.warning(
+                            "NIGHT PREMATCH SEND ERROR: %s",
+                            repr(e)
+                        )
+
+                print(
+                    f"NIGHT PREMATCH COMPLETE | "
+                    f"selected={len(normal)} | "
+                    f"sent={sent}"
+                )
+
+                LAST_PREMATCH_SCAN = now
+
+            except Exception as e:
+
+                logging.exception(
+                    "NIGHT PREMATCH ERROR: %s",
+                    repr(e)
+                )
 
 time.sleep(5)
                 
