@@ -26545,7 +26545,7 @@ current_hour = current_time.hour
 current_minute = current_time.minute
 
 # PREMATCH — само в 11:00 и 21:00 BG
-if current_hour in (18, 21) and current_minute == 59:
+if current_hour == 19 and current_minute == 10:
     print(
         current_time.strftime("%H:%M:%S"),
         "PREMATCH DAILY SCAN"
