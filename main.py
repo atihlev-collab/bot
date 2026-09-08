@@ -26476,15 +26476,56 @@ def main_loop():
             print('LIVE SIGNALS SENT:',sent)
             LAST_LIVE_SCAN=now
 
-        if now-LAST_PREMATCH_SCAN>=PREMATCH_SCAN_INTERVAL:
-            print(
-                datetime.now(TIMEZONE).strftime('%H:%M:%S'),
-                'PREMATCH SCAN'
-            )
-            sent=_final_prematch_scan()
-            print('PREMATCH SIGNALS SENT:',sent)
-            LAST_PREMATCH_SCAN=now
+        # =====================================================
+        # SCHEDULED PREMATCH TEST
+        # =====================================================
 
+        bg_now = datetime.now(TIMEZONE)
+
+        if bg_now.hour == 11 and bg_now.minute == 0:
+            print("🕚 PREMATCH 11:00 PACKAGE")
+
+            try:
+                matches = remove_started_matches(
+                    get_prematch_matches()
+                ) or []
+
+                print(
+                    f"PREMATCH FIXTURES: {len(matches)}"
+                )
+
+                normal = _final_prematch_select(
+                    matches
+                )[:3]
+
+                builders = _final_builder_select(
+                    matches
+                )[:2]
+
+                sent = 0
+
+                for signal in normal:
+                    if send_prematch_signal(signal):
+                        sent += 1
+
+                for builder in builders:
+                    if send_prematch_signal(builder):
+                        sent += 1
+
+                print(
+                    f"PREMATCH PACKAGE COMPLETE | "
+                    f"normal={len(normal)} | "
+                    f"builders={len(builders)} | "
+                    f"sent={sent}"
+                )
+
+                LAST_PREMATCH_SCAN = now
+
+            except Exception as e:
+                logging.exception(
+                    "SCHEDULED PREMATCH ERROR: %s",
+                    repr(e)
+                )
         if now-LAST_RESULT_SCAN>=RESULT_SCAN_INTERVAL:
             checked=check_pending_signals()
 
