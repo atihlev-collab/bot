@@ -26493,8 +26493,12 @@ def main_loop():
                 datetime.now(TIMEZONE).strftime('%H:%M:%S'),
                 'LIVE SCAN'
             )
-            sent=_final_live_scan()
-            print('LIVE SIGNALS SENT:',sent)
+            signals = run_live_scan()
+
+            print(
+                'LIVE SIGNALS SENT:',
+                len(signals) if signals else 0
+            )
             LAST_LIVE_SCAN=now
 
         # =====================================================
