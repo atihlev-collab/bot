@@ -24477,18 +24477,34 @@ def get_best_live_signal(match):
 
 
 def rank_live_signals(signals):
-    valid = [s for s in (signals or []) if live_signal_quality_filter(s)]
-    valid.sort(key=lambda x: (
-        x.get('score', 0), x.get('probability', 0),
-        x.get('confidence', 0), -x.get('risk', 100)
-    ), reverse=True)
-    # At most one signal per fixture to avoid spam/correlation.
-    out=[]; seen=set()
-    for s in valid:
-        fid=s.get('fixture_id')
-        if fid in seen: continue
-        out.append(s); seen.add(fid)
-        if len(out)>=MAX_LIVE_SIGNALS_PER_SCAN: break
+    valid = [
+        s for s in (signals or [])
+        if live_signal_quality_filter(s)
+    ]
+
+    valid.sort(
+        key=lambda x: (
+            x.get('score', 0),
+            x.get('probability', 0),
+            x.get('confidence', 0),
+            -x.get('risk', 100)
+        ),
+        reverse=True
+    )
+
+    # Само един сигнал от един мач
+    out = []
+    seen = set()
+
+    for signal in valid:
+        fixture_id = signal.get('fixture_id')
+
+        if fixture_id in seen:
+            continue
+
+        seen.add(fixture_id)
+        out.append(signal)
+
     return out
 
 # ============================================================
