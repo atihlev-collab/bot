@@ -26557,6 +26557,7 @@ def main_loop():
 
         # =====================================================
         # 21:00 BG — NIGHT PREMATCH TOP 3
+        # ONLY TOMORROW 00:00–09:59 BG
         # =====================================================
 
         current_time = datetime.now(TIMEZONE)
@@ -26568,14 +26569,14 @@ def main_loop():
         )
 
         if (
-            current_hour == 21
-            and current_minute == 55
+            current_hour == 22
+            and current_minute == 10
             and last_prematch_slot != current_slot
         ):
 
             print(
                 current_time.strftime("%H:%M:%S"),
-                "🌙 PREMATCH NIGHT TOP 3"
+                "🌙 PREMATCH NIGHT TOP 3 — 00:00-10:00 BG"
             )
 
             try:
@@ -26592,10 +26593,60 @@ def main_loop():
                     }
                 )
 
-                night_matches = (
-                    night_data.get("response", [])
-                    or []
+                all_night_matches = (
+                    night_data.get(
+                        "response",
+                        []
+                    ) or []
                 )
+
+                # =================================================
+                # FILTER: ONLY 00:00–09:59 BG
+                # =================================================
+
+                night_matches = []
+
+                for match in all_night_matches:
+
+                    try:
+
+                        fixture = match.get(
+                            "fixture",
+                            {}
+                        )
+
+                        fixture_date = fixture.get(
+                            "date"
+                        )
+
+                        if not fixture_date:
+                            continue
+
+                        match_time = datetime.fromisoformat(
+                            fixture_date.replace(
+                                "Z",
+                                "+00:00"
+                            )
+                        )
+
+                        match_time_bg = (
+                            match_time.astimezone(
+                                TIMEZONE
+                            )
+                        )
+
+                        # ONLY 00:00 through 09:59 BG
+                        if 0 <= match_time_bg.hour < 10:
+                            night_matches.append(
+                                match
+                            )
+
+                    except Exception as e:
+
+                        logging.warning(
+                            "NIGHT TIME FILTER ERROR: %s",
+                            repr(e)
+                        )
 
                 night_matches = remove_started_matches(
                     night_matches
@@ -26606,7 +26657,10 @@ def main_loop():
                     f"{len(night_matches)}"
                 )
 
-                # ONLY TOP 3 PREMATCH
+                # =================================================
+                # TOP 3 PREMATCH — NO BUILDERS
+                # =================================================
+
                 normal = _final_prematch_select(
                     night_matches
                 )[:3]
@@ -26631,6 +26685,7 @@ def main_loop():
 
                 print(
                     f"NIGHT PREMATCH COMPLETE | "
+                    f"fixtures={len(night_matches)} | "
                     f"selected={len(normal)} | "
                     f"sent={sent}"
                 )
@@ -26647,13 +26702,16 @@ def main_loop():
                 )
 
         time.sleep(5)
-                
+
 if __name__ == "__main__":
     try:
         main_loop()
     except KeyboardInterrupt:
         print("🛑 BOT STOPPED")
     except Exception as e:
-        logging.exception("FATAL MAIN ERROR: %s", repr(e))
+        logging.exception(
+            "FATAL MAIN ERROR: %s",
+            repr(e)
+        )
     
         
