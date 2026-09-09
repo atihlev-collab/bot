@@ -26782,14 +26782,52 @@ def main_loop():
         time.sleep(5)
 
 if __name__ == "__main__":
-    try:
-        main_loop()
-    except KeyboardInterrupt:
-        print("🛑 BOT STOPPED")
-    except Exception as e:
-        logging.exception(
-            "FATAL MAIN ERROR: %s",
-            repr(e)
-        )
+
+    print("MAIN V3 STARTED")
+
+    init_database()
+
+    last_prematch_scan = 0
+    last_scanner_day = None
+    last_scanner_night = None
+
+    while True:
+
+        # =====================================================
+        # EXISTING PREMATCH SYSTEM — every 15 minutes
+        # =====================================================
+        if (
+            time.time()
+            -
+            last_prematch_scan
+            >=
+            900
+        ):
+
+            check_prematch_results()
+
+            market_roi_report()
+
+            prematch_loop()
+
+            last_prematch_scan = time.time()
+
+        # =====================================================
+        # DAILY STATISTICAL SCANNER
+        # =====================================================
+        try:
+            run_due_scans(send_telegram)
+        except Exception as exc:
+            print(
+                "DAILY SCANNER LOOP ERROR:",
+                repr(exc)
+            )
+
+        # =====================================================
+        # EXISTING LIVE SYSTEM
+        # =====================================================
+        live_loop()
+
+        time.sleep(300)
     
         
