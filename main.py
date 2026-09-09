@@ -165,8 +165,6 @@ BAD_COUNTRIES = {
     "Russia",
     "Belarus",
 
-    "Israel",
-
     "Guatemala",
     "Honduras",
     "El Salvador",
