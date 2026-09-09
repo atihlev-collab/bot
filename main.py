@@ -26766,22 +26766,8 @@ def main_loop():
                     repr(e)
                 )
 
-        # =====================================================
-        # DAILY STATISTICAL SCANNER
-        # 10:00 BG + 20:00 BG
-        # =====================================================
-
-        try:
-            run_due_scans(send_telegram)
-        except Exception as e:
-            logging.warning(
-                "DAILY SCANNER ERROR: %s",
-                repr(e)
-            )
-
-        time.sleep(5)
-
 if __name__ == "__main__":
+
 
     print("MAIN V3 STARTED")
 
@@ -26793,20 +26779,7 @@ if __name__ == "__main__":
 
     while True:
 
-        # =====================================================
-        # EXISTING PREMATCH SYSTEM — every 15 minutes
-        # =====================================================
-        if (
-            time.time()
-            -
-            last_prematch_scan
-            >=
-            900
-        ):
-          
-            prematch_loop()
-
-            last_prematch_scan = time.time()
+                         
 
         # =====================================================
         # DAILY STATISTICAL SCANNER
