@@ -252,7 +252,7 @@ def send_telegram(message):
 
             json={
                 "chat_id": CHAT_ID,
-                "text": message
+                "text": message,
                 "parse_mode": "HTML"
             },
 
