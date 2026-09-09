@@ -26772,7 +26772,7 @@ def main_loop():
         # =====================================================
 
         try:
-            run_due_scans(send_telegram)
+            run_due_scans()
         except Exception as e:
             logging.warning(
                 "DAILY SCANNER ERROR: %s",
