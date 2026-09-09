@@ -26804,7 +26804,7 @@ if __name__ == "__main__":
             900
         ):
 
-            check_prematch_results()
+          
 
             market_roi_report()
 
