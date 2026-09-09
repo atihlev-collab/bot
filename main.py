@@ -253,6 +253,7 @@ def send_telegram(message):
             json={
                 "chat_id": CHAT_ID,
                 "text": message
+                "parse_mode": "HTML"
             },
 
             timeout=20
