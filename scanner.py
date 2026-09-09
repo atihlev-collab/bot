@@ -542,14 +542,21 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 
     # Telegram receives the DAILY scanner as an image so the complete signal
     # is genuinely larger/bolder, not just Markdown/HTML formatting.
-    try:
-        photo_path = _render_daily_scanner_image(message, mode)
-        _send_daily_scanner_photo(photo_path, mode)
-    except Exception as exc:
-        print("SCANNER IMAGE ERROR:", repr(exc))
-        # Keep the existing text fallback if image generation fails.
-        if send_func:
-            send_func(message)
+try:
+    photo_path = _render_daily_scanner_image(message, mode)
+
+    sent = _send_daily_scanner_photo(photo_path, mode)
+
+    if not sent and send_func:
+        print("SCANNER PHOTO FAILED — USING TEXT FALLBACK")
+        send_func(message)
+
+except Exception as exc:
+    print("SCANNER IMAGE ERROR:", repr(exc))
+
+    if send_func:
+        print("SCANNER USING TEXT FALLBACK")
+        send_func(message)
 
     return message
 
