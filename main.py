@@ -71,6 +71,7 @@ import time
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from scanner import run_due_scans
 
 import requests
 
@@ -26720,6 +26721,19 @@ def main_loop():
                     "NIGHT PREMATCH ERROR: %s",
                     repr(e)
                 )
+
+        # =====================================================
+        # DAILY STATISTICAL SCANNER
+        # 10:00 BG + 20:00 BG
+        # =====================================================
+
+        try:
+            run_due_scans(send_telegram)
+        except Exception as e:
+            logging.warning(
+                "DAILY SCANNER ERROR: %s",
+                repr(e)
+            )
 
         time.sleep(5)
 
