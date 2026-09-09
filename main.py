@@ -26803,11 +26803,7 @@ if __name__ == "__main__":
             >=
             900
         ):
-
           
-
-            market_roi_report()
-
             prematch_loop()
 
             last_prematch_scan = time.time()
