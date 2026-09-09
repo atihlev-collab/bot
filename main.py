@@ -26533,6 +26533,18 @@ def main_loop():
         now=time.time()
         cleanup_signal_memory()
 
+
+        # =====================================================
+        # DAILY STATISTICAL SCANNER
+        # =====================================================
+        try:
+            run_due_scans(send_telegram)
+        except Exception as exc:
+            print(
+                "DAILY SCANNER LOOP ERROR:",
+                repr(exc)
+            )
+
         if now-LAST_LIVE_SCAN>=LIVE_SCAN_INTERVAL:
             print(
                 datetime.now(TIMEZONE).strftime('%H:%M:%S'),
@@ -26767,31 +26779,7 @@ def main_loop():
                 )
 
 if __name__ == "__main__":
-
-
     print("MAIN V3 STARTED")
-
-    init_database()
-
-    last_prematch_scan = 0
-    last_scanner_day = None
-    last_scanner_night = None
-
-    while True:
-
-                         
-
-        # =====================================================
-        # DAILY STATISTICAL SCANNER
-        # =====================================================
-        try:
-            run_due_scans(send_telegram)
-        except Exception as exc:
-            print(
-                "DAILY SCANNER LOOP ERROR:",
-                repr(exc)
-            )
-
-        time.sleep(300)
+    main_loop()
     
         
