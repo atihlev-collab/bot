@@ -73,6 +73,7 @@ from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from scanner import run_due_scans
 
+
 import requests
 
 from scipy.stats import poisson
@@ -272,6 +273,50 @@ def send_telegram(message):
 
         logging.warning(
             "TELEGRAM ERROR %s",
+            repr(e)
+        )
+
+        return False
+
+# =========================================================
+# TELEGRAM PHOTO
+# =========================================================
+
+def send_telegram_photo(photo_path):
+
+    try:
+
+        with open(photo_path, "rb") as photo:
+
+            response = requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto",
+
+                data={
+                    "chat_id": CHAT_ID
+                },
+
+                files={
+                    "photo": photo
+                },
+
+                timeout=30
+            )
+
+        if response.status_code == 200:
+            return True
+
+        logging.warning(
+            "TELEGRAM PHOTO ERROR HTTP %s | %s",
+            response.status_code,
+            response.text[:300]
+        )
+
+        return False
+
+    except Exception as e:
+
+        logging.warning(
+            "TELEGRAM PHOTO ERROR %s",
             repr(e)
         )
 
