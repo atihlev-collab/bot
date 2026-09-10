@@ -366,14 +366,26 @@ def _scanner_font(size, bold=False):
     paths = [
         "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold
         else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+
+        "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed-Bold.ttf" if bold
+        else "/usr/share/fonts/truetype/dejavu/DejaVuSansCondensed.ttf",
+
         "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if bold
         else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+
+        "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf" if bold
+        else "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
     ]
+
     for path in paths:
         try:
-            return ImageFont.truetype(path, size)
-        except OSError:
-            pass
+            font = ImageFont.truetype(path, size)
+            print("SCANNER FONT:", path)
+            return font
+        except (OSError, IOError):
+            continue
+
+    print("SCANNER FONT ERROR: No Unicode font found")
     return ImageFont.load_default()
 
 
