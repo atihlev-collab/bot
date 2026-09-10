@@ -1,4 +1,4 @@
-#=====================================================
+#=========================================================
 # MAIN V3
 # CLEAN BETTING SYSTEM
 # =========================================================
@@ -9,7 +9,6 @@ import asyncio
 import threading
 import time
 import logging
-import os
  
     
 
@@ -74,7 +73,7 @@ BAD_COUNTRIES = [
     "Indonesia",
 
     "Russia",
-    "Belarus", 
+    "Belarus",
     "Nicaragua",
     "Guatemala",
     "Honduras",
@@ -93,6 +92,24 @@ team_form_cache = {}
 odds_cache = {}
 live_market_cache = {}
 betano_market_cache = {}
+
+# =========================================================
+# API RATE-LIMIT PROTECTION
+# =========================================================
+# Keep the old main architecture.  The scanner remains untouched.
+# LIVE statistics are cached so analyze_live_match() and live_loop()
+# never request the same fixture twice in one cycle.
+API_RATE_LIMIT_PAUSE = 65
+_main_api_cooldown_until = 0.0
+
+live_stats_cache = {}
+
+def _rate_limited_response(data):
+    try:
+        errors = data.get("errors") or {}
+        return bool(errors.get("rateLimit"))
+    except Exception:
+        return False
 
 # =========================================================
 # DATABASE
@@ -195,30 +212,31 @@ def blocked_league(league):
 
 def get_live_matches():
 
+    global _main_api_cooldown_until
+
+    if time.time() < _main_api_cooldown_until:
+        print("MAIN API COOLDOWN: live fixtures")
+        return []
+
     try:
-
         r = requests.get(
-
             f"{BASE_URL}/fixtures",
-
             headers=HEADERS,
-
-            params={
-                "live": "all"
-            },
-
+            params={"live": "all"},
             timeout=20
-
         ).json()
 
-        return r.get(
-            "response",
-            []
-        )
+        if _rate_limited_response(r):
+            _main_api_cooldown_until = time.time() + API_RATE_LIMIT_PAUSE
+            print("MAIN API RATE LIMIT: pausing", API_RATE_LIMIT_PAUSE, "seconds")
+            return []
 
-    except:
+        return r.get("response", [])
 
+    except Exception as e:
+        print("MAIN LIVE FIXTURES ERROR:", repr(e))
         return []
+
 
 # =========================================================
 # LIVE STATISTICS
@@ -226,35 +244,40 @@ def get_live_matches():
 
 def get_statistics(fixture_id):
 
+    global _main_api_cooldown_until
+
+    now = time.time()
+    cached = live_stats_cache.get(fixture_id)
+    if cached:
+        cache_time, data = cached
+        if now - cache_time < 120:
+            return data
+
+    if now < _main_api_cooldown_until:
+        print("MAIN API COOLDOWN: statistics", fixture_id)
+        return []
+
     try:
-
         r = requests.get(
-
             f"{BASE_URL}/fixtures/statistics",
-
             headers=HEADERS,
-
-            params={
-                "fixture": fixture_id
-            },
-
+            params={"fixture": fixture_id},
             timeout=20
-
         ).json()
 
-        print(
-            "STATS RAW:",
-            fixture_id,
-            r
-        )
-        
-        return r.get(
-            "response",
-            []
-        )
+        print("STATS RAW:", fixture_id, r)
 
-    except:
+        if _rate_limited_response(r):
+            _main_api_cooldown_until = time.time() + API_RATE_LIMIT_PAUSE
+            print("MAIN API RATE LIMIT: pausing", API_RATE_LIMIT_PAUSE, "seconds")
+            return []
 
+        data = r.get("response", [])
+        live_stats_cache[fixture_id] = (time.time(), data)
+        return data
+
+    except Exception as e:
+        print("MAIN STATISTICS ERROR:", repr(e))
         return []
 
 # =========================================================
@@ -263,29 +286,29 @@ def get_statistics(fixture_id):
 
 def get_odds(fixture_id):
 
+    global _main_api_cooldown_until
+
+    if time.time() < _main_api_cooldown_until:
+        print("MAIN API COOLDOWN: odds", fixture_id)
+        return []
+
     try:
-
         r = requests.get(
-
             f"{BASE_URL}/odds",
-
             headers=HEADERS,
-
-            params={
-                "fixture": fixture_id
-            },
-
+            params={"fixture": fixture_id},
             timeout=20
-
         ).json()
 
-        return r.get(
-            "response",
-            []
-        )
+        if _rate_limited_response(r):
+            _main_api_cooldown_until = time.time() + API_RATE_LIMIT_PAUSE
+            print("MAIN API RATE LIMIT: pausing", API_RATE_LIMIT_PAUSE, "seconds")
+            return []
 
-    except:
+        return r.get("response", [])
 
+    except Exception as e:
+        print("MAIN ODDS ERROR:", repr(e))
         return []
 
 
@@ -1300,10 +1323,11 @@ def analyze_live_match(fixture):
 
         if (
             65 <= minute <= 79
-            and total_corners >= 8
-            and total_shots >= 12
+            and total_corners >= 13
+            and total_shots >= 20
             and best_pressure >= 66
             and corner_probability >= 78
+            and total_corners <= 12
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
                 print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -8973,319 +8997,484 @@ def tipster_filter_signals(all_signals):
 
     return passed
 
-def _prematch_market_key(market):
-    m = str(market or "").upper()
-    for key in ("HOME OVER 1.5", "AWAY OVER 1.5", "OVER 3.5", "OVER 2.5", "UNDER 2.5", "BTTS", "HOME WIN", "AWAY WIN"):
-        if key in m:
-            return key
-    return m
+def prematch_loop():
 
+    print("PREMATCH SCAN START")
 
-def _send_bet_builder(builder):
-    fixture_id = builder["fixture_id"]
-    key = f"builder_{fixture_id}_" + "_".join(sorted(x["market"] for x in builder["legs"]))
-    if key in sent_prematch and time.time() - sent_prematch[key] < 86400:
-        return False
-    legs_text = "\n".join(f"• {x['market']} @ {x['odd']:.2f}" for x in builder["legs"])
-    message = f"""<b>🧩 BET BUILDER — PREMATCH</b>
-
-🏆 {builder['home']} vs {builder['away']}
-🗓 {builder['match_date']}  🕒 {builder['kickoff_time']}
-🌍 {builder['country']}
-🏟 {builder['league']}
-
-<b>LEGS:</b>
-{legs_text}
-
-💰 <b>COMBINED ODDS: {builder['odd']:.2f}</b>
-🎯 <b>JOINT PROBABILITY: {builder['probability']:.1f}%</b>
-💎 <b>CONFIDENCE: {builder['confidence']:.1f}%</b>"""
-    if not send_telegram(message):
-        return False
-    sent_prematch[key] = time.time()
-    save_signal(fixture_id, builder["country"], builder["league"], builder["home"], builder["away"], "🧩 BET BUILDER", builder["odd"], builder["confidence"])
-    print("BET BUILDER SENT:", builder["home"], builder["away"], builder["odd"], builder["probability"])
-    return True
-
-
-def _build_bet_builders(matches):
-    import itertools
-    builders = []
-    conflict_pairs = {
-        frozenset(("HOME WIN", "AWAY WIN")),
-        frozenset(("OVER 2.5", "UNDER 2.5")),
-    }
-    for match in matches:
-        try:
-            fixture_id = match["fixture"]["id"]
-            signals = analyze_prematch_match(match) or []
-            odds = get_match_odds(fixture_id)
-            if not signals or not odds:
-                continue
-            odd_map = {
-                "HOME WIN": odds[0], "AWAY WIN": odds[2], "OVER 2.5": odds[3],
-                "UNDER 2.5": odds[4], "BTTS": odds[5],
-                "HOME OVER 1.5": odds[6] if len(odds) > 6 else None,
-                "AWAY OVER 1.5": odds[7] if len(odds) > 7 else None,
-                "OVER 3.5": odds[8] if len(odds) > 8 else None,
-            }
-            legs = []
-            for market, confidence, probability in signals:
-                key = _prematch_market_key(market)
-                odd = odd_map.get(key)
-                if odd is None:
-                    continue
-                try:
-                    p = float(probability); c = float(confidence); o = float(odd)
-                except Exception:
-                    continue
-                edge, ev = tipster_price_metrics(p, o)
-                # Builder uses strong model legs but does not require the
-                # ultra-strict final gate.
-                if p < 70.0 or c < 75.0 or edge < 0.0 or not (1.25 <= o <= 3.20):
-                    continue
-                legs.append({"market": market, "odd": o, "probability": p,
-                             "confidence": c, "edge": edge, "ev": ev, "family": key})
-            for a, b in itertools.combinations(legs, 2):
-                if a["family"] == b["family"]:
-                    continue
-                if frozenset((a["family"], b["family"])) in conflict_pairs:
-                    continue
-                combined_odd = a["odd"] * b["odd"]
-                # Conservative builder score; do not present this as a true
-                # independent joint probability because the legs are correlated.
-                builder_probability = min(a["probability"], b["probability"]) * 0.90
-                confidence = (a["confidence"] + b["confidence"]) / 2.0
-                score = builder_probability * 0.55 + confidence * 0.45 + min(15.0, max(0.0, a["edge"] + b["edge"])) * 0.5
-                if not (1.70 <= combined_odd <= 4.50 and builder_probability >= 63.0 and confidence >= 75.0):
-                    continue
-                ft = datetime.fromisoformat(match["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
-                builders.append({
-                    "fixture_id": fixture_id, "home": match["teams"]["home"]["name"], "away": match["teams"]["away"]["name"],
-                    "country": match["league"]["country"], "league": match["league"]["name"],
-                    "match_date": ft.strftime("%d.%m.%Y"), "kickoff_time": ft.strftime("%H:%M"),
-                    "legs": [a, b], "odd": combined_odd, "probability": builder_probability,
-                    "confidence": confidence, "score": score,
-                })
-        except Exception as e:
-            print("BUILDER ERROR:", repr(e))
-    builders.sort(key=lambda x: x["score"], reverse=True)
-    print("BUILDER CANDIDATES:", len(builders))
-    return builders[:2]
-
-
-def _run_prematch_package(window):
-    print("PREMATCH PACKAGE START:", window)
     matches = get_upcoming_matches()
-    now = datetime.now(TZ)
-    filtered = []
-    for m in matches:
-        try:
-            ft = datetime.fromisoformat(m["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
-            if window == "DAY" and ft.date() == now.date() and 11 <= ft.hour <= 23:
-                filtered.append(m)
-            elif window == "NIGHT" and ft.date() == (now + timedelta(days=1)).date() and 0 <= ft.hour <= 9:
-                filtered.append(m)
-        except Exception as e:
-            print("PREMATCH TIME ERROR:", repr(e))
-    print("PREMATCH MATCHES:", len(filtered))
+
+    print(
+        f"Matches found: {len(matches)}"
+    )
 
     all_signals = []
-    for match in filtered:
-        try:
-            fixture_id = match["fixture"]["id"]
-            signals = analyze_prematch_match(match) or []
-            odds = get_match_odds(fixture_id)
-            if not odds:
-                print("PREMATCH NO ODDS:", fixture_id, match["teams"]["home"]["name"], match["teams"]["away"]["name"])
-                continue
-            odd_map = {
-                "HOME WIN": odds[0], "AWAY WIN": odds[2], "OVER 2.5": odds[3],
-                "UNDER 2.5": odds[4], "BTTS": odds[5],
-                "HOME OVER 1.5": odds[6] if len(odds) > 6 else None,
-                "AWAY OVER 1.5": odds[7] if len(odds) > 7 else None,
-                "OVER 3.5": odds[8] if len(odds) > 8 else None,
-            }
-            print("PREMATCH MODEL:", fixture_id, "SIGNALS=", len(signals))
-            for market, confidence, probability in signals:
-                key = _prematch_market_key(market)
-                odd = odd_map.get(key)
-                if odd is None:
-                    print("PREMATCH SKIP NO MARKET:", fixture_id, market)
-                    continue
-                try:
-                    p = float(probability); c = float(confidence); o = float(odd)
-                except Exception:
-                    continue
-                if o <= 1.0:
-                    continue
-                edge, ev = tipster_price_metrics(p, o)
 
-                # Preferred gate first. If it rejects everything, a measured
-                # fallback keeps the PREMATCH feed from becoming silent.
-                ok, _, _, reason = tipster_final_gate(market, p, c, o)
-                quality = "GATE" if ok else "VALUE_FALLBACK"
-                if not ok:
-                    if not (p >= 70.0 and c >= 75.0 and edge >= 0.0 and 1.30 <= o <= 3.20):
-                        print("PREMATCH REJECT:", fixture_id, market, reason,
-                              "P=", p, "C=", c, "O=", o, "EDGE=", round(edge, 2))
-                        continue
-                score = p * 0.46 + c * 0.32 + max(-10.0, min(edge, 25.0)) * 0.14 + max(-0.20, min(ev, 0.50)) * 16.0
-                if quality == "VALUE_FALLBACK":
-                    score -= 1.5
-                all_signals.append({
-                    "probability": p, "match": match, "market": market,
-                    "confidence": c, "odd": o, "edge": edge, "ev": ev,
-                    "score": score, "quality": quality,
-                })
-        except Exception as e:
-            print("PREMATCH PACKAGE ERROR:", repr(e))
+    for match in matches:
 
-    all_signals.sort(key=lambda x: x["score"], reverse=True)
-    print("PREMATCH CANDIDATES:", len(all_signals))
+        signals = analyze_prematch_match(
+            match
+        )
 
-    sent = 0
-    used = set()
-    for item in all_signals:
-        match = item["match"]
+        if not signals:
+            continue
+
         fixture_id = match["fixture"]["id"]
-        if fixture_id in used:
+
+        match_odds = get_match_odds(
+            fixture_id
+        )
+
+        print(
+            "MATCH ODDS:",
+            fixture_id,
+            match_odds
+        )
+
+        if not match_odds:
             continue
-        ft = datetime.fromisoformat(match["fixture"]["date"].replace("Z", "+00:00")).astimezone(TZ)
-        key = f"{fixture_id}_{item['market']}"
-        if key in sent_prematch and time.time() - sent_prematch[key] < 86400:
-            continue
-        if send_prematch_signal(
-            fixture_id, ft.strftime("%d.%m.%Y"), ft.strftime("%H:%M"),
-            match["league"]["country"], match["league"]["name"],
-            match["teams"]["home"]["name"], match["teams"]["away"]["name"],
-            item["market"], item["confidence"], item["probability"], str(item["odd"])
-        ):
-            sent_prematch[key] = time.time()
-            used.add(fixture_id)
-            sent += 1
-            print("PREMATCH SENT:", fixture_id, item["market"], item["odd"], item["quality"])
-        if sent >= 3:
-            break
 
-    builders = _build_bet_builders(filtered)
-    builder_sent = 0
-    for builder in builders:
-        if _send_bet_builder(builder):
-            builder_sent += 1
-    print("PREMATCH PACKAGE FINISHED:", window, "SENT=", sent, "BUILDERS=", builder_sent)
+        home_odd = match_odds[0]                     
+        draw_odd = match_odds[1]                    
+        away_odd = match_odds[2]                     
+        over25_odd = match_odds[3]  
+        under25_odd = match_odds[4]
+        btts_odd = match_odds[5]
+        home_over15_odd = match_odds[6] if len(match_odds) > 6 else None
+        away_over15_odd = match_odds[7] if len(match_odds) > 7 else None
+        over35_odd = match_odds[8] if len(match_odds) > 8 else None
+
+        country = match["league"]["country"]
+        league = match["league"]["name"]
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        fixture_time = datetime.fromisoformat(
+            match["fixture"]["date"].replace(
+                "Z",
+                "+00:00"
+            )
+        ).astimezone(TZ)
+
+        match_date = fixture_time.strftime(
+            "%d.%m.%Y"
+        )
+
+        kickoff_time = fixture_time.strftime(
+            "%H:%M"
+        )      
+   
+    
+        for market, confidence, probability in signals:               
+
+            print(                                                     
+                "DEBUG SIGNAL:",                                       
+                market,                                                
+                confidence,                                             
+                probability                                            
+            )                                                          
+
+            odds_text = "-"                                            
+
+            if (                                                        
+
+                "HOME WIN" in market                                    
+                and                                                     
+                home_odd is not None                                   
+
+            ):                                                         
+
+                odds_text = str(home_odd)                               
+
+            elif (                                                      
+
+                "AWAY WIN" in market                                   
+                and                                                    
+                away_odd is not None                                   
+
+            ):                                                        
+
+                odds_text = str(away_odd)                               
+
+            elif (                                                      
+
+                "BTTS" in market                                       
+                and                                                    
+                btts_odd is not None                                   
+
+            ):                                                         
+
+                odds_text = str(btts_odd)                              
+
+            elif (                                                     
+
+                "OVER 2.5" in market                                   
+                and                                                     
+                over25_odd is not None                                  
+
+            ):                                                       
+
+                odds_text = str(over25_odd)                            
+                             
+            elif (
+                "UNDER 2.5" in market
+                and under25_odd is not None
+            ):
+                odds_text = str(under25_odd)
+
+            elif (
+                "HOME OVER 1.5" in market
+                and home_over15_odd is not None
+            ):
+                odds_text = str(home_over15_odd)
+
+            elif (
+                "AWAY OVER 1.5" in market
+                and away_over15_odd is not None
+            ):
+                odds_text = str(away_over15_odd)
+
+            elif (
+                "OVER 3.5" in market
+                and over35_odd is not None
+            ):
+                odds_text = str(over35_odd)
+
+            # Never send a prematch recommendation without the actual
+            # Betano price for that exact market.
+            if odds_text == "-":
+                print("SKIP NO BETANO ODDS:", home, away, market)
+                continue
+
+            all_signals.append(                               
+
+            (                                            
+
+                    probability,                            
+                    fixture_id,                               
+                    match_date,                             
+                    kickoff_time,                            
+                    country,                                 
+                    league,                                   
+                    home,                                    
+                    away,                                    
+                    market,                                 
+                    confidence,                              
+                    odds_text                               
+
+                )                                            
+
+            )                                                 
+   
+
+    # TIPSTER PRO FINAL GATE
+    all_signals = tipster_filter_signals(
+        all_signals
+    )
+
+    all_signals.sort(                          
+        reverse=True,                          
+        key=lambda x: tipster_selector_score(    
+            x[8],                              
+            x[0],                              
+            x[9],                              
+            x[10]                              
+        )                                     
+    )                                          
 
 
-def prematch_loop():
-    _run_prematch_package("DAY")
+    top_signals = []                        
+    used_fixtures = set()                   
 
+    for signal_item in all_signals:         
+
+        fixture_id = signal_item[1]         
+
+        if fixture_id in used_fixtures:     
+            continue                        
+
+        top_signals.append(                 
+            signal_item                     
+        )                                   
+
+        used_fixtures.add(                  
+            fixture_id                      
+        )                                   
+
+        if len(top_signals) >= 10:           
+            break                           
+
+    for (
+        probability,
+        fixture_id,
+
+        match_date,
+        kickoff_time,
+
+        country,
+        league,
+
+        home,
+        away,
+
+        market,
+        confidence,
+        odds_text,
+       
+    ) in top_signals:
+
+        key = f"{fixture_id}_{market}"
+
+        if key in sent_prematch:
+
+            if (
+                time.time()
+                -
+                sent_prematch[key]
+            ) < 86400:
+
+                continue       
+
+        print(
+            market,
+            confidence,
+            probability
+        )      
+
+             
+
+        sent_ok = send_prematch_signal(            
+
+            fixture_id,
+
+            match_date,
+            kickoff_time,
+
+            country,
+            league,
+
+            home,
+            away,
+
+            market,
+
+            confidence,
+            probability,
+            odds_text,
+           
+        )
+
+        if sent_ok:                                
+            sent_prematch[key] = time.time()                    
+
+
+# =========================================================
+# LIVE LOOP
+# =========================================================
 
 def live_loop():
+
     matches = get_live_matches()
+
+    if not matches:
+        print("LIVE: no matches / API cooldown / no data")
+        return
+
     print(f"Live matches: {len(matches)}")
+
     print("LIVE SCAN START")
-    sent_count = 0
+
     for match in matches:
-        try:
-            signal = analyze_live_match(match)
-            if not signal:
-                continue
-            fixture_id = match["fixture"]["id"]
-            home_goals = match["goals"].get("home") or 0
-            away_goals = match["goals"].get("away") or 0
-            key = f"live_{fixture_id}_{home_goals}_{away_goals}_{signal[0]}"
-            if key in sent_live and time.time() - sent_live[key] < 7200:
-                continue
-            minute = signal[2]
-            probability = float(signal[3])
-            # Stronger live gate: late/low-quality matches are rejected.
-            if probability < 62:
-                continue
-            if minute < 25 or minute > 88:
-                continue
-            home = match["teams"]["home"]["name"]; away = match["teams"]["away"]["name"]
-            country = match["league"]["country"]; league = match["league"]["name"]
-            odds_text = "-"
-            odds = get_match_odds(fixture_id)
-            if odds:
-                if "HOME" in signal[0] and odds[0] is not None: odds_text = str(odds[0])
-                elif "AWAY" in signal[0] and odds[2] is not None: odds_text = str(odds[2])
-            message = f"""🔥 <b>LIVE SIGNAL</b>
+
+        signal = analyze_live_match(
+            match
+        )
+
+        if not signal:
+            continue
+
+        fixture_id = match["fixture"]["id"]
+
+        home_goals = match["goals"]["home"] or 0
+        away_goals = match["goals"]["away"] or 0
+
+        key = (
+            f"live_{fixture_id}_"
+            f"{home_goals}_{away_goals}_"
+            f"{signal[0]}"
+        )
+
+        if key in sent_live:
+            continue
+
+        sent_live[key] = time.time()
+
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
+
+        home_goals = (
+            match["goals"]["home"] or 0
+        )
+
+        away_goals = (
+            match["goals"]["away"] or 0
+        )
+
+        minute = signal[2]
+
+        goal_probability = signal[3]
+        
+        stats = live_stats_cache.get(fixture_id, (0, []))[1]
+
+        home_pressure = 0
+        away_pressure = 0
+
+        home_shots = 0
+        away_shots = 0 
+
+        home_corners = 0
+        away_corners = 0
+        
+        home_xg = 0            
+        away_xg = 0            
+
+        if len(stats) >= 2:
+
+            home_pressure = calculate_pressure(
+                stats[0]
+            )
+
+            away_pressure = calculate_pressure(
+                stats[1]
+            )
+
+
+            home_form = get_team_form(     
+                match["teams"]["home"]["id"],
+                venue="home"              
+            )                            
+
+            away_form = get_team_form(     
+                match["teams"]["away"]["id"],
+                venue="away"              
+            )                             
+
+            home_shots = extract(
+                stats[0],
+                "Shots on Goal"
+            )
+
+            away_shots = extract(
+                stats[1],
+                "Shots on Goal"
+            )
+
+            home_corners = extract(
+                stats[0],
+                "Corner Kicks"
+            )
+
+            away_corners = extract(
+                stats[1],
+                "Corner Kicks"
+            )           
+        
+        country = match["league"]["country"]      
+        league = match["league"]["name"]         
+
+        odds_text = "-"                          
+
+        match_odds = get_match_odds(              
+
+            fixture_id                           
+        )                                         
+
+        home_odd = None                           
+        away_odd = None                           
+
+        if match_odds:                            
+            home_odd = match_odds[0]              
+            away_odd = match_odds[2]              
+     
+        if (                                   
+            home_odd is not None               
+            or                                 
+            away_odd is not None               
+        ):                                      
+        
+            if "HOME" in signal[0]:            
+        
+                odds_text = str(               
+        
+                    home_odd                   
+        
+                )                              
+        
+            elif "AWAY" in signal[0]:           
+        
+                odds_text = str(               
+        
+                    away_odd                    
+        
+                )                              
+
+                                               
+
+        send_telegram(                            
+
+            f"""                                
+🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
+
 🌍 {country}
 🏟 {league}
-📊 Score: {home_goals} - {away_goals}
+
+📊 Score:
+{match["goals"]["home"] or 0} - {match["goals"]["away"] or 0}
+
 ⏱ Minute: {minute}
-🔥 <b>{signal[0]}</b>
-💰 Odds: {odds_text}
+
+🔥{signal[0]}🔥
+
+💰 Odds:
+{odds_text}
+
 💎 Confidence: {signal[1]}%
-🎯 Probability: {probability}%"""
-            if send_telegram(message):
-                sent_live[key] = time.time(); sent_count += 1
-                print("LIVE SIGNAL SENT:", home, away, signal[0], probability)
-        except Exception as e:
-            print("LIVE LOOP ERROR:", repr(e))
-    print("LIVE SIGNALS SENT:", sent_count)
 
-
+🎯 Goal Probability:
+{goal_probability}%
+"""
+)          
+         
 if __name__ == "__main__":
-    print("MAIN V3 STABLE — STATISTICS + PREMATCH + BET BUILDER + LIVE")
+
+    print("MAIN V3 STARTED")
+
     init_database()
-    last_day = None
-    last_night = None
-    scanner_thread = None
-
-    def scanner_worker():
-        while True:
-            try:
-                run_due_scans(send_telegram)
-            except Exception as e:
-                print("STATISTICS LOOP ERROR:", repr(e))
-            time.sleep(30)
-
-    scanner_thread = threading.Thread(target=scanner_worker, daemon=True)
-    scanner_thread.start()
-    print("STATISTICS THREAD STARTED")
-
-    # Set PREMATCH_TEST=1 in Railway for one immediate PREMATCH/BUILDER test.
-    if os.getenv("PREMATCH_TEST", "0") == "1":
-        print("PREMATCH TEST MODE: STARTED")
-        threading.Thread(target=_run_prematch_package, args=("DAY",), daemon=True).start()
 
     while True:
+
         try:
             now = datetime.now(TZ)
-            slot_day = now.strftime("%Y-%m-%d")
-            slot_night = slot_day
+            today = now.strftime("%Y-%m-%d")
 
-            if now.hour == 11 and last_day != slot_day:
-                last_day = slot_day
-                threading.Thread(
-                    target=_run_prematch_package,
-                    args=("DAY",),
-                    daemon=True
-                ).start()
+            print(
+                f"MAIN LOOP: {now.strftime('%Y-%m-%d %H:%M:%S')}"
+            )
 
-            # 21:00 NIGHT
-            if (
-                now.hour == 21
-                and now.minute <= 5
-                and last_night != slot_night
-            ):
-                last_night = slot_night
-                threading.Thread(
-                    target=_run_prematch_package,
-                    args=("NIGHT",),
-                    daemon=True
-                ).start()
-
-            live_loop()
+            run_due_scans(send_telegram)
 
         except Exception as e:
-            print("MAIN LOOP ERROR:", repr(e))
+            print(
+                "DAILY SCANNER LOOP ERROR:",
+                repr(e)
+            )
 
-        time.sleep(60)
+        # LIVE LOOP
+        live_loop()
+
+        time.sleep(300)
 
     
         
