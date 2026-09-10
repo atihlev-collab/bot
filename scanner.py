@@ -900,17 +900,12 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 
 
 # =========================================================
-# OTHER SPORTS DAILY TOTALS SCANNER
-# Football above is intentionally untouched.
-# At 10:00 BG, scan 12:00 today -> 12:00 tomorrow.
-# =========================================================
-
-# =========================================================
 # OTHER SPORTS DAILY TOTALS SCANNER — SOFASCORE
 # Football above is intentionally untouched.
-# Runs once daily at 10:00 BG and scans 12:00 today -> 12:00 tomorrow.
+# One collection at 10:00 BG: 12:00 today -> 12:00 tomorrow.
 # =========================================================
 
+SOFASCORE_BASE = "https://api.sofascore.com/api/v1"
 OTHER_SPORTS = {
     "basketball": {"label": "🏀 БАСКЕТБОЛ", "slug": "basketball"},
     "hockey": {"label": "🏒 ХОКЕЙ", "slug": "ice-hockey"},
@@ -920,74 +915,72 @@ OTHER_SPORTS = {
     "baseball": {"label": "⚾ БЕЙЗБОЛ", "slug": "baseball"},
 }
 
-_SOFASCORE_BASE = "https://api.sofascore.com/api/v1"
-_SOFASCORE_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36",
-    "Accept": "application/json,text/plain,*/*",
-    "Referer": "https://www.sofascore.com/",
-    "Origin": "https://www.sofascore.com",
-}
-_SOFASCORE_LOCK = threading.Lock()
-_SOFASCORE_LAST_CALL = 0.0
-_SOFASCORE_MIN_INTERVAL = 0.10
-_SOFASCORE_CACHE = {}
+_SOFA_LOCK = threading.Lock()
+_SOFA_LAST_CALL = 0.0
+_SOFA_MIN_INTERVAL = 0.10
+_OTHER_HISTORY_CACHE = {}
+_CONSOLE_LOCK = threading.Lock()
 
 
-def _sofascore_get(path, timeout=20):
-    """Small, rate-limited Sofascore client. No API-Sports quota is used here."""
-    global _SOFASCORE_LAST_CALL
-    key = path
-    if key in _SOFASCORE_CACHE:
-        return _SOFASCORE_CACHE[key]
+def _sofa_headers():
+    return {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/140.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/json,text/plain,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.sofascore.com/",
+        "Origin": "https://www.sofascore.com",
+    }
 
+
+def _sofa_get(path, timeout=20):
+    """Read SofaScore public JSON with a browser-like request.
+
+    curl_cffi is used when installed because SofaScore may challenge plain
+    requests. If it is unavailable, requests is used with Chrome headers.
+    """
+    global _SOFA_LAST_CALL
+    url = f"{SOFASCORE_BASE}/{path.lstrip('/')}"
     for attempt in range(4):
         try:
-            with _SOFASCORE_LOCK:
-                wait = _SOFASCORE_MIN_INTERVAL - (time.monotonic() - _SOFASCORE_LAST_CALL)
+            with _SOFA_LOCK:
+                wait = _SOFA_MIN_INTERVAL - (time.monotonic() - _SOFA_LAST_CALL)
                 if wait > 0:
                     time.sleep(wait)
-                _SOFASCORE_LAST_CALL = time.monotonic()
+                _SOFA_LAST_CALL = time.monotonic()
 
             try:
-                # curl_cffi is preferable when available because Sofascore may
-                # challenge ordinary requests. It is optional so the bot still
-                # works in a plain Railway Python environment.
-                from curl_cffi import requests as cf_requests
-                r = cf_requests.get(
-                    _SOFASCORE_BASE + path,
-                    headers=_SOFASCORE_HEADERS,
+                from curl_cffi import requests as curl_requests
+                r = curl_requests.get(
+                    url,
+                    headers=_sofa_headers(),
                     impersonate="chrome",
                     timeout=timeout,
                 )
             except ImportError:
-                r = requests.get(
-                    _SOFASCORE_BASE + path,
-                    headers=_SOFASCORE_HEADERS,
-                    timeout=timeout,
-                )
+                r = requests.get(url, headers=_sofa_headers(), timeout=timeout)
 
-            if r.status_code in (429, 500, 502, 503, 504):
-                time.sleep(min(2 ** attempt, 8))
-                continue
-            r.raise_for_status()
+            if r.status_code in (403, 429) or 500 <= r.status_code < 600:
+                if attempt < 3:
+                    time.sleep(min(1.5 * (2 ** attempt), 8.0))
+                    continue
+            if r.status_code != 200:
+                print("SOFASCORE HTTP ERROR:", r.status_code, path)
+                return None
             data = r.json()
-            _SOFASCORE_CACHE[key] = data
-            return data
+            return data if isinstance(data, dict) else None
         except Exception as exc:
             if attempt == 3:
                 print("SOFASCORE REQUEST ERROR:", path, repr(exc))
                 return None
-            time.sleep(min(0.8 * (2 ** attempt), 5))
+            time.sleep(min(0.8 * (2 ** attempt), 5.0))
     return None
 
 
-def _ss_events(payload):
-    if not isinstance(payload, dict):
-        return []
-    return payload.get("events") or []
-
-
-def _ss_time(event):
+def _sofa_event_time(event):
     ts = event.get("startTimestamp")
     if ts is None:
         return None
@@ -997,173 +990,227 @@ def _ss_time(event):
         return None
 
 
-def _ss_teams(event):
-    return event.get("homeTeam") or {}, event.get("awayTeam") or {}
-
-
-def _ss_team_id(team):
+def _sofa_event_id(event):
     try:
-        return int(team.get("id"))
-    except (TypeError, ValueError):
+        return int(event.get("id"))
+    except Exception:
         return None
 
 
-def _ss_score(event, side):
+def _sofa_team(event, side):
+    return event.get("homeTeam" if side == "home" else "awayTeam") or {}
+
+
+def _sofa_season(event):
+    season = event.get("season") or {}
+    return season.get("id") or season.get("name") or season.get("year")
+
+
+def _sofa_tournament(event):
+    return event.get("tournament") or {}
+
+
+def _sofa_tournament_id(event):
+    t = _sofa_tournament(event)
+    # Prefer uniqueTournament when available; otherwise tournament id.
+    ut = t.get("uniqueTournament") or {}
+    value = ut.get("id") or t.get("id")
+    return str(value) if value not in (None, "") else ""
+
+
+def _sofa_tournament_name(event):
+    t = _sofa_tournament(event)
+    ut = t.get("uniqueTournament") or {}
+    return str(ut.get("name") or t.get("name") or "-")
+
+
+def _sofa_category_name(event):
+    t = _sofa_tournament(event)
+    category = t.get("category") or {}
+    return str(category.get("name") or "-")
+
+
+def _sofa_status_type(event):
+    status = event.get("status") or {}
+    return str(status.get("type") or "").casefold()
+
+
+def _sofa_finished(event):
+    return _sofa_status_type(event) == "finished"
+
+
+def _sofa_score(event, side):
     score = event.get("homeScore" if side == "home" else "awayScore") or {}
-    # Prefer the final/current displayed score; fall back through sport-specific keys.
-    for key in ("normaltime", "current", "display", "period1", "period2", "period3", "period4"):
+    # current is the normal final score for completed matches. Fall back to
+    # normaltime for sports with overtime fields.
+    for key in ("current", "display", "normaltime"):
         value = score.get(key)
         if isinstance(value, (int, float)):
             return float(value)
     return None
 
 
-def _ss_finished(event):
-    status = event.get("status") or {}
-    return str(status.get("type") or "").lower() in {"finished", "afterpenalties", "afterovertime"} or (
-        status.get("code") in {100, 110, 120}
+def _sofa_is_exhibition(event):
+    text = " ".join([
+        _sofa_tournament_name(event),
+        _sofa_category_name(event),
+    ]).casefold()
+    blocked = (
+        "friendly", "friendlies", "exhibition", "pre-season", "preseason",
+        "all star", "all-star", "test match", "club friendlies",
     )
+    return any(x in text for x in blocked)
 
 
-def _ss_season_id(event):
-    season = event.get("season") or {}
-    value = season.get("id")
-    return str(value) if value is not None else ""
-
-
-def _ss_tournament_id(event):
-    tournament = event.get("tournament") or {}
-    unique = event.get("uniqueTournament") or {}
-    value = unique.get("id") or tournament.get("id")
-    return str(value) if value is not None else ""
-
-
-def _ss_tournament_name(event):
-    tournament = event.get("tournament") or {}
-    unique = event.get("uniqueTournament") or {}
-    return unique.get("name") or tournament.get("name") or "-"
-
-
-def _ss_is_official(event):
-    name = _ss_tournament_name(event).casefold()
-    return "friendly" not in name and "friendlies" not in name
+def _sofa_daily_events(sport, day):
+    slug = OTHER_SPORTS[sport]["slug"]
+    data = _sofa_get(f"sport/{slug}/scheduled-events/{day.isoformat()}")
+    events = (data or {}).get("events") if isinstance(data, dict) else None
+    return events if isinstance(events, list) else []
 
 
 def get_other_sport_fixtures(sport, start_bg, end_bg):
-    """Get future fixtures from SofaScore for the exact 24-hour BG window."""
-    slug = OTHER_SPORTS[sport]["slug"]
-    out, seen = [], set()
+    out = []
+    seen = set()
     day = start_bg.date()
     while day <= end_bg.date():
-        payload = _sofascore_get(f"/sport/{slug}/scheduled-events/{day.isoformat()}")
-        for event in _ss_events(payload):
-            eid = event.get("id")
-            dt = _ss_time(event)
-            if not eid or eid in seen or not dt:
+        for event in _sofa_daily_events(sport, day):
+            eid = _sofa_event_id(event)
+            if not eid or eid in seen:
                 continue
-            if not (start_bg <= dt < end_bg):
+            dt = _sofa_event_time(event)
+            if not dt or dt < start_bg or dt >= end_bg:
                 continue
             if dt <= datetime.now(TZ):
                 continue
-            home, away = _ss_teams(event)
-            if not _ss_team_id(home) or not _ss_team_id(away):
+            if _sofa_finished(event):
+                continue
+            home = _sofa_team(event, "home")
+            away = _sofa_team(event, "away")
+            if not home.get("id") or not away.get("id"):
                 continue
             seen.add(eid)
             out.append(event)
         day += timedelta(days=1)
-    out.sort(key=lambda e: _ss_time(e) or datetime.max.replace(tzinfo=TZ))
+    out.sort(key=lambda e: _sofa_event_time(e) or datetime.max.replace(tzinfo=TZ))
     return out
 
 
-def get_other_team_history(sport, team_id, season_id, tournament_id=None):
-    """Current-season history only; same tournament first, then other official tournaments."""
-    key = (sport, int(team_id), str(season_id), str(tournament_id or ""))
-    if key in _SOFASCORE_CACHE:
-        return _SOFASCORE_CACHE[key]
+def _sofa_team_events(team_id, direction="last", page=0):
+    data = _sofa_get(f"team/{int(team_id)}/events/{direction}/{int(page)}")
+    events = (data or {}).get("events") if isinstance(data, dict) else None
+    return events if isinstance(events, list) else []
 
-    all_current = []
+
+def _sofa_clean_history(events, season, tournament_id=None):
+    clean = []
     seen = set()
-    # Page 0 normally contains the most recent events; page 1 is used only if
-    # the same tournament has fewer than three current-season matches.
-    for page in (0, 1):
-        payload = _sofascore_get(f"/team/{int(team_id)}/events/last/{page}")
-        events = _ss_events(payload)
+    for event in events or []:
+        eid = _sofa_event_id(event)
+        if not eid or eid in seen:
+            continue
+        if not _sofa_finished(event):
+            continue
+        if _sofa_season(event) != season:
+            continue
+        if _sofa_is_exhibition(event):
+            continue
+        home = _sofa_team(event, "home")
+        away = _sofa_team(event, "away")
+        hs = _sofa_score(event, "home")
+        aws = _sofa_score(event, "away")
+        if not home.get("id") or not away.get("id") or hs is None or aws is None:
+            continue
+        if tournament_id and _sofa_tournament_id(event) != str(tournament_id):
+            continue
+        seen.add(eid)
+        clean.append(event)
+    clean.sort(key=lambda e: _sofa_event_time(e) or datetime.min.replace(tzinfo=TZ), reverse=True)
+    return clean
+
+
+def get_other_team_history(sport, team_id, season, tournament_id=None):
+    """Current-season history: same tournament first, then other official events."""
+    key = (sport, int(team_id), str(season), str(tournament_id or ""))
+    if key in _OTHER_HISTORY_CACHE:
+        return _OTHER_HISTORY_CACHE[key]
+
+    pages = []
+    # Three pages is deliberately bounded: enough to find 12 current-season
+    # matches without turning the once-daily scan into an API hammer.
+    for page in range(3):
+        events = _sofa_team_events(team_id, "last", page)
         if not events:
             break
-        for event in events:
-            eid = event.get("id")
-            if not eid or eid in seen:
-                continue
-            seen.add(eid)
-            if not _ss_finished(event):
-                continue
-            if _ss_season_id(event) != str(season_id):
-                continue
-            if not _ss_is_official(event):
-                continue
-            home, away = _ss_teams(event)
-            if _ss_team_id(home) != int(team_id) and _ss_team_id(away) != int(team_id):
-                continue
-            if _ss_score(event, "home") is None or _ss_score(event, "away") is None:
-                continue
-            all_current.append(event)
-
-        same = [e for e in all_current if _ss_tournament_id(e) == str(tournament_id or "")]
-        if len(same) >= 3:
+        pages.extend(events)
+        if len(pages) >= 60:
             break
 
-    same = sorted(
-        [e for e in all_current if _ss_tournament_id(e) == str(tournament_id or "")],
-        key=lambda e: _ss_time(e) or datetime.min.replace(tzinfo=TZ),
-        reverse=True,
-    )
-    other = sorted(
-        [e for e in all_current if _ss_tournament_id(e) != str(tournament_id or "")],
-        key=lambda e: _ss_time(e) or datetime.min.replace(tzinfo=TZ),
-        reverse=True,
-    )
-    result = (same + other)[:12]
-    _SOFASCORE_CACHE[key] = result
-    return result
+    # Deduplicate the fetched pages first.
+    dedup = {}
+    for event in pages:
+        eid = _sofa_event_id(event)
+        if eid:
+            dedup[eid] = event
+    pages = list(dedup.values())
+
+    same = _sofa_clean_history(pages, season, tournament_id)
+    if len(same) >= 3:
+        selected = same[:12]
+    else:
+        current = _sofa_clean_history(pages, season)
+        same_ids = {_sofa_event_id(e) for e in same}
+        other = [e for e in current if _sofa_event_id(e) not in same_ids]
+        selected = (same + other)[:12]
+
+    _OTHER_HISTORY_CACHE[key] = selected
+    return selected
 
 
-def _ss_team_avg(team_id, history):
+def _other_team_avg(team_id, history):
     values = []
     for event in history or []:
-        home, away = _ss_teams(event)
-        hs = _ss_score(event, "home")
-        aws = _ss_score(event, "away")
+        home = _sofa_team(event, "home")
+        away = _sofa_team(event, "away")
+        hs = _sofa_score(event, "home")
+        aws = _sofa_score(event, "away")
         if hs is None or aws is None:
             continue
-        if _ss_team_id(home) == int(team_id):
+        if int(home.get("id") or -1) == int(team_id):
             values.append(hs)
-        elif _ss_team_id(away) == int(team_id):
+        elif int(away.get("id") or -1) == int(team_id):
             values.append(aws)
-    if not values:
+    if len(values) < 3:
         return None
     return sum(values) / len(values), len(values)
 
 
-def _other_fixture_expected(g, histories):
-    home, away = _ss_teams(g)
-    hid, aid = _ss_team_id(home), _ss_team_id(away)
-    hp = _ss_team_avg(hid, histories.get(hid)) if hid else None
-    ap = _ss_team_avg(aid, histories.get(aid)) if aid else None
-    if not hp or not ap or hp[1] < 3 or ap[1] < 3:
+def _other_fixture_expected(event, histories):
+    home = _sofa_team(event, "home")
+    away = _sofa_team(event, "away")
+    hp = _other_team_avg(home.get("id"), histories.get(int(home.get("id"))))
+    ap = _other_team_avg(away.get("id"), histories.get(int(away.get("id"))))
+    if not hp or not ap:
         return None
-    return {"expected": hp[0] + ap[0], "home": hp[0], "away": ap[0], "sample": min(hp[1], ap[1])}
-
-
-def _other_fixture_result(sport, g, x):
-    home, away = _ss_teams(g)
     return {
-        "fixture_id": g.get("id"),
+        "expected": hp[0] + ap[0],
+        "home": hp[0],
+        "away": ap[0],
+        "sample": min(hp[1], ap[1]),
+    }
+
+
+def _other_fixture_result(event, expected):
+    home = _sofa_team(event, "home")
+    away = _sofa_team(event, "away")
+    return {
+        "fixture_id": _sofa_event_id(event),
         "home_name": home.get("name") or "HOME",
         "away_name": away.get("name") or "AWAY",
-        "league": _ss_tournament_name(g),
-        "country": ((g.get("tournament") or {}).get("category") or {}).get("name") or "-",
-        "date": _ss_time(g).isoformat() if _ss_time(g) else "",
-        "expected": x,
+        "league": _sofa_tournament_name(event),
+        "country": _sofa_category_name(event),
+        "date": _sofa_event_time(event),
+        "expected": expected,
     }
 
 
@@ -1172,31 +1219,39 @@ def _format_other_sport(sport, results):
     valid = [r for r in results if r.get("expected")]
     high = sorted(valid, key=lambda r: r["expected"]["expected"], reverse=True)[:3]
     low = sorted(valid, key=lambda r: r["expected"]["expected"])[:3]
+
     lines = [cfg["label"], "🔥 TOP 3 НАД"]
-    for i, r in enumerate(high, 1):
-        x = r["expected"]
-        dt = datetime.fromisoformat(r["date"]).astimezone(TZ) if r["date"] else None
-        kickoff = dt.strftime("%d.%m %H:%M") if dt else "?"
-        lines += [f"{i}. {r['home_name']} - {r['away_name']}",
-                  f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}",
-                  f"   {r['league']} | {r['country']} | {kickoff} BG"]
-        if i < len(high): lines.append("")
-    if not high: lines.append("Няма достатъчно статистика.")
-    lines += ["", "❄️ TOP 3 ПОД"]
-    for i, r in enumerate(low, 1):
-        x = r["expected"]
-        dt = datetime.fromisoformat(r["date"]).astimezone(TZ) if r["date"] else None
-        kickoff = dt.strftime("%d.%m %H:%M") if dt else "?"
-        lines += [f"{i}. {r['home_name']} - {r['away_name']}",
-                  f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}",
-                  f"   {r['league']} | {r['country']} | {kickoff} BG"]
-        if i < len(low): lines.append("")
-    if not low: lines.append("Няма достатъчно статистика.")
+    if high:
+        for i, r in enumerate(high, 1):
+            x = r["expected"]
+            dt = r["date"]
+            kickoff = dt.strftime("%d.%m %H:%M") if dt else "?"
+            lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
+            lines.append(f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}")
+            lines.append(f"   {r['league']} | {r['country']} | {kickoff} BG")
+            if i < len(high):
+                lines.append("")
+    else:
+        lines.append("Няма достатъчно статистика.")
+
+    lines.extend(["", "❄️ TOP 3 ПОД"])
+    if low:
+        for i, r in enumerate(low, 1):
+            x = r["expected"]
+            dt = r["date"]
+            kickoff = dt.strftime("%d.%m %H:%M") if dt else "?"
+            lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
+            lines.append(f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}")
+            lines.append(f"   {r['league']} | {r['country']} | {kickoff} BG")
+            if i < len(low):
+                lines.append("")
+    else:
+        lines.append("Няма достатъчно статистика.")
     return "\n".join(lines)
 
 
 def run_other_sports_scanner(reference_date=None, send_func=None):
-    """10:00 BG: non-football fixtures from 12:00 today through 12:00 tomorrow."""
+    """10:00 BG: collect other-sport totals for the next 24 hours."""
     ref = reference_date or datetime.now(TZ).date()
     start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
     end = start + timedelta(hours=24)
@@ -1204,56 +1259,63 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
         "🌍 DAILY OTHER SPORTS SCANNER",
         ref.strftime("%d.%m.%Y"),
         "10:00 BG → срещи 12:00 днес до 12:00 утре",
-        "История: текущ сезон; първо същият турнир, после други официални турнири",
+        "Източник: SofaScore | история: текущ сезон; първо същият турнир, после други официални турнири",
         "",
     ]
-    total_fixtures = total_valid = 0
+    total_fixtures = 0
+    total_valid = 0
 
+    # The daily schedule is collected once per sport. History is then fetched
+    # only for teams that actually appear in that 24-hour window.
     for sport in OTHER_SPORTS:
         try:
             games = get_other_sport_fixtures(sport, start, end)
             total_fixtures += len(games)
+            print(f"SOFASCORE {sport}: fixtures={len(games)}")
             if not games:
                 lines.extend([OTHER_SPORTS[sport]["label"], "Няма срещи в 24-часовия прозорец.", ""])
-                print(f"SOFASCORE OTHER [{sport}]: fixtures=0 valid=0")
                 continue
 
             histories = {}
-            for g in games:
-                season = _ss_season_id(g)
-                tournament = _ss_tournament_id(g)
-                home, away = _ss_teams(g)
-                for team in (home, away):
-                    tid = _ss_team_id(team)
-                    if tid and (tid, season, tournament) not in histories:
-                        histories[(tid, season, tournament)] = get_other_team_history(
-                            sport, tid, season, tournament
-                        )
+            team_requests = {}
+            for event in games:
+                season = _sofa_season(event)
+                tournament_id = _sofa_tournament_id(event)
+                for side in ("home", "away"):
+                    team = _sofa_team(event, side)
+                    if team.get("id") and season not in (None, ""):
+                        team_requests[(int(team["id"]), str(season), tournament_id)] = None
+
+            for team_id, season, tournament_id in team_requests:
+                try:
+                    histories[team_id] = get_other_team_history(
+                        sport, team_id, season, tournament_id
+                    )
+                except Exception as exc:
+                    print("SOFASCORE HISTORY ERROR:", sport, team_id, repr(exc))
+                    histories[team_id] = []
 
             results = []
-            for g in games:
-                home, away = _ss_teams(g)
-                season = _ss_season_id(g)
-                tournament = _ss_tournament_id(g)
-                fixture_histories = {
-                    _ss_team_id(home): histories.get((_ss_team_id(home), season, tournament), []),
-                    _ss_team_id(away): histories.get((_ss_team_id(away), season, tournament), []),
-                }
-                x = _other_fixture_expected(g, fixture_histories)
-                if x:
-                    results.append(_other_fixture_result(sport, g, x))
+            for event in games:
+                try:
+                    x = _other_fixture_expected(event, histories)
+                    if x:
+                        results.append(_other_fixture_result(event, x))
+                except Exception as exc:
+                    print("SOFASCORE MATCH ERROR:", sport, repr(exc))
 
             total_valid += len(results)
-            lines += [_format_other_sport(sport, results), ""]
-            print(f"SOFASCORE OTHER [{sport}]: fixtures={len(games)} valid={len(results)}")
+            lines.append(_format_other_sport(sport, results))
+            lines.append("")
+            print(f"SOFASCORE {sport}: valid={len(results)}")
         except Exception as exc:
-            print("SOFASCORE OTHER ERROR:", sport, repr(exc))
+            print("SOFASCORE SCANNER ERROR:", sport, repr(exc))
             lines.extend([OTHER_SPORTS[sport]["label"], "Грешка при зареждането на данните.", ""])
 
     lines.append(f"Мачове: {total_fixtures} | Валидни статистически сигнали: {total_valid}")
     message = "\n".join(lines)
     with _CONSOLE_LOCK:
-        print(f"SOFASCORE OTHER MESSAGE READY — {total_valid} valid / {total_fixtures} fixtures")
+        print(f"OTHER SPORTS MESSAGE READY — {total_valid} valid signals / {total_fixtures} fixtures")
     if send_func:
         send_func(message)
     return message
@@ -1268,7 +1330,7 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
     today = now.date()
 
-    # FOOTBALL: keep the existing daily behavior unchanged.
+    # FOOTBALL: existing behavior unchanged.
     if now.hour >= 10 and now.hour < 20:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
@@ -1277,9 +1339,9 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # OTHER SPORTS: collect statistics ONLY ONCE in the morning at 10:00 BG.
-    # There are no other-sport API calls from this scheduler later in the day.
-    # The daily key prevents a second collection on the same date.
+    # OTHER SPORTS: exactly once in the morning window.
+    # The run key prevents repeated collection if the main loop calls this
+    # function every few seconds during the 10:00 hour.
     if now.hour == 10:
         other_key = f"other_sports:{today.isoformat()}"
         if not already_ran(other_key):
