@@ -1121,58 +1121,39 @@ def _other_same_season(g, season):
 def get_other_team_history(sport, team_id, season, league_id=None):
     """Get up to 12 completed official games from the CURRENT season only.
 
+    IMPORTANT: make only ONE history request per team/season.  We then split
+    that already-fetched current-season history into the same tournament first
+    and other official tournaments second.  This prevents the once-daily
+    scanner from burning the free API request quota with repeated fallbacks.
+
     Rule:
       1) Same tournament + current season first.
-      2) If that is insufficient, other official tournaments + same current season.
+      2) If fewer than 3, fill with other official tournaments + same season.
       3) Never use a previous season.
     """
     key = (sport, int(team_id), str(season), str(league_id or ""))
     if key in _OTHER_HISTORY_CACHE:
         return _OTHER_HISTORY_CACHE[key]
 
-    # First: same tournament, current season only.
-    best = []
+    # ONE request only: all games for this team in the fixture's current season.
+    games = _other_api(sport, "games", {
+        "team": int(team_id),
+        "season": season,
+    })
+    current = [
+        g for g in _other_history_clean(games)
+        if _other_same_season(g, season)
+    ]
+
     if league_id:
-        games = _other_api(sport, "games", {
-            "team": int(team_id),
-            "season": season,
-            "league": league_id,
-        })
-        best = [g for g in _other_history_clean(games)
-                if _other_same_season(g, season) and _other_league_id(g) == str(league_id)]
+        same = [g for g in current if _other_league_id(g) == str(league_id)]
+        other = [g for g in current if _other_league_id(g) != str(league_id)]
+        best = (same + other)[:12]
+    else:
+        best = current[:12]
 
-    # Fallback: other official tournaments, but STILL current season only.
-    if len(best) < 3:
-        games = _other_api(sport, "games", {
-            "team": int(team_id),
-            "season": season,
-        })
-        current = [g for g in _other_history_clean(games)
-                   if _other_same_season(g, season)]
-        # Same tournament results stay first; then other tournaments fill the sample.
-        if league_id:
-            same = [g for g in current if _other_league_id(g) == str(league_id)]
-            other = [g for g in current if _other_league_id(g) != str(league_id)]
-            best = (same + other)[:12]
-        else:
-            best = current[:12]
-
-    # Last fallback: unfiltered team games, but reject every game that is not
-    # explicitly from the fixture's current season. This is still NOT a
-    # previous-season fallback.
-    if len(best) < 3:
-        games = _other_api(sport, "games", {"team": int(team_id)})
-        current = [g for g in _other_history_clean(games)
-                   if _other_same_season(g, season)]
-        if league_id:
-            same = [g for g in current if _other_league_id(g) == str(league_id)]
-            other = [g for g in current if _other_league_id(g) != str(league_id)]
-            best = (same + other)[:12]
-        else:
-            best = current[:12]
-
-    _OTHER_HISTORY_CACHE[key] = best[:12]
-    return _OTHER_HISTORY_CACHE[key]
+    _OTHER_HISTORY_CACHE[key] = best
+    return best
 
 def _other_team_avg(team_id, history):
     vals = []
@@ -1222,8 +1203,17 @@ def _other_fixture_result(sport, g, x):
 def _format_other_sport(sport, results):
     cfg = OTHER_SPORTS[sport]
     valid = [r for r in results if r.get("expected")]
-    high = sorted(valid, key=lambda r: r["expected"]["expected"], reverse=True)[:3]
-    low = sorted(valid, key=lambda r: r["expected"]["expected"])[:3]
+    ranked = sorted(valid, key=lambda r: r["expected"]["expected"], reverse=True)
+
+    # Keep Over/Under selections separate.  A match selected for TOP 3 OVER
+    # cannot also appear in TOP 3 UNDER.  Under is therefore the bottom three
+    # from the remaining valid matches.
+    high = ranked[:3]
+    high_ids = {r.get("fixture_id") for r in high}
+    low = sorted(
+        [r for r in valid if r.get("fixture_id") not in high_ids],
+        key=lambda r: r["expected"]["expected"],
+    )[:3]
 
     lines = [cfg["label"], "🔥 TOP 3 НАД"]
     for i, r in enumerate(high, 1):
@@ -1318,6 +1308,9 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
     if send_func:
         send_func(message)
     return message
+
+
+_START = time.time()
 
 
 def run_due_scans(send_func):
