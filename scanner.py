@@ -1097,7 +1097,7 @@ def _other_history_clean(games):
         seen.add(gid)
         finished.append((dt, g))
     finished.sort(key=lambda x: x[0], reverse=True)
-    return [g for _, g in finished[:12]]
+    return [g for _, g in finished]
 
 
 def _other_league(g):
@@ -1330,19 +1330,8 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-   # OTHER SPORTS TEST: run 5 minutes after container start
-if time.time() - _START >= 300:
-    other_key = f"other_sports_test:{today.isoformat()}"
-    if not already_ran(other_key):
-        print(_signal_text("OTHER SPORTS TEST STARTED"))
-        try:
-            run_other_sports_scanner(today, send_func)
-            mark_ran(other_key)
-        except Exception as exc:
-            print(_signal_text(f"OTHER SPORTS TEST ERROR: {exc!r}"))
-        print(_signal_text("OTHER SPORTS TEST FINISHED"))
-
     # OTHER SPORTS: once daily at/after 10:00 BG.
+    # No startup/5-minute test.
     other_key = f"other_sports:{today.isoformat()}"
     if now.hour >= 10 and not already_ran(other_key):
         print(_signal_text("OTHER SPORTS DAILY STARTED"))
