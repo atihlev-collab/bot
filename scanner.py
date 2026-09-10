@@ -1325,8 +1325,7 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
     today = now.date()
 
-    # 10:00 scan: football remains exactly as before, plus the new
-    # non-football 24-hour scanner (12:00 today -> 12:00 tomorrow).
+    # FOOTBALL: keep the existing daily behavior unchanged.
     if now.hour >= 10 and now.hour < 20:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
@@ -1335,12 +1334,19 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
+    # OTHER SPORTS: collect statistics ONLY ONCE in the morning at 10:00 BG.
+    # There are no other-sport API calls from this scheduler later in the day.
+    # The daily key prevents a second collection on the same date.
+    if now.hour == 10:
         other_key = f"other_sports:{today.isoformat()}"
         if not already_ran(other_key):
-            print(_signal_text("OTHER SPORTS SCANNER 10:00 STARTED"))
-            run_other_sports_scanner(today, send_func)
-            mark_ran(other_key)
-            print(_signal_text("OTHER SPORTS SCANNER 10:00 FINISHED"))
+            print(_signal_text("OTHER SPORTS STATISTICS 10:00 STARTED"))
+            try:
+                run_other_sports_scanner(today, send_func)
+                mark_ran(other_key)
+            except Exception as exc:
+                print(_signal_text(f"OTHER SPORTS STATISTICS ERROR: {exc!r}"))
+            print(_signal_text("OTHER SPORTS STATISTICS 10:00 FINISHED"))
 
     # 20:00 football scan remains unchanged.
     if now.hour >= 20:
@@ -1350,4 +1356,5 @@ def run_due_scans(send_func):
             run_daily_scanner("night", today, send_func)
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
+           
          
