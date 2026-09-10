@@ -9193,17 +9193,32 @@ if __name__ == "__main__":
             now = datetime.now(TZ)
             slot_day = now.strftime("%Y-%m-%d")
             slot_night = slot_day
-            # Robust 5-minute trigger window prevents missing 11:00/21:00 after a restart or slow API call.
-            if 11 <= now.hour == 11 and now.minute <= 5 and last_day != slot_day:
-                last_day = slot_day
-                threading.Thread(target=_run_prematch_package, args=("DAY",), daemon=True).start()
-            if now.hour == 21 and now.minute <= 5 and last_night != slot_night:
+
+            if now.hour == 11 and now.minute <= 5 and last_day != slot_day:
+                threading.Thread(
+                    target=_run_prematch_package,
+                    args=("DAY",),
+                    daemon=True
+                ).start()
+
+            # 21:00 NIGHT
+            if (
+                now.hour == 21
+                and now.minute <= 5
+                and last_night != slot_night
+            ):
                 last_night = slot_night
-                threading.Thread(target=_run_prematch_package, args=("NIGHT",), daemon=True).start()
+                threading.Thread(
+                    target=_run_prematch_package,
+                    args=("NIGHT",),
+                    daemon=True
+                ).start()
 
             live_loop()
+
         except Exception as e:
             print("MAIN LOOP ERROR:", repr(e))
+
         time.sleep(60)
 
     
