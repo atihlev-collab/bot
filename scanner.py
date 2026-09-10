@@ -18,7 +18,7 @@ import requests
 
 from config import API_KEY, CHAT_ID
 import threading
-_START = time.time()
+
 BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
@@ -1080,6 +1080,9 @@ def _other_season(g):
 
 
 def _other_history_clean(games):
+    # Keep ALL valid finished games from the current-season API response here.
+    # Do not truncate before tournament selection: otherwise 12 recent games
+    # from other competitions can hide older same-tournament games.
     finished = []
     seen = set()
     for g in games or []:
@@ -1097,7 +1100,7 @@ def _other_history_clean(games):
         seen.add(gid)
         finished.append((dt, g))
     finished.sort(key=lambda x: x[0], reverse=True)
-    return [g for _, g in finished[:12]]
+    return [g for _, g in finished]
 
 
 def _other_league(g):
@@ -1119,41 +1122,39 @@ def _other_same_season(g, season):
 
 
 def get_other_team_history(sport, team_id, season, league_id=None):
-    """Get up to 12 completed official games from the CURRENT season only.
+    """Get current-season completed official games only.
 
-    IMPORTANT: make only ONE history request per team/season.  We then split
-    that already-fetched current-season history into the same tournament first
-    and other official tournaments second.  This prevents the once-daily
-    scanner from burning the free API request quota with repeated fallbacks.
+    Same tournament is preferred for this fixture. If fewer than 3
+    same-tournament games exist, other official tournaments from the SAME
+    season are used. Previous seasons are never accepted.
 
-    Rule:
-      1) Same tournament + current season first.
-      2) If fewer than 3, fill with other official tournaments + same season.
-      3) Never use a previous season.
+    The API is queried once per team/season and the result is cached, which
+    avoids the old 2-3 requests per team and prevents one tournament query
+    from overwriting another tournament's history.
     """
-    key = (sport, int(team_id), str(season), str(league_id or ""))
-    if key in _OTHER_HISTORY_CACHE:
-        return _OTHER_HISTORY_CACHE[key]
+    key = (sport, int(team_id), str(season))
+    if key not in _OTHER_HISTORY_CACHE:
+        games = _other_api(sport, "games", {
+            "team": int(team_id),
+            "season": season,
+        })
+        current = [
+            g for g in _other_history_clean(games)
+            if _other_same_season(g, season)
+        ]
+        _OTHER_HISTORY_CACHE[key] = current
 
-    # ONE request only: all games for this team in the fixture's current season.
-    games = _other_api(sport, "games", {
-        "team": int(team_id),
-        "season": season,
-    })
-    current = [
-        g for g in _other_history_clean(games)
-        if _other_same_season(g, season)
-    ]
-
+    current = list(_OTHER_HISTORY_CACHE.get(key) or [])
     if league_id:
         same = [g for g in current if _other_league_id(g) == str(league_id)]
         other = [g for g in current if _other_league_id(g) != str(league_id)]
-        best = (same + other)[:12]
-    else:
-        best = current[:12]
+        if len(same) >= 3:
+            return same[:12]
+        # Same tournament first, then other official competitions from the
+        # same season only. Cap the final working history at 12 games.
+        return (same + other)[:12]
+    return current[:12]
 
-    _OTHER_HISTORY_CACHE[key] = best
-    return best
 
 def _other_team_avg(team_id, history):
     vals = []
@@ -1174,8 +1175,20 @@ def _other_team_avg(team_id, history):
 
 def _other_fixture_expected(g, histories):
     home, away = _other_game_teams(g)
-    hp = _other_team_avg(home.get("id"), histories.get(int(home.get("id"))))
-    ap = _other_team_avg(away.get("id"), histories.get(int(away.get("id"))))
+    season = _other_season(g)
+    league_id = _other_league_id(g)
+    if not home.get("id") or not away.get("id") or season in (None, ""):
+        return None
+
+    # Histories are stored by team/season and selected for this fixture's
+    # tournament first, then filled with other current-season official games.
+    hp_hist = get_other_team_history(
+        g.get("sport_key") or "", int(home["id"]), season, league_id
+    ) if False else histories.get((int(home["id"]), str(season), league_id), [])
+    ap_hist = histories.get((int(away["id"]), str(season), league_id), [])
+
+    hp = _other_team_avg(home.get("id"), hp_hist)
+    ap = _other_team_avg(away.get("id"), ap_hist)
     if not hp or not ap or hp[1] < 3 or ap[1] < 3:
         return None
     return {
@@ -1204,16 +1217,10 @@ def _format_other_sport(sport, results):
     cfg = OTHER_SPORTS[sport]
     valid = [r for r in results if r.get("expected")]
     ranked = sorted(valid, key=lambda r: r["expected"]["expected"], reverse=True)
-
-    # Keep Over/Under selections separate.  A match selected for TOP 3 OVER
-    # cannot also appear in TOP 3 UNDER.  Under is therefore the bottom three
-    # from the remaining valid matches.
     high = ranked[:3]
     high_ids = {r.get("fixture_id") for r in high}
-    low = sorted(
-        [r for r in valid if r.get("fixture_id") not in high_ids],
-        key=lambda r: r["expected"]["expected"],
-    )[:3]
+    remaining = [r for r in valid if r.get("fixture_id") not in high_ids]
+    low = sorted(remaining, key=lambda r: r["expected"]["expected"])[:3]
 
     lines = [cfg["label"], "🔥 TOP 3 НАД"]
     for i, r in enumerate(high, 1):
@@ -1267,21 +1274,30 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
                 continue
 
             histories = {}
-            unique = {}
+            unique = set()
             for g in games:
                 season = _other_season(g)
                 home, away = _other_game_teams(g)
-                if home.get("id") and away.get("id"):
-                    league_id = _other_league_id(g)
-                    unique[(int(home["id"]), str(season), league_id)] = None
-                    unique[(int(away["id"]), str(season), league_id)] = None
+                league_id = _other_league_id(g)
+                if season in (None, ""):
+                    continue
+                if home.get("id"):
+                    unique.add((int(home["id"]), str(season), league_id))
+                if away.get("id"):
+                    unique.add((int(away["id"]), str(season), league_id))
 
-            for team_id, season, league_id in unique:
+            # Fetch/cache one current-season history per team. Build a fixture-
+            # specific view so same-tournament games are always preferred.
+            for team_id, season, _league_id in unique:
                 try:
-                    histories[team_id] = get_other_team_history(sport, team_id, season, league_id)
+                    get_other_team_history(sport, team_id, season)
                 except Exception as exc:
                     print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
-                    histories[team_id] = []
+
+            for team_id, season, league_id in unique:
+                histories[(team_id, season, league_id)] = get_other_team_history(
+                    sport, team_id, season, league_id
+                )
 
             results = []
             for g in games:
@@ -1310,8 +1326,6 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
     return message
 
 
-_START = time.time()
-
 
 def run_due_scans(send_func):
     """Run the due daily scans once, persisted in SQLite."""
@@ -1328,7 +1342,9 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # OTHER SPORTS TEST: run 5 minutes after container start.
+    # OTHER SPORTS: collect statistics ONLY ONCE in the morning at 10:00 BG.
+    # There are no other-sport API calls from this scheduler later in the day.
+    # The daily key prevents a second collection on the same date.
     if time.time() - _START >= 300:
         other_key = f"other_sports_test:{today.isoformat()}"
         if not already_ran(other_key):
