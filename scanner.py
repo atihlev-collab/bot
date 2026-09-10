@@ -1243,6 +1243,605 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 _START = time.time()
 
 
+# =========================================================
+# MULTI-SPORT SCANNER
+# Other sports only — FOOTBALL IS NOT TOUCHED
+# 10:00 BG -> fixtures from 12:00 today to 12:00 tomorrow
+# =========================================================
+
+OTHER_SPORTS = {
+    "basketball": {
+        "name": "БАСКЕТБОЛ",
+        "emoji": "🏀",
+        "base_url": "https://v1.basketball.api-sports.io",
+    },
+    "hockey": {
+        "name": "ХОКЕЙ",
+        "emoji": "🏒",
+        "base_url": "https://v1.hockey.api-sports.io",
+    },
+    "handball": {
+        "name": "ХАНДБАЛ",
+        "emoji": "🤾",
+        "base_url": "https://v1.handball.api-sports.io",
+    },
+    "rugby": {
+        "name": "РЪГБИ",
+        "emoji": "🏉",
+        "base_url": "https://v1.rugby.api-sports.io",
+    },
+    "american-football": {
+        "name": "NFL / АМЕРИКАНСКИ ФУТБОЛ",
+        "emoji": "🏈",
+        "base_url": "https://v1.american-football.api-sports.io",
+    },
+    "baseball": {
+        "name": "БЕЙЗБОЛ",
+        "emoji": "⚾",
+        "base_url": "https://v1.baseball.api-sports.io",
+    },
+}
+
+
+def _sport_api(sport, endpoint, params=None, timeout=25):
+    cfg = OTHER_SPORTS[sport]
+
+    for attempt in range(5):
+        try:
+            with _API_LOCK:
+                wait = _API_MIN_INTERVAL - (
+                    time.monotonic() - _LAST_API_CALL
+                )
+                if wait > 0:
+                    time.sleep(wait)
+
+                global _LAST_API_CALL
+                _LAST_API_CALL = time.monotonic()
+
+            response = requests.get(
+                f"{cfg['base_url']}/{endpoint}",
+                headers=HEADERS,
+                params=params or {},
+                timeout=timeout,
+            )
+
+            if response.status_code == 429 or 500 <= response.status_code < 600:
+                retry_after = response.headers.get("Retry-After")
+
+                try:
+                    delay = float(retry_after)
+                except (TypeError, ValueError):
+                    delay = min(1.0 * (2 ** attempt), 8.0)
+
+                time.sleep(delay)
+                continue
+
+            response.raise_for_status()
+
+            payload = response.json()
+
+            if payload.get("errors"):
+                print(
+                    "MULTI-SPORT API ERROR:",
+                    sport,
+                    endpoint,
+                    payload.get("errors"),
+                )
+                return None
+
+            return payload.get("response")
+
+        except Exception as exc:
+            if attempt == 4:
+                print(
+                    "MULTI-SPORT REQUEST ERROR:",
+                    sport,
+                    endpoint,
+                    repr(exc),
+                )
+                return None
+
+            time.sleep(min(0.8 * (2 ** attempt), 6.0))
+
+    return None
+
+
+def _sport_fixture_datetime(match):
+    fixture = match.get("fixture") or {}
+    raw = fixture.get("date")
+
+    if not raw:
+        return None
+
+    try:
+        return datetime.fromisoformat(
+            raw.replace("Z", "+00:00")
+        ).astimezone(TZ)
+    except Exception:
+        return None
+
+
+def _sport_fixture_is_upcoming(match, start_bg, end_bg):
+    dt_bg = _sport_fixture_datetime(match)
+
+    if dt_bg is None:
+        return False
+
+    now_bg = datetime.now(TZ)
+
+    if dt_bg < start_bg or dt_bg >= end_bg:
+        return False
+
+    if dt_bg <= now_bg:
+        return False
+
+    status = (
+        (match.get("fixture") or {})
+        .get("status") or {}
+    ).get("short", "")
+
+    blocked = {
+        "FT",
+        "AET",
+        "PEN",
+        "CANC",
+        "PST",
+        "ABD",
+        "AWD",
+        "WO",
+    }
+
+    return status not in blocked
+
+
+def get_other_sport_fixtures(sport, start_bg, end_bg):
+    matches = []
+    seen = set()
+
+    day = start_bg.date()
+
+    while day <= end_bg.date():
+        response = _sport_api(
+            sport,
+            "games",
+            {"date": day.isoformat()},
+        )
+
+        if not isinstance(response, list):
+            day += timedelta(days=1)
+            continue
+
+        for match in response:
+            fixture = match.get("fixture") or {}
+            game_id = fixture.get("id")
+
+            if not game_id or game_id in seen:
+                continue
+
+            if not _sport_fixture_is_upcoming(
+                match,
+                start_bg,
+                end_bg,
+            ):
+                continue
+
+            seen.add(game_id)
+            matches.append(match)
+
+        day += timedelta(days=1)
+
+    matches.sort(
+        key=lambda x: x.get("fixture", {}).get("date", "")
+    )
+
+    return matches
+
+
+def _extract_score(match, side):
+    scores = match.get("scores") or {}
+
+    block = scores.get(side) or {}
+
+    for key in (
+        "points",
+        "goals",
+        "runs",
+        "score",
+    ):
+        value = _safe_float(block.get(key))
+
+        if value is not None:
+            return value
+
+    return None
+
+
+def _team_name(match, side):
+    return (
+        (match.get("teams") or {})
+        .get(side, {})
+        .get("name")
+        or "?"
+    )
+
+
+def _sport_history_average(matches, side):
+    values = []
+
+    for match in matches:
+        value = _extract_score(match, side)
+
+        if value is not None:
+            values.append(value)
+
+    if not values:
+        return None
+
+    return (
+        sum(values) / len(values),
+        len(values),
+    )
+
+
+def _get_team_history_other_sport(
+    sport,
+    team_id,
+    season,
+):
+    response = _sport_api(
+        sport,
+        "games",
+        {
+            "team": team_id,
+            "season": season,
+        },
+    )
+
+    if not isinstance(response, list):
+        return []
+
+    completed = []
+
+    for match in response:
+        status = (
+            (match.get("fixture") or {})
+            .get("status") or {}
+        ).get("short", "")
+
+        if status not in {
+            "FT",
+            "AOT",
+            "AP",
+        }:
+            continue
+
+        completed.append(match)
+
+    completed.sort(
+        key=lambda x: x.get("fixture", {}).get("date", ""),
+        reverse=True,
+    )
+
+    return completed[:12]
+
+
+def _current_sport_season(match):
+    league = match.get("league") or {}
+
+    season = league.get("season")
+
+    if season is not None:
+        try:
+            return int(season)
+        except (TypeError, ValueError):
+            pass
+
+    dt = _sport_fixture_datetime(match)
+
+    if dt:
+        return dt.year
+
+    return datetime.now(TZ).year
+
+
+def analyse_other_sport_fixture(
+    sport,
+    match,
+    profiles,
+):
+    home_id = (
+        (match.get("teams") or {})
+        .get("home", {})
+        .get("id")
+    )
+
+    away_id = (
+        (match.get("teams") or {})
+        .get("away", {})
+        .get("id")
+    )
+
+    home_profile = profiles.get(home_id)
+    away_profile = profiles.get(away_id)
+
+    if not home_profile or not away_profile:
+        return None
+
+    home_avg = home_profile.get("scored")
+    away_avg = away_profile.get("scored")
+
+    if not home_avg or not away_avg:
+        return None
+
+    expected = home_avg[0] + away_avg[0]
+
+    dt = _sport_fixture_datetime(match)
+
+    league = match.get("league") or {}
+
+    return {
+        "sport": sport,
+        "fixture_id": (
+            (match.get("fixture") or {})
+            .get("id")
+        ),
+        "home_name": _team_name(match, "home"),
+        "away_name": _team_name(match, "away"),
+        "league": league.get("name", ""),
+        "country": league.get("country", ""),
+        "date": (
+            (match.get("fixture") or {})
+            .get("date", "")
+        ),
+        "expected": expected,
+        "home_expected": home_avg[0],
+        "away_expected": away_avg[0],
+        "sample": min(
+            home_avg[1],
+            away_avg[1],
+        ),
+        "kickoff": (
+            dt.strftime("%H:%M")
+            if dt
+            else "?"
+        ),
+    }
+
+
+def format_other_sport_top3(
+    sport,
+    results,
+):
+    cfg = OTHER_SPORTS[sport]
+
+    valid = [
+        r
+        for r in results
+        if r is not None
+    ]
+
+    high = sorted(
+        valid,
+        key=lambda x: x["expected"],
+        reverse=True,
+    )[:3]
+
+    low = sorted(
+        valid,
+        key=lambda x: x["expected"],
+    )[:3]
+
+    lines = [
+        f"{cfg['emoji']} {cfg['name']}",
+        "",
+        "🔥 TOP 3 НАД",
+    ]
+
+    if high:
+        for i, r in enumerate(high, 1):
+            lines.append(
+                f"{i}. {r['home_name']} - {r['away_name']}"
+            )
+            lines.append(
+                f"   Очаквани точки/голове: "
+                f"{r['home_expected']:.2f} + "
+                f"{r['away_expected']:.2f} = "
+                f"{r['expected']:.2f}"
+            )
+            lines.append(
+                f"   Лига: {r['league']}"
+            )
+            lines.append(
+                f"   Държава: {r['country']}"
+            )
+            lines.append(
+                f"   Начало: {r['kickoff']} BG"
+            )
+            lines.append("")
+
+    else:
+        lines.append(
+            "Няма достатъчно статистически данни."
+        )
+
+    lines.append("❄️ TOP 3 ПОД")
+
+    if low:
+        for i, r in enumerate(low, 1):
+            lines.append(
+                f"{i}. {r['home_name']} - {r['away_name']}"
+            )
+            lines.append(
+                f"   Очаквани точки/голове: "
+                f"{r['home_expected']:.2f} + "
+                f"{r['away_expected']:.2f} = "
+                f"{r['expected']:.2f}"
+            )
+            lines.append(
+                f"   Лига: {r['league']}"
+            )
+            lines.append(
+                f"   Държава: {r['country']}"
+            )
+            lines.append(
+                f"   Начало: {r['kickoff']} BG"
+            )
+            lines.append("")
+
+    else:
+        lines.append(
+            "Няма достатъчно статистически данни."
+        )
+
+    return "\n".join(lines).rstrip()
+
+
+def run_other_sports_scanner(
+    reference_date=None,
+    send_func=None,
+):
+    now_bg = datetime.now(TZ)
+
+    ref = reference_date or now_bg.date()
+
+    start = datetime(
+        ref.year,
+        ref.month,
+        ref.day,
+        12,
+        0,
+        tzinfo=TZ,
+    )
+
+    next_day = ref + timedelta(days=1)
+
+    end = datetime(
+        next_day.year,
+        next_day.month,
+        next_day.day,
+        12,
+        0,
+        tzinfo=TZ,
+    )
+
+    lines = [
+        "🌍 MULTI-SPORT DAILY SCANNER",
+        now_bg.strftime("%d.%m.%Y"),
+        "",
+        "🕙 Сигнал: 10:00 BG",
+        "📅 Мачове: 12:00 днес → 12:00 утре",
+        "",
+    ]
+
+    for sport in OTHER_SPORTS:
+        try:
+            matches = get_other_sport_fixtures(
+                sport,
+                start,
+                end,
+            )
+
+            print(
+                f"MULTI-SPORT {sport}: "
+                f"{len(matches)} fixtures"
+            )
+
+            if not matches:
+                lines.extend([
+                    OTHER_SPORTS[sport]["emoji"]
+                    + " "
+                    + OTHER_SPORTS[sport]["name"],
+                    "Няма предстоящи мачове в прозореца.",
+                    "",
+                ])
+                continue
+
+            seasons = {}
+
+            for match in matches:
+                season = _current_sport_season(match)
+
+                for side in ("home", "away"):
+                    team_id = (
+                        (match.get("teams") or {})
+                        .get(side, {})
+                        .get("id")
+                    )
+
+                    if team_id:
+                        seasons[int(team_id)] = season
+
+            profiles = {}
+
+            for team_id, season in seasons.items():
+                history = _get_team_history_other_sport(
+                    sport,
+                    team_id,
+                    season,
+                )
+
+                average = _sport_history_average(
+                    history,
+                    "home"
+                    if any(
+                        (m.get("teams") or {})
+                        .get("home", {})
+                        .get("id") == team_id
+                        for m in history
+                    )
+                    else "away",
+                )
+
+                if average and average[1] >= 3:
+                    profiles[team_id] = {
+                        "scored": average
+                    }
+
+            results = []
+
+            for match in matches:
+                result = analyse_other_sport_fixture(
+                    sport,
+                    match,
+                    profiles,
+                )
+
+                if result:
+                    results.append(result)
+
+            lines.append(
+                format_other_sport_top3(
+                    sport,
+                    results,
+                )
+            )
+            lines.append("")
+
+        except Exception as exc:
+            print(
+                "MULTI-SPORT ERROR:",
+                sport,
+                repr(exc),
+            )
+
+            lines.extend([
+                OTHER_SPORTS[sport]["emoji"]
+                + " "
+                + OTHER_SPORTS[sport]["name"],
+                "Грешка при зареждане на статистиката.",
+                "",
+            ])
+
+    message = "\n".join(lines).rstrip()
+
+    print(message)
+
+    if send_func:
+        send_func(message)
+
+    return message
+
+
 def run_due_scans(send_func):
     """Run the due daily scans once, persisted in SQLite."""
     init_scanner_db()
