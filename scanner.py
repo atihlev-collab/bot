@@ -1260,37 +1260,48 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
                 continue
 
             histories = {}
-            unique = {}
+            unique = set()
             for g in games:
                 season = _other_season(g)
                 home, away = _other_game_teams(g)
-                if home.get("id") and away.get("id"):
-                    league_id = _other_league_id(g)
-                    unique[(int(home["id"]), str(season), league_id)] = None
-                    unique[(int(away["id"]), str(season), league_id)] = None
+                if not season or not home.get("id") or not away.get("id"):
+                    continue
+                unique.add((int(home["id"]), str(season)))
+                unique.add((int(away["id"]), str(season)))
 
-            for team_id, season, league_id in unique:
+            # Exactly one history request per team/season. Tournament preference
+            # is decided locally afterwards. This prevents duplicate requests and
+            # prevents one tournament from overwriting another.
+            for team_id, season in unique:
                 try:
-                    histories[team_id] = get_other_team_history(sport, team_id, season, league_id)
+                    histories[(team_id, season)] = get_other_team_history(
+                        sport, team_id, season, None
+                    )
                 except Exception as exc:
                     print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
-                    histories[team_id] = []
+                    histories[(team_id, season)] = []
 
             results = []
             for g in games:
                 try:
                     home, away = _other_game_teams(g)
                     season = _other_season(g)
+                    if not season or not home.get("id") or not away.get("id"):
+                        continue
+                    home_id = int(home["id"])
+                    away_id = int(away["id"])
                     league_id = _other_league_id(g)
-                    fixture_histories = {
-                        int(home["id"]): get_other_team_history(
-                            sport, int(home["id"]), season, league_id
-                        ),
-                        int(away["id"]): get_other_team_history(
-                            sport, int(away["id"]), season, league_id
-                        ),
-                    }
-                    x = _other_fixture_expected(g, fixture_histories)
+                    home_all = histories.get((home_id, str(season)), [])
+                    away_all = histories.get((away_id, str(season)), [])
+
+                    # Same tournament first; if fewer than needed, other official
+                    # tournaments from the SAME season fill the remaining sample.
+                    home_hist = ([x for x in home_all if _other_league_id(x) == league_id] +
+                                 [x for x in home_all if _other_league_id(x) != league_id])[:12]
+                    away_hist = ([x for x in away_all if _other_league_id(x) == league_id] +
+                                 [x for x in away_all if _other_league_id(x) != league_id])[:12]
+
+                    x = _other_fixture_expected(g, {home_id: home_hist, away_id: away_hist})
                     if x:
                         results.append(_other_fixture_result(sport, g, x))
                 except Exception as exc:
@@ -1332,17 +1343,17 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # OTHER SPORTS TEST: run 5 minutes after container start
-    if time.time() - _START >= 300:
-        other_key = f"other_sports_test:{today.isoformat()}"
+    # OTHER SPORTS: once daily at/after 10:00 BG.
+    # The scanner itself uses exactly the next 24-hour window.
+    if now.hour >= 10:
+        other_key = f"other_sports:{today.isoformat()}"
         if not already_ran(other_key):
-            print(_signal_text("OTHER SPORTS TEST STARTED"))
+            print(_signal_text("DAILY OTHER SPORTS SCANNER STARTED"))
             try:
                 run_other_sports_scanner(today, send_func)
                 mark_ran(other_key)
             except Exception as exc:
-                print(_signal_text(f"OTHER SPORTS TEST ERROR: {exc!r}"))
-            print(_signal_text("OTHER SPORTS TEST FINISHED"))
+                print(_signal_text(f"DAILY OTHER SPORTS SCANNER ERROR: {exc!r}"))
 
     # 20:00 football scan remains unchanged.
     if now.hour >= 20:
