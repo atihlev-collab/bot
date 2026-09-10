@@ -12,6 +12,30 @@ import logging
  
     
 
+
+# =========================================================
+# API RATE-LIMIT PROTECTION
+# Keeps the existing scanner/LIVE engines unchanged.
+# =========================================================
+API_RATE_LIMIT_COOLDOWN = 65
+_API_RATE_LIMIT_UNTIL = 0.0
+
+def _api_allowed():
+    return time.time() >= _API_RATE_LIMIT_UNTIL
+
+def _mark_api_rate_limit(data):
+    global _API_RATE_LIMIT_UNTIL
+    try:
+        if isinstance(data, dict):
+            msg = str(data.get("errors") or data)
+            if "rateLimit" in msg or "Too many requests" in msg:
+                _API_RATE_LIMIT_UNTIL = time.time() + API_RATE_LIMIT_COOLDOWN
+                print("API RATE LIMIT -> cooldown 65s")
+                return True
+    except Exception:
+        pass
+    return False
+
 from scipy.stats import poisson
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -74,6 +98,7 @@ BAD_COUNTRIES = [
 
     "Russia",
     "Belarus",
+    "Israel",
     "Nicaragua",
     "Guatemala",
     "Honduras",
@@ -92,24 +117,6 @@ team_form_cache = {}
 odds_cache = {}
 live_market_cache = {}
 betano_market_cache = {}
-
-# =========================================================
-# API RATE-LIMIT PROTECTION
-# =========================================================
-# Keep the old main architecture.  The scanner remains untouched.
-# LIVE statistics are cached so analyze_live_match() and live_loop()
-# never request the same fixture twice in one cycle.
-API_RATE_LIMIT_PAUSE = 65
-_main_api_cooldown_until = 0.0
-
-live_stats_cache = {}
-
-def _rate_limited_response(data):
-    try:
-        errors = data.get("errors") or {}
-        return bool(errors.get("rateLimit"))
-    except Exception:
-        return False
 
 # =========================================================
 # DATABASE
@@ -212,31 +219,34 @@ def blocked_league(league):
 
 def get_live_matches():
 
-    global _main_api_cooldown_until
-
-    if time.time() < _main_api_cooldown_until:
-        print("MAIN API COOLDOWN: live fixtures")
+    if not _api_allowed():
+        print("LIVE API COOLDOWN ACTIVE")
         return []
 
     try:
+
         r = requests.get(
+
             f"{BASE_URL}/fixtures",
+
             headers=HEADERS,
-            params={"live": "all"},
+
+            params={
+                "live": "all"
+            },
+
             timeout=20
+
         ).json()
 
-        if _rate_limited_response(r):
-            _main_api_cooldown_until = time.time() + API_RATE_LIMIT_PAUSE
-            print("MAIN API RATE LIMIT: pausing", API_RATE_LIMIT_PAUSE, "seconds")
-            return []
+        return r.get(
+            "response",
+            []
+        )
 
-        return r.get("response", [])
+    except:
 
-    except Exception as e:
-        print("MAIN LIVE FIXTURES ERROR:", repr(e))
         return []
-
 
 # =========================================================
 # LIVE STATISTICS
@@ -244,40 +254,35 @@ def get_live_matches():
 
 def get_statistics(fixture_id):
 
-    global _main_api_cooldown_until
-
-    now = time.time()
-    cached = live_stats_cache.get(fixture_id)
-    if cached:
-        cache_time, data = cached
-        if now - cache_time < 120:
-            return data
-
-    if now < _main_api_cooldown_until:
-        print("MAIN API COOLDOWN: statistics", fixture_id)
-        return []
-
     try:
+
         r = requests.get(
+
             f"{BASE_URL}/fixtures/statistics",
+
             headers=HEADERS,
-            params={"fixture": fixture_id},
+
+            params={
+                "fixture": fixture_id
+            },
+
             timeout=20
+
         ).json()
 
-        print("STATS RAW:", fixture_id, r)
+        print(
+            "STATS RAW:",
+            fixture_id,
+            r
+        )
+        
+        return r.get(
+            "response",
+            []
+        )
 
-        if _rate_limited_response(r):
-            _main_api_cooldown_until = time.time() + API_RATE_LIMIT_PAUSE
-            print("MAIN API RATE LIMIT: pausing", API_RATE_LIMIT_PAUSE, "seconds")
-            return []
+    except:
 
-        data = r.get("response", [])
-        live_stats_cache[fixture_id] = (time.time(), data)
-        return data
-
-    except Exception as e:
-        print("MAIN STATISTICS ERROR:", repr(e))
         return []
 
 # =========================================================
@@ -286,29 +291,29 @@ def get_statistics(fixture_id):
 
 def get_odds(fixture_id):
 
-    global _main_api_cooldown_until
-
-    if time.time() < _main_api_cooldown_until:
-        print("MAIN API COOLDOWN: odds", fixture_id)
-        return []
-
     try:
+
         r = requests.get(
+
             f"{BASE_URL}/odds",
+
             headers=HEADERS,
-            params={"fixture": fixture_id},
+
+            params={
+                "fixture": fixture_id
+            },
+
             timeout=20
+
         ).json()
 
-        if _rate_limited_response(r):
-            _main_api_cooldown_until = time.time() + API_RATE_LIMIT_PAUSE
-            print("MAIN API RATE LIMIT: pausing", API_RATE_LIMIT_PAUSE, "seconds")
-            return []
+        return r.get(
+            "response",
+            []
+        )
 
-        return r.get("response", [])
+    except:
 
-    except Exception as e:
-        print("MAIN ODDS ERROR:", repr(e))
         return []
 
 
@@ -9276,10 +9281,6 @@ def live_loop():
 
     matches = get_live_matches()
 
-    if not matches:
-        print("LIVE: no matches / API cooldown / no data")
-        return
-
     print(f"Live matches: {len(matches)}")
 
     print("LIVE SCAN START")
@@ -9324,7 +9325,9 @@ def live_loop():
 
         goal_probability = signal[3]
         
-        stats = live_stats_cache.get(fixture_id, (0, []))[1]
+        stats = get_statistics(
+            fixture_id
+        )
 
         home_pressure = 0
         away_pressure = 0
@@ -9471,8 +9474,11 @@ if __name__ == "__main__":
                 repr(e)
             )
 
-        # LIVE LOOP
-        live_loop()
+        # LIVE LOOP — pause completely during API cooldown
+        if _api_allowed():
+            live_loop()
+        else:
+            print("LIVE PAUSED: API rate-limit cooldown")
 
         time.sleep(300)
 
