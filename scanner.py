@@ -18,7 +18,7 @@ import requests
 
 from config import API_KEY, CHAT_ID
 import threading
-
+_START = time.time()
 BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
@@ -1338,19 +1338,17 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # OTHER SPORTS: collect statistics ONLY ONCE in the morning at 10:00 BG.
-    # There are no other-sport API calls from this scheduler later in the day.
-    # The daily key prevents a second collection on the same date.
-    if now.hour == 20 and now.minute >= 29:
-        other_key = f"other_sports:{today.isoformat()}"
-        if not already_ran(other_key):
-            print(_signal_text("OTHER SPORTS STATISTICS 10:00 STARTED"))
-            try:
-                run_other_sports_scanner(today, send_func)
-                mark_ran(other_key)
-            except Exception as exc:
-                print(_signal_text(f"OTHER SPORTS STATISTICS ERROR: {exc!r}"))
-            print(_signal_text("OTHER SPORTS STATISTICS 10:00 FINISHED"))
+   # OTHER SPORTS TEST: run 5 minutes after container start
+if time.time() - _START >= 300:
+    other_key = f"other_sports_test:{today.isoformat()}"
+    if not already_ran(other_key):
+        print(_signal_text("OTHER SPORTS TEST STARTED"))
+        try:
+            run_other_sports_scanner(today, send_func)
+            mark_ran(other_key)
+        except Exception as exc:
+            print(_signal_text(f"OTHER SPORTS TEST ERROR: {exc!r}"))
+        print(_signal_text("OTHER SPORTS TEST FINISHED"))
 
     # 20:00 football scan remains unchanged.
     if now.hour >= 20:
