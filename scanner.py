@@ -7,6 +7,7 @@
 # =========================================================
 
 import re
+import sys
 import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -887,7 +888,9 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     lines.append(f"\n⏱ Scan time: {time.time() - _START:.1f}s")
 
     message = "\n".join(lines)
-    print(message)
+    with _CONSOLE_LOCK:
+        sys.stdout.write(message + "\n")
+        sys.stdout.flush()
     if send_func:
         send_func(message)
     return message
@@ -900,18 +903,19 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 # =========================================================
 
 OTHER_SPORTS = {
-    "basketball": {"label": "🏀 БАСКЕТБОЛ", "base": "https://v1.basketball.api-sports.io", "date_key": "date"},
-    "hockey": {"label": "🏒 ХОКЕЙ", "base": "https://v1.hockey.api-sports.io", "date_key": "date"},
-    "handball": {"label": "🤾 ХАНДБАЛ", "base": "https://v1.handball.api-sports.io", "date_key": "date"},
-    "rugby": {"label": "🏉 РЪГБИ", "base": "https://v1.rugby.api-sports.io", "date_key": "date"},
-    "american_football": {"label": "🏈 NFL / NCAA", "base": "https://v1.american-football.api-sports.io", "date_key": "date"},
-    "baseball": {"label": "⚾ БЕЙЗБОЛ", "base": "https://v1.baseball.api-sports.io", "date_key": "date"},
+    "basketball": {"label": "🏀 БАСКЕТБОЛ", "base": "https://v1.basketball.api-sports.io"},
+    "hockey": {"label": "🏒 ХОКЕЙ", "base": "https://v1.hockey.api-sports.io"},
+    "handball": {"label": "🤾 ХАНДБАЛ", "base": "https://v1.handball.api-sports.io"},
+    "rugby": {"label": "🏉 РЪГБИ", "base": "https://v1.rugby.api-sports.io"},
+    "american_football": {"label": "🏈 NFL / NCAA", "base": "https://v1.american-football.api-sports.io"},
+    "baseball": {"label": "⚾ БЕЙЗБОЛ", "base": "https://v1.baseball.api-sports.io"},
 }
 
 _OTHER_API_LOCK = threading.Lock()
 _OTHER_LAST_API_CALL = 0.0
 _OTHER_API_MIN_INTERVAL = 0.12
 _OTHER_HISTORY_CACHE = {}
+_CONSOLE_LOCK = threading.Lock()
 
 
 def _other_api(sport, endpoint, params=None, timeout=25):
@@ -953,9 +957,9 @@ def _other_api(sport, endpoint, params=None, timeout=25):
 
 
 def _other_game_id(g):
-    if isinstance(g, dict):
-        return g.get("id") or (g.get("game") or {}).get("id")
-    return None
+    if not isinstance(g, dict):
+        return None
+    return g.get("id") or (g.get("game") or {}).get("id")
 
 
 def _other_game_date(g):
@@ -967,10 +971,10 @@ def _other_game_date(g):
     if raw:
         return raw
     game = g.get("game") or {}
-    d = game.get("date")
-    if isinstance(d, dict):
-        return d.get("date") or d.get("time")
-    return d
+    raw = game.get("date")
+    if isinstance(raw, dict):
+        raw = raw.get("date") or raw.get("time")
+    return raw
 
 
 def _other_game_teams(g):
@@ -984,7 +988,8 @@ def _other_score(g, side):
     scores = g.get("scores") or {}
     x = scores.get(side)
     if isinstance(x, dict):
-        for key in ("total", "points", "goals", "runs"):
+        # Different APIs use different names for the final team score.
+        for key in ("total", "points", "goals", "runs", "score"):
             value = _safe_float(x.get(key))
             if value is not None:
                 return value
@@ -992,22 +997,28 @@ def _other_score(g, side):
 
 
 def _other_game_status(g):
-    status = g.get("status")
-    if isinstance(status, dict):
-        status = status.get("short") or status.get("long")
-    game = g.get("game") or {}
-    if not status:
-        status = game.get("status")
+    candidates = [g.get("status"), (g.get("game") or {}).get("status")]
+    for status in candidates:
         if isinstance(status, dict):
-            status = status.get("short") or status.get("long")
-    return str(status or "").upper()
+            for key in ("short", "long", "name"):
+                if status.get(key):
+                    return str(status[key]).upper()
+        elif status:
+            return str(status).upper()
+    return ""
 
 
 def _other_is_finished(g):
     status = _other_game_status(g)
-    if any(x in status for x in ("FT", "FINAL", "FINISHED", "ENDED", "AFTER")):
-        return True
-    return status in {"AOT", "AET", "OT", "PEN"}
+    if not status:
+        # A completed game must have two final scores. This fallback is useful
+        # for APIs whose status object is missing/empty in older responses.
+        return _other_score(g, "home") is not None and _other_score(g, "away") is not None
+    bad = ("CANCEL", "POSTPONE", "ABANDON", "SUSPEND", "DELAY")
+    if any(x in status for x in bad):
+        return False
+    good = ("FT", "FINAL", "FINISHED", "ENDED", "END", "AFTER", "AOT", "AET", "OT", "PEN")
+    return any(x in status for x in good)
 
 
 def _other_game_time_bg(g):
@@ -1060,24 +1071,15 @@ def _other_season(g):
     season = league.get("season")
     if season is not None:
         return season
-    return None
+    # Some API responses expose the season through the nested game object.
+    game = g.get("game") or {}
+    return game.get("season")
 
 
-def get_other_team_history(sport, team_id, season):
-    key = (sport, int(team_id), str(season))
-    if key in _OTHER_HISTORY_CACHE:
-        return _OTHER_HISTORY_CACHE[key]
-
-    params = {"team": int(team_id)}
-    if season is not None:
-        params["season"] = season
-    games = _other_api(sport, "games", params)
-    if not isinstance(games, list):
-        games = []
-
+def _other_history_clean(games):
     finished = []
     seen = set()
-    for g in games:
+    for g in games or []:
         gid = _other_game_id(g)
         if not gid or gid in seen or not _other_is_finished(g):
             continue
@@ -1089,22 +1091,89 @@ def get_other_team_history(sport, team_id, season):
         aws = _other_score(g, "away")
         if hs is None or aws is None:
             continue
-        # Exclude obvious cancelled/postponed states.
-        status = _other_game_status(g)
-        if any(x in status for x in ("CANCEL", "POSTPONE", "ABANDON", "SUSPEND")):
-            continue
         seen.add(gid)
         finished.append((dt, g))
-
     finished.sort(key=lambda x: x[0], reverse=True)
-    history = [g for _, g in finished[:12]]
-    _OTHER_HISTORY_CACHE[key] = history
-    return history
+    return [g for _, g in finished[:12]]
 
+
+def _other_league(g):
+    return g.get("league") or {}
+
+
+def _other_league_id(g):
+    league = _other_league(g)
+    value = league.get("id")
+    return str(value) if value not in (None, "") else ""
+
+
+def _other_same_season(g, season):
+    """Strictly match the fixture's current season; never use another season."""
+    if season in (None, ""):
+        return False
+    value = _other_season(g)
+    return str(value) == str(season)
+
+
+def get_other_team_history(sport, team_id, season, league_id=None):
+    """Get up to 12 completed official games from the CURRENT season only.
+
+    Rule:
+      1) Same tournament + current season first.
+      2) If that is insufficient, other official tournaments + same current season.
+      3) Never use a previous season.
+    """
+    key = (sport, int(team_id), str(season), str(league_id or ""))
+    if key in _OTHER_HISTORY_CACHE:
+        return _OTHER_HISTORY_CACHE[key]
+
+    # First: same tournament, current season only.
+    best = []
+    if league_id:
+        games = _other_api(sport, "games", {
+            "team": int(team_id),
+            "season": season,
+            "league": league_id,
+        })
+        best = [g for g in _other_history_clean(games)
+                if _other_same_season(g, season) and _other_league_id(g) == str(league_id)]
+
+    # Fallback: other official tournaments, but STILL current season only.
+    if len(best) < 3:
+        games = _other_api(sport, "games", {
+            "team": int(team_id),
+            "season": season,
+        })
+        current = [g for g in _other_history_clean(games)
+                   if _other_same_season(g, season)]
+        # Same tournament results stay first; then other tournaments fill the sample.
+        if league_id:
+            same = [g for g in current if _other_league_id(g) == str(league_id)]
+            other = [g for g in current if _other_league_id(g) != str(league_id)]
+            best = (same + other)[:12]
+        else:
+            best = current[:12]
+
+    # Last fallback: unfiltered team games, but reject every game that is not
+    # explicitly from the fixture's current season. This is still NOT a
+    # previous-season fallback.
+    if len(best) < 3:
+        games = _other_api(sport, "games", {"team": int(team_id)})
+        current = [g for g in _other_history_clean(games)
+                   if _other_same_season(g, season)]
+        if league_id:
+            same = [g for g in current if _other_league_id(g) == str(league_id)]
+            other = [g for g in current if _other_league_id(g) != str(league_id)]
+            best = (same + other)[:12]
+        else:
+            best = current[:12]
+
+    _OTHER_HISTORY_CACHE[key] = best[:12]
+    return _OTHER_HISTORY_CACHE[key]
 
 def _other_team_avg(team_id, history):
     vals = []
-    for g in history:
+    for g in history or []:
         home, away = _other_game_teams(g)
         hs = _other_score(g, "home")
         aws = _other_score(g, "away")
@@ -1161,6 +1230,8 @@ def _format_other_sport(sport, results):
         lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
         lines.append(f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}")
         lines.append(f"   {r['league']} | {r['country']} | {kickoff} BG")
+        if i < len(high):
+            lines.append("")
     if not high:
         lines.append("Няма достатъчно статистика.")
 
@@ -1172,13 +1243,15 @@ def _format_other_sport(sport, results):
         lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
         lines.append(f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}")
         lines.append(f"   {r['league']} | {r['country']} | {kickoff} BG")
+        if i < len(low):
+            lines.append("")
     if not low:
         lines.append("Няма достатъчно статистика.")
     return "\n".join(lines)
 
 
 def run_other_sports_scanner(reference_date=None, send_func=None):
-    """10:00 BG signal for non-football sports, fixtures 12:00 -> 12:00."""
+    """10:00 BG: non-football fixtures from 12:00 today through 12:00 tomorrow."""
     ref = reference_date or datetime.now(TZ).date()
     start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
     end = start + timedelta(hours=24)
@@ -1186,7 +1259,7 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
         "🌍 DAILY OTHER SPORTS SCANNER",
         ref.strftime("%d.%m.%Y"),
         "10:00 BG → срещи 12:00 днес до 12:00 утре",
-        "История: последните завършени мачове от текущия сезон",
+        "История: текущ сезон; първо същият турнир, после други официални турнири",
         "",
     ]
 
@@ -1205,13 +1278,14 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
             for g in games:
                 season = _other_season(g)
                 home, away = _other_game_teams(g)
-                if season is not None:
-                    unique[(int(home["id"]), str(season))] = None
-                    unique[(int(away["id"]), str(season))] = None
+                if home.get("id") and away.get("id"):
+                    league_id = _other_league_id(g)
+                    unique[(int(home["id"]), str(season), league_id)] = None
+                    unique[(int(away["id"]), str(season), league_id)] = None
 
-            for team_id, season in unique:
+            for team_id, season, league_id in unique:
                 try:
-                    histories[team_id] = get_other_team_history(sport, team_id, season)
+                    histories[team_id] = get_other_team_history(sport, team_id, season, league_id)
                 except Exception as exc:
                     print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
                     histories[team_id] = []
@@ -1224,6 +1298,7 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
                         results.append(_other_fixture_result(sport, g, x))
                 except Exception as exc:
                     print("OTHER SPORTS MATCH ERROR:", sport, repr(exc))
+
             total_valid += len(results)
             lines.append(_format_other_sport(sport, results))
             lines.append("")
@@ -1233,7 +1308,9 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 
     lines.append(f"Мачове: {total_fixtures} | Валидни статистически сигнали: {total_valid}")
     message = "\n".join(lines)
-    print(message)
+    with _CONSOLE_LOCK:
+        sys.stdout.write(message + "\n")
+        sys.stdout.flush()
     if send_func:
         send_func(message)
     return message
