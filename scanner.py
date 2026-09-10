@@ -1341,7 +1341,7 @@ def run_due_scans(send_func):
     # OTHER SPORTS: collect statistics ONLY ONCE in the morning at 10:00 BG.
     # There are no other-sport API calls from this scheduler later in the day.
     # The daily key prevents a second collection on the same date.
-    if now.hour == 10:
+    if now.hour == 20 and now.minute >= 29:
         other_key = f"other_sports:{today.isoformat()}"
         if not already_ran(other_key):
             print(_signal_text("OTHER SPORTS STATISTICS 10:00 STARTED"))
