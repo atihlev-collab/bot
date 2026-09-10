@@ -1097,7 +1097,7 @@ def _other_history_clean(games):
         seen.add(gid)
         finished.append((dt, g))
     finished.sort(key=lambda x: x[0], reverse=True)
-    return [g for _, g in finished]
+    return [g for _, g in finished[:12]]
 
 
 def _other_league(g):
@@ -1119,46 +1119,37 @@ def _other_same_season(g, season):
 
 
 def get_other_team_history(sport, team_id, season, league_id=None):
-    """Get up to 12 completed official games from the CURRENT season only.
+    """Get up to 12 completed official games from CURRENT season only.
 
-    Rule:
-      1) Same tournament + current season first.
-      2) If that is insufficient, other official tournaments + same current season.
-      3) Never use a previous season.
+    The API is queried once per team/season.  The returned current-season
+    games are then split locally so the same-tournament games are preferred,
+    followed by other official tournaments from the SAME season.
     """
-    key = (sport, int(team_id), str(season), str(league_id or ""))
-    if key in _OTHER_HISTORY_CACHE:
-        return _OTHER_HISTORY_CACHE[key]
+    base_key = (sport, int(team_id), str(season))
+    if base_key not in _OTHER_HISTORY_CACHE:
+        games = _other_api(sport, "games", {
+            "team": int(team_id),
+            "season": season,
+        })
+        current = [
+            g for g in _other_history_clean(games)
+            if _other_same_season(g, season)
+        ]
+        # Keep the newest completed current-season games available for
+        # tournament selection.  Do NOT query previous seasons.
+        _OTHER_HISTORY_CACHE[base_key] = current
 
-    # First: same tournament, current season only.
-    best = []
+    current = _OTHER_HISTORY_CACHE.get(base_key, [])
+
     if league_id:
-        games = _other_api(sport, "games", {
-            "team": int(team_id),
-            "season": season,
-            "league": league_id,
-        })
-        best = [g for g in _other_history_clean(games)
-                if _other_same_season(g, season) and _other_league_id(g) == str(league_id)]
+        same = [g for g in current if _other_league_id(g) == str(league_id)]
+        other = [g for g in current if _other_league_id(g) != str(league_id)]
+        selected = (same + other)[:12]
+    else:
+        selected = current[:12]
 
-    # Fallback: other official tournaments, but STILL current season only.
-    if len(best) < 3:
-        games = _other_api(sport, "games", {
-            "team": int(team_id),
-            "season": season,
-        })
-        current = [g for g in _other_history_clean(games)
-                   if _other_same_season(g, season)]
-        # Same tournament results stay first; then other tournaments fill the sample.
-        if league_id:
-            same = [g for g in current if _other_league_id(g) == str(league_id)]
-            other = [g for g in current if _other_league_id(g) != str(league_id)]
-            best = (same + other)[:12]
-        else:
-            best = current[:12]
+    return selected
 
-    _OTHER_HISTORY_CACHE[key] = best[:12]
-    return _OTHER_HISTORY_CACHE[key]
 
 def _other_team_avg(team_id, history):
     vals = []
@@ -1179,9 +1170,8 @@ def _other_team_avg(team_id, history):
 
 def _other_fixture_expected(g, histories):
     home, away = _other_game_teams(g)
-    league_id = _other_league_id(g)
-    hp = _other_team_avg(home.get("id"), histories.get((int(home.get("id")), league_id)))
-    ap = _other_team_avg(away.get("id"), histories.get((int(away.get("id")), league_id)))
+    hp = _other_team_avg(home.get("id"), histories.get(int(home.get("id"))))
+    ap = _other_team_avg(away.get("id"), histories.get(int(away.get("id"))))
     if not hp or not ap or hp[1] < 3 or ap[1] < 3:
         return None
     return {
@@ -1209,8 +1199,12 @@ def _other_fixture_result(sport, g, x):
 def _format_other_sport(sport, results):
     cfg = OTHER_SPORTS[sport]
     valid = [r for r in results if r.get("expected")]
+    # Over and Under must be different fixtures.  Over gets the highest
+    # expected totals; Under gets the lowest totals from the remaining games.
     high = sorted(valid, key=lambda r: r["expected"]["expected"], reverse=True)[:3]
-    low = sorted(valid, key=lambda r: r["expected"]["expected"])[:3]
+    high_ids = {r.get("fixture_id") for r in high}
+    remaining = [r for r in valid if r.get("fixture_id") not in high_ids]
+    low = sorted(remaining, key=lambda r: r["expected"]["expected"])[:3]
 
     lines = [cfg["label"], "🔥 TOP 3 НАД"]
     for i, r in enumerate(high, 1):
@@ -1275,15 +1269,26 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 
             for team_id, season, league_id in unique:
                 try:
-                    histories[(team_id, league_id)] = get_other_team_history(sport, team_id, season, league_id)
+                    histories[team_id] = get_other_team_history(sport, team_id, season, league_id)
                 except Exception as exc:
                     print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
-                    histories[(team_id, league_id)] = []
+                    histories[team_id] = []
 
             results = []
             for g in games:
                 try:
-                    x = _other_fixture_expected(g, histories)
+                    home, away = _other_game_teams(g)
+                    season = _other_season(g)
+                    league_id = _other_league_id(g)
+                    fixture_histories = {
+                        int(home["id"]): get_other_team_history(
+                            sport, int(home["id"]), season, league_id
+                        ),
+                        int(away["id"]): get_other_team_history(
+                            sport, int(away["id"]), season, league_id
+                        ),
+                    }
+                    x = _other_fixture_expected(g, fixture_histories)
                     if x:
                         results.append(_other_fixture_result(sport, g, x))
                 except Exception as exc:
@@ -1307,6 +1312,9 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
     return message
 
 
+_START = time.time()
+
+
 def run_due_scans(send_func):
     """Run the due daily scans once, persisted in SQLite."""
     init_scanner_db()
@@ -1322,17 +1330,17 @@ def run_due_scans(send_func):
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # OTHER SPORTS TEST: run 5 minutes after container start
-    if time.time() - _START >= 300:
-        other_key = f"other_sports_test:{today.isoformat()}"
-        if not already_ran(other_key):
-            print(_signal_text("OTHER SPORTS TEST STARTED"))
-            try:
-                run_other_sports_scanner(today, send_func)
-                mark_ran(other_key)
-            except Exception as exc:
-                print(_signal_text(f"OTHER SPORTS TEST ERROR: {exc!r}"))
-            print(_signal_text("OTHER SPORTS TEST FINISHED"))
+   # OTHER SPORTS TEST: run 5 minutes after container start
+if time.time() - _START >= 300:
+    other_key = f"other_sports_test:{today.isoformat()}"
+    if not already_ran(other_key):
+        print(_signal_text("OTHER SPORTS TEST STARTED"))
+        try:
+            run_other_sports_scanner(today, send_func)
+            mark_ran(other_key)
+        except Exception as exc:
+            print(_signal_text(f"OTHER SPORTS TEST ERROR: {exc!r}"))
+        print(_signal_text("OTHER SPORTS TEST FINISHED"))
 
     # 20:00 football scan remains unchanged.
     if now.hour >= 20:
