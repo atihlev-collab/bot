@@ -888,9 +888,12 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     lines.append(f"\n⏱ Scan time: {time.time() - _START:.1f}s")
 
     message = "\n".join(lines)
+    # Do not dump the complete Telegram message into Railway stdout.
+    # live_loop/other threads also write to stdout and can interleave lines
+    # in the middle of this large message. Telegram receives the message
+    # as one complete payload through send_func().
     with _CONSOLE_LOCK:
-        sys.stdout.write(message + "\n")
-        sys.stdout.flush()
+        print(f"SCANNER {mode.upper()} MESSAGE READY — {len(results)} matches")
     if send_func:
         send_func(message)
     return message
@@ -1308,9 +1311,10 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 
     lines.append(f"Мачове: {total_fixtures} | Валидни статистически сигнали: {total_valid}")
     message = "\n".join(lines)
+    # Keep Railway logs compact; the complete report is sent atomically
+    # by send_func() and must not be interleaved with live_loop output.
     with _CONSOLE_LOCK:
-        sys.stdout.write(message + "\n")
-        sys.stdout.flush()
+        print(f"OTHER SPORTS MESSAGE READY — {total_valid} valid signals / {total_fixtures} fixtures")
     if send_func:
         send_func(message)
     return message
@@ -1356,5 +1360,6 @@ def run_due_scans(send_func):
             run_daily_scanner("night", today, send_func)
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
+
            
          
