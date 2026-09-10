@@ -1355,6 +1355,5 @@ def run_due_scans(send_func):
             run_daily_scanner("night", today, send_func)
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
-
            
          
