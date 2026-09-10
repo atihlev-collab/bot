@@ -1,9 +1,9 @@
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
-# Runs once at/after 11:00 and once at/after 21:00 Bulgaria time.
-# 11:00: today's fixtures 11:00-23:59 BG
-# 21:00: tomorrow's fixtures 00:00-10:00 BG
+# Runs once at/after 10:00 and once at/after 20:00 Bulgaria time.
+# 10:00: today's fixtures 10:00-23:59 BG
+# 20:00: tomorrow's fixtures 00:00-10:00 BG
 # =========================================================
 
 import re
@@ -185,50 +185,172 @@ def get_fixtures_for_window(start_bg, end_bg):
 
 def get_team_history(team_id, season, league_id=None):
     """
-    ALL completed fixtures for this team in the exact current competition/season.
-    No last-N and no minimum sample.
+    Official current-season history.
+
+    1. First use the requested competition.
+    2. If fewer than 3 official matches exist there,
+       fall back to the team's other official matches
+       from the current season.
+    3. Friendly matches are excluded.
+    4. Only FT/AET/PEN matches are accepted.
     """
-    key=(int(team_id),int(season),int(league_id or 0))
+
+    team_id = int(team_id)
+    season = int(season)
+    league_id = int(league_id or 0)
+
+    key = (team_id, season, league_id)
+
     if key in _SCAN_HISTORY:
         return _SCAN_HISTORY[key]
 
-    if not league_id:
-        return []
+    # ---------------------------------------------------------
+    # 1. FIRST: CURRENT COMPETITION
+    # ---------------------------------------------------------
 
-    fixtures=_api(
+    primary = []
+
+    if league_id:
+        fixtures = _api(
+            "fixtures",
+            {
+                "team": team_id,
+                "league": league_id,
+                "season": season,
+            },
+        )
+
+        if not isinstance(fixtures, list):
+            fixtures = []
+
+        seen = set()
+
+        for f in fixtures:
+
+            fixture = f.get("fixture") or {}
+            league = f.get("league") or {}
+            status = (fixture.get("status") or {}).get("short", "")
+
+            fid = fixture.get("id")
+
+            if not fid or fid in seen:
+                continue
+
+            if int(league.get("id") or 0) != league_id:
+                continue
+
+            if int(league.get("season") or 0) != season:
+                continue
+
+            if status not in {"FT", "AET", "PEN"}:
+                continue
+
+            seen.add(fid)
+            primary.append(f)
+
+    primary.sort(
+        key=lambda f: (f.get("fixture") or {}).get("date", ""),
+        reverse=True,
+    )
+
+    # ---------------------------------------------------------
+    # 2. IF WE HAVE 3+ MATCHES IN THE COMPETITION
+    #    USE THEM
+    # ---------------------------------------------------------
+
+    if len(primary) >= 3:
+
+        primary.sort(
+            key=lambda f: (f.get("fixture") or {}).get("date", "")
+        )
+
+        _SCAN_HISTORY[key] = primary
+
+        return primary
+
+    # ---------------------------------------------------------
+    # 3. FALLBACK:
+    #    ALL OFFICIAL CURRENT-SEASON MATCHES
+    # ---------------------------------------------------------
+
+    print(
+        "HISTORY FALLBACK:",
+        team_id,
+        "competition_matches=",
+        len(primary),
+        "-> current-season official matches",
+    )
+
+    all_fixtures = _api(
         "fixtures",
         {
-            "team":int(team_id),
-            "league":int(league_id),
-            "season":int(season),
-            "status":"FT",
+            "team": team_id,
+            "season": season,
         },
     )
 
-    if not isinstance(fixtures,list):
-        fixtures=[]
+    if not isinstance(all_fixtures, list):
+        all_fixtures = []
 
-    # Keep only completed fixtures from the exact competition and season.
-    clean=[]
-    seen=set()
-    for f in fixtures:
-        fid=(f.get("fixture") or {}).get("id")
-        fl=(f.get("league") or {}).get("id")
-        fs=(f.get("league") or {}).get("season")
-        status=((f.get("fixture") or {}).get("status") or {}).get("short","")
+    clean = []
+    seen = set()
+
+    for f in all_fixtures:
+
+        fixture = f.get("fixture") or {}
+        league = f.get("league") or {}
+        status = (fixture.get("status") or {}).get("short", "")
+
+        fid = fixture.get("id")
+
         if not fid or fid in seen:
             continue
-        if fl is not None and int(fl)!=int(league_id):
+
+        # CURRENT SEASON ONLY
+        if int(league.get("season") or 0) != season:
             continue
-        if fs is not None and int(fs)!=int(season):
+
+        # OFFICIAL COMPLETED MATCHES ONLY
+        if status not in {"FT", "AET", "PEN"}:
             continue
-        if status not in {"FT","AET","PEN"}:
+
+        # EXCLUDE FRIENDLIES
+        league_type = str(league.get("type") or "").casefold()
+        league_name = str(league.get("name") or "").casefold()
+
+        if league_type == "friendly":
             continue
+
+        if "friend" in league_name:
+            continue
+
         seen.add(fid)
         clean.append(f)
 
-    clean.sort(key=lambda f:(f.get("fixture") or {}).get("date",""))
-    _SCAN_HISTORY[key]=clean
+    # Most recent first
+    clean.sort(
+        key=lambda f: (f.get("fixture") or {}).get("date", ""),
+        reverse=True,
+    )
+
+    # Keep the most recent official current-season matches.
+    # We want enough data for the statistical profiles.
+    clean = clean[:12]
+
+    # Oldest -> newest for calculations
+    clean.sort(
+        key=lambda f: (f.get("fixture") or {}).get("date", "")
+    )
+
+    _SCAN_HISTORY[key] = clean
+
+    print(
+        "HISTORY FALLBACK RESULT:",
+        team_id,
+        "matches=",
+        len(clean),
+    )
+
     return clean
 
 
@@ -488,6 +610,19 @@ def _market_allowed_by_betano(match, market):
     return True
 
 
+
+ANSI_BOLD = "\033[1m"
+ANSI_RESET = "\033[0m"
+
+def _big(text):
+    return f"{ANSI_BOLD}{text}{ANSI_RESET}"
+
+
+def _signal_text(text):
+    """Make scanner output substantially more prominent in terminal/Railway logs."""
+    return f"\033[1m\033[4m{text}\033[0m"
+
+
 def analyse_fixture(fixture, team_profiles):
     home = fixture["teams"]["home"]
     away = fixture["teams"]["away"]
@@ -652,17 +787,17 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     ref = ref if hasattr(ref, "year") else now_bg.date()
 
     if mode == "day":
-        start = datetime(ref.year, ref.month, ref.day, 11, 0, tzinfo=TZ)
-        end = start + timedelta(days=1)
-        title = "11:00 ДНЕВЕН СКЕНЕР"
+        start = datetime(ref.year, ref.month, ref.day, 10, 0, tzinfo=TZ)
+        end = datetime(ref.year, ref.month, ref.day + 1, 0, 0, tzinfo=TZ)
+        title = "10:00 ДНЕВЕН СКЕНЕР"
     else:
         next_day = ref + timedelta(days=1)
         start = datetime(next_day.year, next_day.month, next_day.day, 0, 0, tzinfo=TZ)
         end = datetime(next_day.year, next_day.month, next_day.day, 10, 0, tzinfo=TZ)
-        title = "21:00 НОЩЕН СКЕНЕР"
+        title = "20:00 НОЩЕН СКЕНЕР"
 
     matches = get_fixtures_for_window(start, end)
-    print(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures")
+    print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
 
     # Exclude leagues unavailable on Betano.
@@ -681,7 +816,8 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         futures = {
-            pool.submit(get_team_history, tid, season, league_id): (tid, league_id, season)
+            pool.submit(get_team_history, tid, season, league_id):
+                (tid, league_id, season)
             for tid, league_id, season in unique_requests
         }
         for fut in as_completed(futures):
@@ -703,7 +839,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         "SCANNER HISTORICAL FIXTURES WITH DATA:",
         sum(1 for v in stats_by_fixture.values() if v), "/", len(stats_by_fixture)
     )
-    print("SCANNER MARKET RULE: missing corner/card/shot stats are NOT treated as zero; each team needs >=3 actual observations.")
+    print(_signal_text("SCANNER MARKET RULE: missing corner/card/shot stats are NOT treated as zero; each team needs >=3 actual observations."))
 
     results = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
@@ -736,7 +872,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         now_bg.strftime("%d.%m.%Y"),
         f"\n{title}",
         f"Мачове в прозореца: {len(matches)}",
-        f"Мачове с поне един валиден пазар: {sum(1 for r in results if r['markets'])}",
+        f"Мачове с поне един валиден пазар: {sum(1 for r in results if r["markets"])}",
         "История: всички завършени мачове от текущия сезон",
         "",
     ]
@@ -757,30 +893,384 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     return message
 
 
+# =========================================================
+# OTHER SPORTS DAILY TOTALS SCANNER
+# Football above is intentionally untouched.
+# At 10:00 BG, scan 12:00 today -> 12:00 tomorrow.
+# =========================================================
+
+OTHER_SPORTS = {
+    "basketball": {"label": "🏀 БАСКЕТБОЛ", "base": "https://v1.basketball.api-sports.io", "date_key": "date"},
+    "hockey": {"label": "🏒 ХОКЕЙ", "base": "https://v1.hockey.api-sports.io", "date_key": "date"},
+    "handball": {"label": "🤾 ХАНДБАЛ", "base": "https://v1.handball.api-sports.io", "date_key": "date"},
+    "rugby": {"label": "🏉 РЪГБИ", "base": "https://v1.rugby.api-sports.io", "date_key": "date"},
+    "american_football": {"label": "🏈 NFL / NCAA", "base": "https://v1.american-football.api-sports.io", "date_key": "date"},
+    "baseball": {"label": "⚾ БЕЙЗБОЛ", "base": "https://v1.baseball.api-sports.io", "date_key": "date"},
+}
+
+_OTHER_API_LOCK = threading.Lock()
+_OTHER_LAST_API_CALL = 0.0
+_OTHER_API_MIN_INTERVAL = 0.12
+_OTHER_HISTORY_CACHE = {}
+
+
+def _other_api(sport, endpoint, params=None, timeout=25):
+    global _OTHER_LAST_API_CALL
+    cfg = OTHER_SPORTS[sport]
+    for attempt in range(5):
+        try:
+            with _OTHER_API_LOCK:
+                wait = _OTHER_API_MIN_INTERVAL - (time.monotonic() - _OTHER_LAST_API_CALL)
+                if wait > 0:
+                    time.sleep(wait)
+                _OTHER_LAST_API_CALL = time.monotonic()
+            r = requests.get(
+                f"{cfg['base']}/{endpoint}",
+                headers=HEADERS,
+                params=params or {},
+                timeout=timeout,
+            )
+            if r.status_code == 429 or 500 <= r.status_code < 600:
+                retry_after = r.headers.get("Retry-After")
+                try:
+                    delay = float(retry_after)
+                except (TypeError, ValueError):
+                    delay = min(1.0 * (2 ** attempt), 8.0)
+                time.sleep(delay)
+                continue
+            r.raise_for_status()
+            payload = r.json()
+            if payload.get("errors"):
+                print(f"OTHER SPORTS API ERROR [{sport}]:", endpoint, payload.get("errors"))
+                return None
+            return payload.get("response")
+        except Exception as exc:
+            if attempt == 4:
+                print(f"OTHER SPORTS REQUEST ERROR [{sport}]:", endpoint, repr(exc))
+                return None
+            time.sleep(min(0.8 * (2 ** attempt), 6.0))
+    return None
+
+
+def _other_game_id(g):
+    if isinstance(g, dict):
+        return g.get("id") or (g.get("game") or {}).get("id")
+    return None
+
+
+def _other_game_date(g):
+    if not isinstance(g, dict):
+        return None
+    raw = g.get("date")
+    if isinstance(raw, dict):
+        raw = raw.get("date") or raw.get("time")
+    if raw:
+        return raw
+    game = g.get("game") or {}
+    d = game.get("date")
+    if isinstance(d, dict):
+        return d.get("date") or d.get("time")
+    return d
+
+
+def _other_game_teams(g):
+    teams = g.get("teams") or {}
+    home = teams.get("home") or {}
+    away = teams.get("away") or {}
+    return home, away
+
+
+def _other_score(g, side):
+    scores = g.get("scores") or {}
+    x = scores.get(side)
+    if isinstance(x, dict):
+        for key in ("total", "points", "goals", "runs"):
+            value = _safe_float(x.get(key))
+            if value is not None:
+                return value
+    return _safe_float(x)
+
+
+def _other_game_status(g):
+    status = g.get("status")
+    if isinstance(status, dict):
+        status = status.get("short") or status.get("long")
+    game = g.get("game") or {}
+    if not status:
+        status = game.get("status")
+        if isinstance(status, dict):
+            status = status.get("short") or status.get("long")
+    return str(status or "").upper()
+
+
+def _other_is_finished(g):
+    status = _other_game_status(g)
+    if any(x in status for x in ("FT", "FINAL", "FINISHED", "ENDED", "AFTER")):
+        return True
+    return status in {"AOT", "AET", "OT", "PEN"}
+
+
+def _other_game_time_bg(g):
+    raw = _other_game_date(g)
+    if not raw:
+        return None
+    try:
+        raw = str(raw).replace("Z", "+00:00")
+        dt = datetime.fromisoformat(raw)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(TZ)
+    except Exception:
+        return None
+
+
+def _other_games_for_date(sport, day):
+    response = _other_api(sport, "games", {"date": day.isoformat()})
+    return response if isinstance(response, list) else []
+
+
+def get_other_sport_fixtures(sport, start_bg, end_bg):
+    out = []
+    seen = set()
+    day = start_bg.date()
+    while day <= end_bg.date():
+        for g in _other_games_for_date(sport, day):
+            gid = _other_game_id(g)
+            if not gid or gid in seen:
+                continue
+            dt = _other_game_time_bg(g)
+            if not dt or dt < start_bg or dt >= end_bg:
+                continue
+            if dt <= datetime.now(TZ):
+                continue
+            if _other_is_finished(g):
+                continue
+            home, away = _other_game_teams(g)
+            if not home.get("id") or not away.get("id"):
+                continue
+            seen.add(gid)
+            out.append(g)
+        day += timedelta(days=1)
+    out.sort(key=lambda x: _other_game_time_bg(x) or datetime.max.replace(tzinfo=TZ))
+    return out
+
+
+def _other_season(g):
+    league = g.get("league") or {}
+    season = league.get("season")
+    if season is not None:
+        return season
+    return None
+
+
+def get_other_team_history(sport, team_id, season):
+    key = (sport, int(team_id), str(season))
+    if key in _OTHER_HISTORY_CACHE:
+        return _OTHER_HISTORY_CACHE[key]
+
+    params = {"team": int(team_id)}
+    if season is not None:
+        params["season"] = season
+    games = _other_api(sport, "games", params)
+    if not isinstance(games, list):
+        games = []
+
+    finished = []
+    seen = set()
+    for g in games:
+        gid = _other_game_id(g)
+        if not gid or gid in seen or not _other_is_finished(g):
+            continue
+        dt = _other_game_time_bg(g)
+        home, away = _other_game_teams(g)
+        if not dt or not home.get("id") or not away.get("id"):
+            continue
+        hs = _other_score(g, "home")
+        aws = _other_score(g, "away")
+        if hs is None or aws is None:
+            continue
+        # Exclude obvious cancelled/postponed states.
+        status = _other_game_status(g)
+        if any(x in status for x in ("CANCEL", "POSTPONE", "ABANDON", "SUSPEND")):
+            continue
+        seen.add(gid)
+        finished.append((dt, g))
+
+    finished.sort(key=lambda x: x[0], reverse=True)
+    history = [g for _, g in finished[:12]]
+    _OTHER_HISTORY_CACHE[key] = history
+    return history
+
+
+def _other_team_avg(team_id, history):
+    vals = []
+    for g in history:
+        home, away = _other_game_teams(g)
+        hs = _other_score(g, "home")
+        aws = _other_score(g, "away")
+        if hs is None or aws is None:
+            continue
+        if int(home.get("id") or -1) == int(team_id):
+            vals.append(hs)
+        elif int(away.get("id") or -1) == int(team_id):
+            vals.append(aws)
+    if not vals:
+        return None
+    return sum(vals) / len(vals), len(vals)
+
+
+def _other_fixture_expected(g, histories):
+    home, away = _other_game_teams(g)
+    hp = _other_team_avg(home.get("id"), histories.get(int(home.get("id"))))
+    ap = _other_team_avg(away.get("id"), histories.get(int(away.get("id"))))
+    if not hp or not ap or hp[1] < 3 or ap[1] < 3:
+        return None
+    return {
+        "expected": hp[0] + ap[0],
+        "home": hp[0],
+        "away": ap[0],
+        "sample": min(hp[1], ap[1]),
+    }
+
+
+def _other_fixture_result(sport, g, x):
+    home, away = _other_game_teams(g)
+    league = g.get("league") or {}
+    return {
+        "fixture_id": _other_game_id(g),
+        "home_name": home.get("name") or "HOME",
+        "away_name": away.get("name") or "AWAY",
+        "league": league.get("name") or "-",
+        "country": league.get("country") or "-",
+        "date": _other_game_date(g),
+        "expected": x,
+    }
+
+
+def _format_other_sport(sport, results):
+    cfg = OTHER_SPORTS[sport]
+    valid = [r for r in results if r.get("expected")]
+    high = sorted(valid, key=lambda r: r["expected"]["expected"], reverse=True)[:3]
+    low = sorted(valid, key=lambda r: r["expected"]["expected"])[:3]
+
+    lines = [cfg["label"], "🔥 TOP 3 НАД"]
+    for i, r in enumerate(high, 1):
+        x = r["expected"]
+        dt = _other_game_time_bg({"date": r["date"]})
+        kickoff = dt.strftime("%d.%m %H:%M") if dt else "?"
+        lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
+        lines.append(f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}")
+        lines.append(f"   {r['league']} | {r['country']} | {kickoff} BG")
+    if not high:
+        lines.append("Няма достатъчно статистика.")
+
+    lines.extend(["", "❄️ TOP 3 ПОД"])
+    for i, r in enumerate(low, 1):
+        x = r["expected"]
+        dt = _other_game_time_bg({"date": r["date"]})
+        kickoff = dt.strftime("%d.%m %H:%M") if dt else "?"
+        lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
+        lines.append(f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}")
+        lines.append(f"   {r['league']} | {r['country']} | {kickoff} BG")
+    if not low:
+        lines.append("Няма достатъчно статистика.")
+    return "\n".join(lines)
+
+
+def run_other_sports_scanner(reference_date=None, send_func=None):
+    """10:00 BG signal for non-football sports, fixtures 12:00 -> 12:00."""
+    ref = reference_date or datetime.now(TZ).date()
+    start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
+    end = start + timedelta(hours=24)
+    lines = [
+        "🌍 DAILY OTHER SPORTS SCANNER",
+        ref.strftime("%d.%m.%Y"),
+        "10:00 BG → срещи 12:00 днес до 12:00 утре",
+        "История: последните завършени мачове от текущия сезон",
+        "",
+    ]
+
+    total_fixtures = 0
+    total_valid = 0
+    for sport in OTHER_SPORTS:
+        try:
+            games = get_other_sport_fixtures(sport, start, end)
+            total_fixtures += len(games)
+            if not games:
+                lines.extend([OTHER_SPORTS[sport]["label"], "Няма срещи в 24-часовия прозорец.", ""])
+                continue
+
+            histories = {}
+            unique = {}
+            for g in games:
+                season = _other_season(g)
+                home, away = _other_game_teams(g)
+                if season is not None:
+                    unique[(int(home["id"]), str(season))] = None
+                    unique[(int(away["id"]), str(season))] = None
+
+            for team_id, season in unique:
+                try:
+                    histories[team_id] = get_other_team_history(sport, team_id, season)
+                except Exception as exc:
+                    print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
+                    histories[team_id] = []
+
+            results = []
+            for g in games:
+                try:
+                    x = _other_fixture_expected(g, histories)
+                    if x:
+                        results.append(_other_fixture_result(sport, g, x))
+                except Exception as exc:
+                    print("OTHER SPORTS MATCH ERROR:", sport, repr(exc))
+            total_valid += len(results)
+            lines.append(_format_other_sport(sport, results))
+            lines.append("")
+        except Exception as exc:
+            print("OTHER SPORTS SCANNER ERROR:", sport, repr(exc))
+            lines.extend([OTHER_SPORTS[sport]["label"], "Грешка при зареждането на данните.", ""])
+
+    lines.append(f"Мачове: {total_fixtures} | Валидни статистически сигнали: {total_valid}")
+    message = "\n".join(lines)
+    print(message)
+    if send_func:
+        send_func(message)
+    return message
+
+
 _START = time.time()
 
 
 def run_due_scans(send_func):
-    """Run the due daily scan(s) once, persisted in SQLite."""
+    """Run the due daily scans once, persisted in SQLite."""
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
 
-    # 11:00 scan: once any time from 11:00 until 21:00.
-    if now.hour >= 11 and now.hour < 21:
-        key = f"day11:{today.isoformat()}"
+    # 10:00 scan: football remains exactly as before, plus the new
+    # non-football 24-hour scanner (12:00 today -> 12:00 tomorrow).
+    if now.hour >= 10 and now.hour < 20:
+        key = f"day:{today.isoformat()}"
         if not already_ran(key):
-            print("DAILY SCANNER 11:00 STARTED")
+            print(_signal_text("DAILY SCANNER 10:00 STARTED"))
             run_daily_scanner("day", today, send_func)
             mark_ran(key)
-            print("DAILY SCANNER 11:00 FINISHED")
+            print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # 21:00 scan: once any time from 21:00 until midnight.
-    if now.hour >= 21:
-        key = f"night21:{today.isoformat()}"
+        other_key = f"other_sports:{today.isoformat()}"
+        if not already_ran(other_key):
+            print(_signal_text("OTHER SPORTS SCANNER 10:00 STARTED"))
+            run_other_sports_scanner(today, send_func)
+            mark_ran(other_key)
+            print(_signal_text("OTHER SPORTS SCANNER 10:00 FINISHED"))
+
+    # 20:00 football scan remains unchanged.
+    if now.hour >= 20:
+        key = f"night:{today.isoformat()}"
         if not already_ran(key):
-            print("DAILY SCANNER 21:00 STARTED")
+            print(_signal_text("DAILY SCANNER 20:00 STARTED"))
             run_daily_scanner("night", today, send_func)
             mark_ran(key)
-            print("DAILY SCANNER 21:00 FINISHED")
+            print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
          
