@@ -872,7 +872,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         now_bg.strftime("%d.%m.%Y"),
         f"\n{title}",
         f"Мачове в прозореца: {len(matches)}",
-        f"Мачове с поне един валиден пазар: {sum(1 for r in results if r["markets"])}",
+        f"Мачове с поне един валиден пазар: {sum(1 for r in results if r['markets'])}",
         "История: всички завършени мачове от текущия сезон",
         "",
     ]
