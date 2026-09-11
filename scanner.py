@@ -1395,9 +1395,9 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
                 f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
                 0, 0,
             )
-    if send_func:
-        return _send_other_sports_daily_report(ref, send_func)
+
     return _get_other_sport_results(ref)
+    
 
 
 def _run_staggered_other_sports(reference_date, send_func, now):
