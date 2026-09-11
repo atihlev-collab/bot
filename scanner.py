@@ -13,11 +13,13 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-
+import threading
 import requests
 
+_CONSOLE_LOCK = threading.Lock()
+
 from config import API_KEY, CHAT_ID
-import threading
+
 _START = time.time()
 BASE_URL = "https://v3.football.api-sports.io"
 HEADERS = {"x-apisports-key": API_KEY}
@@ -30,7 +32,7 @@ _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
-_CONSOLE_LOCK = threading.Lock()
+
 
 def _api(endpoint, params=None, timeout=25):
     global _LAST_API_CALL
