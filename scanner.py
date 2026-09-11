@@ -30,7 +30,7 @@ _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
-
+_CONSOLE_LOCK = threading.Lock()
 
 def _api(endpoint, params=None, timeout=25):
     global _LAST_API_CALL
