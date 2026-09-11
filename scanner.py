@@ -1503,9 +1503,8 @@ def run_due_scans(send_func):
     if now.hour >= 20:
         key = f"night:{today.isoformat()}"
 
-             if not already_ran(key):
-
-             print(_signal_text("DAILY SCANNER 20:00 STARTED"))
-             run_daily_scanner("night", today, send_func)
-             mark_ran(key)
-             print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
+        if not already_ran(key):
+            print(_signal_text("DAILY SCANNER 20:00 STARTED"))
+            run_daily_scanner("night", today, send_func)
+            mark_ran(key)
+            print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
