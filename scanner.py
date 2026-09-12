@@ -1,9 +1,9 @@
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
-# Runs once at/after 10:00 and once at/after 20:00 Bulgaria time.
-# 10:00: today's fixtures 10:00-23:59 BG
-# 20:00: tomorrow's fixtures 00:00-10:00 BG
+# Runs exactly twice per day, only at the two scheduled signal times.
+# 11:00: day football signal
+# 21:00: night football signal
 # =========================================================
 
 import re
@@ -24,14 +24,13 @@ HEADERS = {"x-apisports-key": API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
 HISTORY_GAMES = None
-MAX_WORKERS = 8
+MAX_WORKERS = 4
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
-_CONSOLE_LOCK = threading.Lock()
+_CONSOLE_LOCK = threading.RLock()
 _LAST_API_CALL = 0.0
-_API_MIN_INTERVAL = 0.12
-_TEAM_CURRENT_LEAGUE_CACHE = {}
+_API_MIN_INTERVAL = 6.2
 
 
 def _api(endpoint, params=None, timeout=25):
@@ -106,6 +105,17 @@ def init_scanner_db():
             data TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             PRIMARY KEY (team_id, season)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS other_sports_daily_results (
+            run_date TEXT NOT NULL,
+            sport TEXT NOT NULL,
+            report TEXT NOT NULL,
+            fixtures INTEGER NOT NULL DEFAULT 0,
+            valid INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (run_date, sport)
         )
     """)
     conn.commit()
@@ -761,14 +771,8 @@ def _team_stats_competition(match, team_id):
     if not _is_cup_competition(league):
         return int(league["id"]), int(league["season"])
 
-    tid = int(team_id)
-    cached = _TEAM_CURRENT_LEAGUE_CACHE.get(tid)
-    if cached is not None:
-        return cached
-
-    response = _api("leagues", {"team": tid, "current": "true"})
+    response = _api("leagues", {"team": int(team_id), "current": "true"})
     if not isinstance(response, list):
-        _TEAM_CURRENT_LEAGUE_CACHE[tid] = None
         return None
 
     candidates = []
@@ -796,14 +800,14 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     ref = ref if hasattr(ref, "year") else now_bg.date()
 
     if mode == "day":
-        start = datetime(ref.year, ref.month, ref.day, 10, 0, tzinfo=TZ)
+        start = datetime(ref.year, ref.month, ref.day, 11, 0, tzinfo=TZ)
         end = datetime(ref.year, ref.month, ref.day + 1, 0, 0, tzinfo=TZ)
-        title = "10:00 ДНЕВЕН СКЕНЕР"
+        title = "11:00 ДНЕВЕН СКЕНЕР"
     else:
         next_day = ref + timedelta(days=1)
         start = datetime(next_day.year, next_day.month, next_day.day, 0, 0, tzinfo=TZ)
-        end = datetime(next_day.year, next_day.month, next_day.day, 10, 0, tzinfo=TZ)
-        title = "20:00 НОЩЕН СКЕНЕР"
+        end = datetime(next_day.year, next_day.month, next_day.day, 11, 0, tzinfo=TZ)
+        title = "21:00 НОЩЕН СКЕНЕР"
 
     matches = get_fixtures_for_window(start, end)
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
@@ -907,665 +911,568 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     return message
 
 
-
 # =========================================================
-# OTHER SPORTS — SEPARATE SPORT BLOCKS
-# =========================================================
-# Each sport has its own source adapter.
-# NBA / Basketball -> API-Sports
-# Hockey / Handball / Rugby / American Football / Baseball -> FlashLive
-#
-# FlashLive is the current-data provider documented for Flashscore-style
-# coverage. It requires a RapidAPI key (free tier is available).
-# No secondary score-site fallback is used in this block.
+# OTHER SPORTS DAILY TOTALS SCANNER — API-SPORTS
+# Same history flow as football.
+# 10:00 BG: scan 12:00 today -> 12:00 tomorrow.
 # =========================================================
 
-import os
-import json
-
-OTHER_SPORT_BLOCKS = {
-    "nba": {
-        "label": "🏀 NBA",
-        "source": "api_sports",
-        "api_base": "https://v2.nba.api-sports.io",
-    },
-    "basketball": {
-        "label": "🏀 БАСКЕТБОЛ",
-        "source": "api_sports",
-        "api_base": "https://v1.basketball.api-sports.io",
-    },
-    "hockey": {
-        "label": "🏒 ХОКЕЙ",
-        "source": "flashlive",
-        "flashlive_sport_id": 4,
-    },
-    "handball": {
-        "label": "🤾 ХАНДБАЛ",
-        "source": "flashlive",
-        "flashlive_sport_id": 7,
-    },
-    "rugby": {
-        "label": "🏉 РЪГБИ",
-        "source": "flashlive",
-        "flashlive_sport_id": 8,
-    },
-    "american_football": {
-        "label": "🏈 NFL / NCAA",
-        "source": "flashlive",
-        "flashlive_sport_id": 5,
-    },
-    "baseball": {
-        "label": "⚾ БЕЙЗБОЛ",
-        "source": "flashlive",
-        "flashlive_sport_id": 6,
-    },
+OTHER_SPORTS = {
+    "nba": {"label": "🏀 NBA", "base": "https://v2.nba.api-sports.io", "stats_endpoint": "games/statistics"},
+    "basketball": {"label": "🏀 БАСКЕТБОЛ", "base": "https://v1.basketball.api-sports.io", "stats_endpoint": "games/statistics/teams"},
+    "hockey": {"label": "🏒 ХОКЕЙ", "base": "https://v1.hockey.api-sports.io", "stats_endpoint": "games/statistics/teams"},
+    "handball": {"label": "🤾 ХАНДБАЛ", "base": "https://v1.handball.api-sports.io", "stats_endpoint": "games/statistics/teams"},
+    "rugby": {"label": "🏉 РЪГБИ", "base": "https://v1.rugby.api-sports.io", "stats_endpoint": "games/statistics/teams"},
+    "american_football": {"label": "🏈 NFL / NCAA", "base": "https://v1.american-football.api-sports.io", "stats_endpoint": "games/statistics/teams"},
+    "baseball": {"label": "⚾ БЕЙЗБОЛ", "base": "https://v1.baseball.api-sports.io", "stats_endpoint": "games/statistics/teams"},
 }
 
-try:
-    import config as _scanner_config
-    FLASHLIVE_API_KEY = (
-        getattr(_scanner_config, "FLASHLIVE_API_KEY", None)
-        or os.getenv("FLASHLIVE_API_KEY")
-        or os.getenv("RAPIDAPI_KEY")
-    )
-except Exception:
-    FLASHLIVE_API_KEY = os.getenv("FLASHLIVE_API_KEY") or os.getenv("RAPIDAPI_KEY")
-
-FLASHLIVE_BASE = "https://flashlive-sports.p.rapidapi.com"
-FLASHLIVE_HEADERS = {
-    "x-rapidapi-key": FLASHLIVE_API_KEY or "",
-    "x-rapidapi-host": "flashlive-sports.p.rapidapi.com",
-}
-_OTHER_BLOCK_CACHE = {}
-_OTHER_BLOCK_LOCK = threading.Lock()
+_OTHER_API_LOCK = threading.Lock()
+_OTHER_LAST_API_CALL = {sport: 0.0 for sport in OTHER_SPORTS}
+# Keep a safe gap between calls to the same API product.  The other-sports
+# scheduler deliberately runs one sport every 5 minutes, and this limiter
+# prevents a single sport from bursting through its per-minute quota.
+_OTHER_API_MIN_INTERVAL = 6.2
+_OTHER_HISTORY_CACHE = {}
+_OTHER_STATS_CACHE = {}
 
 
-def _flashlive_get(endpoint, params):
-    if not FLASHLIVE_API_KEY:
-        raise RuntimeError(
-            "FLASHLIVE_API_KEY is missing. Add FLASHLIVE_API_KEY to config.py "
-            "or the environment before running non-API-Sports sports."
-        )
-    r = requests.get(
-        f"{FLASHLIVE_BASE}{endpoint}",
-        headers=FLASHLIVE_HEADERS,
-        params=params,
-        timeout=25,
-    )
-    if r.status_code == 429:
-        raise RuntimeError("FlashLive rate limit (429)")
-    r.raise_for_status()
-    payload = r.json()
-    if isinstance(payload, dict) and payload.get("detail"):
-        raise RuntimeError(str(payload["detail"]))
-    return payload.get("DATA") if isinstance(payload, dict) else payload
-
-
-def _flashlive_events_for_day(sport_id, day_offset, timezone_hours=3):
-    data = _flashlive_get(
-        "/v1/events/list",
-        {
-            "locale": "en_INT",
-            "sport_id": int(sport_id),
-            "timezone": str(timezone_hours),
-            "indent_days": int(day_offset),
-        },
-    )
-    return data if isinstance(data, list) else []
-
-
-def _flashlive_flat_events(sport_id, start_bg, end_bg):
-    out = []
-    seen = set()
-    for offset in (0, 1):
-        for tournament in _flashlive_events_for_day(sport_id, offset):
-            if not isinstance(tournament, dict):
-                continue
-            tournament_name = tournament.get("NAME") or "-"
-            stage_id = tournament.get("TOURNAMENT_STAGE_ID")
-            country = tournament.get("COUNTRY_NAME") or "-"
-            for e in tournament.get("EVENTS") or []:
-                eid = e.get("EVENT_ID")
-                if not eid or eid in seen:
-                    continue
-                try:
-                    dt = datetime.fromtimestamp(float(e["START_TIME"]), tz=timezone.utc).astimezone(TZ)
-                except Exception:
-                    continue
-                if not (start_bg <= dt < end_bg):
-                    continue
-                if str(e.get("STAGE") or "").upper() in {
-                    "FINISHED", "CANCELLED", "POSTPONED", "ABANDONED"
-                }:
-                    continue
-                seen.add(eid)
-                e = dict(e)
-                e["_tournament_name"] = tournament_name
-                e["_country_name"] = country
-                e["_stage_id"] = stage_id
-                out.append(e)
-    out.sort(key=lambda x: x.get("START_TIME", 0))
-    return out
-
-
-def _flashlive_results_for_stage(stage_id):
-    if not stage_id:
-        return []
-    key = ("stage", str(stage_id))
-    with _OTHER_BLOCK_LOCK:
-        if key in _OTHER_BLOCK_CACHE:
-            return _OTHER_BLOCK_CACHE[key]
-
-    page = 1
-    results = []
-    # Page 1 is intentionally enough for the football-style rule:
-    # use the most recent completed games first. More pages are only loaded
-    # when fewer than three usable games are found.
-    while page <= 3 and len(results) < 12:
-        data = _flashlive_get(
-            "/v1/tournaments/results",
-            {
-                "locale": "en_INT",
-                "tournament_stage_id": str(stage_id),
-                "page": page,
-            },
-        )
-        if not isinstance(data, list) or not data:
-            break
-        found = 0
-        for group in data:
-            for e in group.get("EVENTS") or [] if isinstance(group, dict) else []:
-                if str(e.get("STAGE") or "").upper() != "FINISHED":
-                    continue
-                if e.get("EVENT_ID"):
-                    results.append(e)
-                    found += 1
-        if found == 0:
-            break
-        page += 1
-
-    results = results[:12]
-    with _OTHER_BLOCK_LOCK:
-        _OTHER_BLOCK_CACHE[key] = results
-    return results
-
-
-def _flashlive_team_results(sport_id, team_id):
-    key = ("team", int(sport_id), str(team_id))
-    with _OTHER_BLOCK_LOCK:
-        if key in _OTHER_BLOCK_CACHE:
-            return _OTHER_BLOCK_CACHE[key]
-
-    data = _flashlive_get(
-        "/v1/teams/results",
-        {
-            "locale": "en_INT",
-            "sport_id": int(sport_id),
-            "team_id": str(team_id),
-            "page": 1,
-        },
-    )
-    results = []
-    if isinstance(data, list):
-        for group in data:
-            for e in group.get("EVENTS") or [] if isinstance(group, dict) else []:
-                if str(e.get("STAGE") or "").upper() != "FINISHED":
-                    continue
-                if e.get("EVENT_ID"):
-                    results.append(e)
-    results = results[:12]
-    with _OTHER_BLOCK_LOCK:
-        _OTHER_BLOCK_CACHE[key] = results
-    return results
-
-
-def _fl_score(e, home=True):
-    key = "HOME_SCORE_CURRENT" if home else "AWAY_SCORE_CURRENT"
-    try:
-        return float(e.get(key))
-    except (TypeError, ValueError):
-        return None
-
-
-def _fl_team_history(sport_id, team_id, stage_id):
-    primary = _flashlive_results_for_stage(stage_id)
-    team_id_s = str(team_id)
-
-    def belongs(e):
-        return str(e.get("HOME_PARTICIPANT_ID") or e.get("HOME_TEAM_ID") or "") == team_id_s \
-            or str(e.get("AWAY_PARTICIPANT_ID") or e.get("AWAY_TEAM_ID") or "") == team_id_s
-
-    primary_team = [e for e in primary if belongs(e)]
-    if len(primary_team) >= 3:
-        return primary_team[:12]
-
-    # Football-style fallback: current official team results, no friendlies.
-    fallback = _flashlive_team_results(sport_id, team_id)
-    return fallback[:12]
-
-
-def _fl_fixture_record(e):
-    return {
-        "fixture_id": e.get("EVENT_ID"),
-        "home_name": e.get("HOME_NAME") or "HOME",
-        "away_name": e.get("AWAY_NAME") or "AWAY",
-        "league": e.get("_tournament_name") or e.get("TOURNAMENT_NAME") or "-",
-        "country": e.get("_country_name") or "-",
-        "date": datetime.fromtimestamp(
-            float(e["START_TIME"]), tz=timezone.utc
-        ).astimezone(TZ).isoformat(),
-    }
-
-
-def _fl_team_avg(team_id, history):
-    vals = []
-    tid = str(team_id)
-    for e in history:
-        home_id = str(e.get("HOME_PARTICIPANT_ID") or e.get("HOME_TEAM_ID") or "")
-        away_id = str(e.get("AWAY_PARTICIPANT_ID") or e.get("AWAY_TEAM_ID") or "")
-        if home_id == tid:
-            score = _fl_score(e, True)
-        elif away_id == tid:
-            score = _fl_score(e, False)
-        else:
-            # Some FlashLive responses omit team IDs. Match by name is not
-            # safe enough for the statistical calculation.
-            continue
-        if score is not None:
-            vals.append(score)
-    return (sum(vals) / len(vals), len(vals)) if vals else None
-
-
-def _run_flashlive_block(sport, reference_date):
-    cfg = OTHER_SPORT_BLOCKS[sport]
-    start = datetime(
-        reference_date.year, reference_date.month, reference_date.day, 12, 0, tzinfo=TZ
-    )
-    end = start + timedelta(hours=24)
-
-    games = _flashlive_flat_events(cfg["flashlive_sport_id"], start, end)
-    results = []
-
-    for g in games:
-        stage_id = g.get("_stage_id")
-        home_id = g.get("HOME_PARTICIPANT_ID") or g.get("HOME_TEAM_ID")
-        away_id = g.get("AWAY_PARTICIPANT_ID") or g.get("AWAY_TEAM_ID")
-        if not home_id or not away_id:
-            # If event list does not expose IDs, it cannot safely be matched
-            # to team history. Do not invent a match.
-            continue
-
-        home_hist = _fl_team_history(cfg["flashlive_sport_id"], home_id, stage_id)
-        away_hist = _fl_team_history(cfg["flashlive_sport_id"], away_id, stage_id)
-
-        hp = _fl_team_avg(home_id, home_hist)
-        ap = _fl_team_avg(away_id, away_hist)
-
-        if not hp or not ap or hp[1] < 3 or ap[1] < 3:
-            continue
-
-        record = _fl_fixture_record(g)
-        record["expected"] = {
-            "home": hp[0],
-            "away": ap[0],
-            "expected": hp[0] + ap[0],
-            "sample": min(hp[1], ap[1]),
-        }
-        results.append(record)
-
-    return games, results
-
-
-def _api_sports_other_block(sport, reference_date):
-    """
-    API-Sports block for NBA/Basketball only.
-    It deliberately uses fixture scores as the statistical value, so there
-    is no second historical box-score endpoint and no request per historical
-    match.
-    """
-    cfg = OTHER_SPORT_BLOCKS[sport]
-    start = datetime(
-        reference_date.year, reference_date.month, reference_date.day, 12, 0, tzinfo=TZ
-    )
-    end = start + timedelta(hours=24)
-
-    # NBA/Basketball endpoints accept date-based fixture discovery.
-    matches = []
-    for day in (start.date(), end.date()):
-        response = _other_direct_api(
-            cfg["api_base"], "games", {"date": day.isoformat()}
-        )
-        for g in response or []:
-            gid = (g.get("id") or (g.get("game") or {}).get("id"))
-            if not gid:
-                continue
-            raw = g.get("date") or (g.get("game") or {}).get("date")
-            try:
-                dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00")).astimezone(TZ)
-            except Exception:
-                continue
-            if not (start <= dt < end):
-                continue
-            status = str((g.get("status") or {}).get("short") or "").upper()
-            if status in {"FT", "FINAL", "FINISHED", "CANC", "POST", "PST"}:
-                continue
-            matches.append(g)
-
-    # Unique teams, then football-style current competition -> season fallback.
-    histories = {}
-    for g in matches:
-        league = g.get("league") or {}
-        season = league.get("season")
-        league_id = league.get("id")
-        for team in ((g.get("teams") or {}).get("home") or {}, (g.get("teams") or {}).get("away") or {}):
-            tid = team.get("id")
-            if not tid or season is None:
-                continue
-            key = (int(tid), str(season), str(league_id or ""))
-            if key in histories:
-                continue
-
-            primary = _other_direct_api(
-                cfg["api_base"], "games",
-                {"team": int(tid), "league": int(league_id), "season": season}
-            ) if league_id else []
-
-            finished = [
-                x for x in (primary or [])
-                if str((x.get("status") or {}).get("short") or "").upper()
-                in {"FT", "FINAL", "FINISHED", "AOT", "OT", "AET"}
-            ]
-
-            if len(finished) < 3:
-                finished = _other_direct_api(
-                    cfg["api_base"], "games",
-                    {"team": int(tid), "season": season}
-                ) or []
-                finished = [
-                    x for x in finished
-                    if str((x.get("status") or {}).get("short") or "").upper()
-                    in {"FT", "FINAL", "FINISHED", "AOT", "OT", "AET"}
-                ]
-
-            finished.sort(
-                key=lambda x: str(x.get("date") or (x.get("game") or {}).get("date") or "")
-            )
-            histories[key] = finished[-12:]
-
-    results = []
-    for g in matches:
-        league = g.get("league") or {}
-        season = league.get("season")
-        league_id = str(league.get("id") or "")
-        home = (g.get("teams") or {}).get("home") or {}
-        away = (g.get("teams") or {}).get("away") or {}
-        hh = histories.get((int(home.get("id")), str(season), league_id), [])
-        ah = histories.get((int(away.get("id")), str(season), league_id), [])
-
-        def avg(team_id, hist):
-            vals = []
-            for x in hist:
-                th = (x.get("teams") or {}).get("home") or {}
-                ta = (x.get("teams") or {}).get("away") or {}
-                sc = x.get("scores") or x.get("score") or {}
-                if int(th.get("id") or -1) == int(team_id):
-                    val = sc.get("home")
-                elif int(ta.get("id") or -1) == int(team_id):
-                    val = sc.get("away")
-                else:
-                    continue
-                if isinstance(val, dict):
-                    val = val.get("total") or val.get("points") or val.get("goals") or val.get("runs")
-                try:
-                    vals.append(float(val))
-                except (TypeError, ValueError):
-                    pass
-            return (sum(vals) / len(vals), len(vals)) if vals else None
-
-        hp = avg(home.get("id"), hh)
-        ap = avg(away.get("id"), ah)
-        if not hp or not ap or hp[1] < 3 or ap[1] < 3:
-            continue
-
-        results.append({
-            "fixture_id": g.get("id") or (g.get("game") or {}).get("id"),
-            "home_name": home.get("name") or "HOME",
-            "away_name": away.get("name") or "AWAY",
-            "league": league.get("name") or "-",
-            "country": league.get("country") or "-",
-            "date": g.get("date") or (g.get("game") or {}).get("date"),
-            "expected": {
-                "home": hp[0],
-                "away": ap[0],
-                "expected": hp[0] + ap[0],
-                "sample": min(hp[1], ap[1]),
-            },
-        })
-
-    return matches, results
-
-
-def _other_direct_api(base, endpoint, params=None):
-    # One shared rate limiter for API-Sports other-sport blocks.
-    global _OTHER_LAST_API_CALL
-    for attempt in range(3):
+def _other_api(sport, endpoint, params=None, timeout=25):
+    cfg = OTHER_SPORTS[sport]
+    for attempt in range(5):
         try:
             with _OTHER_API_LOCK:
-                wait = _OTHER_API_MIN_INTERVAL - (time.monotonic() - _OTHER_LAST_API_CALL)
+                last = _OTHER_LAST_API_CALL.get(sport, 0.0)
+                wait = _OTHER_API_MIN_INTERVAL - (time.monotonic() - last)
                 if wait > 0:
                     time.sleep(wait)
-                _OTHER_LAST_API_CALL = time.monotonic()
+                _OTHER_LAST_API_CALL[sport] = time.monotonic()
 
-            r = requests.get(
-                f"{base}/{endpoint}",
-                headers=HEADERS,
-                params=params or {},
-                timeout=25,
-            )
-            if r.status_code == 429:
-                time.sleep(min(2 ** attempt, 8))
+            r = requests.get(f"{cfg['base']}/{endpoint}", headers=HEADERS,
+                             params=params or {}, timeout=timeout)
+            if r.status_code == 429 or 500 <= r.status_code < 600:
+                retry_after = r.headers.get("Retry-After")
+                try:
+                    delay = float(retry_after)
+                except (TypeError, ValueError):
+                    delay = min(5.0 * (2 ** attempt), 60.0)
+                print(f"OTHER SPORTS RATE LIMIT [{sport}] {endpoint}: sleeping {delay:.1f}s")
+                time.sleep(delay)
                 continue
             r.raise_for_status()
             payload = r.json()
             if payload.get("errors"):
-                print("OTHER SPORTS API ERROR:", payload.get("errors"))
-                return []
+                print(f"OTHER SPORTS API ERROR [{sport}]:", endpoint, payload.get("errors"))
+                return None
             return payload.get("response") or []
         except Exception as exc:
-            if attempt == 2:
-                print("OTHER SPORTS REQUEST ERROR:", repr(exc))
-                return []
-            time.sleep(0.8 * (attempt + 1))
-    return []
+            if attempt == 4:
+                print(f"OTHER SPORTS REQUEST ERROR [{sport}]: {endpoint} {exc!r}")
+                return None
+            time.sleep(min(2.0 * (2 ** attempt), 30.0))
+    return None
 
 
-def _format_other_block(label, results):
-    high = sorted(results, key=lambda r: r["expected"]["expected"], reverse=True)[:3]
-    low = sorted(results, key=lambda r: r["expected"]["expected"])[:3]
+def _other_game_id(g):
+    return (g or {}).get("id") or ((g or {}).get("game") or {}).get("id")
 
-    lines = [label, "🔥 TOP 3 НАД"]
-    for i, r in enumerate(high, 1):
-        x = r["expected"]
-        dt = _other_game_time_bg({"date": r["date"]})
-        lines += [
-            f"{i}. {r['home_name']} - {r['away_name']}",
-            f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}",
-            f"   {r['league']} | {r['country']} | {dt.strftime('%d.%m %H:%M') if dt else '?'} BG",
-        ]
-        if i < len(high):
-            lines.append("")
 
-    if not high:
-        lines.append("Няма достатъчно статистика.")
+def _other_game_date(g):
+    game = g.get("game") or {}
+    raw = g.get("date") or game.get("date")
+    if isinstance(raw, dict):
+        raw = raw.get("date") or raw.get("time")
+    return raw
 
-    lines += ["", "❄️ TOP 3 ПОД"]
 
-    for i, r in enumerate(low, 1):
-        x = r["expected"]
-        dt = _other_game_time_bg({"date": r["date"]})
-        lines += [
-            f"{i}. {r['home_name']} - {r['away_name']}",
-            f"   Очаквано: {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}",
-            f"   {r['league']} | {r['country']} | {dt.strftime('%d.%m %H:%M') if dt else '?'} BG",
-        ]
-        if i < len(low):
-            lines.append("")
+def _other_game_time_bg(g):
+    raw = _other_game_date(g)
+    if not raw:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(TZ)
+    except Exception:
+        return None
 
-    if not low:
-        lines.append("Няма достатъчно статистика.")
+
+def _other_game_teams(g):
+    teams = g.get("teams") or {}
+    return teams.get("home") or {}, teams.get("away") or {}
+
+
+def _other_score(g, side):
+    scores = g.get("scores") or g.get("score") or {}
+    value = scores.get(side)
+    if isinstance(value, dict):
+        for key in ("total", "points", "goals", "runs", "score"):
+            n = _safe_float(value.get(key))
+            if n is not None:
+                return n
+    return _safe_float(value)
+
+
+def _other_game_status(g):
+    status = g.get("status") or (g.get("game") or {}).get("status") or {}
+    if isinstance(status, dict):
+        return str(status.get("short") or status.get("long") or "").upper().strip()
+    return str(status).upper().strip()
+
+
+def _other_is_finished(g):
+    status = _other_game_status(g)
+    if status in {"CANC", "POST", "PST", "ABD", "ABAN", "SUSP", "DELAY", "NS", "TBD", "NOT_STARTED"}:
+        return False
+    if status in {"FT", "FINAL", "FINISHED", "END", "AOT", "AET", "OT", "PEN", "AFTER_OT", "AFTER_PEN"}:
+        return True
+    return _other_score(g, "home") is not None and _other_score(g, "away") is not None
+
+
+def _other_season(g):
+    league = g.get("league") or {}
+    if league.get("season") is not None:
+        return league.get("season")
+    game = g.get("game") or {}
+    if game.get("season") is not None:
+        return game.get("season")
+    return g.get("season")
+
+
+def _other_league_id(g):
+    value = (g.get("league") or {}).get("id")
+    return str(value) if value not in (None, "") else ""
+
+
+def _other_is_official(g):
+    league = g.get("league") or {}
+    typ = str(league.get("type") or "").casefold()
+    name = str(league.get("name") or "").casefold()
+    return typ != "friendly" and "friend" not in name and "exhibition" not in name
+
+
+def _other_history_clean(games, season):
+    out, seen = [], set()
+    for g in games or []:
+        gid = _other_game_id(g)
+        if not gid or gid in seen or not _other_is_finished(g):
+            continue
+        if str(_other_season(g)) != str(season) or not _other_is_official(g):
+            continue
+        home, away = _other_game_teams(g)
+        if not home.get("id") or not away.get("id"):
+            continue
+        if _other_score(g, "home") is None or _other_score(g, "away") is None:
+            continue
+        seen.add(gid)
+        out.append(g)
+    out.sort(key=lambda x: _other_game_time_bg(x) or datetime.min.replace(tzinfo=TZ), reverse=True)
+    return out[:12]
+
+
+def get_other_team_history(sport, team_id, season, league_id=None):
+    """Football-style history with ONE API call per team/season.
+
+    We fetch the team's current-season games once, then locally prefer the
+    requested tournament. If it has fewer than 3 official completed games,
+    we fill from other official competitions in the SAME season. Friendlies
+    and previous seasons are never used.
+    """
+    base_key = (sport, int(team_id), str(season))
+    key = (sport, int(team_id), str(season), str(league_id or ""))
+    if key in _OTHER_HISTORY_CACHE:
+        return _OTHER_HISTORY_CACHE[key]
+
+    if base_key not in _OTHER_TEAM_HISTORY_CACHE:
+        all_games = _other_api(sport, "games", {
+            "team": int(team_id),
+            "season": season,
+        })
+        _OTHER_TEAM_HISTORY_CACHE[base_key] = _other_history_clean(all_games, season)
+
+    current = list(_OTHER_TEAM_HISTORY_CACHE.get(base_key, []))
+    if league_id:
+        same = [g for g in current if _other_league_id(g) == str(league_id)]
+        other = [g for g in current if _other_league_id(g) != str(league_id)]
+        selected = (same + other)[:12]
+        print("HISTORY:", sport, team_id, "competition_matches=", len(same),
+              "-> current competition" if len(same) >= 3 else
+              "-> current-season official matches")
+    else:
+        selected = current[:12]
+
+    selected.sort(key=lambda x: _other_game_time_bg(x) or datetime.min.replace(tzinfo=TZ))
+    _OTHER_HISTORY_CACHE[key] = selected
+    return selected
+
+
+def _other_stat_number(value):
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        try:
+            return float(value.replace("%", "").replace(",", "").strip())
+        except ValueError:
+            return None
+    if isinstance(value, dict):
+        for k in ("total", "value", "points", "goals", "runs", "score"):
+            n = _other_stat_number(value.get(k))
+            if n is not None:
+                return n
+    return None
+
+
+def _other_stats_for_games(sport, game_ids):
+    """Load real team box-score statistics for historical games, batched to save quota."""
+    missing = [int(x) for x in game_ids if int(x) not in _OTHER_STATS_CACHE]
+    if not missing:
+        return {int(x): _OTHER_STATS_CACHE[int(x)] for x in game_ids}
+    endpoint = OTHER_SPORTS[sport]["stats_endpoint"]
+    loaded = {}
+    for i in range(0, len(missing), 20):
+        batch = missing[i:i+20]
+        params = {"id": "-".join(map(str, batch))}
+        response = _other_api(sport, endpoint, params)
+        if not isinstance(response, list):
+            continue
+        for row in response:
+            gid = (row.get("game") or {}).get("id") or row.get("game_id") or row.get("id")
+            if not gid:
+                continue
+            tid = (row.get("team") or {}).get("id")
+            if not tid:
+                continue
+            values = {}
+            for k, v in row.items():
+                if k in {"game", "team", "player", "type"}:
+                    continue
+                n = _other_stat_number(v)
+                if n is not None:
+                    values[k] = n
+            loaded.setdefault(int(gid), {})[int(tid)] = values
+    _OTHER_STATS_CACHE.update(loaded)
+    return {int(x): _OTHER_STATS_CACHE.get(int(x), {}) for x in game_ids}
+
+
+def _other_team_avg(team_id, history, stats_by_game):
+    values = []
+    for g in history or []:
+        gid = _other_game_id(g)
+        home, away = _other_game_teams(g)
+        stats = stats_by_game.get(int(gid), {}).get(int(team_id), {})
+        # Prefer the actual team box score if API-Sports supplied one.
+        score = None
+        for key in ("points", "goals", "runs", "score", "total"):
+            score = _other_stat_number(stats.get(key))
+            if score is not None:
+                break
+        if score is None:
+            score = _other_score(g, "home" if int(home.get("id") or -1) == int(team_id) else "away")
+        if score is not None:
+            values.append(score)
+    return (sum(values) / len(values), len(values)) if values else None
+
+
+def _other_fixture_expected(g, histories, stats_by_game):
+    home, away = _other_game_teams(g)
+    season = _other_season(g)
+    league_id = _other_league_id(g)
+    hp_hist = histories.get((int(home.get("id")), str(season), league_id), [])
+    ap_hist = histories.get((int(away.get("id")), str(season), league_id), [])
+    hp = _other_team_avg(home.get("id"), hp_hist, stats_by_game)
+    ap = _other_team_avg(away.get("id"), ap_hist, stats_by_game)
+    if not hp or not ap or hp[1] < 3 or ap[1] < 3:
+        return None
+    return {"expected": hp[0] + ap[0], "home": hp[0], "away": ap[0], "sample": min(hp[1], ap[1])}
+
+
+def _other_fixture_result(sport, g, expected):
+    home, away = _other_game_teams(g)
+    league = g.get("league") or {}
+    return {"fixture_id": _other_game_id(g), "home_name": home.get("name") or "HOME",
+            "away_name": away.get("name") or "AWAY", "league": league.get("name") or "-",
+            "country": league.get("country") or "-", "date": _other_game_date(g), "expected": expected}
+
+
+def _format_other_sport(sport, results):
+    # Same presentation as the working football scanner:
+    # TOP 3 highest expected totals and TOP 3 lowest expected totals.
+    label = OTHER_SPORTS[sport]["label"]
+    valid = [
+        r for r in results
+        if r.get("expected")
+        and _safe_float(r["expected"].get("expected")) is not None
+    ]
+
+    high = sorted(
+        valid,
+        key=lambda r: (r["expected"]["expected"], r["expected"].get("sample", 0)),
+        reverse=True,
+    )[:3]
+    low = sorted(
+        valid,
+        key=lambda r: (r["expected"]["expected"], -r["expected"].get("sample", 0)),
+    )[:3]
+
+    lines = [label, "🔥 НАД"]
+
+    if high:
+        for i, r in enumerate(high, 1):
+            x = r["expected"]
+            dt = _other_game_time_bg({"date": r["date"]})
+            kickoff = dt.strftime("%H:%M") if dt else "?"
+            lines += [
+                f"{i}. {r['home_name']} - {r['away_name']}",
+                f"   {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}",
+                f"   Лига: {r['league']}",
+                f"   Държава: {r['country']}",
+                f"   Начало: {kickoff} BG",
+            ]
+            if i < len(high):
+                lines.append("")
+    else:
+        lines.append("Няма достатъчно статистически данни.")
+
+    lines += ["", "❄️ ПОД"]
+
+    if low:
+        for i, r in enumerate(low, 1):
+            x = r["expected"]
+            dt = _other_game_time_bg({"date": r["date"]})
+            kickoff = dt.strftime("%H:%M") if dt else "?"
+            lines += [
+                f"{i}. {r['home_name']} - {r['away_name']}",
+                f"   {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}",
+                f"   Лига: {r['league']}",
+                f"   Държава: {r['country']}",
+                f"   Начало: {kickoff} BG",
+            ]
+            if i < len(low):
+                lines.append("")
+    else:
+        lines.append("Няма достатъчно статистически данни.")
 
     return "\n".join(lines)
 
 
-def run_other_sports_scanner(reference_date=None, send_func=None):
-    """
-    One daily aggregation. Each sport runs through its own block/source.
-    There is no secondary score-site fallback and no per-historical-game statistics endpoint.
-    """
+def _run_one_other_sport(sport, reference_date):
+    """Collect and calculate one sport only; no Telegram send here."""
     ref = reference_date or datetime.now(TZ).date()
-    lines = [
-        "🌍 DAILY OTHER SPORTS SCANNER",
-        ref.strftime("%d.%m.%Y"),
-        "10:00 BG → срещи 12:00 днес до 12:00 утре",
-        "Източник: API-Sports + FlashLive | история: текущ турнир, после официални текущи резултати",
-        "",
-    ]
+    start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
+    end = start + timedelta(hours=24)
 
-    total_fixtures = 0
-    total_valid = 0
+    games = get_other_sport_fixtures(sport, start, end)
+    print(f"OTHER SPORTS API-Sports [{sport}]: fixtures={len(games)}")
+    if not games:
+        report = f"{OTHER_SPORTS[sport]['label']}\nНяма срещи в 24-часовия прозорец."
+        return report, 0, 0
 
-    for sport, cfg in OTHER_SPORT_BLOCKS.items():
+    histories = {}
+    unique = {}
+    for g in games:
+        season = _other_season(g)
+        home, away = _other_game_teams(g)
+        league_id = _other_league_id(g)
+        if season is None:
+            continue
+        for team in (home, away):
+            if team.get("id"):
+                unique[(int(team["id"]), str(season), league_id)] = None
+
+    for team_id, season, league_id in unique:
         try:
-            if cfg["source"] == "flashlive":
-                fixtures, results = _run_flashlive_block(sport, ref)
-            else:
-                fixtures, results = _api_sports_other_block(sport, ref)
-
-            total_fixtures += len(fixtures)
-            total_valid += len(results)
-
-            if not fixtures:
-                lines += [cfg["label"], "Няма срещи в 24-часовия прозорец.", ""]
-            else:
-                lines += [_format_other_block(cfg["label"], results), ""]
-
-            print(
-                f"OTHER SPORTS BLOCK [{sport}] source={cfg['source']} "
-                f"fixtures={len(fixtures)} valid={len(results)}"
+            histories[(team_id, str(season), league_id)] = get_other_team_history(
+                sport, team_id, season, league_id
             )
         except Exception as exc:
-            print(f"OTHER SPORTS BLOCK ERROR [{sport}]:", repr(exc))
-            lines += [cfg["label"], "Грешка при зареждането на данните.", ""]
+            print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
+            histories[(team_id, str(season), league_id)] = []
 
+    all_hist_games = {
+        int(_other_game_id(g)): g
+        for h in histories.values()
+        for g in h
+        if _other_game_id(g)
+    }
+    stats_by_game = _other_stats_for_games(sport, list(all_hist_games))
+    print(
+        f"OTHER SPORTS HISTORY STATS [{sport}]: "
+        f"games={len(all_hist_games)} "
+        f"with_data={sum(1 for v in stats_by_game.values() if v)}"
+    )
+
+    results = []
+    for g in games:
+        try:
+            x = _other_fixture_expected(g, histories, stats_by_game)
+            if x:
+                results.append(_other_fixture_result(sport, g, x))
+        except Exception as exc:
+            print("OTHER SPORTS MATCH ERROR:", sport, repr(exc))
+
+    report = _format_other_sport(sport, results)
+    print(f"OTHER SPORTS API-Sports [{sport}]: valid={len(results)}")
+    return report, len(games), len(results)
+
+
+def _save_other_sport_result(run_date, sport, report, fixtures, valid):
+    conn = _db()
+    conn.execute(
+        """INSERT OR REPLACE INTO other_sports_daily_results
+           (run_date, sport, report, fixtures, valid, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (run_date.isoformat(), sport, report, int(fixtures), int(valid),
+         datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _get_other_sport_results(run_date):
+    conn = _db()
+    rows = conn.execute(
+        "SELECT sport, report, fixtures, valid FROM other_sports_daily_results "
+        "WHERE run_date=?",
+        (run_date.isoformat(),),
+    ).fetchall()
+    conn.close()
+    return {row[0]: {"report": row[1], "fixtures": row[2], "valid": row[3]} for row in rows}
+
+
+def _send_other_sports_daily_report(reference_date, send_func):
+    results = _get_other_sport_results(reference_date)
+    lines = [
+        "🌍 DAILY OTHER SPORTS SCANNER",
+        reference_date.strftime("%d.%m.%Y"),
+        "10:00 BG → срещи 12:00 днес до 12:00 утре",
+        "Източник: API-Sports | история: текущ сезон; първо същият турнир, после други официални турнири",
+        "",
+    ]
+    total_fixtures = 0
+    total_valid = 0
+    for sport in OTHER_SPORTS:
+        item = results.get(sport)
+        if item:
+            lines += [item["report"], ""]
+            total_fixtures += int(item["fixtures"])
+            total_valid += int(item["valid"])
+        else:
+            lines += [OTHER_SPORTS[sport]["label"], "Данните не бяха събрани преди крайния час.", ""]
     lines.append(f"Мачове: {total_fixtures} | Валидни статистически сигнали: {total_valid}")
     message = "\n".join(lines)
-
     with _CONSOLE_LOCK:
-        print(
-            f"OTHER SPORTS MESSAGE READY — "
-            f"{total_valid} valid signals / {total_fixtures} fixtures"
-        )
-
+        print(f"OTHER SPORTS MESSAGE READY — {total_valid} valid signals / {total_fixtures} fixtures")
     if send_func:
         send_func(message)
-
     return message
 
 
+# 09:30→10:00: one API product every five minutes.
+OTHER_SPORT_SCHEDULE = (
+    (9, 30, "nba"),
+    (9, 35, "basketball"),
+    (9, 40, "hockey"),
+    (9, 45, "handball"),
+    (9, 50, "rugby"),
+    (9, 55, "american_football"),
+)
+# Baseball gets the final collection slot immediately before the 10:00 report.
+OTHER_SPORT_FINAL_SLOT = (9, 58, "baseball")
+
+
+def run_other_sports_scanner(reference_date=None, send_func=None):
+    """Manual/full run: collect all sports sequentially, then optionally send."""
+    ref = reference_date or datetime.now(TZ).date()
+    for sport in OTHER_SPORTS:
+        try:
+            report, fixtures, valid = _run_one_other_sport(sport, ref)
+            _save_other_sport_result(ref, sport, report, fixtures, valid)
+        except Exception as exc:
+            print("OTHER SPORTS SCANNER ERROR:", sport, repr(exc))
+            _save_other_sport_result(
+                ref, sport,
+                f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
+                0, 0,
+            )
+    if send_func:
+        return _send_other_sports_daily_report(ref, send_func)
+    return _get_other_sport_results(ref)
+
+
+def _run_staggered_other_sports(reference_date, send_func, now):
+    """Run at most one sport per 5-minute slot and send once at 10:00."""
+    ref = reference_date
+    minute_of_day = now.hour * 60 + now.minute
+
+    for hour, minute, sport in OTHER_SPORT_SCHEDULE + (OTHER_SPORT_FINAL_SLOT,):
+        slot = hour * 60 + minute
+        if minute_of_day < slot:
+            continue
+        if already_ran(f"other_sports_slot:{ref.isoformat()}:{sport}"):
+            continue
+        print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"))
+        try:
+            report, fixtures, valid = _run_one_other_sport(sport, ref)
+            _save_other_sport_result(ref, sport, report, fixtures, valid)
+            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
+            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT FINISHED: valid={valid} fixtures={fixtures}"))
+        except Exception as exc:
+            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"))
+            _save_other_sport_result(
+                ref, sport,
+                f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
+                0, 0,
+            )
+            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
+        # Exactly one sport per scheduler invocation. This prevents catch-up
+        # bursts from defeating the rate-limit protection.
+        return
+
+
 def run_due_scans(send_func):
-    """Run football and Other Sports daily scans once, persisted in SQLite."""
+    """Run football ONLY at 11:00 and 21:00 BG; no startup catch-up."""
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
 
-    # FOOTBALL: unchanged.
-    if 10 <= now.hour < 20:
+    # FOOTBALL DAY: exact 11:00 BG, once per day.
+    if now.hour == 11:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 10:00 STARTED"))
-            run_daily_scanner("day", today, send_func)
-            mark_ran(key)
-            print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
+            print(_signal_text("DAILY SCANNER 11:00 STARTED"))
+            try:
+                run_daily_scanner("day", today, send_func)
+                mark_ran(key)
+                print(_signal_text("DAILY SCANNER 11:00 FINISHED"))
+            except Exception as exc:
+                print(_signal_text(f"DAILY SCANNER 11:00 ERROR: {exc!r}"))
 
-    # OTHER SPORTS: once daily at/after 10:00 BG.
-    other_key = f"other_sports:{today.isoformat()}"
-    if now.hour >= 10 and not already_ran(other_key):
-        print(_signal_text("OTHER SPORTS DAILY STARTED"))
-        try:
-            run_other_sports_scanner(today, send_func)
-            mark_ran(other_key)
-        except Exception as exc:
-            print(_signal_text(f"OTHER SPORTS DAILY ERROR: {exc!r}"))
-        print(_signal_text("OTHER SPORTS DAILY FINISHED"))
+    # OTHER SPORTS: collect one sport per scheduled slot before 10:00,
+    # then send the complete report once at 10:00.
+    if (now.hour > 9 or (now.hour == 9 and now.minute >= 30)) and now.hour < 10:
+        _run_staggered_other_sports(today, send_func, now)
 
-    # 20:00 football scan remains unchanged.
-    if now.hour >= 20:
+    if now.hour >= 10:
+        other_key = f"other_sports:{today.isoformat()}"
+        if not already_ran(other_key):
+            print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
+            try:
+                _send_other_sports_daily_report(today, send_func)
+                mark_ran(other_key)
+                print(_signal_text("OTHER SPORTS DAILY REPORT FINISHED"))
+            except Exception as exc:
+                print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
+
+    # FOOTBALL NIGHT: exact 21:00 BG, once per day.
+    if now.hour == 21:
         key = f"night:{today.isoformat()}"
         if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 20:00 STARTED"))
-            run_daily_scanner("night", today, send_func)
-            mark_ran(key)
-            print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
-
-# === EXPLICIT OTHER-SPORT BLOCKS ===
-
-# === EXPLICIT OTHER-SPORT BLOCKS ===
-def nba_scanner(reference_date=None):
-    return _run_one_other_sport("nba", reference_date or datetime.now(TZ).date())
-
-def basketball_scanner(reference_date=None):
-    return _run_one_other_sport("basketball", reference_date or datetime.now(TZ).date())
-
-def hockey_scanner(reference_date=None):
-    return _run_one_other_sport("hockey", reference_date or datetime.now(TZ).date())
-
-def handball_scanner(reference_date=None):
-    return _run_one_other_sport("handball", reference_date or datetime.now(TZ).date())
-
-def rugby_scanner(reference_date=None):
-    return _run_one_other_sport("rugby", reference_date or datetime.now(TZ).date())
-
-def american_football_scanner(reference_date=None):
-    return _run_one_other_sport("american_football", reference_date or datetime.now(TZ).date())
-
-def baseball_scanner(reference_date=None):
-    return _run_one_other_sport("baseball", reference_date or datetime.now(TZ).date())
-
-
-# === STAGGERED OTHER-SPORTS DAILY SCHEDULER ===
-OTHER_SPORT_CHECK_INTERVAL_MINUTES = 5
-
-_OTHER_SPORT_ORDER = (
-    "nba", "basketball", "hockey", "handball",
-    "rugby", "american_football", "baseball",
-)
-
-def _run_other_sport_block_and_save(sport, ref):
-    """Exactly one sport per cycle; no parallel fan-out."""
-    report, fixtures, valid = _run_one_other_sport(sport, ref)
-    _save_other_sport_result(ref, sport, report, fixtures, valid)
-    return report, fixtures, valid
-
-def run_other_sports_staggered(reference_date=None, send_func=None):
-    """
-    Collect sports sequentially with a 5-minute gap.
-    The daily report is sent only after all blocks finish.
-    """
-    ref = reference_date or datetime.now(TZ).date()
-
-    for index, sport in enumerate(_OTHER_SPORT_ORDER):
-        if index:
-            time.sleep(OTHER_SPORT_CHECK_INTERVAL_MINUTES * 60)
-
-        try:
-            _run_other_sport_block_and_save(sport, ref)
-        except Exception as exc:
-            print("OTHER SPORTS BLOCK ERROR:", sport, repr(exc))
-            label = OTHER_SPORTS[sport]["label"]
-            report = f"{label}\nДанните не бяха събрани."
-            _save_other_sport_result(ref, sport, report, 0, 0)
-
-    if send_func:
-        return _send_other_sports_daily_report(ref, send_func)
-    return _get_other_sport_results(ref)
+            print(_signal_text("DAILY SCANNER 21:00 STARTED"))
+            try:
+                run_daily_scanner("night", today, send_func)
+                mark_ran(key)
+                print(_signal_text("DAILY SCANNER 21:00 FINISHED"))
+            except Exception as exc:
+                print(_signal_text(f"DAILY SCANNER 21:00 ERROR: {exc!r}"))
 
