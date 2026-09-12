@@ -30,8 +30,9 @@ _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
 _CONSOLE_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
-_API_MIN_INTERVAL = 0.12
+_API_MIN_INTERVAL = 1.05
 _TEAM_CURRENT_LEAGUE_CACHE = {}
+_SCAN_LEAGUE_HISTORY = {}
 
 
 def _api(endpoint, params=None, timeout=25):
@@ -65,7 +66,10 @@ def _api(endpoint, params=None, timeout=25):
             payload = r.json()
 
             if payload.get("errors"):
-                print("SCANNER API ERROR:", endpoint, payload.get("errors"))
+                errors = payload.get("errors")
+                print("SCANNER API ERROR:", endpoint, errors)
+                if isinstance(errors, dict) and errors.get("rateLimit"):
+                    time.sleep(60.0)
                 return None
 
             return payload.get("response")
@@ -187,175 +191,83 @@ def get_fixtures_for_window(start_bg, end_bg):
 
 
 def get_team_history(team_id, season, league_id=None):
-    """
-    Official current-season history.
+    """Current-season history with one league+season request shared by teams.
 
-    1. First use the requested competition.
-    2. If fewer than 3 official matches exist there,
-       fall back to the team's other official matches
-       from the current season.
-    3. Friendly matches are excluded.
-    4. Only FT/AET/PEN matches are accepted.
+    Primary: load the current competition once and filter locally.
+    Fallback: only if that competition has fewer than 3 completed matches,
+    use the team-season endpoint once and cache it.  No historical match
+    statistics endpoint is called here.
     """
-
     team_id = int(team_id)
     season = int(season)
     league_id = int(league_id or 0)
-
     key = (team_id, season, league_id)
 
     if key in _SCAN_HISTORY:
         return _SCAN_HISTORY[key]
 
-    # ---------------------------------------------------------
-    # 1. FIRST: CURRENT COMPETITION
-    # ---------------------------------------------------------
-
     primary = []
-
     if league_id:
-        fixtures = _api(
-            "fixtures",
-            {
-                "team": team_id,
+        league_key = (league_id, season)
+        if league_key not in _SCAN_LEAGUE_HISTORY:
+            fixtures = _api("fixtures", {
                 "league": league_id,
                 "season": season,
-            },
-        )
+            })
+            clean = []
+            for f in fixtures or []:
+                fixture = f.get("fixture") or {}
+                league = f.get("league") or {}
+                status = (fixture.get("status") or {}).get("short", "")
+                fid = fixture.get("id")
+                if not fid or int(league.get("season") or 0) != season:
+                    continue
+                if status not in {"FT", "AET", "PEN"}:
+                    continue
+                clean.append(f)
+            _SCAN_LEAGUE_HISTORY[league_key] = clean
+        primary = [
+            f for f in _SCAN_LEAGUE_HISTORY.get((league_id, season), [])
+            if team_id in {
+                int(((f.get("teams") or {}).get("home") or {}).get("id") or -1),
+                int(((f.get("teams") or {}).get("away") or {}).get("id") or -1),
+            }
+        ]
 
-        if not isinstance(fixtures, list):
-            fixtures = []
+    primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+    if len(primary) >= 3:
+        result = primary[-12:]
+        _SCAN_HISTORY[key] = result
+        return result
 
-        seen = set()
+    print("HISTORY FALLBACK:", team_id, "competition_matches=", len(primary),
+          "-> current-season official matches")
 
-        for f in fixtures:
-
+    # Fallback is cached per team/season, so repeated fixtures never repeat it.
+    fallback_key = ("team", team_id, season)
+    if fallback_key not in _SCAN_HISTORY:
+        all_fixtures = _api("fixtures", {"team": team_id, "season": season})
+        clean = []
+        for f in all_fixtures or []:
             fixture = f.get("fixture") or {}
             league = f.get("league") or {}
             status = (fixture.get("status") or {}).get("short", "")
-
-            fid = fixture.get("id")
-
-            if not fid or fid in seen:
-                continue
-
-            if int(league.get("id") or 0) != league_id:
-                continue
-
             if int(league.get("season") or 0) != season:
                 continue
-
             if status not in {"FT", "AET", "PEN"}:
                 continue
+            league_type = str(league.get("type") or "").casefold()
+            league_name = str(league.get("name") or "").casefold()
+            if league_type == "friendly" or "friend" in league_name:
+                continue
+            clean.append(f)
+        clean.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+        _SCAN_HISTORY[fallback_key] = clean[-12:]
 
-            seen.add(fid)
-            primary.append(f)
-
-    primary.sort(
-        key=lambda f: (f.get("fixture") or {}).get("date", ""),
-        reverse=True,
-    )
-
-    # ---------------------------------------------------------
-    # 2. IF WE HAVE 3+ MATCHES IN THE COMPETITION
-    #    USE THEM
-    # ---------------------------------------------------------
-
-    if len(primary) >= 3:
-
-        primary.sort(
-            key=lambda f: (f.get("fixture") or {}).get("date", "")
-        )
-
-        _SCAN_HISTORY[key] = primary
-
-        return primary
-
-    # ---------------------------------------------------------
-    # 3. FALLBACK:
-    #    ALL OFFICIAL CURRENT-SEASON MATCHES
-    # ---------------------------------------------------------
-
-    print(
-        "HISTORY FALLBACK:",
-        team_id,
-        "competition_matches=",
-        len(primary),
-        "-> current-season official matches",
-    )
-
-    all_fixtures = _api(
-        "fixtures",
-        {
-            "team": team_id,
-            "season": season,
-        },
-    )
-
-    if not isinstance(all_fixtures, list):
-        all_fixtures = []
-
-    clean = []
-    seen = set()
-
-    for f in all_fixtures:
-
-        fixture = f.get("fixture") or {}
-        league = f.get("league") or {}
-        status = (fixture.get("status") or {}).get("short", "")
-
-        fid = fixture.get("id")
-
-        if not fid or fid in seen:
-            continue
-
-        # CURRENT SEASON ONLY
-        if int(league.get("season") or 0) != season:
-            continue
-
-        # OFFICIAL COMPLETED MATCHES ONLY
-        if status not in {"FT", "AET", "PEN"}:
-            continue
-
-        # EXCLUDE FRIENDLIES
-        league_type = str(league.get("type") or "").casefold()
-        league_name = str(league.get("name") or "").casefold()
-
-        if league_type == "friendly":
-            continue
-
-        if "friend" in league_name:
-            continue
-
-        seen.add(fid)
-        clean.append(f)
-
-    # Most recent first
-    clean.sort(
-        key=lambda f: (f.get("fixture") or {}).get("date", ""),
-        reverse=True,
-    )
-
-    # Keep the most recent official current-season matches.
-    # We want enough data for the statistical profiles.
-    clean = clean[:12]
-
-    # Oldest -> newest for calculations
-    clean.sort(
-        key=lambda f: (f.get("fixture") or {}).get("date", "")
-    )
-
-    _SCAN_HISTORY[key] = clean
-
-    print(
-        "HISTORY FALLBACK RESULT:",
-        team_id,
-        "matches=",
-        len(clean),
-    )
-
-    return clean
-
+    result = _SCAN_HISTORY[fallback_key]
+    _SCAN_HISTORY[key] = result
+    print("HISTORY FALLBACK RESULT:", team_id, "matches=", len(result))
+    return result
 
 def _read_cached_stat(fixture_id):
     conn = _db()
