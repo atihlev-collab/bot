@@ -1401,42 +1401,58 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 
 
 def _run_staggered_other_sports(reference_date, send_func, now):
-    """Run at most one sport per 5-minute slot and send once at 10:00."""
+    """One API-Sports sport per 5-minute slot; final report at 10:00."""
     ref = reference_date
     minute_of_day = now.hour * 60 + now.minute
 
-    for hour, minute, sport in OTHER_SPORT_SCHEDULE + (OTHER_SPORT_FINAL_SLOT,):
+    for hour, minute, sport in OTHER_SPORT_SCHEDULE:
         slot = hour * 60 + minute
         if minute_of_day < slot:
             continue
-        if already_ran(f"other_sports_slot:{ref.isoformat()}:{sport}"):
+        key = f"other_sports_slot:{ref.isoformat()}:{sport}"
+        if already_ran(key):
             continue
-        print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"))
+
+        print(_signal_text(
+            f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"
+        ))
         try:
             report, fixtures, valid = _run_one_other_sport(sport, ref)
             _save_other_sport_result(ref, sport, report, fixtures, valid)
-            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
-            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT FINISHED: valid={valid} fixtures={fixtures}"))
+            mark_ran(key)
+            print(_signal_text(
+                f"OTHER SPORTS {sport.upper()} SLOT FINISHED: "
+                f"valid={valid} fixtures={fixtures}"
+            ))
         except Exception as exc:
-            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"))
+            print(_signal_text(
+                f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"
+            ))
             _save_other_sport_result(
                 ref, sport,
                 f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
                 0, 0,
             )
-            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
-        # Exactly one sport per scheduler invocation. This prevents catch-up
-        # bursts from defeating the rate-limit protection.
+            mark_ran(key)
+
+        # Never catch up multiple sports in one invocation.
         return
 
-
 def run_due_scans(send_func):
-    """Run football ONLY at 11:00 and 21:00 BG; no startup catch-up."""
+    """Strict schedule: football 11:00/21:00; other sports 09:30-10:00."""
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
 
-    # FOOTBALL DAY: exact 11:00 BG, once per day.
+    # Other sports: one sport every 5 minutes, starting 09:30.
+    if 9 <= now.hour < 10:
+        _run_staggered_other_sports(today, send_func, now)
+
+        # Final report is sent only at/after 10:00, but never by catch-up.
+        # The 10:00 tick itself is handled by the main loop calling this function.
+        return
+
+    # Football day: exact 11:00 hour only; no startup catch-up.
     if now.hour == 11:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
@@ -1448,12 +1464,8 @@ def run_due_scans(send_func):
             except Exception as exc:
                 print(_signal_text(f"DAILY SCANNER 11:00 ERROR: {exc!r}"))
 
-    # OTHER SPORTS: collect one sport per scheduled slot before 10:00,
-    # then send the complete report once at 10:00.
-    if (now.hour > 9 or (now.hour == 9 and now.minute >= 30)) and now.hour < 10:
-        _run_staggered_other_sports(today, send_func, now)
-
-    if now.hour >= 10:
+    # Other-sports final report: exact 10:00 hour only; no catch-up.
+    if now.hour == 10:
         other_key = f"other_sports:{today.isoformat()}"
         if not already_ran(other_key):
             print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
@@ -1464,7 +1476,7 @@ def run_due_scans(send_func):
             except Exception as exc:
                 print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
 
-    # FOOTBALL NIGHT: exact 21:00 BG, once per day.
+    # Football night: exact 21:00 hour only; no startup catch-up.
     if now.hour == 21:
         key = f"night:{today.isoformat()}"
         if not already_ran(key):
