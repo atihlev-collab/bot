@@ -1,4 +1,4 @@
-#=========================================================
+# =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
 # Runs once at/after 10:00 and once at/after 20:00 Bulgaria time.
@@ -28,8 +28,10 @@ MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
+_CONSOLE_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
+_TEAM_CURRENT_LEAGUE_CACHE = {}
 
 
 def _api(endpoint, params=None, timeout=25):
@@ -759,8 +761,14 @@ def _team_stats_competition(match, team_id):
     if not _is_cup_competition(league):
         return int(league["id"]), int(league["season"])
 
-    response = _api("leagues", {"team": int(team_id), "current": "true"})
+    tid = int(team_id)
+    cached = _TEAM_CURRENT_LEAGUE_CACHE.get(tid)
+    if cached is not None:
+        return cached
+
+    response = _api("leagues", {"team": tid, "current": "true"})
     if not isinstance(response, list):
+        _TEAM_CURRENT_LEAGUE_CACHE[tid] = None
         return None
 
     candidates = []
