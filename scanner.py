@@ -32,7 +32,7 @@ _CONSOLE_LOCK = threading.RLock()
 _LAST_API_CALL = 0.0
 # Keep the statistics worker from consuming the whole API minute budget.
 # LIVE has priority; statistics use a deliberately conservative 12s spacing.
-_API_MIN_INTERVAL = 12.0
+
 
 
 def _api(endpoint, params=None, timeout=25):
@@ -973,9 +973,9 @@ _OTHER_LAST_API_CALL = {sport: 0.0 for sport in OTHER_SPORTS}
 # Keep a safe gap between calls to the same API product.  The other-sports
 # scheduler deliberately runs one sport every 5 minutes, and this limiter
 # prevents a single sport from bursting through its per-minute quota.
-_OTHER# Keep the statistics worker from consuming the whole API minute budget.
+_OTHER
 # LIVE has priority; statistics use a deliberately conservative 12s spacing.
-_API_MIN_INTERVAL = 12.0
+
 _OTHER_HISTORY_CACHE = {}
 _OTHER_STATS_CACHE = {}
 
