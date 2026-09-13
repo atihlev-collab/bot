@@ -1376,9 +1376,8 @@ OTHER_SPORT_SCHEDULE = (
     (9, 45, "handball"),
     (9, 50, "rugby"),
     (9, 55, "american_football"),
+    (9, 58, "baseball"),
 )
-# Baseball gets the final collection slot immediately before the 10:00 report.
-OTHER_SPORT_FINAL_SLOT = (9, 58, "baseball")
 
 
 def run_other_sports_scanner(reference_date=None, send_func=None):
