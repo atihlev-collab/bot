@@ -30,7 +30,9 @@ _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
 _CONSOLE_LOCK = threading.RLock()
 _LAST_API_CALL = 0.0
-_API_MIN_INTERVAL = 6.2
+# Keep the statistics worker from consuming the whole API minute budget.
+# LIVE has priority; statistics use a deliberately conservative 12s spacing.
+_API_MIN_INTERVAL = 12.0
 
 
 def _api(endpoint, params=None, timeout=25):
@@ -217,6 +219,31 @@ def get_team_history(team_id, season, league_id=None):
     if key in _SCAN_HISTORY:
         return _SCAN_HISTORY[key]
 
+    # Persistent cache: the old scanner created this table but never read it,
+    # which caused every restart / second daily run to re-download team history.
+    # Reuse current-season history whenever it is already stored.
+    try:
+        import json
+        conn = _db()
+        row = conn.execute(
+            "SELECT data, updated_at FROM scanner_team_season_history "
+            "WHERE team_id=? AND season=?",
+            (team_id, season),
+        ).fetchone()
+        conn.close()
+        if row and row[0]:
+            updated = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
+            # A same-season history snapshot is sufficient for the daily
+            # statistical scanner; it is refreshed by a new season.
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=timezone.utc)
+            data = json.loads(row[0])
+            if isinstance(data, list):
+                _SCAN_HISTORY[key] = data
+                return data
+    except Exception as exc:
+        print("HISTORY CACHE READ ERROR:", team_id, repr(exc))
+
     # ---------------------------------------------------------
     # 1. FIRST: CURRENT COMPETITION
     # ---------------------------------------------------------
@@ -278,6 +305,7 @@ def get_team_history(team_id, season, league_id=None):
         )
 
         _SCAN_HISTORY[key] = primary
+        _write_cached_history(team_id, season, primary)
 
         return primary
 
@@ -356,6 +384,7 @@ def get_team_history(team_id, season, league_id=None):
     )
 
     _SCAN_HISTORY[key] = clean
+    _write_cached_history(team_id, season, clean)
 
     print(
         "HISTORY FALLBACK RESULT:",
@@ -365,6 +394,18 @@ def get_team_history(team_id, season, league_id=None):
     )
 
     return clean
+
+
+def _write_cached_history(team_id, season, data):
+    import json
+    conn = _db()
+    conn.execute(
+        "INSERT OR REPLACE INTO scanner_team_season_history "
+        "(team_id, season, data, updated_at) VALUES (?, ?, ?, ?)",
+        (int(team_id), int(season), json.dumps(data), datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
 
 
 def _read_cached_stat(fixture_id):
@@ -932,7 +973,9 @@ _OTHER_LAST_API_CALL = {sport: 0.0 for sport in OTHER_SPORTS}
 # Keep a safe gap between calls to the same API product.  The other-sports
 # scheduler deliberately runs one sport every 5 minutes, and this limiter
 # prevents a single sport from bursting through its per-minute quota.
-_OTHER_API_MIN_INTERVAL = 6.2
+_OTHER# Keep the statistics worker from consuming the whole API minute budget.
+# LIVE has priority; statistics use a deliberately conservative 12s spacing.
+_API_MIN_INTERVAL = 12.0
 _OTHER_HISTORY_CACHE = {}
 _OTHER_STATS_CACHE = {}
 
