@@ -934,6 +934,7 @@ _OTHER_LAST_API_CALL = {sport: 0.0 for sport in OTHER_SPORTS}
 # prevents a single sport from bursting through its per-minute quota.
 _OTHER_API_MIN_INTERVAL = 6.2
 _OTHER_HISTORY_CACHE = {}
+_OTHER_TEAM_HISTORY_CACHE = {}
 _OTHER_STATS_CACHE = {}
 
 
@@ -971,6 +972,38 @@ def _other_api(sport, endpoint, params=None, timeout=25):
                 return None
             time.sleep(min(2.0 * (2 ** attempt), 30.0))
     return None
+
+
+def _other_games_for_date(sport, day):
+    response = _other_api(sport, "games", {"date": day.isoformat()})
+    return response if isinstance(response, list) else []
+
+
+def get_other_sport_fixtures(sport, start_bg, end_bg):
+    out, seen = [], set()
+    day = start_bg.date()
+    while day <= end_bg.date():
+        for g in _other_games_for_date(sport, day):
+            gid = _other_game_id(g)
+            if not gid or gid in seen:
+                continue
+            dt = _other_game_time_bg(g)
+            if not dt or dt < start_bg or dt >= end_bg or dt <= datetime.now(TZ):
+                continue
+            if _other_is_finished(g):
+                continue
+            home, away = _other_game_teams(g)
+            if not home.get("id") or not away.get("id"):
+                continue
+            if sport == "basketball":
+                league_name = str((g.get("league") or {}).get("name") or "").casefold()
+                if league_name == "nba" or league_name.startswith("nba ") or "nba cup" in league_name:
+                    continue
+            seen.add(gid)
+            out.append(g)
+        day += timedelta(days=1)
+    out.sort(key=lambda x: _other_game_time_bg(x) or datetime.max.replace(tzinfo=TZ))
+    return out
 
 
 def _other_game_id(g):
@@ -1072,40 +1105,25 @@ def _other_history_clean(games, season):
 
 
 def get_other_team_history(sport, team_id, season, league_id=None):
-    """Football-style history with ONE API call per team/season.
-
-    We fetch the team's current-season games once, then locally prefer the
-    requested tournament. If it has fewer than 3 official completed games,
-    we fill from other official competitions in the SAME season. Friendlies
-    and previous seasons are never used.
-    """
-    base_key = (sport, int(team_id), str(season))
-    key = (sport, int(team_id), str(season), str(league_id or ""))
+    """One current-season history request per team; select tournament locally."""
+    team_id = int(team_id)
+    base_key = (sport, team_id, str(season))
+    key = (sport, team_id, str(season), str(league_id or ""))
     if key in _OTHER_HISTORY_CACHE:
         return _OTHER_HISTORY_CACHE[key]
-
     if base_key not in _OTHER_TEAM_HISTORY_CACHE:
-        all_games = _other_api(sport, "games", {
-            "team": int(team_id),
-            "season": season,
-        })
-        _OTHER_TEAM_HISTORY_CACHE[base_key] = _other_history_clean(all_games, season)
-
+        games = _other_api(sport, "games", {"team": team_id, "season": season})
+        _OTHER_TEAM_HISTORY_CACHE[base_key] = _other_history_clean(games, season)
     current = list(_OTHER_TEAM_HISTORY_CACHE.get(base_key, []))
     if league_id:
         same = [g for g in current if _other_league_id(g) == str(league_id)]
         other = [g for g in current if _other_league_id(g) != str(league_id)]
         selected = (same + other)[:12]
-        print("HISTORY:", sport, team_id, "competition_matches=", len(same),
-              "-> current competition" if len(same) >= 3 else
-              "-> current-season official matches")
     else:
         selected = current[:12]
-
     selected.sort(key=lambda x: _other_game_time_bg(x) or datetime.min.replace(tzinfo=TZ))
     _OTHER_HISTORY_CACHE[key] = selected
     return selected
-
 
 def _other_stat_number(value):
     if isinstance(value, (int, float)):
@@ -1160,8 +1178,7 @@ def _other_team_avg(team_id, history, stats_by_game):
     for g in history or []:
         gid = _other_game_id(g)
         home, away = _other_game_teams(g)
-        stats = stats_by_game.get(int(gid), {}).get(int(team_id), {})
-        # Prefer the actual team box score if API-Sports supplied one.
+        stats = (stats_by_game or {}).get(int(gid), {}).get(int(team_id), {})
         score = None
         for key in ("points", "goals", "runs", "score", "total"):
             score = _other_stat_number(stats.get(key))
@@ -1174,7 +1191,7 @@ def _other_team_avg(team_id, history, stats_by_game):
     return (sum(values) / len(values), len(values)) if values else None
 
 
-def _other_fixture_expected(g, histories, stats_by_game):
+def _other_fixture_expected(g, histories, stats_by_game=None):
     home, away = _other_game_teams(g)
     season = _other_season(g)
     league_id = _other_league_id(g)
@@ -1257,19 +1274,22 @@ def _format_other_sport(sport, results):
 
 
 def _run_one_other_sport(sport, reference_date):
-    """Collect and calculate one sport only; no Telegram send here."""
+    """Collect one sport using fixture + team-history data only.
+
+    Historical box-score endpoints are deliberately not called here: they
+    were consuming the API minute budget and preventing the daily scanner
+    from completing. Scores are sufficient for the expected-total model.
+    """
     ref = reference_date or datetime.now(TZ).date()
     start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
     end = start + timedelta(hours=24)
-
     games = get_other_sport_fixtures(sport, start, end)
     print(f"OTHER SPORTS API-Sports [{sport}]: fixtures={len(games)}")
     if not games:
-        report = f"{OTHER_SPORTS[sport]['label']}\nНяма срещи в 24-часовия прозорец."
-        return report, 0, 0
+        return f"{OTHER_SPORTS[sport]['label']}\nНяма срещи в 24-часовия прозорец.", 0, 0
 
     histories = {}
-    unique = {}
+    unique = set()
     for g in games:
         season = _other_season(g)
         home, away = _other_game_teams(g)
@@ -1278,34 +1298,29 @@ def _run_one_other_sport(sport, reference_date):
             continue
         for team in (home, away):
             if team.get("id"):
-                unique[(int(team["id"]), str(season), league_id)] = None
+                unique.add((int(team["id"]), str(season), league_id))
 
     for team_id, season, league_id in unique:
         try:
-            histories[(team_id, str(season), league_id)] = get_other_team_history(
+            histories[(team_id, season, league_id)] = get_other_team_history(
                 sport, team_id, season, league_id
             )
         except Exception as exc:
             print("OTHER SPORTS HISTORY ERROR:", sport, team_id, repr(exc))
-            histories[(team_id, str(season), league_id)] = []
-
-    all_hist_games = {
-        int(_other_game_id(g)): g
-        for h in histories.values()
-        for g in h
-        if _other_game_id(g)
-    }
-    stats_by_game = _other_stats_for_games(sport, list(all_hist_games))
-    print(
-        f"OTHER SPORTS HISTORY STATS [{sport}]: "
-        f"games={len(all_hist_games)} "
-        f"with_data={sum(1 for v in stats_by_game.values() if v)}"
-    )
+            histories[(team_id, season, league_id)] = []
 
     results = []
     for g in games:
         try:
-            x = _other_fixture_expected(g, histories, stats_by_game)
+            home, away = _other_game_teams(g)
+            season = _other_season(g)
+            league_id = _other_league_id(g)
+            hp_hist = histories.get((int(home.get("id")), str(season), league_id), [])
+            ap_hist = histories.get((int(away.get("id")), str(season), league_id), [])
+            x = _other_fixture_expected(g, {
+                (int(home.get("id"))): hp_hist,
+                (int(away.get("id"))): ap_hist,
+            }, {})
             if x:
                 results.append(_other_fixture_result(sport, g, x))
         except Exception as exc:
@@ -1314,7 +1329,6 @@ def _run_one_other_sport(sport, reference_date):
     report = _format_other_sport(sport, results)
     print(f"OTHER SPORTS API-Sports [{sport}]: valid={len(results)}")
     return report, len(games), len(results)
-
 
 def _save_other_sport_result(run_date, sport, report, fixtures, valid):
     conn = _db()
@@ -1368,17 +1382,18 @@ def _send_other_sports_daily_report(reference_date, send_func):
     return message
 
 
-# 09:30→10:00: one API product every five minutes.
+# OTHER SPORTS are deliberately staggered so API-Sports is NOT hit by
+# every sport at the same time.  This window is BEFORE the 11:00 football
+# daily signal.  One sport is allowed per 5-minute slot.
 OTHER_SPORT_SCHEDULE = (
-    (9, 30, "nba"),
-    (9, 35, "basketball"),
-    (9, 40, "hockey"),
-    (9, 45, "handball"),
-    (9, 50, "rugby"),
-    (9, 55, "american_football"),
+    (10, 0, "nba"),
+    (10, 5, "basketball"),
+    (10, 10, "hockey"),
+    (10, 15, "handball"),
+    (10, 20, "rugby"),
+    (10, 25, "american_football"),
+    (10, 30, "baseball"),
 )
-# Baseball gets the final collection slot immediately before the 10:00 report.
-OTHER_SPORT_FINAL_SLOT = (9, 58, "baseball")
 
 
 def run_other_sports_scanner(reference_date=None, send_func=None):
@@ -1401,42 +1416,73 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 
 
 def _run_staggered_other_sports(reference_date, send_func, now):
-    """Run at most one sport per 5-minute slot and send once at 10:00."""
+    """One API-Sports sport per 5-minute slot; final report at 10:00."""
     ref = reference_date
     minute_of_day = now.hour * 60 + now.minute
 
-    for hour, minute, sport in OTHER_SPORT_SCHEDULE + (OTHER_SPORT_FINAL_SLOT,):
+    for hour, minute, sport in OTHER_SPORT_SCHEDULE:
         slot = hour * 60 + minute
         if minute_of_day < slot:
             continue
-        if already_ran(f"other_sports_slot:{ref.isoformat()}:{sport}"):
+        key = f"other_sports_slot:{ref.isoformat()}:{sport}"
+        if already_ran(key):
             continue
-        print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"))
+
+        print(_signal_text(
+            f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"
+        ))
         try:
             report, fixtures, valid = _run_one_other_sport(sport, ref)
             _save_other_sport_result(ref, sport, report, fixtures, valid)
-            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
-            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT FINISHED: valid={valid} fixtures={fixtures}"))
+            mark_ran(key)
+            print(_signal_text(
+                f"OTHER SPORTS {sport.upper()} SLOT FINISHED: "
+                f"valid={valid} fixtures={fixtures}"
+            ))
         except Exception as exc:
-            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"))
+            print(_signal_text(
+                f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"
+            ))
             _save_other_sport_result(
                 ref, sport,
                 f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
                 0, 0,
             )
-            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
-        # Exactly one sport per scheduler invocation. This prevents catch-up
-        # bursts from defeating the rate-limit protection.
+            mark_ran(key)
+
+        # Never catch up multiple sports in one invocation.
         return
 
-
 def run_due_scans(send_func):
-    """Run football ONLY at 11:00 and 21:00 BG; no startup catch-up."""
+    """Strict schedule: football 11:00/21:00; other sports 09:30-10:00."""
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
 
-    # FOOTBALL DAY: exact 11:00 BG, once per day.
+    # Other sports: one sport every 5 minutes, starting 10:00.
+    # Never run the whole sports list in one call.
+    if now.hour == 10:
+        _run_staggered_other_sports(today, send_func, now)
+        # Send one combined report only after all seven sport slots have
+        # completed. This prevents the 10:00 message from showing seven
+        # "not collected" sections while the staggered workers are still running.
+        if now.minute >= 35:
+            other_key = f"other_sports:{today.isoformat()}"
+            all_slots_done = all(
+                already_ran(f"other_sports_slot:{today.isoformat()}:{sport}")
+                for _, _, sport in OTHER_SPORT_SCHEDULE
+            )
+            if all_slots_done and not already_ran(other_key):
+                print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
+                try:
+                    _send_other_sports_daily_report(today, send_func)
+                    mark_ran(other_key)
+                    print(_signal_text("OTHER SPORTS DAILY REPORT FINISHED"))
+                except Exception as exc:
+                    print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
+        return
+
+    # Football day: exact 11:00 hour only; no startup catch-up.
     if now.hour == 11:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
@@ -1448,23 +1494,7 @@ def run_due_scans(send_func):
             except Exception as exc:
                 print(_signal_text(f"DAILY SCANNER 11:00 ERROR: {exc!r}"))
 
-    # OTHER SPORTS: collect one sport per scheduled slot before 10:00,
-    # then send the complete report once at 10:00.
-    if (now.hour > 9 or (now.hour == 9 and now.minute >= 30)) and now.hour < 10:
-        _run_staggered_other_sports(today, send_func, now)
-
-    if now.hour >= 10:
-        other_key = f"other_sports:{today.isoformat()}"
-        if not already_ran(other_key):
-            print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
-            try:
-                _send_other_sports_daily_report(today, send_func)
-                mark_ran(other_key)
-                print(_signal_text("OTHER SPORTS DAILY REPORT FINISHED"))
-            except Exception as exc:
-                print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
-
-    # FOOTBALL NIGHT: exact 21:00 BG, once per day.
+    # Football night: exact 21:00 hour only; no startup catch-up.
     if now.hour == 21:
         key = f"night:{today.isoformat()}"
         if not already_ran(key):
