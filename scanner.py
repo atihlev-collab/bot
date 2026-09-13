@@ -1368,15 +1368,17 @@ def _send_other_sports_daily_report(reference_date, send_func):
     return message
 
 
-# 09:30→10:00: one API product every five minutes.
+# OTHER SPORTS are deliberately staggered so API-Sports is NOT hit by
+# every sport at the same time.  This window is BEFORE the 11:00 football
+# daily signal.  One sport is allowed per 5-minute slot.
 OTHER_SPORT_SCHEDULE = (
-    (9, 30, "nba"),
-    (9, 35, "basketball"),
-    (9, 40, "hockey"),
-    (9, 45, "handball"),
-    (9, 50, "rugby"),
-    (9, 55, "american_football"),
-    (9, 58, "baseball"),
+    (10, 0, "nba"),
+    (10, 5, "basketball"),
+    (10, 10, "hockey"),
+    (10, 15, "handball"),
+    (10, 20, "rugby"),
+    (10, 25, "american_football"),
+    (10, 30, "baseball"),
 )
 
 
@@ -1443,12 +1445,22 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
     today = now.date()
 
-    # Other sports: one sport every 5 minutes, starting 09:30.
-    if 9 <= now.hour < 10:
+    # Other sports: one sport every 5 minutes, starting 10:00.
+    # Never run the whole sports list in one call.
+    if now.hour == 10:
         _run_staggered_other_sports(today, send_func, now)
-
-        # Final report is sent only at/after 10:00, but never by catch-up.
-        # The 10:00 tick itself is handled by the main loop calling this function.
+        # After the last staggered sport has had its slot, send one combined
+        # report.  This does not make any additional API requests.
+        if now.minute >= 35:
+            other_key = f"other_sports:{today.isoformat()}"
+            if not already_ran(other_key):
+                print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
+                try:
+                    _send_other_sports_daily_report(today, send_func)
+                    mark_ran(other_key)
+                    print(_signal_text("OTHER SPORTS DAILY REPORT FINISHED"))
+                except Exception as exc:
+                    print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
         return
 
     # Football day: exact 11:00 hour only; no startup catch-up.
