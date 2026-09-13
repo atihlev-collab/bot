@@ -30,9 +30,7 @@ _SCAN_HISTORY = {}
 _API_LOCK = threading.Lock()
 _CONSOLE_LOCK = threading.RLock()
 _LAST_API_CALL = 0.0
-# Keep the statistics worker from consuming the whole API minute budget.
-# LIVE has priority; statistics use a deliberately conservative 12s spacing.
-_API_MIN_INTERVAL = 12.0
+_API_MIN_INTERVAL = 6.2
 
 
 def _api(endpoint, params=None, timeout=25):
@@ -219,31 +217,6 @@ def get_team_history(team_id, season, league_id=None):
     if key in _SCAN_HISTORY:
         return _SCAN_HISTORY[key]
 
-    # Persistent cache: the old scanner created this table but never read it,
-    # which caused every restart / second daily run to re-download team history.
-    # Reuse current-season history whenever it is already stored.
-    try:
-        import json
-        conn = _db()
-        row = conn.execute(
-            "SELECT data, updated_at FROM scanner_team_season_history "
-            "WHERE team_id=? AND season=?",
-            (team_id, season),
-        ).fetchone()
-        conn.close()
-        if row and row[0]:
-            updated = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
-            # A same-season history snapshot is sufficient for the daily
-            # statistical scanner; it is refreshed by a new season.
-            if updated.tzinfo is None:
-                updated = updated.replace(tzinfo=timezone.utc)
-            data = json.loads(row[0])
-            if isinstance(data, list):
-                _SCAN_HISTORY[key] = data
-                return data
-    except Exception as exc:
-        print("HISTORY CACHE READ ERROR:", team_id, repr(exc))
-
     # ---------------------------------------------------------
     # 1. FIRST: CURRENT COMPETITION
     # ---------------------------------------------------------
@@ -305,7 +278,6 @@ def get_team_history(team_id, season, league_id=None):
         )
 
         _SCAN_HISTORY[key] = primary
-        _write_cached_history(team_id, season, primary)
 
         return primary
 
@@ -384,7 +356,6 @@ def get_team_history(team_id, season, league_id=None):
     )
 
     _SCAN_HISTORY[key] = clean
-    _write_cached_history(team_id, season, clean)
 
     print(
         "HISTORY FALLBACK RESULT:",
@@ -394,18 +365,6 @@ def get_team_history(team_id, season, league_id=None):
     )
 
     return clean
-
-
-def _write_cached_history(team_id, season, data):
-    import json
-    conn = _db()
-    conn.execute(
-        "INSERT OR REPLACE INTO scanner_team_season_history "
-        "(team_id, season, data, updated_at) VALUES (?, ?, ?, ?)",
-        (int(team_id), int(season), json.dumps(data), datetime.now(timezone.utc).isoformat()),
-    )
-    conn.commit()
-    conn.close()
 
 
 def _read_cached_stat(fixture_id):
@@ -973,9 +932,7 @@ _OTHER_LAST_API_CALL = {sport: 0.0 for sport in OTHER_SPORTS}
 # Keep a safe gap between calls to the same API product.  The other-sports
 # scheduler deliberately runs one sport every 5 minutes, and this limiter
 # prevents a single sport from bursting through its per-minute quota.
-# Keep the other-sports statistics worker from consuming the API minute budget.
-# LIVE has priority; statistics use a deliberately conservative 12s spacing.
-_OTHER_API_MIN_INTERVAL = 12.0
+_OTHER_API_MIN_INTERVAL = 6.2
 _OTHER_HISTORY_CACHE = {}
 _OTHER_STATS_CACHE = {}
 
@@ -1411,18 +1368,17 @@ def _send_other_sports_daily_report(reference_date, send_func):
     return message
 
 
-# OTHER SPORTS are deliberately staggered so API-Sports is NOT hit by
-# every sport at the same time.  This window is BEFORE the 11:00 football
-# daily signal.  One sport is allowed per 5-minute slot.
+# 09:30→10:00: one API product every five minutes.
 OTHER_SPORT_SCHEDULE = (
-    (10, 0, "nba"),
-    (10, 5, "basketball"),
-    (10, 10, "hockey"),
-    (10, 15, "handball"),
-    (10, 20, "rugby"),
-    (10, 25, "american_football"),
-    (10, 30, "baseball"),
+    (9, 30, "nba"),
+    (9, 35, "basketball"),
+    (9, 40, "hockey"),
+    (9, 45, "handball"),
+    (9, 50, "rugby"),
+    (9, 55, "american_football"),
 )
+# Baseball gets the final collection slot immediately before the 10:00 report.
+OTHER_SPORT_FINAL_SLOT = (9, 58, "baseball")
 
 
 def run_other_sports_scanner(reference_date=None, send_func=None):
@@ -1445,68 +1401,42 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 
 
 def _run_staggered_other_sports(reference_date, send_func, now):
-    """One API-Sports sport per 5-minute slot; final report at 10:00."""
+    """Run at most one sport per 5-minute slot and send once at 10:00."""
     ref = reference_date
     minute_of_day = now.hour * 60 + now.minute
 
-    for hour, minute, sport in OTHER_SPORT_SCHEDULE:
+    for hour, minute, sport in OTHER_SPORT_SCHEDULE + (OTHER_SPORT_FINAL_SLOT,):
         slot = hour * 60 + minute
         if minute_of_day < slot:
             continue
-        key = f"other_sports_slot:{ref.isoformat()}:{sport}"
-        if already_ran(key):
+        if already_ran(f"other_sports_slot:{ref.isoformat()}:{sport}"):
             continue
-
-        print(_signal_text(
-            f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"
-        ))
+        print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT STARTED ({hour:02d}:{minute:02d})"))
         try:
             report, fixtures, valid = _run_one_other_sport(sport, ref)
             _save_other_sport_result(ref, sport, report, fixtures, valid)
-            mark_ran(key)
-            print(_signal_text(
-                f"OTHER SPORTS {sport.upper()} SLOT FINISHED: "
-                f"valid={valid} fixtures={fixtures}"
-            ))
+            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
+            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT FINISHED: valid={valid} fixtures={fixtures}"))
         except Exception as exc:
-            print(_signal_text(
-                f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"
-            ))
+            print(_signal_text(f"OTHER SPORTS {sport.upper()} SLOT ERROR: {exc!r}"))
             _save_other_sport_result(
                 ref, sport,
                 f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
                 0, 0,
             )
-            mark_ran(key)
-
-        # Never catch up multiple sports in one invocation.
+            mark_ran(f"other_sports_slot:{ref.isoformat()}:{sport}")
+        # Exactly one sport per scheduler invocation. This prevents catch-up
+        # bursts from defeating the rate-limit protection.
         return
 
+
 def run_due_scans(send_func):
-    """Strict schedule: football 11:00/21:00; other sports 09:30-10:00."""
+    """Run football ONLY at 11:00 and 21:00 BG; no startup catch-up."""
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
 
-    # Other sports: one sport every 5 minutes, starting 10:00.
-    # Never run the whole sports list in one call.
-    if now.hour == 10:
-        _run_staggered_other_sports(today, send_func, now)
-        # After the last staggered sport has had its slot, send one combined
-        # report.  This does not make any additional API requests.
-        if now.minute >= 35:
-            other_key = f"other_sports:{today.isoformat()}"
-            if not already_ran(other_key):
-                print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
-                try:
-                    _send_other_sports_daily_report(today, send_func)
-                    mark_ran(other_key)
-                    print(_signal_text("OTHER SPORTS DAILY REPORT FINISHED"))
-                except Exception as exc:
-                    print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
-        return
-
-    # Football day: exact 11:00 hour only; no startup catch-up.
+    # FOOTBALL DAY: exact 11:00 BG, once per day.
     if now.hour == 11:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
@@ -1518,8 +1448,12 @@ def run_due_scans(send_func):
             except Exception as exc:
                 print(_signal_text(f"DAILY SCANNER 11:00 ERROR: {exc!r}"))
 
-    # Other-sports final report: exact 10:00 hour only; no catch-up.
-    if now.hour == 10:
+    # OTHER SPORTS: collect one sport per scheduled slot before 10:00,
+    # then send the complete report once at 10:00.
+    if (now.hour > 9 or (now.hour == 9 and now.minute >= 30)) and now.hour < 10:
+        _run_staggered_other_sports(today, send_func, now)
+
+    if now.hour >= 10:
         other_key = f"other_sports:{today.isoformat()}"
         if not already_ran(other_key):
             print(_signal_text("OTHER SPORTS DAILY REPORT STARTED"))
@@ -1530,7 +1464,7 @@ def run_due_scans(send_func):
             except Exception as exc:
                 print(_signal_text(f"OTHER SPORTS DAILY REPORT ERROR: {exc!r}"))
 
-    # Football night: exact 21:00 hour only; no startup catch-up.
+    # FOOTBALL NIGHT: exact 21:00 BG, once per day.
     if now.hour == 21:
         key = f"night:{today.isoformat()}"
         if not already_ran(key):
