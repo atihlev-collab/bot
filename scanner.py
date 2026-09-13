@@ -915,23 +915,23 @@ OTHER_SPORTS = {
 }
 
 _OTHER_API_LOCK = threading.Lock()
-_OTHER_LAST_API_CALL = 0.0
-_OTHER_API_MIN_INTERVAL = 0.12
+_OTHER_LAST_API_CALL = {sport: 0.0 for sport in OTHER_SPORTS}
+_OTHER_API_MIN_INTERVAL = 6.2
 _OTHER_HISTORY_CACHE = {}
 _CONSOLE_LOCK = globals().get("_CONSOLE_LOCK", threading.Lock())
 
 
 def _other_api(sport, endpoint, params=None, timeout=25):
     """API-Sports request for non-football sports, with retry and real errors."""
-    global _OTHER_LAST_API_CALL
     cfg = OTHER_SPORTS[sport]
     for attempt in range(5):
         try:
             with _OTHER_API_LOCK:
-                wait = _OTHER_API_MIN_INTERVAL - (time.monotonic() - _OTHER_LAST_API_CALL)
+                last = _OTHER_LAST_API_CALL.get(sport, 0.0)
+                wait = _OTHER_API_MIN_INTERVAL - (time.monotonic() - last)
                 if wait > 0:
                     time.sleep(wait)
-                _OTHER_LAST_API_CALL = time.monotonic()
+                _OTHER_LAST_API_CALL[sport] = time.monotonic()
             r = requests.get(
                 f"{cfg['base']}/{endpoint}",
                 headers=HEADERS,
@@ -1244,43 +1244,75 @@ def run_other_sports_scanner(reference_date=None, send_func=None):
 _START = time.time()
 
 def _start_other_sports_worker(ref, send_func, key):
+    """Collect non-football sports one at a time, 5 minutes apart.
+
+    The final Telegram report is sent only after every sport has completed.
+    This intentionally avoids the old behaviour that fired all sport APIs in
+    one burst and exhausted the API-Sports per-minute quota.
+    """
     try:
-        print("OTHER SPORTS DAILY STARTED — staggered 5 min/sport")
-        run_other_sports_scanner(ref, send_func)
+        print("OTHER SPORTS DAILY STARTED — one sport every 5 min")
+        sports = list(OTHER_SPORTS.keys())
+        for i, sport in enumerate(sports):
+            if i:
+                print(f"OTHER SPORTS WAIT — next sport in 300s")
+                time.sleep(300)
+            print(f"OTHER SPORTS {sport.upper()} STARTED")
+            try:
+                report, fixtures, valid = _run_one_other_sport(sport, ref)
+                _save_other_sport_result(ref, sport, report, fixtures, valid)
+                print(f"OTHER SPORTS {sport.upper()} FINISHED — fixtures={fixtures} valid={valid}")
+            except Exception as exc:
+                print(f"OTHER SPORTS {sport.upper()} ERROR:", repr(exc))
+                _save_other_sport_result(
+                    ref, sport,
+                    f"{OTHER_SPORTS[sport]['label']}\nГрешка при зареждането на данните.",
+                    0, 0,
+                )
+        # One final message, only after all sports are collected.
+        _send_other_sports_daily_report(ref, send_func)
         mark_ran(key)
-        print("OTHER SPORTS DAILY FINISHED")
+        print("OTHER SPORTS DAILY FINISHED — FINAL REPORT SENT")
     except Exception as exc:
         print(_signal_text(f"OTHER SPORTS DAILY ERROR: {exc!r}"))
-        # Do not mark as completed after an exception; a restart can retry.
     finally:
         with _OTHER_SPORTS_RUNNING_LOCK:
             _OTHER_SPORTS_RUNNING.discard(key)
 
 
 def run_due_scans(send_func):
-    """Run football at 10/20 BG and start other-sports scan once at 10 BG.
-    Football is synchronous and unchanged. Other sports run in one background
-    worker with a 5-minute gap between sports, so live/prematch loops are never
-    blocked and API-Sports is not hit by a burst of requests.
+    """Daily scheduler. Football is exactly two short slots; other sports are
+    collected independently in a background worker with a 5-minute gap.
+    LIVE is not touched by this scheduler.
     """
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
+    minute = now.hour * 60 + now.minute
 
-    # FOOTBALL: exactly two daily scans, 11:00-style day feed and 21:00-style night feed.
-    if 10 <= now.hour < 20:
+    # FOOTBALL: only the two actual signal windows. Do not catch up a missed
+    # scan after a Railway restart hours later.
+    if 11 * 60 <= minute < 11 * 60 + 5:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 10:00 STARTED"))
+            print(_signal_text("DAILY SCANNER 11:00 STARTED"))
             run_daily_scanner("day", today, send_func)
             mark_ran(key)
-            print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
+            print(_signal_text("DAILY SCANNER 11:00 FINISHED"))
 
-    # OTHER SPORTS: one staggered daily batch. It is intentionally launched in
-    # the background because it can take ~25-30 minutes with seven-minute-sized
-    # work windows; it must never stop LIVE or PREMATCH.
+    if 21 * 60 <= minute < 21 * 60 + 5:
+        key = f"night:{today.isoformat()}"
+        if not already_ran(key):
+            print(_signal_text("DAILY SCANNER 21:00 STARTED"))
+            run_daily_scanner("night", today, send_func)
+            mark_ran(key)
+            print(_signal_text("DAILY SCANNER 21:00 FINISHED"))
+
+    # OTHER SPORTS: start only in the morning collection window. The worker
+    # itself spaces every sport by 5 minutes and sends one final report after
+    # the last sport. Never start a second batch on every scheduler poll.
     other_key = f"other_sports:{today.isoformat()}"
-    if now.hour >= 10 and not already_ran(other_key):
+    if 10 * 60 <= minute < 10 * 60 + 5 and not already_ran(other_key):
         with _OTHER_SPORTS_RUNNING_LOCK:
             if other_key not in _OTHER_SPORTS_RUNNING:
                 _OTHER_SPORTS_RUNNING.add(other_key)
@@ -1291,11 +1323,4 @@ def run_due_scans(send_func):
                     name="other-sports-staggered",
                 ).start()
 
-    if now.hour >= 20:
-        key = f"night:{today.isoformat()}"
-        if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 20:00 STARTED"))
-            run_daily_scanner("night", today, send_func)
-            mark_ran(key)
-            print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
 
