@@ -146,50 +146,70 @@ def _safe_float(v):
 
 
 def get_fixtures_for_window(start_bg, end_bg):
-    # API-Football's date parameter is the most efficient way to obtain the
-    # full daily fixture list. We then filter by exact Sofia-local time.
     days = []
     d = start_bg.date()
+
     while d <= end_bg.date():
         days.append(d)
         d += timedelta(days=1)
 
-all_matches = []
-seen = set()
+    all_matches = []
+    seen = set()
 
-for day in days:
-    matches = _api("football/matches", {
-        "date": day.isoformat(),
-        "timezone": "Europe/Sofia",
-        "limit": 100
-    })
+    for day in days:
+        matches = _api(
+            "football/matches",
+            {
+                "date": day.isoformat(),
+                "timezone": "Europe/Sofia",
+                "limit": 100,
+            },
+        )
 
-    if not matches:
-        continue
+        if not isinstance(matches, list):
+            continue
 
-    for match in matches:
-        # останалият ти код тук
-            fid = m.get("fixture", {}).get("id")
+        for m in matches:
+            fid = m.get("id") or m.get("matchId")
+
             if not fid or fid in seen:
                 continue
-            seen.add(fid)
-            dt_raw = m.get("fixture", {}).get("date")
+
+            dt_raw = (
+                m.get("date")
+                or m.get("startDate")
+                or m.get("start_time")
+            )
+
+            if not dt_raw:
+                continue
+
             try:
-                dt_utc = datetime.fromisoformat(dt_raw.replace("Z", "+00:00"))
+                dt_utc = datetime.fromisoformat(
+                    str(dt_raw).replace("Z", "+00:00")
+                )
                 dt_bg = dt_utc.astimezone(TZ)
             except Exception:
                 continue
 
-            status = (m.get("fixture", {}).get("status", {}) or {}).get("short", "")
-            if status in {"FT", "AET", "PEN", "CANC", "PST", "ABD", "AWD", "WO"}:
-                continue
             if dt_bg < start_bg or dt_bg >= end_bg:
                 continue
+
             if dt_utc <= datetime.now(timezone.utc):
                 continue
+
+            seen.add(fid)
             all_matches.append(m)
 
-    all_matches.sort(key=lambda x: x["fixture"]["date"])
+    all_matches.sort(
+        key=lambda x: str(
+            x.get("date")
+            or x.get("startDate")
+            or x.get("start_time")
+            or ""
+        )
+    )
+
     return all_matches
 
 
@@ -773,9 +793,13 @@ def _team_stats_competition(match, team_id):
     if not _is_cup_competition(league):
         return int(league["id"]), int(league["season"])
 
-    response = _api("leagues", {"team": int(team_id), "current": "true"})
-    if not isinstance(response, list):
-        return None
+response = _api("football/matches", {
+    "teamId": int(team_id),
+    "limit": 100
+})
+
+if not isinstance(response, list):
+    return None
 
     candidates = []
     for item in response:
