@@ -20,17 +20,17 @@ import requests
 from scipy.stats import poisson
 from telegram import Bot
 
-from config import BOT_TOKEN, API_KEY, CHAT_ID
+from config import BOT_TOKEN, API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 
 
 # =========================================================
 # CONFIG
 # =========================================================
 
-BASE_URL = "https://v3.football.api-sports.io"
+BASE_URL = "https://sports.highlightly.net"
 
 HEADERS = {
-    "x-apisports-key": API_KEY
+    "x-rapidapi-key": HIGHLIGHTLY_API_KEY
 }
 
 TIMEZONE = ZoneInfo("Europe/Sofia")
@@ -14144,21 +14144,25 @@ def scan_prematch():
 
 # BLOCK: API_HEALTH_CHECK
 def api_health_check():
-
     try:
-
         data = api_get(
-
-            "fixtures",
-
+            "football/matches",
             {
-
-                "live":
-                    "all"
-
+                "limit": 1
             }
-
         )
+
+        if data is None:
+            return False
+
+        return True
+
+    except Exception as e:
+        logging.warning(
+            "API HEALTH ERROR: %s",
+            repr(e)
+        )
+        return False
 
         if data is None:
 
