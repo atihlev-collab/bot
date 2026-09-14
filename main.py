@@ -14,6 +14,7 @@ import time
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
+from daily_statistical_scanner import run_due_scans
 
 import requests
 
@@ -14388,6 +14389,23 @@ def main_loop():
             )
 
             LAST_PREMATCH_SCAN = now
+
+        # =============================================
+        # DAILY STATISTICAL SCANNER
+        # =============================================
+
+        try:
+
+            run_due_scans(
+                send_func=send_telegram
+            )
+
+        except Exception as e:
+
+            main_log(
+                f"STATISTICAL SCANNER ERROR: {repr(e)}",
+                "WARNING"
+            )
 
         # =============================================
         # SLEEP
