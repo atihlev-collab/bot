@@ -1,6 +1,6 @@
 import os
 
-BOT_TOKEN = "старият ти token"
+BOT_TOKEN = "8847822220:AAHhv-ZJulQFA_ZvHUBbfGh1wT9rj8sKiRo"
 API_KEY = "dae2b08f-3b85-4af5-b53d-305c6db511a5"
 CHAT_ID = "@rangel_radar_pro"
 
