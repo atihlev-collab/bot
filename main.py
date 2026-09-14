@@ -14394,6 +14394,18 @@ def main_loop():
         # DAILY STATISTICAL SCANNER
         # =============================================
 
+        # =============================================
+        # STATISTICAL SCANNER
+        # =============================================
+
+        try:
+            run_due_scans(send_func=send_telegram)
+        except Exception as e:
+            main_log(
+                f"STATISTICAL SCANNER ERROR: {repr(e)}",
+                "WARNING"
+            )
+
        
 
         # =============================================
