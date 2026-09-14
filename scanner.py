@@ -18,7 +18,11 @@ import requests
 from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
 
-BASE_URL = "https://sports.highlightly.net"
+# =========================================================
+# HIGHLIGHTLY FOOTBALL API
+# =========================================================
+
+BASE_URL = "https://soccer.highlightly.net"
 
 HEADERS = {
     "x-rapidapi-key": HIGHLIGHTLY_API_KEY
