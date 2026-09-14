@@ -270,13 +270,66 @@ def send_telegram(message):
 
 
 # =========================================================
-# API ENGINE
+# API ENGINE — HIGHLIGHTLY COMPATIBILITY LAYER
 # =========================================================
 
-# BLOCK: API_GET
 def api_get(endpoint, params=None):
+    params = dict(params or {})
 
-    params = params or {}
+    # -----------------------------------------------------
+    # OLD API-FOOTBALL -> HIGHLIGHTLY ROUTES
+    # -----------------------------------------------------
+
+    original_endpoint = endpoint
+
+    if endpoint == "fixtures":
+        endpoint = "football/matches"
+
+        # API-Football -> Highlightly
+        if "live" in params:
+            live = params.pop("live")
+            if live == "all":
+                # Highlightly has no live=all.
+                # Get today's matches and filter live below.
+                params.setdefault(
+                    "date",
+                    datetime.now(TIMEZONE).strftime("%Y-%m-%d")
+                )
+                params.setdefault("timezone", str(TIMEZONE))
+
+        if "team" in params:
+            team_id = params.pop("team")
+            params["homeTeamId"] = team_id
+
+        if "last" in params:
+            # Highlightly does not use API-Football last=N.
+            params.pop("last", None)
+
+        if "id" in params:
+            params["matchId"] = params.pop("id")
+
+        params.setdefault("limit", 100)
+
+    elif endpoint == "fixtures/statistics":
+        fixture_id = params.pop("fixture", None)
+        endpoint = f"statistics/{fixture_id}"
+
+    elif endpoint == "fixtures/events":
+        fixture_id = params.pop("fixture", None)
+        endpoint = f"events/{fixture_id}"
+
+    elif endpoint == "leagues":
+        # This old call is only used as a competition fallback.
+        # Highlightly leagues does not support team=current.
+        team_id = params.pop("team", None)
+        params.pop("current", None)
+
+        endpoint = "football/leagues"
+        params.setdefault("limit", 100)
+
+    # -----------------------------------------------------
+    # REQUEST
+    # -----------------------------------------------------
 
     for attempt in range(1, API_RETRIES + 1):
 
@@ -289,36 +342,208 @@ def api_get(endpoint, params=None):
                 timeout=REQUEST_TIMEOUT
             )
 
-            # Successful request
             if response.status_code == 200:
 
                 try:
-                    return response.json()
-
+                    payload = response.json()
                 except ValueError:
-
                     logging.warning(
                         "API INVALID JSON | %s",
-                        endpoint
+                        original_endpoint
                     )
-
                     return {}
 
-            # API limit
+                # -------------------------------------------------
+                # HIGHLIGHTLY -> API-FOOTBALL COMPATIBILITY
+                # -------------------------------------------------
+
+                if isinstance(payload, dict):
+
+                    data = payload.get("data")
+
+                    # Matches
+                    if original_endpoint == "fixtures":
+
+                        if not isinstance(data, list):
+                            data = []
+
+                        converted = []
+
+                        for m in data:
+
+                            if not isinstance(m, dict):
+                                continue
+
+                            home = m.get("homeTeam") or {}
+                            away = m.get("awayTeam") or {}
+                            league = m.get("league") or {}
+                            country = m.get("country") or {}
+                            state = m.get("state") or {}
+                            score = state.get("score") or {}
+
+                            current_score = score.get(
+                                "current",
+                                "0 - 0"
+                            )
+
+                            try:
+                                hs, aw = [
+                                    int(x.strip())
+                                    for x in str(
+                                        current_score
+                                    ).split("-", 1)
+                                ]
+                            except Exception:
+                                hs, aw = 0, 0
+
+                            description = str(
+                                state.get(
+                                    "description",
+                                    ""
+                                )
+                            )
+
+                            desc_upper = description.upper()
+
+                            if "NOT STARTED" in desc_upper:
+                                status_short = "NS"
+                            elif "FINISHED" in desc_upper:
+                                status_short = "FT"
+                            elif any(
+                                x in desc_upper
+                                for x in (
+                                    "HALF",
+                                    "FIRST",
+                                    "SECOND",
+                                    "EXTRA",
+                                    "PENALT",
+                                    "IN PROGRESS",
+                                    "BREAK"
+                                )
+                            ):
+                                status_short = "LIVE"
+                            elif "POSTPONED" in desc_upper:
+                                status_short = "PST"
+                            elif "CANCEL" in desc_upper:
+                                status_short = "CANC"
+                            else:
+                                status_short = "NS"
+
+                            converted.append({
+                                "fixture": {
+                                    "id": m.get("id"),
+                                    "date": m.get("date"),
+                                    "timezone": params.get(
+                                        "timezone",
+                                        str(TIMEZONE)
+                                    ),
+                                    "status": {
+                                        "short": status_short,
+                                        "long": description,
+                                        "elapsed": state.get(
+                                            "clock"
+                                        )
+                                    }
+                                },
+                                "league": {
+                                    "id": league.get("id"),
+                                    "name": league.get("name"),
+                                    "season": league.get("season"),
+                                    "country": (
+                                        country.get("name")
+                                        or ""
+                                    )
+                                },
+                                "teams": {
+                                    "home": {
+                                        "id": home.get("id"),
+                                        "name": home.get("name"),
+                                        "logo": home.get("logo")
+                                    },
+                                    "away": {
+                                        "id": away.get("id"),
+                                        "name": away.get("name"),
+                                        "logo": away.get("logo")
+                                    }
+                                },
+                                "goals": {
+                                    "home": hs,
+                                    "away": aw
+                                }
+                            })
+
+                        # live=all compatibility
+                        if "live" in (params or {}) or (
+                            "live" in str(original_endpoint)
+                        ):
+                            converted = [
+                                m for m in converted
+                                if m.get("fixture", {})
+                                  .get("status", {})
+                                  .get("short") == "LIVE"
+                            ]
+
+                        return {
+                            "response": converted
+                        }
+
+                    # Statistics
+                    if original_endpoint == "fixtures/statistics":
+
+                        if isinstance(data, list):
+                            return {
+                                "response": data
+                            }
+
+                        return {
+                            "response": []
+                        }
+
+                    # Events
+                    if original_endpoint == "fixtures/events":
+
+                        if isinstance(data, list):
+                            return {
+                                "response": data
+                            }
+
+                        return {
+                            "response": []
+                        }
+
+                    # Leagues
+                    if original_endpoint == "leagues":
+
+                        if isinstance(data, list):
+                            return {
+                                "response": data
+                            }
+
+                        return {
+                            "response": []
+                        }
+
+                    # Normal Highlightly response
+                    return payload
+
+                return payload
+
             if response.status_code == 429:
 
-                wait_time = min(10, attempt * 3)
+                wait_time = min(
+                    10,
+                    attempt * 3
+                )
 
                 logging.warning(
                     "API RATE LIMIT 429 | %s | waiting %ss",
-                    endpoint,
+                    original_endpoint,
                     wait_time
                 )
 
                 time.sleep(wait_time)
                 continue
 
-            # Temporary server error
             if response.status_code >= 500:
 
                 wait_time = attempt
@@ -326,7 +551,7 @@ def api_get(endpoint, params=None):
                 logging.warning(
                     "API SERVER ERROR %s | %s | retry %s/%s",
                     response.status_code,
-                    endpoint,
+                    original_endpoint,
                     attempt,
                     API_RETRIES
                 )
@@ -334,11 +559,10 @@ def api_get(endpoint, params=None):
                 time.sleep(wait_time)
                 continue
 
-            # Other HTTP error
             logging.warning(
                 "API HTTP ERROR %s | %s",
                 response.status_code,
-                endpoint
+                original_endpoint
             )
 
             time.sleep(1)
@@ -347,7 +571,7 @@ def api_get(endpoint, params=None):
 
             logging.warning(
                 "API REQUEST ERROR | %s | attempt %s/%s | %s",
-                endpoint,
+                original_endpoint,
                 attempt,
                 API_RETRIES,
                 repr(e)
@@ -359,7 +583,7 @@ def api_get(endpoint, params=None):
 
             logging.warning(
                 "API ERROR | %s | %s",
-                endpoint,
+                original_endpoint,
                 repr(e)
             )
 
