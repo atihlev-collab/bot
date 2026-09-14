@@ -19,7 +19,7 @@ from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
 
 BASE_URL = "https://sports.highlightly.net"
-HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY}
+HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": "sport-highlights-api.p.rapidapi.com"}
 TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
 HISTORY_GAMES = None
@@ -145,244 +145,116 @@ def _safe_float(v):
         return None
 
 
+def _normalize_match(m):
+    if not isinstance(m, dict):
+        return None
+    home = m.get("homeTeam") or {}
+    away = m.get("awayTeam") or {}
+    league = m.get("league") or {}
+    country = m.get("country") or {}
+    state = m.get("state") or {}
+    score = state.get("score") or {}
+    current = score.get("current")
+    hs = aw = 0
+    if isinstance(current, str) and "-" in current:
+        try:
+            hs, aw = [int(x.strip()) for x in current.split("-", 1)]
+        except Exception:
+            pass
+    elif isinstance(current, dict):
+        hs = int(current.get("home") or current.get("homeTeam") or 0)
+        aw = int(current.get("away") or current.get("awayTeam") or 0)
+    desc = str(state.get("description") or "")
+    up = desc.upper()
+    if any(x in up for x in ("FIRST HALF", "SECOND HALF", "IN PROGRESS", "HALF TIME", "BREAK", "EXTRA TIME", "PENALT")):
+        short = "LIVE"
+    elif "FINISHED" in up or "FINAL" in up:
+        short = "FT"
+    elif "POSTPONED" in up:
+        short = "PST"
+    elif "CANCEL" in up:
+        short = "CANC"
+    else:
+        short = "NS"
+    return {
+        "fixture": {"id": m.get("id"), "date": m.get("date"), "status": {"short": short, "long": desc, "elapsed": state.get("clock")}},
+        "league": {"id": league.get("id"), "name": league.get("name"), "season": league.get("season"), "country": country.get("name") or "", "type": league.get("type")},
+        "teams": {"home": {"id": home.get("id"), "name": home.get("name"), "logo": home.get("logo")}, "away": {"id": away.get("id"), "name": away.get("name"), "logo": away.get("logo")}},
+        "goals": {"home": hs, "away": aw},
+    }
+
+
 def get_fixtures_for_window(start_bg, end_bg):
     days = []
     d = start_bg.date()
-
     while d <= end_bg.date():
         days.append(d)
         d += timedelta(days=1)
-
-    all_matches = []
-    seen = set()
-
+    all_matches, seen = [], set()
     for day in days:
-        matches = _api(
-            "football/matches",
-            {
-                "date": day.isoformat(),
-                "timezone": "Europe/Sofia",
-                "limit": 100,
-            },
-        )
-
-        if not isinstance(matches, list):
-            continue
-
-        for m in matches:
-            fid = m.get("id") or m.get("matchId")
-
-            if not fid or fid in seen:
+        rows = _api("football/matches", {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100})
+        for raw in rows if isinstance(rows, list) else []:
+            m = _normalize_match(raw)
+            if not m:
                 continue
-
-            dt_raw = (
-                m.get("date")
-                or m.get("startDate")
-                or m.get("start_time")
-            )
-
-            if not dt_raw:
+            fid = (m.get("fixture") or {}).get("id")
+            dt_raw = (m.get("fixture") or {}).get("date")
+            if not fid or fid in seen or not dt_raw:
                 continue
-
             try:
-                dt_utc = datetime.fromisoformat(
-                    str(dt_raw).replace("Z", "+00:00")
-                )
+                dt_utc = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00"))
                 dt_bg = dt_utc.astimezone(TZ)
             except Exception:
                 continue
-
-            if dt_bg < start_bg or dt_bg >= end_bg:
+            if dt_bg < start_bg or dt_bg >= end_bg or dt_utc <= datetime.now(timezone.utc):
                 continue
-
-            if dt_utc <= datetime.now(timezone.utc):
-                continue
-
             seen.add(fid)
             all_matches.append(m)
-
-    all_matches.sort(
-        key=lambda x: str(
-            x.get("date")
-            or x.get("startDate")
-            or x.get("start_time")
-            or ""
-        )
-    )
-
+    all_matches.sort(key=lambda x: (x.get("fixture") or {}).get("date", ""))
     return all_matches
 
-
 def get_team_history(team_id, season, league_id=None):
-    """
-    Official current-season history.
-
-    1. First use the requested competition.
-    2. If fewer than 3 official matches exist there,
-       fall back to the team's other official matches
-       from the current season.
-    3. Friendly matches are excluded.
-    4. Only FT/AET/PEN matches are accepted.
-    """
-
-    team_id = int(team_id)
-    season = int(season)
-    league_id = int(league_id or 0)
-
+    team_id, season, league_id = int(team_id), int(season), int(league_id or 0)
     key = (team_id, season, league_id)
-
     if key in _SCAN_HISTORY:
         return _SCAN_HISTORY[key]
 
-    # ---------------------------------------------------------
-    # 1. FIRST: CURRENT COMPETITION
-    # ---------------------------------------------------------
+    def fetch_team_matches(extra):
+        rows = _api("football/matches", {**extra, "limit": 100})
+        return [_normalize_match(x) for x in (rows if isinstance(rows, list) else []) if _normalize_match(x)]
 
     primary = []
-
     if league_id:
-        fixtures = _api(
-            "fixtures",
-            {
-                "team": team_id,
-                "league": league_id,
-                "season": season,
-            },
-        )
+        primary = fetch_team_matches({"leagueId": league_id, "season": season, "homeTeamId": team_id})
+        primary += fetch_team_matches({"leagueId": league_id, "season": season, "awayTeamId": team_id})
 
-        if not isinstance(fixtures, list):
-            fixtures = []
-
-        seen = set()
-
-        for f in fixtures:
-
-            fixture = f.get("fixture") or {}
-            league = f.get("league") or {}
-            status = (fixture.get("status") or {}).get("short", "")
-
-            fid = fixture.get("id")
-
-            if not fid or fid in seen:
+    def clean(rows):
+        out, seen = [], set()
+        for f in rows:
+            fid = (f.get("fixture") or {}).get("id")
+            lg = f.get("league") or {}
+            status = (f.get("fixture") or {}).get("status", {}).get("short", "")
+            if not fid or fid in seen or int(lg.get("season") or 0) != season or status not in {"FT", "AET", "PEN"}:
                 continue
-
-            if int(league.get("id") or 0) != league_id:
+            name = str(lg.get("name") or "").casefold()
+            typ = str(lg.get("type") or "").casefold()
+            if typ == "friendly" or "friend" in name:
                 continue
+            seen.add(fid); out.append(f)
+        return out
 
-            if int(league.get("season") or 0) != season:
-                continue
+    primary = clean(primary)
+    if len(primary) < 3:
+        fallback = fetch_team_matches({"season": season, "homeTeamId": team_id})
+        fallback += fetch_team_matches({"season": season, "awayTeamId": team_id})
+        primary = clean(primary + fallback)
 
-            if status not in {"FT", "AET", "PEN"}:
-                continue
-
-            seen.add(fid)
-            primary.append(f)
-
-    primary.sort(
-        key=lambda f: (f.get("fixture") or {}).get("date", ""),
-        reverse=True,
-    )
-
-    # ---------------------------------------------------------
-    # 2. IF WE HAVE 3+ MATCHES IN THE COMPETITION
-    #    USE THEM
-    # ---------------------------------------------------------
-
-    if len(primary) >= 3:
-
-        primary.sort(
-            key=lambda f: (f.get("fixture") or {}).get("date", "")
-        )
-
-        _SCAN_HISTORY[key] = primary
-
-        return primary
-
-    # ---------------------------------------------------------
-    # 3. FALLBACK:
-    #    ALL OFFICIAL CURRENT-SEASON MATCHES
-    # ---------------------------------------------------------
-
-    print(
-        "HISTORY FALLBACK:",
-        team_id,
-        "competition_matches=",
-        len(primary),
-        "-> current-season official matches",
-    )
-
-    all_fixtures = _api(
-        "fixtures",
-        {
-            "team": team_id,
-            "season": season,
-        },
-    )
-
-    if not isinstance(all_fixtures, list):
-        all_fixtures = []
-
-    clean = []
-    seen = set()
-
-    for f in all_fixtures:
-
-        fixture = f.get("fixture") or {}
-        league = f.get("league") or {}
-        status = (fixture.get("status") or {}).get("short", "")
-
-        fid = fixture.get("id")
-
-        if not fid or fid in seen:
-            continue
-
-        # CURRENT SEASON ONLY
-        if int(league.get("season") or 0) != season:
-            continue
-
-        # OFFICIAL COMPLETED MATCHES ONLY
-        if status not in {"FT", "AET", "PEN"}:
-            continue
-
-        # EXCLUDE FRIENDLIES
-        league_type = str(league.get("type") or "").casefold()
-        league_name = str(league.get("name") or "").casefold()
-
-        if league_type == "friendly":
-            continue
-
-        if "friend" in league_name:
-            continue
-
-        seen.add(fid)
-        clean.append(f)
-
-    # Most recent first
-    clean.sort(
-        key=lambda f: (f.get("fixture") or {}).get("date", ""),
-        reverse=True,
-    )
-
-    # Keep the most recent official current-season matches.
-    # We want enough data for the statistical profiles.
-    clean = clean[:12]
-
-    # Oldest -> newest for calculations
-    clean.sort(
-        key=lambda f: (f.get("fixture") or {}).get("date", "")
-    )
-
-    _SCAN_HISTORY[key] = clean
-
-    print(
-        "HISTORY FALLBACK RESULT:",
-        team_id,
-        "matches=",
-        len(clean),
-    )
-
-    return clean
-
+    primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""), reverse=True)
+    primary = primary[:12]
+    primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+    _SCAN_HISTORY[key] = primary
+    print("HISTORY:", team_id, "matches=", len(primary))
+    return primary
 
 def _read_cached_stat(fixture_id):
     conn = _db()
@@ -454,49 +326,22 @@ def _fixture_market_values(fixture):
 
 
 def load_historical_statistics(all_histories):
-    """
-    Load statistics for unique current-season fixtures in batches of up to 20.
-    This avoids one request per historical match while using the actual
-    fixture-level statistics endpoint/data.
-    """
-    fixtures_by_id={}
+    fixtures_by_id = {}
     for history in all_histories:
         for f in history:
-            fid=(f.get("fixture") or {}).get("id")
+            fid = (f.get("fixture") or {}).get("id")
             if fid:
-                fixtures_by_id[int(fid)]=f
-
-ids = list(fixtures_by_id)
-loaded = {}
-
-for fid in ids:
-    response = _api(f"football/matches/{fid}", {})
-
-    if not response:
-        continue
-
-    if isinstance(response, dict):
-        response = [response]
-
-    for f in response:
-        fid2, data = _fixture_market_values(f)
-        if fid2:
-            loaded[int(fid2)] = data
-
-    # Merge fixture goals even if enriched statistics are absent.
-    for fid,f in fixtures_by_id.items():
-        base=loaded.setdefault(fid,{})
-        fid2,goal_data=_fixture_market_values(f)
-        for tid,vals in goal_data.items():
-            base.setdefault(tid,{}).update({
-                k:v for k,v in vals.items()
-                if k in ("goals_scored","goals_conceded")
-            })
-
+                fixtures_by_id[int(fid)] = f
+    loaded = {}
+    for fid, base_fixture in fixtures_by_id.items():
+        rows = _api(f"football/statistics/{fid}", {})
+        fake = dict(base_fixture)
+        fake["statistics"] = rows if isinstance(rows, list) else []
+        _, data = _fixture_market_values(fake)
+        loaded[fid] = data
     _SCAN_FIXTURE_STATS.clear()
     _SCAN_FIXTURE_STATS.update(loaded)
     return loaded
-
 
 def build_profiles_from_histories(histories_by_key, stats_by_fixture):
     profiles={}
@@ -790,33 +635,24 @@ def _is_cup_competition(league):
 
 def _team_stats_competition(match, team_id):
     league = match.get("league") or {}
-    if not _is_cup_competition(league):
-        return int(league["id"]), int(league["season"])
+    lid = league.get("id")
+    season = league.get("season")
+    if not _is_cup_competition(league) and lid and season:
+        return int(lid), int(season)
 
-response = _api("football/matches", {
-    "teamId": int(team_id),
-    "limit": 100
-})
-
-if not isinstance(response, list):
-    return None
-
+    # For cup fixtures, resolve the team's current league/season from Highlightly team statistics.
+    from_date = f"{int(season) - 1 if season else datetime.now(TZ).year - 1}-07-01"
+    rows = _api(f"football/teams/statistics/{int(team_id)}", {"fromDate": from_date, "timezone": "Europe/Sofia"})
     candidates = []
-    for item in response:
-        lg = item.get("league") or {}
-        if str(lg.get("type") or "").casefold() != "league":
-            continue
-        if "cup" in str(lg.get("name") or "").casefold():
-            continue
-        for season in item.get("seasons") or []:
-            if season.get("current"):
-                candidates.append((lg, season))
-                break
-
-    if not candidates:
-        return None
-    lg, season = candidates[0]
-    return int(lg["id"]), int(season["year"])
+    for item in rows if isinstance(rows, list) else []:
+        lgid = item.get("leagueId")
+        sy = item.get("season")
+        lname = str(item.get("leagueName") or "").casefold()
+        if lgid and sy and "cup" not in lname and "copa" not in lname and "knockout" not in lname:
+            candidates.append((int(lgid), int(sy)))
+    if candidates:
+        return candidates[0]
+    return None
 
 # =========================================================
 # BETANO PREMATCH MARKET FILTER
@@ -826,100 +662,19 @@ BETANO_BOOKMAKER_ID = 32
 
 
 def get_betano_prematch_markets(fixture_id):
-    """
-    Returns the real markets offered by Betano for this fixture.
-
-    Result:
-        {
-            "match": True/False,
-            "corners": True/False,
-            "shots": True/False,
-            "cards": True/False,
-        }
-    """
-
-    result = {
-        "match": False,
-        "corners": False,
-        "shots": False,
-        "cards": False,
-    }
-
-    response = _api(
-        "odds",
-        {
-            "fixture": int(fixture_id),
-            "bookmaker": BETANO_BOOKMAKER_ID,
-        },
-    )
-
-    if not isinstance(response, list) or not response:
-        print(
-            "BETANO FILTER:",
-            fixture_id,
-            "MATCH NOT FOUND"
-        )
-        return result
-
-    found_betano = False
-
-    for item in response:
-
-        bookmakers = item.get("bookmakers") or []
-
-        for bookmaker in bookmakers:
-
-            bookmaker_id = bookmaker.get("id")
-
-            if bookmaker_id != BETANO_BOOKMAKER_ID:
+    result = {"match": False, "corners": False, "shots": False, "cards": False}
+    rows = _api("football/odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
+    for row in rows if isinstance(rows, list) else []:
+        for market in row.get("odds", []) or []:
+            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
                 continue
-
-            found_betano = True
             result["match"] = True
-
-            for bet in bookmaker.get("bets") or []:
-
-                name = str(
-                    bet.get("name") or ""
-                ).casefold()
-
-                print(
-                    "BETANO MARKET:",
-                    fixture_id,
-                    name
-                )
-
-                # CORNERS
-                if "corner" in name:
-                    result["corners"] = True
-
-                # SHOTS / SHOTS ON GOAL
-                if (
-                    "shot" in name
-                    or "shots on goal" in name
-                    or "total shotongoal" in name
-                ):
-                    result["shots"] = True
-
-                # CARDS
-                if (
-                    "card" in name
-                    or "cards" in name
-                    or "booking" in name
-                ):
-                    result["cards"] = True
-
-    if not found_betano:
-        result["match"] = False
-
-    print(
-        "BETANO FILTER RESULT:",
-        fixture_id,
-        result
-    )
-
+            name = str(market.get("market") or "").casefold()
+            if "corner" in name: result["corners"] = True
+            if "shot" in name: result["shots"] = True
+            if "card" in name or "booking" in name: result["cards"] = True
+    print("BETANO FILTER RESULT:", fixture_id, result)
     return result
-
 
 def filter_matches_by_betano_markets(matches):
 
