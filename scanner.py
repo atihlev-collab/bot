@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from config import API_KEY, CHAT_ID
+from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
 
 BASE_URL = "https://v3.football.api-sports.io"
