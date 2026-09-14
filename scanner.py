@@ -18,8 +18,8 @@ import requests
 from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
 
-BASE_URL = "https://v3.football.api-sports.io"
-HEADERS = {"x-apisports-key": API_KEY}
+BASE_URL = "https://sports.highlightly.net"
+HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY}
 TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
 HISTORY_GAMES = None
