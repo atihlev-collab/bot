@@ -21,7 +21,7 @@ from scipy.stats import poisson
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
-
+from scanner import run_due_scans
 
 # =========================================================
 # CONFIG
