@@ -1,3 +1,4 @@
+# BUILD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
@@ -18,16 +19,8 @@ import requests
 from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
 
-# =========================================================
-# HIGHLIGHTLY FOOTBALL API
-# =========================================================
-
 BASE_URL = "https://soccer.highlightly.net"
-
-HEADERS = {
-    "x-rapidapi-key": HIGHLIGHTLY_API_KEY
-}
-
+HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": "football-highlights-api.p.rapidapi.com"}
 TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
 HISTORY_GAMES = None
@@ -200,7 +193,7 @@ def get_fixtures_for_window(start_bg, end_bg):
         d += timedelta(days=1)
     all_matches, seen = [], set()
     for day in days:
-        rows = _api("football/matches", {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100})
+        rows = _api("matches", {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100})
         for raw in rows if isinstance(rows, list) else []:
             m = _normalize_match(raw)
             if not m:
@@ -228,7 +221,7 @@ def get_team_history(team_id, season, league_id=None):
         return _SCAN_HISTORY[key]
 
     def fetch_team_matches(extra):
-        rows = _api("football/matches", {**extra, "limit": 100})
+        rows = _api("matches", {**extra, "limit": 100})
         return [_normalize_match(x) for x in (rows if isinstance(rows, list) else []) if _normalize_match(x)]
 
     primary = []
@@ -342,7 +335,7 @@ def load_historical_statistics(all_histories):
                 fixtures_by_id[int(fid)] = f
     loaded = {}
     for fid, base_fixture in fixtures_by_id.items():
-        rows = _api(f"football/statistics/{fid}", {})
+        rows = _api(f"statistics/{fid}", {})
         fake = dict(base_fixture)
         fake["statistics"] = rows if isinstance(rows, list) else []
         _, data = _fixture_market_values(fake)
@@ -650,7 +643,7 @@ def _team_stats_competition(match, team_id):
 
     # For cup fixtures, resolve the team's current league/season from Highlightly team statistics.
     from_date = f"{int(season) - 1 if season else datetime.now(TZ).year - 1}-07-01"
-    rows = _api(f"football/teams/statistics/{int(team_id)}", {"fromDate": from_date, "timezone": "Europe/Sofia"})
+    rows = _api(f"teams/statistics/{int(team_id)}", {"fromDate": from_date, "timezone": "Europe/Sofia"})
     candidates = []
     for item in rows if isinstance(rows, list) else []:
         lgid = item.get("leagueId")
@@ -671,7 +664,7 @@ BETANO_BOOKMAKER_ID = 32
 
 def get_betano_prematch_markets(fixture_id):
     result = {"match": False, "corners": False, "shots": False, "cards": False}
-    rows = _api("football/odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
+    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
     for row in rows if isinstance(rows, list) else []:
         for market in row.get("odds", []) or []:
             if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
@@ -900,6 +893,7 @@ def run_due_scans(send_func):
             run_daily_scanner("night", today, send_func)
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
+
 
 
 
