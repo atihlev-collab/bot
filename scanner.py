@@ -446,17 +446,22 @@ def load_historical_statistics(all_histories):
             if fid:
                 fixtures_by_id[int(fid)]=f
 
-    ids=list(fixtures_by_id)
-    loaded={}
-    for i in range(0,len(ids),20):
-        batch=ids[i:i+20]
-        response=_api("fixtures", {"ids":"-".join(map(str,batch))})
-        if not isinstance(response,list):
-            continue
-        for f in response:
-            fid, data=_fixture_market_values(f)
-            if fid:
-                loaded[int(fid)]=data
+ids = list(fixtures_by_id)
+loaded = {}
+
+for fid in ids:
+    response = _api(f"football/matches/{fid}", {})
+
+    if not response:
+        continue
+
+    if isinstance(response, dict):
+        response = [response]
+
+    for f in response:
+        fid2, data = _fixture_market_values(f)
+        if fid2:
+            loaded[int(fid2)] = data
 
     # Merge fixture goals even if enriched statistics are absent.
     for fid,f in fixtures_by_id.items():
