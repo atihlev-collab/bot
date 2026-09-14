@@ -1,3 +1,4 @@
+# BUILD: HIGHLIGHTLY-NATIVE-FULL-FIX-2
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
@@ -19,7 +20,7 @@ from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
 
 BASE_URL = "https://sports.highlightly.net"
-HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": "sport-highlights-api.p.rapidapi.com"}
+HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": "football-highlights-api.p.rapidapi.com"}
 TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
 HISTORY_GAMES = None
