@@ -53,7 +53,7 @@ logging.basicConfig(
 CACHE_TIME_FORM = 21600          # 6 hours
 CACHE_TIME_ODDS = 900            # 15 minutes
 CACHE_TIME_STANDINGS = 21600     # 6 hours
-CACHE_TIME_LIVE = 30             # 30 seconds
+CACHE_TIME_LIVE = 120           
 
 sent_live = {}
 sent_prematch = {}
@@ -8585,11 +8585,11 @@ from datetime import datetime
 
 SCAN_INTERVAL = 60
 
-PREMATCH_SCAN_INTERVAL = 300
+PREMATCH_SCAN_INTERVAL = 900
 
 LIVE_SCAN_INTERVAL = 60
 
-RESULT_SCAN_INTERVAL = 120
+RESULT_SCAN_INTERVAL = 300
 
 MAX_PREMATCH_SIGNALS = 5
 
@@ -13428,8 +13428,8 @@ def process_live_matches(
 # MAIN V4 - SIGNAL SCANNER
 # =========================================================
 
-PREMATCH_SCAN_INTERVAL = 300
-LIVE_SCAN_INTERVAL = 30
+PREMATCH_SCAN_INTERVAL = 900
+LIVE_SCAN_INTERVAL = 60
 
 MAX_LIVE_SIGNALS_PER_SCAN = 5
 MAX_PREMATCH_SIGNALS_PER_SCAN = 5
