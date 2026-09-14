@@ -65,7 +65,7 @@ def _api(endpoint, params=None, timeout=25):
                 print("SCANNER API ERROR:", endpoint, payload.get("errors"))
                 return None
 
-            return payload.get("response")
+            return payload.get("data", [])
 
         except Exception as e:
             if attempt == 4:
@@ -154,11 +154,21 @@ def get_fixtures_for_window(start_bg, end_bg):
         days.append(d)
         d += timedelta(days=1)
 
-    all_matches = []
-    seen = set()
-    for day in days:
-        matches = _api("fixtures", {"date": day.isoformat()})
-        for m in matches:
+all_matches = []
+seen = set()
+
+for day in days:
+    matches = _api("football/matches", {
+        "date": day.isoformat(),
+        "timezone": "Europe/Sofia",
+        "limit": 100
+    })
+
+    if not matches:
+        continue
+
+    for match in matches:
+        # останалият ти код тук
             fid = m.get("fixture", {}).get("id")
             if not fid or fid in seen:
                 continue
