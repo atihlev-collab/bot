@@ -1,9 +1,12 @@
+import os
 
-BOT_TOKEN = "8847822220:AAHhv-ZJulQFA_ZvHUBbfGh1wT9rj8sKiRo"
-API_KEY = "810c89c2b68279ba2bc6f6ba427bf6b9"
+BOT_TOKEN = "старият ти token"
+API_KEY = "старият API-Football key"
 CHAT_ID = "@rangel_radar_pro"
-# force restart
 
+HIGHLIGHTLY_API_KEY = os.getenv("HIGHLIGHTLY_API_KEY")
+
+# force restart
 
  
 
