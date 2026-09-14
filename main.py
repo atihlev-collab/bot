@@ -14,7 +14,7 @@ import time
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from daily_statistical_scanner import run_due_scans
+
 
 import requests
 
