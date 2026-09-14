@@ -478,24 +478,30 @@ def api_get(endpoint, params=None):
     original_endpoint = endpoint
     timezone_name = params.get("timezone") or str(TIMEZONE)
 
-    # ---------------------------------------------------------
-    # Native Highlightly Football API endpoint + parameter mapping
-    # ---------------------------------------------------------
-    if endpoint == "fixtures":
-        if "live" in params:
-            params.pop("live", None)
-            # Highlightly matches has no live=all parameter.  A date is
-            # required as the primary query parameter.
-            params.setdefault(
-                "date",
-                datetime.now(TIMEZONE).strftime("%Y-%m-%d")
-            )
-            params.setdefault("timezone", timezone_name)
-            params.setdefault("limit", 100)
-            live_requested = True
-            logging.info(
-                "FOOTBALL API LIVE REQUEST | endpoint=/matches | date=%s",
-                params.get("date")
+# ---------------------------------------------------------
+# Highlightly Football API endpoint mapping
+# ---------------------------------------------------------
+if endpoint == "fixtures":
+    # API-Football compatibility name -> Highlightly Football API
+    endpoint = "matches"
+
+    # Highlightly Football API does not use live=all.
+    params.pop("live", None)
+
+    params.setdefault(
+        "date",
+        datetime.now(TIMEZONE).strftime("%Y-%m-%d")
+    )
+
+    params.pop("timezone", None)
+    params.pop("limit", None)
+
+    live_requested = True
+
+    logging.info(
+        "FOOTBALL API LIVE REQUEST | endpoint=/matches | date=%s",
+        params.get("date")
+    )
             )
         elif "team" in params:
             team_id = params.pop("team")
