@@ -1275,31 +1275,100 @@ def run_sport_daily_scanner(send_func=None):
     return message
 
 
+_START = time.time()
+
+
 def run_due_scans(send_func):
-    """Run the due daily scan(s) once, persisted in SQLite."""
+    """Run football and sport daily scans independently."""
     init_scanner_db()
+
     now = datetime.now(TZ)
     today = now.date()
 
-    # 10:00 scan: once any time from 10:00 until 20:00.
+    # =====================================================
+    # 10:00 DAY SCANS
+    # =====================================================
+
     if now.hour >= 10 and now.hour < 20:
-        key = f"day:{today.isoformat()}"
-        if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 10:00 STARTED"))
-            run_daily_scanner("day", today, send_func)
+
+        # -------------------------------------------------
+        # FOOTBALL — own persisted key
+        # -------------------------------------------------
+
+        football_key = f"day:{today.isoformat()}"
+
+        if not already_ran(football_key):
+            print(
+                _signal_text(
+                    "DAILY FOOTBALL SCANNER 10:00 STARTED"
+                )
+            )
+
+            run_daily_scanner(
+                "day",
+                today,
+                send_func
+            )
+
+            mark_ran(football_key)
+
+            print(
+                _signal_text(
+                    "DAILY FOOTBALL SCANNER 10:00 FINISHED"
+                )
+            )
+
+        # -------------------------------------------------
+        # OTHER SPORTS — separate key
+        # -------------------------------------------------
+
+        sport_key = f"sport:{today.isoformat()}"
+
+        if not already_ran(sport_key):
+            print(
+                _signal_text(
+                    "SPORT DAILY SCANNER STARTED"
+                )
+            )
+
             run_sport_daily_scanner(send_func)
-            mark_ran(key)
-            print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
-    # 20:00 scan: once any time from 20:00 until midnight.
+            mark_ran(sport_key)
+
+            print(
+                _signal_text(
+                    "SPORT DAILY SCANNER FINISHED"
+                )
+            )
+
+    # =====================================================
+    # 20:00 NIGHT FOOTBALL SCAN
+    # =====================================================
+
     if now.hour >= 20:
-        key = f"night:{today.isoformat()}"
-        if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 20:00 STARTED"))
-            run_daily_scanner("night", today, send_func)
-            mark_ran(key)
-            print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
 
+        night_key = f"night:{today.isoformat()}"
+
+        if not already_ran(night_key):
+            print(
+                _signal_text(
+                    "DAILY FOOTBALL SCANNER 20:00 STARTED"
+                )
+            )
+
+            run_daily_scanner(
+                "night",
+                today,
+                send_func
+            )
+
+            mark_ran(night_key)
+
+            print(
+                _signal_text(
+                    "DAILY FOOTBALL SCANNER 20:00 FINISHED"
+                )
+            )
 
 
 
