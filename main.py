@@ -14132,7 +14132,13 @@ def scan_prematch():
 
 # BLOCK: API_HEALTH_CHECK
 def api_health_check():
-    return True
+    try:
+        data = api_get(
+            "football/matches",
+            {
+                "limit": 1
+            }
+        )
 
         if data is None:
             return False
@@ -14144,31 +14150,12 @@ def api_health_check():
             "API HEALTH ERROR: %s",
             repr(e)
         )
-        return False
-
-        if data is None:
-
-            return False
-
-        return True
-
-    except Exception as e:
-
-        logging.warning(
-
-            "API HEALTH ERROR: %s",
-
-            repr(e)
-
-        )
-
         return False
 
 
 # =========================================================
 # SYSTEM STATUS
 # =========================================================
-
 # BLOCK: PRINT_SYSTEM_STATUS
 def print_system_status():
 
