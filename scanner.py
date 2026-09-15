@@ -1334,30 +1334,7 @@ def run_due_scans(send_func):
             )
 
 
-# =====================================================
-# SPORT DAILY SCANNER
-# =====================================================
 
-sport_key = f"sport:{today.isoformat()}"
-
-if now.hour >= 10 and not already_ran(sport_key):
-
-    print(
-        _signal_text(
-            "SPORT DAILY SCANNER STARTED"
-        )
-    )
-
-    run_sport_daily_scanner(send_func)
-
-    mark_ran(sport_key)
-
-    print(
-        _signal_text(
-            "SPORT DAILY SCANNER FINISHED"
-        )
-    )
-    
 
     # =====================================================
     # 10:00 DAY SCANS
