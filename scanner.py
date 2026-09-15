@@ -1326,37 +1326,38 @@ def run_due_scans(send_func):
                     )
                 )
 
-        # -------------------------------------------------
-        # OTHER SPORTS
-        # -------------------------------------------------
+# -------------------------------------------------
+# OTHER SPORTS — once per day
+# -------------------------------------------------
 
-        sport_key = f"sport:{today.isoformat()}"
+sport_key = f"sport:{today.isoformat()}"
 
-        if not already_ran(sport_key):
+if 23 <= now.hour < 24 and not already_ran(sport_key):
 
-            print(
-                _signal_text(
-                    "SPORT DAILY SCANNER STARTED"
-                )
+    print(
+        _signal_text(
+            "SPORT DAILY SCANNER STARTED"
+        )
+    )
+
+    try:
+        run_sport_daily_scanner(send_func)
+        mark_ran(sport_key)
+
+    except Exception as exc:
+        print(
+            _signal_text(
+                f"SPORT DAILY SCANNER ERROR: {exc!r}"
             )
+        )
 
-            try:
-                run_sport_daily_scanner(send_func)
+    print(
+        _signal_text(
+            "SPORT DAILY SCANNER FINISHED"
+        )
+    )
 
-                mark_ran(sport_key)
-
-                print(
-                    _signal_text(
-                        "SPORT DAILY SCANNER FINISHED"
-                    )
-                )
-
-            except Exception as exc:
-                print(
-                    _signal_text(
-                        f"SPORT DAILY SCANNER ERROR: {exc!r}"
-                    )
-                )
+           
 
     # =====================================================
     # 20:00 NIGHT FOOTBALL
