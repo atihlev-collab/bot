@@ -1289,7 +1289,7 @@ def run_due_scans(send_func):
     # 10:00 DAILY SCANS
     # =====================================================
 
-    if 10 <= now.hour < 20:
+    if 23 <= now.hour < 24:
 
         # -------------------------------------------------
         # FOOTBALL — once per day
