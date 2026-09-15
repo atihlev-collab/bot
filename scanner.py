@@ -1283,32 +1283,32 @@ def run_due_scans(send_func):
     init_scanner_db()
 
     now = datetime.now(TZ)
+    today = now.date()
 
-
-if now.hour >= 10 and now.hour < 20:
-
-    football_key = f"day:{today.isoformat()}"
-
-    if not already_ran(football_key):
-        print(
-            _signal_text(
-                "DAILY FOOTBALL SCANNER 10:00 STARTED"
+    if now.hour >= 10 and now.hour < 20:
+    
+        football_key = f"day:{today.isoformat()}"
+    
+        if not already_ran(football_key):
+            print(
+                _signal_text(
+                    "DAILY FOOTBALL SCANNER 10:00 STARTED"
+                )
             )
-        )
 
-        run_daily_scanner(
-            "day",
-            today,
-            send_func
-        )
-
-        mark_ran(football_key)
-
-        print(
-            _signal_text(
-                "DAILY FOOTBALL SCANNER 10:00 FINISHED"
+            run_daily_scanner(
+                "day",
+                today,
+                send_func
             )
-        )
+
+            mark_ran(football_key)
+    
+            print(
+                _signal_text(
+                    "DAILY FOOTBALL SCANNER 10:00 FINISHED"
+                )
+            )
 
 
 # =====================================================
