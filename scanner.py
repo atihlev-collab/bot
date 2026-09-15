@@ -1279,20 +1279,19 @@ _START = time.time()
 
 
 def run_due_scans(send_func):
-    """Run football and sport daily scans independently."""
     init_scanner_db()
 
     now = datetime.now(TZ)
     today = now.date()
 
     # =====================================================
-    # 10:00 DAILY SCANS
+    # TEST DAILY SCANS — 23:00
     # =====================================================
 
     if 23 <= now.hour < 24:
 
         # -------------------------------------------------
-        # FOOTBALL — once per day
+        # FOOTBALL
         # -------------------------------------------------
 
         football_key = f"day:{today.isoformat()}"
@@ -1301,26 +1300,34 @@ def run_due_scans(send_func):
 
             print(
                 _signal_text(
-                    "DAILY FOOTBALL SCANNER 10:00 STARTED"
+                    "DAILY FOOTBALL SCANNER STARTED"
                 )
             )
 
-            run_daily_scanner(
-                "day",
-                today,
-                send_func
-            )
-
-            mark_ran(football_key)
-
-            print(
-                _signal_text(
-                    "DAILY FOOTBALL SCANNER 10:00 FINISHED"
+            try:
+                run_daily_scanner(
+                    "day",
+                    today,
+                    send_func
                 )
-            )
+
+                mark_ran(football_key)
+
+                print(
+                    _signal_text(
+                        "DAILY FOOTBALL SCANNER FINISHED"
+                    )
+                )
+
+            except Exception as exc:
+                print(
+                    _signal_text(
+                        f"DAILY FOOTBALL SCANNER ERROR: {exc!r}"
+                    )
+                )
 
         # -------------------------------------------------
-        # OTHER SPORTS — once per day
+        # OTHER SPORTS
         # -------------------------------------------------
 
         sport_key = f"sport:{today.isoformat()}"
@@ -1333,18 +1340,26 @@ def run_due_scans(send_func):
                 )
             )
 
-            run_sport_daily_scanner(send_func)
+            try:
+                run_sport_daily_scanner(send_func)
 
-            mark_ran(sport_key)
+                mark_ran(sport_key)
 
-            print(
-                _signal_text(
-                    "SPORT DAILY SCANNER FINISHED"
+                print(
+                    _signal_text(
+                        "SPORT DAILY SCANNER FINISHED"
+                    )
                 )
-            )
+
+            except Exception as exc:
+                print(
+                    _signal_text(
+                        f"SPORT DAILY SCANNER ERROR: {exc!r}"
+                    )
+                )
 
     # =====================================================
-    # 20:00 NIGHT FOOTBALL SCAN
+    # 20:00 NIGHT FOOTBALL
     # =====================================================
 
     if now.hour >= 20:
@@ -1355,23 +1370,31 @@ def run_due_scans(send_func):
 
             print(
                 _signal_text(
-                    "DAILY FOOTBALL SCANNER 20:00 STARTED"
+                    "DAILY FOOTBALL NIGHT SCANNER STARTED"
                 )
             )
 
-            run_daily_scanner(
-                "night",
-                today,
-                send_func
-            )
-
-            mark_ran(night_key)
-
-            print(
-                _signal_text(
-                    "DAILY FOOTBALL SCANNER 20:00 FINISHED"
+            try:
+                run_daily_scanner(
+                    "night",
+                    today,
+                    send_func
                 )
-            )
+
+                mark_ran(night_key)
+
+                print(
+                    _signal_text(
+                        "DAILY FOOTBALL NIGHT SCANNER FINISHED"
+                    )
+                )
+
+            except Exception as exc:
+                print(
+                    _signal_text(
+                        f"NIGHT FOOTBALL SCANNER ERROR: {exc!r}"
+                    )
+                )
           
    
 
