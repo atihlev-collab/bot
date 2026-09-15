@@ -1285,8 +1285,6 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
 
 
-today = now.date()
-
 if now.hour >= 10 and now.hour < 20:
 
     football_key = f"day:{today.isoformat()}"
