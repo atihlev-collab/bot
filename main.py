@@ -15621,7 +15621,7 @@ def evaluate_extended_live_market(signal):
 # =========================================================
 # BLOCK: STARTUP CONFIG - FINAL
 # =========================================================
-PREMATCH_SCAN_INTERVAL=300
+PREMATCH_SCAN_INTERVAL=900
 LIVE_SCAN_INTERVAL=60
 MAX_PREMATCH_SIGNALS_PER_SCAN=5
 MAX_LIVE_SIGNALS_PER_SCAN=5
