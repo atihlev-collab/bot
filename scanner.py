@@ -1287,6 +1287,7 @@ def run_due_scans(send_func):
         if not already_ran(key):
             print(_signal_text("DAILY SCANNER 10:00 STARTED"))
             run_daily_scanner("day", today, send_func)
+            run_sport_daily_scanner(send_func)
             mark_ran(key)
             print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
 
