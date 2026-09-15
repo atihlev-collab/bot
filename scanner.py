@@ -1278,14 +1278,23 @@ def run_sport_daily_scanner(send_func=None):
 _START = time.time()
 
 
+# =========================================================
+# DAILY SCAN SCHEDULER
+# =========================================================
+
 def run_due_scans(send_func):
+    """
+    Run scheduled football and other-sports scanners.
+    """
+
     init_scanner_db()
 
     now = datetime.now(TZ)
     today = now.date()
 
+
     # =====================================================
-    # TEST FOOTBALL — 23:00
+    # TEST FOOTBALL — 23:00 to 23:59
     # =====================================================
 
     if 23 <= now.hour < 24:
@@ -1301,6 +1310,7 @@ def run_due_scans(send_func):
             )
 
             try:
+
                 run_daily_scanner(
                     "day",
                     today,
@@ -1316,43 +1326,52 @@ def run_due_scans(send_func):
                 )
 
             except Exception as exc:
+
                 print(
                     _signal_text(
                         f"DAILY FOOTBALL SCANNER ERROR: {exc!r}"
                     )
                 )
 
+
     # =====================================================
-    # TEST SPORT — 00:00–00:59
+    # TEST SPORT — 00:00 to 00:59
     # =====================================================
 
-    sport_key = f"sport_test:{today.isoformat()}"
+    if 0 <= now.hour < 1:
 
-    if 0 <= now.hour < 1 and not already_ran(sport_key):
+        sport_key = f"sport_test:{today.isoformat()}"
 
-        print(
-            _signal_text(
-                "SPORT DAILY SCANNER STARTED"
-            )
-        )
-
-        try:
-            run_sport_daily_scanner(send_func)
-
-            mark_ran(sport_key)
+        if not already_ran(sport_key):
 
             print(
                 _signal_text(
-                    "SPORT DAILY SCANNER FINISHED"
+                    "SPORT DAILY SCANNER STARTED"
                 )
             )
 
-        except Exception as exc:
-            print(
-                _signal_text(
-                    f"SPORT DAILY SCANNER ERROR: {exc!r}"
+            try:
+
+                run_sport_daily_scanner(
+                    send_func
                 )
-            )
+
+                mark_ran(sport_key)
+
+                print(
+                    _signal_text(
+                        "SPORT DAILY SCANNER FINISHED"
+                    )
+                )
+
+            except Exception as exc:
+
+                print(
+                    _signal_text(
+                        f"SPORT DAILY SCANNER ERROR: {exc!r}"
+                    )
+                )
+
 
     # =====================================================
     # 20:00 NIGHT FOOTBALL
@@ -1371,6 +1390,7 @@ def run_due_scans(send_func):
             )
 
             try:
+
                 run_daily_scanner(
                     "night",
                     today,
@@ -1386,6 +1406,7 @@ def run_due_scans(send_func):
                 )
 
             except Exception as exc:
+
                 print(
                     _signal_text(
                         f"NIGHT FOOTBALL SCANNER ERROR: {exc!r}"
