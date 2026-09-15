@@ -1279,23 +1279,20 @@ _START = time.time()
 
 
 def run_due_scans(send_func):
-    """Run football and sport daily scans independently."""
     init_scanner_db()
 
     now = datetime.now(TZ)
     today = now.date()
+
+    # -------------------------------------------------
+    # FOOTBALL — 10:00
+    # -------------------------------------------------
 
     if now.hour >= 10 and now.hour < 20:
 
         football_key = f"day:{today.isoformat()}"
 
         if not already_ran(football_key):
-            print(
-                _signal_text(
-                    "DAILY FOOTBALL SCANNER 10:00 STARTED"
-                )
-            )
-
             run_daily_scanner(
                 "day",
                 today,
@@ -1304,11 +1301,29 @@ def run_due_scans(send_func):
 
             mark_ran(football_key)
 
-            print(
-                _signal_text(
-                    "DAILY FOOTBALL SCANNER 10:00 FINISHED"
-                )
+    # -------------------------------------------------
+    # SPORT — 10:00
+    # -------------------------------------------------
+
+    sport_key = f"sport:{today.isoformat()}"
+
+    if now.hour >= 10 and not already_ran(sport_key):
+
+        print(
+            _signal_text(
+                "SPORT DAILY SCANNER STARTED"
             )
+        )
+
+        run_sport_daily_scanner(send_func)
+
+        mark_ran(sport_key)
+
+        print(
+            _signal_text(
+                "SPORT DAILY SCANNER FINISHED"
+            )
+        )
 
         # -------------------------------------------------
         # SPORT DAILY SCANNER — own persisted key
