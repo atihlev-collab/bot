@@ -870,6 +870,411 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 _START = time.time()
 
 
+# =========================================================
+# SPORT DAILY SCANNER
+# 1 API REQUEST PER SPORT / DAY
+# =========================================================
+
+SPORT_API_BASE = "https://sports.highlightly.net"
+SPORT_API_TZ = "Europe/Sofia"
+SPORT_API_LIMIT = 100
+
+SPORTS_CONFIG = {
+    "basketball": {
+        "name": "🏀 БАСКЕТБОЛ",
+        "endpoint": "basketball/matches",
+        "metric": "points",
+    },
+    "hockey": {
+        "name": "🏒 ХОКЕЙ",
+        "endpoint": "hockey/matches",
+        "metric": "goals",
+    },
+    "american-football": {
+        "name": "🏈 NFL / AMERICAN FOOTBALL",
+        "endpoint": "american-football/matches",
+        "metric": "points",
+    },
+    "baseball": {
+        "name": "⚾ БЕЙЗБОЛ",
+        "endpoint": "baseball/matches",
+        "metric": "runs",
+    },
+    "rugby": {
+        "name": "🏉 РЪГБИ",
+        "endpoint": "rugby/matches",
+        "metric": "points",
+    },
+    "volleyball": {
+        "name": "🏐 ВОЛЕЙБОЛ",
+        "endpoint": "volleyball/matches",
+        "metric": "points",
+    },
+    "handball": {
+        "name": "🤾 ХАНДБАЛ",
+        "endpoint": "handball/matches",
+        "metric": "goals",
+    },
+}
+
+
+def _sport_api_get_once(endpoint, params):
+    """
+    EXACTLY ONE HTTP REQUEST.
+    No retry.
+    No pagination.
+    No second request.
+    """
+
+    try:
+        from config import HIGHLIGHTLY_API_KEY
+
+        headers = {
+            "x-rapidapi-key": HIGHLIGHTLY_API_KEY,
+        }
+
+        url = f"{SPORT_API_BASE}/{endpoint}"
+
+        response = requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=20,
+        )
+
+        if response.status_code != 200:
+            print(
+                "SPORT API ERROR:",
+                endpoint,
+                response.status_code,
+                response.text[:300],
+            )
+            return []
+
+        payload = response.json()
+
+        if isinstance(payload, dict):
+            data = payload.get("data", [])
+        elif isinstance(payload, list):
+            data = payload
+        else:
+            data = []
+
+        if not isinstance(data, list):
+            return []
+
+        return data
+
+    except Exception as exc:
+        print(
+            "SPORT API REQUEST ERROR:",
+            endpoint,
+            repr(exc),
+        )
+        return []
+
+
+def _sport_match_datetime(match):
+    """
+    Convert API match date to Bulgaria time.
+    """
+
+    raw = (
+        match.get("date")
+        or match.get("startTime")
+        or match.get("startDate")
+    )
+
+    if not raw:
+        return None
+
+    try:
+        text = str(raw).replace("Z", "+00:00")
+        dt = datetime.fromisoformat(text)
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        return dt.astimezone(TZ)
+
+    except Exception:
+        return None
+
+
+def _sport_team_name(team):
+    if not isinstance(team, dict):
+        return str(team or "")
+
+    return (
+        team.get("name")
+        or team.get("displayName")
+        or team.get("shortName")
+        or "Unknown"
+    )
+
+
+def _sport_match_names(match):
+    home = match.get("homeTeam") or match.get("home") or {}
+    away = match.get("awayTeam") or match.get("away") or {}
+
+    return (
+        _sport_team_name(home),
+        _sport_team_name(away),
+    )
+
+
+def _sport_match_score(match):
+    """
+    Read score directly from the match response.
+    Supports several Highlightly-style score layouts.
+    """
+
+    score = match.get("score") or match.get("scores") or {}
+
+    if not isinstance(score, dict):
+        return None, None
+
+    home = (
+        score.get("home")
+        or score.get("homeScore")
+        or score.get("homePoints")
+    )
+
+    away = (
+        score.get("away")
+        or score.get("awayScore")
+        or score.get("awayPoints")
+    )
+
+    # Nested score objects
+    if isinstance(home, dict):
+        home = (
+            home.get("current")
+            or home.get("display")
+            or home.get("total")
+            or home.get("points")
+        )
+
+    if isinstance(away, dict):
+        away = (
+            away.get("current")
+            or away.get("display")
+            or away.get("total")
+            or away.get("points")
+        )
+
+    try:
+        home = float(home)
+        away = float(away)
+    except Exception:
+        return None, None
+
+    return home, away
+
+
+def _sport_metric(match, metric):
+    """
+    Total match score used for ranking.
+    """
+
+    home, away = _sport_match_score(match)
+
+    if home is None or away is None:
+        return None
+
+    return home + away
+
+
+def _sport_league_country(match):
+    league = match.get("league") or {}
+
+    if isinstance(league, dict):
+        league_name = (
+            league.get("name")
+            or league.get("leagueName")
+            or ""
+        )
+
+        country = league.get("country") or {}
+
+        if isinstance(country, dict):
+            country_name = (
+                country.get("name")
+                or country.get("countryName")
+                or ""
+            )
+        else:
+            country_name = str(country or "")
+    else:
+        league_name = str(league or "")
+        country_name = ""
+
+    return league_name, country_name
+
+
+def _format_sport_entry(index, item):
+    match = item["match"]
+    value = item["value"]
+    dt = item["datetime"]
+
+    home, away = _sport_match_names(match)
+    league, country = _sport_league_country(match)
+
+    return (
+        f"{index}. {home} - {away}\n"
+        f"   {value:.1f}\n"
+        f"   Лига: {league or '-'}\n"
+        f"   Държава: {country or '-'}\n"
+        f"   Начало: {dt.strftime('%H:%M')} BG"
+    )
+
+
+def _build_sport_section(sport_name, metric, matches, start, end):
+    valid = []
+
+    for match in matches:
+        dt = _sport_match_datetime(match)
+
+        if dt is None:
+            continue
+
+        if not (start <= dt < end):
+            continue
+
+        value = _sport_metric(match, metric)
+
+        if value is None:
+            continue
+
+        valid.append({
+            "match": match,
+            "datetime": dt,
+            "value": value,
+        })
+
+    if not valid:
+        return (
+            f"{sport_name}\n"
+            "Няма достатъчно завършени мачове със score данни."
+        )
+
+    valid.sort(key=lambda x: x["value"], reverse=True)
+
+    top_over = valid[:3]
+    top_under = sorted(valid, key=lambda x: x["value"])[:3]
+
+    lines = [
+        sport_name,
+        "",
+        "🔥 НАД",
+    ]
+
+    for i, item in enumerate(top_over, 1):
+        lines.append(_format_sport_entry(i, item))
+        lines.append("")
+
+    lines.append("❄️ ПОД")
+
+    for i, item in enumerate(top_under, 1):
+        lines.append(_format_sport_entry(i, item))
+        lines.append("")
+
+    lines.append(f"Мачове със score: {len(valid)}")
+
+    return "\n".join(lines)
+
+
+def run_sport_daily_scanner(send_func=None):
+    """
+    Sport scanner.
+
+    Runs once per day.
+    One API request per sport.
+    Window:
+        12:00 BG today -> 12:00 BG tomorrow
+    """
+
+    now_bg = datetime.now(TZ)
+
+    start = now_bg.replace(
+        hour=12,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
+
+    end = start + timedelta(days=1)
+
+    lines = [
+        "🏆 SPORT DAILY STATISTICAL SCANNER",
+        now_bg.strftime("%d.%m.%Y"),
+        "",
+        "Период:",
+        f"{start.strftime('%d.%m.%Y %H:%M')} BG"
+        " → "
+        f"{end.strftime('%d.%m.%Y %H:%M')} BG",
+        "",
+    ]
+
+    total_api_calls = 0
+
+    for sport_key, cfg in SPORTS_CONFIG.items():
+
+        print(
+            f"SPORT SCAN: {sport_key} | "
+            f"1 API REQUEST"
+        )
+
+        matches = _sport_api_get_once(
+            cfg["endpoint"],
+            {
+                "timezone": SPORT_API_TZ,
+                "limit": SPORT_API_LIMIT,
+            },
+        )
+
+        total_api_calls += 1
+
+        # No retry / no pagination.
+        if len(matches) >= SPORT_API_LIMIT:
+            print(
+                f"SPORT SCAN WARNING: {sport_key} "
+                f"returned limit={SPORT_API_LIMIT}; "
+                "no additional request will be made."
+            )
+
+        section = _build_sport_section(
+            cfg["name"],
+            cfg["metric"],
+            matches,
+            start,
+            end,
+        )
+
+        lines.append(section)
+        lines.append("")
+        lines.append("────────────────────")
+        lines.append("")
+
+    lines.append(
+        f"📡 API заявки: {total_api_calls} "
+        f"(1 на спорт)"
+    )
+
+    lines.append(
+        f"⏱ Scan time: {time.time() - _START:.1f}s"
+    )
+
+    message = "\n".join(lines)
+
+    print(message)
+
+    if send_func:
+        send_func(message)
+
+    return message
+
+
 def run_due_scans(send_func):
     """Run the due daily scan(s) once, persisted in SQLite."""
     init_scanner_db()
