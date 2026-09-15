@@ -1351,6 +1351,9 @@ def run_due_scans(send_func):
 
         sport_key = f"sport:{today.isoformat()}"
 
+        print("SPORT KEY:", sport_key)
+        print("SPORT ALREADY RAN:", already_ran(sport_key))
+
         if not already_ran(sport_key):
 
             print(
