@@ -1330,7 +1330,7 @@ def run_due_scans(send_func):
     # OTHER SPORTS — once per day
     # -------------------------------------------------
 
-    sport_key = f"sport:{today.isoformat()}"
+    sport_key = f"sport_test:{today.isoformat()}"
 
     if 23 <= now.hour < 24 and not already_ran(sport_key):
 
