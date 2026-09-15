@@ -1325,7 +1325,7 @@ def run_due_scans(send_func):
 
         sport_key = f"sport:{today.isoformat()}"
 
-        if not already_ran(sport_key):
+        if True:
             print(
                 _signal_text(
                     "SPORT DAILY SCANNER STARTED"
