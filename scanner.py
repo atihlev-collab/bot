@@ -1278,17 +1278,40 @@ def run_sport_daily_scanner(send_func=None):
 _START = time.time()
 
 
+# =========================================================
+# DAILY SCAN SCHEDULER
+# =========================================================
+
+_START = time.time()
+
+
 def run_due_scans(send_func):
+    """
+    Run daily football and sports scanners independently.
+
+    Football:
+        10:00 BG -> scans 12:00 today -> 12:00 tomorrow
+        20:00 BG -> scans night window
+
+    Sports:
+        10:00 BG -> one scan per day
+        Uses one API request per sport where supported.
+    """
+
     init_scanner_db()
 
     now = datetime.now(TZ)
     today = now.date()
 
-    # -------------------------------------------------
-    # FOOTBALL — 10:00
-    # -------------------------------------------------
+    # =====================================================
+    # 10:00 DAY SCANS
+    # =====================================================
 
-    if now.hour >= 10 and now.hour < 20:
+    if 10 <= now.hour < 20:
+
+        # -------------------------------------------------
+        # FOOTBALL — once per day
+        # -------------------------------------------------
 
         football_key = f"day:{today.isoformat()}"
 
@@ -1300,46 +1323,59 @@ def run_due_scans(send_func):
                 )
             )
 
-            run_daily_scanner(
-                "day",
-                today,
-                send_func
-            )
-
-            mark_ran(football_key)
-
-            print(
-                _signal_text(
-                    "DAILY FOOTBALL SCANNER 10:00 FINISHED"
+            try:
+                run_daily_scanner(
+                    "day",
+                    today,
+                    send_func
                 )
-            )
 
+                mark_ran(football_key)
 
-    # -------------------------------------------------
-    # SPORT — 10:00
-    # -------------------------------------------------
+                print(
+                    _signal_text(
+                        "DAILY FOOTBALL SCANNER 10:00 FINISHED"
+                    )
+                )
 
-    sport_key = f"sport:{today.isoformat()}"
+            except Exception as exc:
 
-    if now.hour >= 10:
+                print(
+                    "DAILY FOOTBALL SCANNER ERROR:",
+                    repr(exc)
+                )
+
+        # -------------------------------------------------
+        # OTHER SPORTS — once per day
+        # -------------------------------------------------
+
+        sport_key = f"sport:{today.isoformat()}"
 
         if not already_ran(sport_key):
 
             print(
                 _signal_text(
-                    "SPORT DAILY SCANNER STARTED"
+                    "SPORT DAILY SCANNER 10:00 STARTED"
                 )
             )
 
-            run_sport_daily_scanner(send_func)
+            try:
+                run_sport_daily_scanner(send_func)
 
-            mark_ran(sport_key)
+                mark_ran(sport_key)
 
-            print(
-                _signal_text(
-                    "SPORT DAILY SCANNER FINISHED"
+                print(
+                    _signal_text(
+                        "SPORT DAILY SCANNER 10:00 FINISHED"
+                    )
                 )
-            )
+
+            except Exception as exc:
+
+                print(
+                    "SPORT DAILY SCANNER ERROR:",
+                    repr(exc)
+                )
 
 
     # =====================================================
@@ -1358,20 +1394,27 @@ def run_due_scans(send_func):
                 )
             )
 
-            run_daily_scanner(
-                "night",
-                today,
-                send_func
-            )
-
-            mark_ran(night_key)
-
-            print(
-                _signal_text(
-                    "DAILY FOOTBALL SCANNER 20:00 FINISHED"
+            try:
+                run_daily_scanner(
+                    "night",
+                    today,
+                    send_func
                 )
-            )
 
+                mark_ran(night_key)
+
+                print(
+                    _signal_text(
+                        "DAILY FOOTBALL SCANNER 20:00 FINISHED"
+                    )
+                )
+
+            except Exception as exc:
+
+                print(
+                    "DAILY FOOTBALL NIGHT SCANNER ERROR:",
+                    repr(exc)
+                )
 
           
    
