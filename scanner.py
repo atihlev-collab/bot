@@ -1321,7 +1321,7 @@ def run_due_scans(send_func):
 
     sport_key = f"sport:{today.isoformat()}"
 
-    if now.hour >= 10 and now.hour < 20:
+    if now.hour >= 10:
 
         if not already_ran(sport_key):
 
