@@ -37,7 +37,7 @@ HEADERS = {
 TIMEZONE = ZoneInfo("Europe/Sofia")
 
 REQUEST_TIMEOUT = 20
-API_RETRIES = 3
+API_RETRIES = 1
 
 bot = Bot(token=BOT_TOKEN)
 
@@ -442,10 +442,11 @@ def api_get(endpoint, params=None):
                 return payload if isinstance(payload, dict) else {"response": data}
 
             if response.status_code == 429:
-                wait_time = min(10, attempt * 3)
-                logging.warning("HIGHLIGHTLY RATE LIMIT 429 | %s | waiting %ss", endpoint, wait_time)
-                time.sleep(wait_time)
-                continue
+                logging.warning(
+                    "HIGHLIGHTLY RATE LIMIT 429 | %s | NO RETRY",
+                    endpoint
+                )
+                return {}
             if response.status_code >= 500:
                 logging.warning("HIGHLIGHTLY SERVER ERROR %s | %s | retry %s/%s", response.status_code, endpoint, attempt, API_RETRIES)
                 time.sleep(attempt)
