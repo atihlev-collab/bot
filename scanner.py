@@ -1318,13 +1318,38 @@ def run_due_scans(send_func):
                 )
             )
 
+
+        # -------------------------------------------------
+        # SPORT DAILY SCANNER — own persisted key
+        # -------------------------------------------------
+
+        sport_key = f"sport:{today.isoformat()}"
+
+        if not already_ran(sport_key):
+            print(
+                _signal_text(
+                    "SPORT DAILY SCANNER STARTED"
+                )
+            )
+
+            run_sport_daily_scanner(send_func)
+
+            mark_ran(sport_key)
+
+            print(
+                _signal_text(
+                    "SPORT DAILY SCANNER FINISHED"
+                )
+            )
+        
+
         # -------------------------------------------------
         # OTHER SPORTS — separate key
         # -------------------------------------------------
 
         sport_key = f"sport:{today.isoformat()}"
 
-        if not already_ran(sport_key):
+        if True:
             print(
                 _signal_text(
                     "SPORT DAILY SCANNER STARTED"
