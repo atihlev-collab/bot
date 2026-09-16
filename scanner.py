@@ -1,5 +1,4 @@
-BUILD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1 
-
+# BUILD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
@@ -18,6 +17,10 @@ import requests
 
 from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
 import threading
+
+# Backward-compatibility alias: older deployments referenced HIGHLIGHTLY.
+# Keep the canonical key name HIGHLIGHTLY_API_KEY everywhere else.
+HIGHLIGHTLY = HIGHLIGHTLY_API_KEY
 
 BASE_URL = "https://soccer.highlightly.net"
 HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": "football-highlights-api.p.rapidapi.com"}
@@ -584,11 +587,11 @@ def format_market(results, key, label, emoji):
         valid,
         key=lambda r: r["markets"][key]["expected"],
         reverse=True,
-    )[:3]
+    )[:5]
     low = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
-    )[:3]
+    )[:5]
 
     lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
 
@@ -1157,7 +1160,17 @@ def _get_sport_fixtures(cfg, start, end):
             "limit": SPORT_API_LIMIT,
         }
         rows = _sport_api_get(cfg["endpoint"], params)
-        # Exactly one fixture request per sport. No fallback/pagination.
+
+        # Some Sport Ultra responses can be empty when timezone is combined with date.
+        # Retry the same date without timezone; results are still filtered locally in BG time.
+        if not isinstance(rows, list) or not rows:
+            fallback = _sport_api_get(
+                cfg["endpoint"],
+                {"date": day.isoformat(), "limit": SPORT_API_LIMIT},
+            )
+            if isinstance(fallback, list):
+                rows = fallback
+
         all_rows.extend(rows if isinstance(rows, list) else [])
 
     unique = {}
@@ -1199,9 +1212,9 @@ def _build_sport_section(sport_name, candidates):
     if not candidates:
         return f"{sport_name}\nНяма достатъчно исторически статистически данни."
 
-    # Top 3, but never invent a third entry when fewer are valid.
-    top_over = sorted(candidates, key=lambda x: x["expected"], reverse=True)[:3]
-    top_under = sorted(candidates, key=lambda x: x["expected"])[:3]
+    # Top 4, but never invent a fourth entry when fewer are valid.
+    top_over = sorted(candidates, key=lambda x: x["expected"], reverse=True)[:4]
+    top_under = sorted(candidates, key=lambda x: x["expected"])[:4]
 
     lines = [sport_name, "", "🔥 НАД"]
     for i, item in enumerate(top_over, 1):
@@ -1297,35 +1310,40 @@ def run_sport_daily_scanner(send_func=None):
 
 
 def run_due_scans(send_func):
-    """Run football and sport daily scanners independently."""
+    """Run football and Sport Statistics once per day."""
     init_scanner_db()
     now = datetime.now(TZ)
     today = now.date()
 
-    # FOOTBALL: once per day at/after 10:30 BG.
+    # Football: once per day at/after 10:30 BG.
+    # The scanner uses the fixed 12:00 -> next-day 12:00 window.
     if now.hour > 10 or (now.hour == 10 and now.minute >= 30):
-        football_key = f"football_daily_v2:{today.isoformat()}"
+        football_key = f"football_daily:{today.isoformat()}"
+
         if not already_ran(football_key):
             print(_signal_text("FOOTBALL DAILY SCANNER STARTED"))
             try:
-                run_daily_scanner("day", today, send_func)
+                run_daily_scanner(
+                    mode="day",
+                    reference_date=today,
+                    send_func=send_func,
+                )
                 mark_ran(football_key)
                 print(_signal_text("FOOTBALL DAILY SCANNER FINISHED"))
             except Exception as exc:
                 print(_signal_text(f"FOOTBALL DAILY SCANNER ERROR: {exc!r}"))
 
-    # OTHER SPORTS: once per day at/after 10:00 BG.
-    # v2 key deliberately avoids an old test key already stored in SQLite.
-    if now.hour >= 10:
-        sport_key = f"sport_daily_v2:{today.isoformat()}"
-        if not already_ran(sport_key):
-            print(_signal_text("SPORT DAILY SCANNER STARTED"))
-            try:
-                run_sport_daily_scanner(send_func)
-                mark_ran(sport_key)
-                print(_signal_text("SPORT DAILY SCANNER FINISHED"))
-            except Exception as exc:
-                print(_signal_text(f"SPORT DAILY SCANNER ERROR: {exc!r}"))
+    # Sport Statistics: keep its existing once-per-day run.
+    sport_key = f"sport_test:{today.isoformat()}"
+
+    if not already_ran(sport_key):
+        print(_signal_text("SPORT DAILY SCANNER STARTED"))
+        try:
+            run_sport_daily_scanner(send_func)
+            mark_ran(sport_key)
+            print(_signal_text("SPORT DAILY SCANNER FINISHED"))
+        except Exception as exc:
+            print(_signal_text(f"SPORT DAILY SCANNER ERROR: {exc!r}"))
 
     return True
 
