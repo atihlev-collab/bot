@@ -1346,4 +1346,3 @@ def run_due_scans(send_func):
             print(_signal_text(f"SPORT DAILY SCANNER ERROR: {exc!r}"))
 
     return True
-
