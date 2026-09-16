@@ -1417,11 +1417,7 @@ def run_sport_daily_scanner(send_func=None):
             print(f"SPORT SCAN: {sport_key} — FIXTURES")
             fixtures = _get_sport_fixtures(cfg, start, end)
 
-            # Skip Russia and Belarus before statistics/API requests
-            fixtures = [
-                m for m in fixtures
-                if not _sport_country_blocked(m)
-            ]
+            
 
             # American football: check BOTH competitions, but never treat
             # unrelated American-football leagues as NFL/NCAA.
