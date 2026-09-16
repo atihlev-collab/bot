@@ -1392,15 +1392,16 @@ def _sport_country_blocked(match):
     )
 
 
-def run_sport_daily_scanner(send_func=None):
-    """Build Top 4 Over/Under from real current-season team statistics."""
-    global _SPORT_API_CALLS, _SPORT_STATS_CACHE
-    _SPORT_API_CALLS = 0
-    _SPORT_STATS_CACHE = {}
+def run_sport_daily_scanner(send_func):
     started = time.time()
 
     now_bg = datetime.now(TZ)
-    start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
+    start = now_bg.replace(
+        hour=12,
+        minute=0,
+        second=0,
+        microsecond=0
+    )
     end = start + timedelta(days=1)
 
     lines = [
@@ -1408,80 +1409,161 @@ def run_sport_daily_scanner(send_func=None):
         now_bg.strftime("%d.%m.%Y"),
         "",
         "Период:",
-        f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "История: САМО текущият сезон за всеки спорт (без предишни сезони)",
+        f"{start.strftime('%d.%m.%Y %H:%M')} BG → "
+        f"{end.strftime('%d.%m.%Y %H:%M')} BG",
+        "История: САМО текущият сезон за всеки спорт",
         "",
     ]
 
-        for sport_key, cfg in SPORTS_CONFIG.items():
-            print(f"SPORT SCAN: {sport_key} — FIXTURES")
-            fixtures = _get_sport_fixtures(cfg, start, end)
+    for sport_key, cfg in SPORTS_CONFIG.items():
+        print(f"SPORT SCAN: {sport_key} — FIXTURES")
 
-            
+        fixtures = _get_sport_fixtures(
+            cfg,
+            start,
+            end
+        )
 
-            # American football: check BOTH competitions, but never treat
-            # unrelated American-football leagues as NFL/NCAA.
-            if sport_key == "american-football":
-                fixtures = [
-                    m for m in fixtures
-                    if _american_football_competition(m) in {"NFL", "NCAA"}
-                ]
+        # =================================================
+        # MANUAL BETANO COUNTRY BLOCK
+        # Russia / Belarus are not available at Betano.
+        # =================================================
+        fixtures = [
+            m for m in fixtures
+            if not _sport_country_blocked(m)
+        ]
 
-            candidates = []
+        # =================================================
+        # AMERICAN FOOTBALL
+        # Check BOTH NFL and NCAA.
+        # Ignore unrelated American-football leagues.
+        # =================================================
+        if sport_key == "american-football":
+            fixtures = [
+                m for m in fixtures
+                if _american_football_competition(m)
+                in {"NFL", "NCAA"}
+            ]
 
-            for match in fixtures:
-            home = match.get("homeTeam") or match.get("home") or {}
-            away = match.get("awayTeam") or match.get("away") or {}
+        candidates = []
+
+        for match in fixtures:
+            home = (
+                match.get("homeTeam")
+                or match.get("home")
+                or {}
+            )
+
+            away = (
+                match.get("awayTeam")
+                or match.get("away")
+                or {}
+            )
+
             home_id = _sport_team_id(home)
             away_id = _sport_team_id(away)
+
             if not home_id or not away_id:
                 continue
 
+            # =================================================
+            # VOLLEYBALL = POINTS PER MATCH
+            # NOT SETS / GAMES
+            # =================================================
             if sport_key == "volleyball":
-                h = _get_volleyball_points_average(match, home_id)
-                a = _get_volleyball_points_average(match, away_id)
+                h = _get_volleyball_points_average(
+                    match,
+                    home_id
+                )
+                a = _get_volleyball_points_average(
+                    match,
+                    away_id
+                )
             else:
-                h = _get_team_average(sport_key, home_id, cfg["metric"])
-                a = _get_team_average(sport_key, away_id, cfg["metric"])
-            if not h or not a or h["games"] < 3 or a["games"] < 3:
+                h = _get_team_average(
+                    sport_key,
+                    home_id,
+                    cfg["metric"]
+                )
+
+                a = _get_team_average(
+                    sport_key,
+                    away_id,
+                    cfg["metric"]
+                )
+
+            if not h or not a:
+                continue
+
+            if h["games"] < 3 or a["games"] < 3:
                 continue
 
             dt = _sport_match_datetime(match)
+
             if not dt:
                 continue
+
+            competition = None
+
+            if sport_key == "american-football":
+                competition = _american_football_competition(
+                    match
+                )
 
             candidates.append({
                 "match": match,
                 "datetime": dt,
                 "home_avg": h["average"],
                 "away_avg": a["average"],
-                "expected": h["average"] + a["average"],
-                "competition": (
-                    _american_football_competition(match)
-                    if sport_key == "american-football"
-                    else None
+                "expected": (
+                    h["average"] +
+                    a["average"]
                 ),
+                "competition": competition,
             })
 
-        lines.append(_build_sport_section(cfg["name"], candidates))
+        # =================================================
+        # BUILD SPORT SECTION
+        # Top 4 if available.
+        # If only 1/2/3 valid matches -> show 1/2/3.
+        # =================================================
+        lines.append(
+            _build_sport_section(
+                cfg["name"],
+                candidates
+            )
+        )
+
         lines.append("")
         lines.append("────────────────────")
         lines.append("")
 
         print(
-            f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} "
+            f"SPORT RESULT: {sport_key} "
+            f"fixtures={len(fixtures)} "
             f"valid={len(candidates)}"
         )
 
-    lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
-    lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
+    lines.append(
+        f"📡 API заявки: {_SPORT_API_CALLS}"
+    )
+
+    lines.append(
+        f"⏱ Scan time: "
+        f"{time.time() - started:.1f}s"
+    )
 
     message = "\n".join(lines)
+
     print(message)
+
     if send_func:
-        # Telegram hard limit is 4096 characters. Keep a safety margin
-        # for the numbered chunk header and send the complete report.
-        _send_sport_report_chunks(message, send_func, max_chars=3700)
+        _send_sport_report_chunks(
+            message,
+            send_func,
+            max_chars=3700
+        )
+
     return message
 
 
