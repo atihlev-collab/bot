@@ -385,20 +385,26 @@ def build_profiles_from_histories(histories_by_key, stats_by_fixture):
                     else goals.get("home") or 0
                 )
 
-            mappings={
-                "corners":"corner kicks",
-                "shots":"total shots",
-                "cards":"yellow cards",
-                "goals_scored":"goals_scored",
-                "goals_conceded":"goals_conceded",
+            aliases={
+                "corners": ("corner kicks", "corner kicks total", "corners", "corner_kicks"),
+                "shots": ("total shots", "shots total", "shots", "total_shots"),
+                "cards": ("yellow cards", "yellow card", "cards", "yellow_cards", "bookings"),
+                "goals_scored": ("goals_scored",),
+                "goals_conceded": ("goals_conceded",),
             }
 
-            for market,stat_name in mappings.items():
-                value=data.get(stat_name)
+            normalized_data = {str(k).strip().casefold().replace("-", " ").replace("_", " "): v for k,v in data.items()}
+            for market, names in aliases.items():
+                value = None
+                for name in names:
+                    key = name.casefold().replace("_", " ")
+                    if key in normalized_data:
+                        value = normalized_data[key]
+                        break
                 if value is None:
                     continue
-                sums[market]+=float(value)
-                counts[market]+=1
+                sums[market] += float(value)
+                counts[market] += 1
 
         result={}
         for market,total in sums.items():
@@ -578,9 +584,11 @@ def _match_info(r):
         kickoff = "?"
     league = r.get("league") or "-"
     country = r.get("country") or "-"
+    date_text = dt.strftime("%d.%m.%Y") if 'dt' in locals() else "-"
     return (
         f"   Лига: {league}\n"
         f"   Държава: {country}\n"
+        f"   Дата: {date_text}\n"
         f"   Начало: {kickoff} BG"
     )
 
@@ -595,11 +603,11 @@ def format_market(results, key, label, emoji):
         valid,
         key=lambda r: r["markets"][key]["expected"],
         reverse=True,
-    )[:3]
+    )[:5]
     low = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
-    )[:3]
+    )[:5]
 
     lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
 
@@ -779,9 +787,10 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     ref = ref if hasattr(ref, "year") else now_bg.date()
 
     if mode == "day":
-        start = datetime(ref.year, ref.month, ref.day, 10, 0, tzinfo=TZ)
-        end = datetime(ref.year, ref.month, ref.day + 1, 0, 0, tzinfo=TZ)
-        title = "10:00 ДНЕВЕН СКЕНЕР"
+        start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
+        next_day = ref + timedelta(days=1)
+        end = datetime(next_day.year, next_day.month, next_day.day, 12, 0, tzinfo=TZ)
+        title = "10:30 ДНЕВЕН СКЕНЕР"
     else:
         next_day = ref + timedelta(days=1)
         start = datetime(next_day.year, next_day.month, next_day.day, 0, 0, tzinfo=TZ)
@@ -887,21 +896,12 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
     today = now.date()
 
-    # 10:00 scan: once any time from 10:00 until 20:00.
-    if now.hour >= 10 and now.hour < 20:
+    # 10:30 scan: once any time from 10:30 until 20:00.
+    if (now.hour > 10 or (now.hour == 10 and now.minute >= 30)) and now.hour < 20:
         key = f"day:{today.isoformat()}"
         if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 10:00 STARTED"))
+            print(_signal_text("DAILY SCANNER 10:30 STARTED"))
             run_daily_scanner("day", today, send_func)
             mark_ran(key)
-            print(_signal_text("DAILY SCANNER 10:00 FINISHED"))
-
-    # 20:00 scan: once any time from 20:00 until midnight.
-    if now.hour >= 20:
-        key = f"night:{today.isoformat()}"
-        if not already_ran(key):
-            print(_signal_text("DAILY SCANNER 20:00 STARTED"))
-            run_daily_scanner("night", today, send_func)
-            mark_ran(key)
-            print(_signal_text("DAILY SCANNER 20:00 FINISHED"))
+            print(_signal_text("DAILY SCANNER 10:30 FINISHED"))
 
