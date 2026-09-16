@@ -1,4 +1,4 @@
-LD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
+# BUILD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
