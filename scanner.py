@@ -309,14 +309,23 @@ def _fixture_market_values(fixture):
             continue
         vals={}
         for item in block.get("statistics") or []:
-            typ=(item.get("type") or "").strip().lower()
+            typ=(
+                item.get("displayName")
+                or item.get("name")
+                or item.get("type")
+                or ""
+            ).strip().lower()
+
             val=item.get("value")
+
             if isinstance(val,str):
                 val=val.replace("%","").strip()
+
             try:
                 val=float(val) if val is not None else None
             except (TypeError,ValueError):
                 val=None
+
             if val is not None:
                 vals[typ]=val
 
