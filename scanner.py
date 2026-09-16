@@ -603,11 +603,11 @@ def format_market(results, key, label, emoji):
         valid,
         key=lambda r: r["markets"][key]["expected"],
         reverse=True,
-    )[:3]
+    )[:5]
     low = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
-    )[:3]
+    )[:5]
 
     lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
 
