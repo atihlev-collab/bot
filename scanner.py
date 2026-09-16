@@ -1366,6 +1366,31 @@ def _build_sport_section(sport_name, candidates):
 
     return "\n".join(lines)
 
+# =====================================================
+# MANUAL BETANO COUNTRY BLOCK
+# =====================================================
+
+BLOCKED_SPORT_COUNTRIES = {
+    "Russia",
+    "Belarus",
+    "Russian Federation",
+}
+
+
+def _sport_country_blocked(match):
+    league, country = _sport_league_country(match)
+
+    values = {
+        str(country or "").strip().casefold(),
+        str(league or "").strip().casefold(),
+    }
+
+    return any(
+        blocked.casefold() in value
+        for blocked in BLOCKED_SPORT_COUNTRIES
+        for value in values
+    )
+
 
 def run_sport_daily_scanner(send_func=None):
     """Build Top 4 Over/Under from real current-season team statistics."""
@@ -1388,21 +1413,27 @@ def run_sport_daily_scanner(send_func=None):
         "",
     ]
 
-    for sport_key, cfg in SPORTS_CONFIG.items():
-        print(f"SPORT SCAN: {sport_key} — FIXTURES")
-        fixtures = _get_sport_fixtures(cfg, start, end)
+        for sport_key, cfg in SPORTS_CONFIG.items():
+            print(f"SPORT SCAN: {sport_key} — FIXTURES")
+            fixtures = _get_sport_fixtures(cfg, start, end)
 
-        # American football: check BOTH competitions, but never treat
-        # unrelated American-football leagues as NFL/NCAA.
-        if sport_key == "american-football":
+            # Skip Russia and Belarus before statistics/API requests
             fixtures = [
                 m for m in fixtures
-                if _american_football_competition(m) in {"NFL", "NCAA"}
+                if not _sport_country_blocked(m)
             ]
 
-        candidates = []
+            # American football: check BOTH competitions, but never treat
+            # unrelated American-football leagues as NFL/NCAA.
+            if sport_key == "american-football":
+                fixtures = [
+                    m for m in fixtures
+                    if _american_football_competition(m) in {"NFL", "NCAA"}
+                ]
 
-        for match in fixtures:
+            candidates = []
+
+            for match in fixtures:
             home = match.get("homeTeam") or match.get("home") or {}
             away = match.get("awayTeam") or match.get("away") or {}
             home_id = _sport_team_id(home)
