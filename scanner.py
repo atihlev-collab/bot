@@ -309,23 +309,14 @@ def _fixture_market_values(fixture):
             continue
         vals={}
         for item in block.get("statistics") or []:
-            typ=(
-                item.get("displayName")
-                or item.get("name")
-                or item.get("type")
-                or ""
-            ).strip().lower()
-
+            typ=(item.get("displayName") or item.get("type") or item.get("name") or "").strip().lower()
             val=item.get("value")
-
             if isinstance(val,str):
                 val=val.replace("%","").strip()
-
             try:
                 val=float(val) if val is not None else None
             except (TypeError,ValueError):
                 val=None
-
             if val is not None:
                 vals[typ]=val
 
@@ -395,9 +386,9 @@ def build_profiles_from_histories(histories_by_key, stats_by_fixture):
                 )
 
             aliases={
-                "corners": ("corner kicks", "corner kicks total", "corners", "corner_kicks"),
-                "shots": ("total shots", "shots total", "shots", "total_shots"),
-                "cards": ("yellow cards", "yellow card", "cards", "yellow_cards", "bookings"),
+                "corners": ("corner kicks", "corner kicks total", "corners", "corner_kicks", "corner"),
+                "shots": ("total shots", "shots total", "shots", "total_shots", "total shots attempted"),
+                "cards": ("yellow cards", "yellow card", "cards", "yellow_cards", "bookings", "yellow card(s)"),
                 "goals_scored": ("goals_scored",),
                 "goals_conceded": ("goals_conceded",),
             }
