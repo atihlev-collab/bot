@@ -7,6 +7,8 @@
 import os
 import re
 import time
+import json
+import hashlib
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -37,75 +39,88 @@ _session = requests.Session()
 _last_call = 0.0
 _MIN_INTERVAL = 0.25
 _API_RATE_LIMITED = False
+_API_ERROR = None
+_CACHE_DIR = os.path.join(".scanner_cache")
+_CACHE_TTL = 24 * 60 * 60
 
 
-def _get(url, host, params=None, timeout=25):
-    global _last_call, _API_RATE_LIMITED
+def _cache_key(url, params):
+    raw = json.dumps([url, params or {}], sort_keys=True, ensure_ascii=False)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest() + ".json"
+
+
+def _get(url, host, params=None, timeout=25, cache_ttl=None):
+    global _last_call, _API_RATE_LIMITED, _API_ERROR
 
     if _API_RATE_LIMITED:
         return []
+
+    cache_ttl = _CACHE_TTL if cache_ttl is None else cache_ttl
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+    cache_path = os.path.join(_CACHE_DIR, _cache_key(url, params))
+
+    try:
+        if os.path.exists(cache_path) and time.time() - os.path.getmtime(cache_path) <= cache_ttl:
+            with open(cache_path, "r", encoding="utf-8") as f:
+                cached = json.load(f)
+            if isinstance(cached, list):
+                return cached
+    except Exception:
+        pass
 
     wait = _MIN_INTERVAL - (time.monotonic() - _last_call)
     if wait > 0:
         time.sleep(wait)
     _last_call = time.monotonic()
 
-    headers = {
-        "x-rapidapi-key": HIGHLIGHTLY_API_KEY,
-    }
+    headers = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY}
     if "p.rapidapi.com" in url:
         headers["x-rapidapi-host"] = host
 
     try:
-        r = _session.get(
-            url,
-            headers=headers,
-            params=params or {},
-            timeout=timeout,
-        )
-
+        r = _session.get(url, headers=headers, params=params or {}, timeout=timeout)
         remaining = r.headers.get("x-ratelimit-requests-remaining")
         limit = r.headers.get("x-ratelimit-requests-limit")
         retry_after = r.headers.get("retry-after")
-
-        print(
-            f"API RESPONSE: status={r.status_code} "
-            f"remaining={remaining} limit={limit} "
-            f"retry_after={retry_after} url={url}"
-        )
+        print(f"API RESPONSE: status={r.status_code} remaining={remaining} limit={limit} retry_after={retry_after} url={url}")
 
         if r.status_code == 429:
             _API_RATE_LIMITED = True
-            print(
-                "HIGHLIGHTLY RATE LIMIT: 429. "
-                "No more API requests will be made during this scan."
-            )
+            _API_ERROR = "RATE_LIMIT"
+            print("HIGHLIGHTLY QUOTA/RATE LIMIT: 429 â stopping this daily scan.")
             return []
-
         if r.status_code != 200:
-            print(f"API ERROR HTTP {r.status_code}: {r.text[:300]}")
+            _API_ERROR = f"HTTP_{r.status_code}"
+            print(f"API ERROR HTTP {r.status_code}: {r.text[:500]}")
             return []
 
-        try:
-            payload = r.json()
-        except ValueError as exc:
-            print("API JSON ERROR:", repr(exc))
-            return []
-
+        payload = r.json()
         if isinstance(payload, list):
-            return payload
-
-        if isinstance(payload, dict):
+            data = payload
+        elif isinstance(payload, dict):
             if payload.get("errors"):
+                _API_ERROR = "API_ERROR"
                 print("API ERROR:", payload.get("errors"))
                 return []
             data = payload.get("data", [])
-            return data if isinstance(data, list) else []
+        else:
+            data = []
+        if not isinstance(data, list):
+            data = []
 
-        return []
-
+        try:
+            with open(cache_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False)
+        except Exception:
+            pass
+        return data
     except requests.RequestException as exc:
+        _API_ERROR = "REQUEST_ERROR"
         print("API REQUEST ERROR:", url, repr(exc))
+        return []
+    except ValueError as exc:
+        _API_ERROR = "JSON_ERROR"
+        print("API JSON ERROR:", repr(exc))
         return []
 
 
@@ -655,9 +670,11 @@ def run_sport_daily_scanner(send_func=None):
 
 
 def run_due_scans(send_func):
-    global _API_RATE_LIMITED
+    """Run both scanners once per Bulgarian day without faking empty results."""
+    global _API_RATE_LIMITED, _API_ERROR
     _API_RATE_LIMITED = False
-    """Called by main.py. Runs both scanners once per day after 10:30 BG."""
+    _API_ERROR = None
+
     today = datetime.now(TZ).date()
     key_file = "scanner_last_run.txt"
     today_key = today.isoformat()
@@ -685,13 +702,25 @@ def run_due_scans(send_func):
     except Exception as exc:
         print("FOOTBALL SCANNER ERROR:", repr(exc))
 
-    if _API_RATE_LIMITED:
-        print("SPORT SCANNER: skipped because Highlightly returned HTTP 429.")
-    else:
+    if not _API_RATE_LIMITED:
         try:
             run_sport_daily_scanner(send_func)
         except Exception as exc:
             print("SPORT SCANNER ERROR:", repr(exc))
+    else:
+        print("SPORT SCANNER: not started because Highlightly returned HTTP 429.")
+
+    if _API_RATE_LIMITED:
+        warning = (
+            "⚠️ HIGHLIGHTLY API LIMIT\n"
+            "Скенерът НЕ е маркиран като успешно изпълнен.\n"
+            "API върна HTTP 429 (дневната квота/лимитът е достигнат).\n"
+            "Няма да изпращам фалшиви резултати с 0 мача.\n"
+            "След reset на квотата скенерът ще може да работи отново."
+        )
+        print(warning)
+        _send_chunks(warning, send_func)
+        return False
 
     try:
         with open(key_file, "w", encoding="utf-8") as f:
