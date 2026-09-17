@@ -38,13 +38,6 @@ _API_MIN_INTERVAL = 0.12
 def _api(endpoint, params=None, timeout=25):
     global _LAST_API_CALL
 
-    # Canonical football Highlightly base is soccer.highlightly.net.
-    # Accept both 'matches' and legacy 'football/matches' callers,
-    # but NEVER generate /football/football/... URLs.
-    endpoint = str(endpoint or "").lstrip("/")
-    if endpoint.startswith("football/"):
-        endpoint = endpoint[len("football/"):]
-
     for attempt in range(5):
         try:
             with _API_LOCK:
@@ -974,98 +967,130 @@ _START = time.time()
 # Sport statistics use Highlightly Sport Ultra only.
 # =========================================================
 
-SPORT_API_BASE = "https://sports.highlightly.net"
-SPORT_API_HOST = "sport-highlights-api.p.rapidapi.com"
 SPORT_API_TZ = "Europe/Sofia"
 SPORT_API_LIMIT = 100
-SPORT_HISTORY_FROM = "2026-01-01"
+SPORT_HISTORY_FROM = f"{datetime.now(TZ).year - 1}-07-01"
 
-# Global exclusion: Russia and Belarus are blocked for every sport/league.
-BLOCKED_COUNTRIES = {"russia", "belarus"}
-
-def _sport_is_blocked_country(match):
-    _league = match.get("league") or {}
-    if isinstance(_league, dict):
-        _country = _league.get("country") or _league.get("countryName") or ""
-        if isinstance(_country, dict):
-            _country = _country.get("name") or _country.get("countryName") or ""
-    else:
-        _country = ""
-    if not _country:
-        _country = match.get("country") or match.get("countryName") or ""
-        if isinstance(_country, dict):
-            _country = _country.get("name") or _country.get("countryName") or ""
-    return str(_country).strip().casefold() in BLOCKED_COUNTRIES
-
-SPORTS_CONFIG = {
-    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
-    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
-    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
-    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
-    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
-    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
-    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
+# Use the dedicated Highlightly API for each sport.  The dashboard shows the
+# combined Sport API is quota-constrained, while the dedicated sport APIs are
+# separate subscriptions/quotas.  Football remains on soccer.highlightly.net.
+SPORT_API_CONFIG = {
+    "basketball": {
+        "name": "🏀 БАСКЕТБОЛ",
+        "base": "https://basketball.highlightly.net",
+        "host": "basketball-highlights-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "points",
+    },
+    "hockey": {
+        "name": "🏒 ХОКЕЙ",
+        "base": "https://hockey.highlightly.net",
+        "host": "hockey-highlights-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "goals",
+    },
+    "american-football": {
+        "name": "🏈 NFL / NCAA — Division I / Division II",
+        "base": "https://american-football.highlightly.net",
+        "host": "nfl-ncaa-highlights-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "points",
+    },
+    "baseball": {
+        "name": "⚾ БЕЙЗБОЛ",
+        "base": "https://baseball.highlightly.net",
+        "host": "mlb-college-baseball-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "runs",
+    },
+    "rugby": {
+        "name": "🏉 РЪГБИ",
+        "base": "https://rugby.highlightly.net",
+        "host": "rugby-highlights-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "points",
+    },
+    "volleyball": {
+        "name": "🏐 ВОЛЕЙБОЛ",
+        "base": "https://volleyball.highlightly.net",
+        "host": "volleyball-highlights-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "points",
+    },
+    "handball": {
+        "name": "🤾 ХАНДБАЛ",
+        "base": "https://handball.highlightly.net",
+        "host": "handball-highlights-api.p.rapidapi.com",
+        "endpoint": "matches",
+        "stats": "teams/statistics",
+        "metric": "goals",
+    },
 }
 
+# Keep the old name available internally so existing code paths do not break.
+SPORTS_CONFIG = SPORT_API_CONFIG
+
 _SPORT_API_CALLS = 0
+_SPORT_API_CALLS_BY_SPORT = {}
 _SPORT_STATS_CACHE = {}
-_SPORT_API_LOCK = threading.Lock()
-_SPORT_NEXT_API_SLOT = 0.0
-_SPORT_API_MIN_INTERVAL = 0.40
-_SPORT_API_RETRIES = 4
+_SPORT_HTTP_LOCK = threading.Lock()
+_SPORT_LAST_CALL = 0.0
+_SPORT_MIN_INTERVAL = 0.08
 
 
-def _sport_api_get(endpoint, params=None):
-    """Rate-limited Sport Ultra transport with bounded 429/5xx retries."""
-    global _SPORT_API_CALLS, _SPORT_NEXT_API_SLOT
-    from config import HIGHLIGHTLY_API_KEY
-    headers = {
-        "x-rapidapi-key": HIGHLIGHTLY_API_KEY,
-        "x-rapidapi-host": SPORT_API_HOST,
-    }
+def _sport_api_get(sport_key, endpoint, params=None):
+    """Call the dedicated Highlightly sport API once.
 
-    for attempt in range(1, _SPORT_API_RETRIES + 1):
-        try:
-            with _SPORT_API_LOCK:
-                now_m = time.monotonic()
-                wait = max(0.0, _SPORT_NEXT_API_SLOT - now_m)
-                _SPORT_NEXT_API_SLOT = max(now_m, _SPORT_NEXT_API_SLOT) + _SPORT_API_MIN_INTERVAL
+    Important quota rule: no automatic retry on 429/5xx and no second
+    fallback request for the same date.  A failed request is simply skipped.
+    """
+    global _SPORT_API_CALLS, _SPORT_LAST_CALL
+    cfg = SPORTS_CONFIG[sport_key]
+    _SPORT_API_CALLS += 1
+    _SPORT_API_CALLS_BY_SPORT[sport_key] = _SPORT_API_CALLS_BY_SPORT.get(sport_key, 0) + 1
+
+    try:
+        from config import HIGHLIGHTLY_API_KEY
+        headers = {
+            "x-rapidapi-key": HIGHLIGHTLY_API_KEY,
+            "x-rapidapi-host": cfg["host"],
+        }
+        with _SPORT_HTTP_LOCK:
+            wait = _SPORT_MIN_INTERVAL - (time.monotonic() - _SPORT_LAST_CALL)
             if wait > 0:
                 time.sleep(wait)
+            _SPORT_LAST_CALL = time.monotonic()
 
-            _SPORT_API_CALLS += 1
-            response = requests.get(
-                f"{SPORT_API_BASE}/{endpoint}",
-                headers=headers,
-                params=params or {},
-                timeout=25,
-            )
-            print(f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} params={params or {}} status={response.status_code}")
+        response = requests.get(
+            f"{cfg['base']}/{endpoint.lstrip('/')}",
+            headers=headers,
+            params=params or {},
+            timeout=20,
+        )
+        print(
+            f"SPORT API REQUEST {_SPORT_API_CALLS}: {sport_key} {endpoint} "
+            f"params={params or {}} status={response.status_code}"
+        )
 
-            if response.status_code == 429 or 500 <= response.status_code < 600:
-                retry_after = response.headers.get("Retry-After")
-                try:
-                    delay = float(retry_after) if retry_after else min(12.0, 2.0 ** attempt)
-                except (TypeError, ValueError):
-                    delay = min(12.0, 2.0 ** attempt)
-                print(f"SPORT API RETRY {response.status_code}: waiting {delay:.1f}s")
-                time.sleep(delay)
-                continue
+        if response.status_code != 200:
+            print("SPORT API ERROR:", sport_key, endpoint, response.text[:300])
+            return []
 
-            if response.status_code != 200:
-                print("SPORT API ERROR:", response.text[:500])
-                return []
-
-            payload = response.json()
-            data = payload.get("data", []) if isinstance(payload, dict) else payload
-            return data if isinstance(data, list) else []
-        except Exception as exc:
-            if attempt == _SPORT_API_RETRIES:
-                print("SPORT API REQUEST ERROR:", endpoint, repr(exc))
-                return []
-            time.sleep(min(2.0 ** attempt, 8.0))
-
-    return []
+        payload = response.json()
+        if isinstance(payload, dict):
+            data = payload.get("data", [])
+        else:
+            data = payload
+        return data if isinstance(data, list) else []
+    except Exception as exc:
+        print("SPORT API REQUEST ERROR:", sport_key, endpoint, repr(exc))
+        return []
 
 
 def _sport_match_datetime(match):
@@ -1151,7 +1176,7 @@ def _recursive_number(obj, names):
     return None
 
 
-def _extract_team_average(stats_rows, metric):
+def _extract_team_average(stats_rows, metric, league_id=None):
     """Extract scored average from Highlightly's current-season team statistics."""
     if isinstance(stats_rows, dict):
         stats_rows = stats_rows.get("data", stats_rows)
@@ -1179,13 +1204,15 @@ def _extract_team_average(stats_rows, metric):
 
         if games and games > 0 and scored is not None:
             season = _recursive_number(row, {"season", "seasonid", "year"}) or 0
-            candidates.append((season, games, scored, row))
+            row_league_id = _recursive_number(row, {"leagueid", "league_id"})
+            league_match = league_id is not None and row_league_id is not None and int(row_league_id) == int(league_id)
+            candidates.append((1 if league_match else 0, season, games, scored, row))
 
     if not candidates:
         return None
 
-    candidates.sort(key=lambda x: x[0], reverse=True)
-    season, games, scored, raw = candidates[0]
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    _league_match, season, games, scored, raw = candidates[0]
     return {
         "average": scored / games,
         "games": int(games),
@@ -1194,19 +1221,20 @@ def _extract_team_average(stats_rows, metric):
     }
 
 
-def _get_team_average(sport_key, team_id, metric):
+def _get_team_average(sport_key, team_id, metric, league_id=None):
     if not team_id:
         return None
-    cache_key = (sport_key, int(team_id), metric)
+    cache_key = (sport_key, int(team_id), metric, int(league_id or 0))
     if cache_key in _SPORT_STATS_CACHE:
         return _SPORT_STATS_CACHE[cache_key]
 
     cfg = SPORTS_CONFIG[sport_key]
     rows = _sport_api_get(
+        sport_key,
         f"{cfg['stats']}/{int(team_id)}",
         {"fromDate": SPORT_HISTORY_FROM, "timezone": SPORT_API_TZ},
     )
-    result = _extract_team_average(rows, metric)
+    result = _extract_team_average(rows, metric, league_id)
     _SPORT_STATS_CACHE[cache_key] = result
 
     if result:
@@ -1219,8 +1247,8 @@ def _get_team_average(sport_key, team_id, metric):
     return result
 
 
-def _get_sport_fixtures(cfg, start, end):
-    """Fetch the complete local-day window, with a safe fallback if timezone filtering returns empty."""
+def _get_sport_fixtures(sport_key, cfg, start, end):
+    """Fetch the complete local-day window with one request per date."""
     all_rows = []
     dates = []
     d = start.date()
@@ -1234,7 +1262,7 @@ def _get_sport_fixtures(cfg, start, end):
             "timezone": SPORT_API_TZ,
             "limit": SPORT_API_LIMIT,
         }
-        rows = _sport_api_get(cfg["endpoint"], params)
+        rows = _sport_api_get(sport_key, cfg["endpoint"], params)
 
         all_rows.extend(rows if isinstance(rows, list) else [])
 
@@ -1302,8 +1330,9 @@ def _build_sport_section(sport_name, candidates):
 
 def run_sport_daily_scanner(send_func=None):
     """Build Top 5 Over/Under from real current-season team statistics."""
-    global _SPORT_API_CALLS, _SPORT_STATS_CACHE
+    global _SPORT_API_CALLS, _SPORT_API_CALLS_BY_SPORT, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
+    _SPORT_API_CALLS_BY_SPORT = {}
     _SPORT_STATS_CACHE = {}
     started = time.time()
 
@@ -1317,13 +1346,13 @@ def run_sport_daily_scanner(send_func=None):
         "",
         "Период:",
         f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "История: всички налични текущо-сезонни team statistics от Sport Ultra",
+        "История: текущосезонни team statistics от Highlightly",
         "",
     ]
 
     for sport_key, cfg in SPORTS_CONFIG.items():
         print(f"SPORT SCAN: {sport_key} — FIXTURES")
-        fixtures = _get_sport_fixtures(cfg, start, end)
+        fixtures = _get_sport_fixtures(sport_key, cfg, start, end)
         candidates = []
 
         for match in fixtures:
@@ -1334,10 +1363,14 @@ def run_sport_daily_scanner(send_func=None):
             if sport_key == "american-football":
                 league_name, _country_name = _sport_league_country(match)
                 lname = str(league_name or "").casefold()
-                is_nfl = "nfl" in lname
-                is_ncaa = "ncaa" in lname
-                is_div_iii = "division iii" in lname or "division 3" in lname
-                allowed_american = (is_nfl or (is_ncaa and not is_div_iii))
+                allowed_american = (
+                    "nfl" in lname
+                    or "ncaa" in lname
+                    or "division i" in lname
+                    or "division ii" in lname
+                    or "division 1" in lname
+                    or "division 2" in lname
+                )
                 if not allowed_american:
                     continue
 
@@ -1348,8 +1381,15 @@ def run_sport_daily_scanner(send_func=None):
             if not home_id or not away_id:
                 continue
 
-            h = _get_team_average(sport_key, home_id, cfg["metric"])
-            a = _get_team_average(sport_key, away_id, cfg["metric"])
+            league_obj = match.get("league") or {}
+            league_id = league_obj.get("id") if isinstance(league_obj, dict) else None
+            try:
+                league_id = int(league_id) if league_id is not None else None
+            except (TypeError, ValueError):
+                league_id = None
+
+            h = _get_team_average(sport_key, home_id, cfg["metric"], league_id)
+            a = _get_team_average(sport_key, away_id, cfg["metric"], league_id)
             if not h or not a or h["games"] < 3 or a["games"] < 3:
                 continue
 
@@ -1376,6 +1416,8 @@ def run_sport_daily_scanner(send_func=None):
         )
 
     lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
+    if _SPORT_API_CALLS_BY_SPORT:
+        lines.append("📡 По спортове: " + ", ".join(f"{k}={v}" for k, v in _SPORT_API_CALLS_BY_SPORT.items()))
     lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
 
     message = "\n".join(lines)
@@ -1398,9 +1440,9 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
     today = now.date()
 
-    # Football: once per day at/after 10:00 BG.
+    # Football: once per day at/after 10:30 BG.
     # The scanner uses the fixed 12:00 -> next-day 12:00 window.
-    if now.hour > 10 or (now.hour == 10 and now.minute >= 0):
+    if now.hour > 10 or (now.hour == 10 and now.minute >= 30):
         football_key = f"football_daily:{today.isoformat()}"
 
         if not already_ran(football_key):
