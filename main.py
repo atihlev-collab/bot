@@ -934,9 +934,9 @@ def get_team_form(team_id, venue=None):
     # ONLY THE MOST RECENT 5
     # -----------------------------------------------------
 
-    games = filtered[:4]
+    games = filtered[:5]
 
-    if len(games) < 4:
+    if len(games) < 5:
         return None
 
     played = len(games)
