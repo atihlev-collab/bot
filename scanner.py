@@ -35,11 +35,16 @@ SPORTS = {
 
 _session = requests.Session()
 _last_call = 0.0
-_MIN_INTERVAL = 0.12
+_MIN_INTERVAL = 0.25
+_API_RATE_LIMITED = False
 
 
 def _get(url, host, params=None, timeout=25):
-    global _last_call
+    global _last_call, _API_RATE_LIMITED
+
+    if _API_RATE_LIMITED:
+        return []
+
     wait = _MIN_INTERVAL - (time.monotonic() - _last_call)
     if wait > 0:
         time.sleep(wait)
@@ -47,39 +52,61 @@ def _get(url, host, params=None, timeout=25):
 
     headers = {
         "x-rapidapi-key": HIGHLIGHTLY_API_KEY,
-        "x-rapidapi-host": host,
     }
+    if "p.rapidapi.com" in url:
+        headers["x-rapidapi-host"] = host
 
-    for attempt in range(4):
-        try:
-            print(f"API CALL: {url} params={params or {}} host={host}")
-            r = _session.get(url, headers=headers, params=params or {}, timeout=timeout)
-            print(f"API RESPONSE: status={r.status_code} url={url}")
-            if r.status_code in (429, 500, 502, 503, 504):
-                time.sleep(min(1.0 * (2 ** attempt), 6.0))
-                continue
-            r.raise_for_status()
-            payload = r.json()
-            if isinstance(payload, list):
-                print(f"API DATA: list rows={len(payload)}")
-                return payload
-            if isinstance(payload, dict):
-                if payload.get("errors"):
-                    print("API ERROR:", payload.get("errors"))
-                    return []
-                data = payload.get("data", [])
-                print(
-                    f"API DATA: dict keys={list(payload.keys())[:10]} "
-                    f"rows={len(data) if isinstance(data, list) else type(data).__name__}"
-                )
-                return data if isinstance(data, list) else []
+    try:
+        r = _session.get(
+            url,
+            headers=headers,
+            params=params or {},
+            timeout=timeout,
+        )
+
+        remaining = r.headers.get("x-ratelimit-requests-remaining")
+        limit = r.headers.get("x-ratelimit-requests-limit")
+        retry_after = r.headers.get("retry-after")
+
+        print(
+            f"API RESPONSE: status={r.status_code} "
+            f"remaining={remaining} limit={limit} "
+            f"retry_after={retry_after} url={url}"
+        )
+
+        if r.status_code == 429:
+            _API_RATE_LIMITED = True
+            print(
+                "HIGHLIGHTLY RATE LIMIT: 429. "
+                "No more API requests will be made during this scan."
+            )
             return []
-        except Exception as exc:
-            if attempt == 3:
-                print("API REQUEST ERROR:", url, repr(exc))
+
+        if r.status_code != 200:
+            print(f"API ERROR HTTP {r.status_code}: {r.text[:300]}")
+            return []
+
+        try:
+            payload = r.json()
+        except ValueError as exc:
+            print("API JSON ERROR:", repr(exc))
+            return []
+
+        if isinstance(payload, list):
+            return payload
+
+        if isinstance(payload, dict):
+            if payload.get("errors"):
+                print("API ERROR:", payload.get("errors"))
                 return []
-            time.sleep(min(0.8 * (2 ** attempt), 5.0))
-    return []
+            data = payload.get("data", [])
+            return data if isinstance(data, list) else []
+
+        return []
+
+    except requests.RequestException as exc:
+        print("API REQUEST ERROR:", url, repr(exc))
+        return []
 
 
 def _norm(value):
@@ -178,8 +205,6 @@ def _football_fixtures(start, end):
             {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100},
         )
         print(f"FOOTBALL FIXTURES API: date={day.isoformat()} rows={len(rows)}")
-        if rows:
-            print("FOOTBALL FIRST RAW:", rows[0])
 
         for raw in rows:
             m = _football_match(raw)
@@ -203,8 +228,6 @@ def _football_fixtures(start, end):
 
     result = sorted(out.values(), key=lambda x: x["date"])
     print(f"FOOTBALL FIXTURES RESULT: {len(result)}")
-    if not result:
-        print("FOOTBALL DIAGNOSTIC: API returned no usable fixture after filtering.")
     return result
 
 
@@ -427,9 +450,6 @@ def _sport_fixtures(sport, start, end):
             f"{SPORT_BASE}/{sport}/matches", SPORT_HOST,
             {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100},
         )
-        print(f"SPORT FIXTURES API: sport={sport} date={day.isoformat()} rows={len(rows)}")
-        if rows:
-            print(f"SPORT FIRST RAW: {sport}:", rows[0])
         for m in rows:
             dt = _dt(m.get("date") or m.get("startTime") or m.get("startDate"))
             if not dt or not (start <= dt < end) or dt <= datetime.now(TZ):
@@ -442,10 +462,7 @@ def _sport_fixtures(sport, start, end):
                 continue
             out[m.get("id") or f"{_sport_team_id(h)}-{_sport_team_id(a)}-{dt.isoformat()}"] = m
         day += timedelta(days=1)
-    result = list(out.values())
-    if not result:
-        print(f"SPORT DIAGNOSTIC: {sport} API returned no usable fixture after filtering.")
-    return result
+    return list(out.values())
 
 
 def _american_allowed(m):
@@ -638,6 +655,8 @@ def run_sport_daily_scanner(send_func=None):
 
 
 def run_due_scans(send_func):
+    global _API_RATE_LIMITED
+    _API_RATE_LIMITED = False
     """Called by main.py. Runs both scanners once per day after 10:30 BG."""
     today = datetime.now(TZ).date()
     key_file = "scanner_last_run.txt"
@@ -666,10 +685,13 @@ def run_due_scans(send_func):
     except Exception as exc:
         print("FOOTBALL SCANNER ERROR:", repr(exc))
 
-    try:
-        run_sport_daily_scanner(send_func)
-    except Exception as exc:
-        print("SPORT SCANNER ERROR:", repr(exc))
+    if _API_RATE_LIMITED:
+        print("SPORT SCANNER: skipped because Highlightly returned HTTP 429.")
+    else:
+        try:
+            run_sport_daily_scanner(send_func)
+        except Exception as exc:
+            print("SPORT SCANNER ERROR:", repr(exc))
 
     try:
         with open(key_file, "w", encoding="utf-8") as f:
