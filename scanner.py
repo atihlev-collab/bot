@@ -1131,7 +1131,11 @@ def _sport_api_get(endpoint, params=None):
         limit = response.headers.get("x-ratelimit-requests-limit")
         print(f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} status={response.status_code} remaining={remaining}/{limit}")
         if response.status_code == 429:
+            # A provider 429 means the Sport API is unavailable for the
+            # current daily quota period. Persist the lock for this BG day
+            # so a scheduler restart cannot hammer the endpoint repeatedly.
             _lock_quota(provider, "HTTP 429 daily quota/rate limit")
+            print("SPORT API QUOTA LOCKED: no further Sport API requests until the next Bulgaria calendar day.")
             raise APIQuotaExceeded(provider)
         try:
             if remaining is not None and int(float(remaining)) <= API_SAFETY_RESERVE:
@@ -1507,7 +1511,7 @@ def _run_daily_due_scans(send_func):
     if now.hour > 10 or (now.hour == 10 and now.minute >= 30):
         football_key = f"football_daily:{today.isoformat()}"
 
-        if not already_ran(football_key):
+        if not already_ran(football_key) and not _quota_locked("football"):
             print(_signal_text("FOOTBALL DAILY SCANNER STARTED"))
             try:
                 run_daily_scanner(
@@ -1518,21 +1522,23 @@ def _run_daily_due_scans(send_func):
                 mark_ran(football_key)
                 print(_signal_text("FOOTBALL DAILY SCANNER FINISHED"))
             except APIQuotaExceeded as exc:
-                print(_signal_text(f"FOOTBALL DAILY SCANNER STOPPED: {exc}"))
+                print(_signal_text(f"FOOTBALL DAILY SCANNER STOPPED: {exc}; no retry until next BG day"))
+                mark_ran(football_key)
             except Exception as exc:
                 print(_signal_text(f"FOOTBALL DAILY SCANNER ERROR: {exc!r}"))
 
     # Sport Statistics: once per day at/after 10:00 BG.
     sport_key = f"sport_test:{today.isoformat()}"
 
-    if (now.hour > 10 or (now.hour == 10 and now.minute >= 0)) and not already_ran(sport_key):
+    if (now.hour > 10 or (now.hour == 10 and now.minute >= 0)) and not already_ran(sport_key) and not _quota_locked("sport"):
         print(_signal_text("SPORT DAILY SCANNER STARTED"))
         try:
             run_sport_daily_scanner(send_func)
             mark_ran(sport_key)
             print(_signal_text("SPORT DAILY SCANNER FINISHED"))
         except APIQuotaExceeded as exc:
-            print(_signal_text(f"SPORT DAILY SCANNER STOPPED: {exc}"))
+            print(_signal_text(f"SPORT DAILY SCANNER STOPPED: {exc}; no retry until next BG day"))
+            mark_ran(sport_key)
         except Exception as exc:
             print(_signal_text(f"SPORT DAILY SCANNER ERROR: {exc!r}"))
 
