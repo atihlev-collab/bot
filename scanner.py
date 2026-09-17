@@ -385,6 +385,12 @@ def load_historical_statistics(all_histories):
     loaded = {}
     for fid, base_fixture in fixtures_by_id.items():
         rows = _api(f"statistics/{fid}", {})
+        if not rows:
+            detail = _api(f"matches/{fid}", {})
+            if isinstance(detail, list) and detail and isinstance(detail[0], dict):
+                detail = detail[0]
+            if isinstance(detail, dict):
+                rows = detail.get("statistics") or detail.get("matchStatistics") or []
         fake = dict(base_fixture)
         fake["statistics"] = rows if isinstance(rows, list) else []
         _, data = _fixture_market_values(fake)
@@ -1004,9 +1010,7 @@ SPORT_API_TZ = "Europe/Sofia"
 SPORT_API_LIMIT = 100
 SPORT_HISTORY_FROM = f"{datetime.now(TZ).year - 1}-07-01"
 
-# Use the dedicated Highlightly API for each sport.  The dashboard shows the
-# combined Sport API is quota-constrained, while the dedicated sport APIs are
-# separate subscriptions/quotas.  Football remains on soccer.highlightly.net.
+# SIMPLE MODE: one unified Highlightly Sport API for all non-football sports.
 SPORT_API_CONFIG = {
     "basketball": {"name": "🏀 БАСКЕТБОЛ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
     "hockey": {"name": "🏒 ХОКЕЙ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
@@ -1051,8 +1055,9 @@ def _sport_api_get(sport_key, endpoint, params=None):
                 time.sleep(wait)
             _SPORT_LAST_CALL = time.monotonic()
 
+        path = endpoint.lstrip('/')
         response = requests.get(
-            f"{cfg['base']}/{endpoint.lstrip('/')}",
+            f"{cfg['base'].rstrip('/')}/{path}",
             headers=headers,
             params=params or {},
             timeout=20,
@@ -1195,7 +1200,7 @@ def _extract_team_average(stats_rows, metric, league_id=None):
     if not candidates:
         return None
 
-    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    candidates.sort(key=lambda x: (x[0], x[1], x[2]), reverse=True)
     _league_match, season, games, scored, raw = candidates[0]
     return {
         "average": scored / games,
