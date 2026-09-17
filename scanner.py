@@ -301,63 +301,79 @@ def _write_cached_stat(fixture_id, data):
 
 
 def _fixture_market_values(fixture):
-    """Extract per-team match statistics from Highlightly /statistics/{matchId}.
+    """Extract real per-team statistics from Highlightly /statistics/{matchId}.
 
-    Highlightly returns statistics as `{value, displayName}` records. Goals
-    come from the match score and the other markets are only counted when
-    Highlightly actually supplies the corresponding statistic. Missing data
-    is never converted to zero.
+    Highlightly uses ``displayName`` + ``value`` (for example ``Corner Kicks``,
+    ``Total Shots`` and ``Yellow Cards``). Missing statistics are skipped,
+    never converted to zero.
     """
-    fid=(fixture.get("fixture") or {}).get("id")
-    out={}
-    for block in fixture.get("statistics") or []:
-        tid=(block.get("team") or {}).get("id")
-        if not tid:
+    fid = (fixture.get("fixture") or {}).get("id")
+    out = {}
+    rows = fixture.get("statistics") or []
+    if isinstance(rows, dict):
+        rows = rows.get("data") or rows.get("statistics") or []
+    if not isinstance(rows, list):
+        rows = []
+
+    aliases = {
+        "corner kicks": "corner kicks", "corners": "corner kicks",
+        "corner": "corner kicks", "total shots": "total shots",
+        "shots": "total shots", "total shot": "total shots",
+        "yellow cards": "yellow cards", "yellow card": "yellow cards",
+        "yellowcards": "yellow cards",
+    }
+    compact_aliases = {
+        "cornerkicks": "corner kicks", "corners": "corner kicks",
+        "totalshots": "total shots", "shots": "total shots",
+        "yellowcards": "yellow cards",
+    }
+
+    for block in rows:
+        if not isinstance(block, dict):
             continue
-        vals={}
-        for item in block.get("statistics") or []:
-            # Highlightly Football API uses `displayName` for match-stat
-            # labels (for example: Corners, Total shots, Yellow cards).
-            # Older API-Football code used `type`; support both so the
-            # football scanner can consume Highlightly data correctly.
-            raw_name = item.get("displayName") or item.get("type") or item.get("name") or ""
-            typ = _norm(raw_name)
-            val = item.get("value")
-            if isinstance(val, str):
-                val = val.replace("%", "").strip()
-            try:
-                val = float(val) if val is not None else None
-            except (TypeError, ValueError):
-                val = None
-            if val is not None:
-                vals[typ] = val
+        team = block.get("team") or {}
+        try:
+            tid = int(team.get("id"))
+        except (TypeError, ValueError):
+            continue
+        vals = out.setdefault(tid, {})
+        items = block.get("statistics") or block.get("stats") or []
+        if isinstance(items, dict):
+            items = [items]
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            label = item.get("displayName") or item.get("name") or item.get("type") or ""
+            norm = _norm(label)
+            key = aliases.get(norm)
+            if key is None:
+                key = compact_aliases.get(re.sub(r"[^a-z0-9]+", "", str(label).casefold()))
+            if key is None:
+                continue
+            value = item.get("value")
+            if isinstance(value, dict):
+                value = value.get("value") or value.get("total") or value.get("count")
+            value = _safe_float(value)
+            if value is not None:
+                vals[key] = value
 
-                # Canonical aliases used by the scanner's market model.
-                aliases = {
-                    "corners": {"corners", "corner kicks", "corner"},
-                    "shots": {"total shots", "total shot", "shots", "shots total"},
-                    "cards": {"yellow cards", "yellow card", "yellow cards total"},
-                }
-                for canonical, names in aliases.items():
-                    if typ in names:
-                        vals[canonical] = val
+    # Goals come from the completed match score and are always valid when present.
+    home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
+    away_id = (fixture.get("teams") or {}).get("away", {}).get("id")
+    goals = fixture.get("goals") or {}
+    try:
+        if home_id is not None and goals.get("home") is not None:
+            out.setdefault(int(home_id), {})["goals_scored"] = float(goals.get("home"))
+            out.setdefault(int(home_id), {})["goals_conceded"] = float(goals.get("away") or 0)
+        if away_id is not None and goals.get("away") is not None:
+            out.setdefault(int(away_id), {})["goals_scored"] = float(goals.get("away"))
+            out.setdefault(int(away_id), {})["goals_conceded"] = float(goals.get("home") or 0)
+    except (TypeError, ValueError):
+        pass
 
-        if vals:
-            out[int(tid)]=vals
-
-    # Goals are always available in the fixture itself.
-    home_id=(fixture.get("teams") or {}).get("home",{}).get("id")
-    away_id=(fixture.get("teams") or {}).get("away",{}).get("id")
-    goals=fixture.get("goals") or {}
-    if home_id:
-        out.setdefault(int(home_id),{})["goals_scored"]=float(goals.get("home") or 0)
-        out.setdefault(int(home_id),{})["goals_conceded"]=float(goals.get("away") or 0)
-    if away_id:
-        out.setdefault(int(away_id),{})["goals_scored"]=float(goals.get("away") or 0)
-        out.setdefault(int(away_id),{})["goals_conceded"]=float(goals.get("home") or 0)
-
-    return fid,out
-
+    return fid, out
 
 def load_historical_statistics(all_histories):
     fixtures_by_id = {}
@@ -992,62 +1008,13 @@ SPORT_HISTORY_FROM = f"{datetime.now(TZ).year - 1}-07-01"
 # combined Sport API is quota-constrained, while the dedicated sport APIs are
 # separate subscriptions/quotas.  Football remains on soccer.highlightly.net.
 SPORT_API_CONFIG = {
-    "basketball": {
-        "name": "🏀 БАСКЕТБОЛ",
-        "base": "https://basketball.highlightly.net",
-        "host": "basketball-highlights-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "points",
-    },
-    "hockey": {
-        "name": "🏒 ХОКЕЙ",
-        "base": "https://hockey.highlightly.net",
-        "host": "hockey-highlights-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "goals",
-    },
-    "american-football": {
-        "name": "🏈 NFL / NCAA — Division I / Division II",
-        "base": "https://american-football.highlightly.net",
-        "host": "nfl-ncaa-highlights-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "points",
-    },
-    "baseball": {
-        "name": "⚾ БЕЙЗБОЛ",
-        "base": "https://baseball.highlightly.net",
-        "host": "mlb-college-baseball-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "runs",
-    },
-    "rugby": {
-        "name": "🏉 РЪГБИ",
-        "base": "https://rugby.highlightly.net",
-        "host": "rugby-highlights-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "points",
-    },
-    "volleyball": {
-        "name": "🏐 ВОЛЕЙБОЛ",
-        "base": "https://volleyball.highlightly.net",
-        "host": "volleyball-highlights-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "points",
-    },
-    "handball": {
-        "name": "🤾 ХАНДБАЛ",
-        "base": "https://handball.highlightly.net",
-        "host": "handball-highlights-api.p.rapidapi.com",
-        "endpoint": "matches",
-        "stats": "teams/statistics",
-        "metric": "goals",
-    },
+    "basketball": {"name": "🏀 БАСКЕТБОЛ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
+    "hockey": {"name": "🏒 ХОКЕЙ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
+    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
+    "baseball": {"name": "⚾ БЕЙЗБОЛ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
+    "rugby": {"name": "🏉 РЪГБИ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
+    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
+    "handball": {"name": "🤾 ХАНДБАЛ", "base": "https://sports.highlightly.net", "host": "sport-highlights-api.p.rapidapi.com", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
 }
 
 # Keep the old name available internally so existing code paths do not break.
