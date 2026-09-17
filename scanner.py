@@ -1,5 +1,5 @@
 # BUILD HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
-# =========================================================
+# =======================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
 # Runs once at/after 10:00 and once at/after 20:00 Bulgaria time.
