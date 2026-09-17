@@ -301,10 +301,12 @@ def _write_cached_stat(fixture_id, data):
 
 
 def _fixture_market_values(fixture):
-    """
-    Extract per-team match statistics from the enriched /fixtures?ids response.
-    API-Football documents that the ids form can return fixture data enriched
-    with statistics; statistics themselves are only used when present.
+    """Extract per-team match statistics from Highlightly /statistics/{matchId}.
+
+    Highlightly returns statistics as `{value, displayName}` records. Goals
+    come from the match score and the other markets are only counted when
+    Highlightly actually supplies the corresponding statistic. Missing data
+    is never converted to zero.
     """
     fid=(fixture.get("fixture") or {}).get("id")
     out={}
@@ -314,16 +316,31 @@ def _fixture_market_values(fixture):
             continue
         vals={}
         for item in block.get("statistics") or []:
-            typ=(item.get("type") or "").strip().lower()
-            val=item.get("value")
-            if isinstance(val,str):
-                val=val.replace("%","").strip()
+            # Highlightly Football API uses `displayName` for match-stat
+            # labels (for example: Corners, Total shots, Yellow cards).
+            # Older API-Football code used `type`; support both so the
+            # football scanner can consume Highlightly data correctly.
+            raw_name = item.get("displayName") or item.get("type") or item.get("name") or ""
+            typ = _norm(raw_name)
+            val = item.get("value")
+            if isinstance(val, str):
+                val = val.replace("%", "").strip()
             try:
-                val=float(val) if val is not None else None
-            except (TypeError,ValueError):
-                val=None
+                val = float(val) if val is not None else None
+            except (TypeError, ValueError):
+                val = None
             if val is not None:
-                vals[typ]=val
+                vals[typ] = val
+
+                # Canonical aliases used by the scanner's market model.
+                aliases = {
+                    "corners": {"corners", "corner kicks", "corner"},
+                    "shots": {"total shots", "total shot", "shots", "shots total"},
+                    "cards": {"yellow cards", "yellow card", "yellow cards total"},
+                }
+                for canonical, names in aliases.items():
+                    if typ in names:
+                        vals[canonical] = val
 
         if vals:
             out[int(tid)]=vals
