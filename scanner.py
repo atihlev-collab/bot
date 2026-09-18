@@ -9,7 +9,6 @@
 import re
 import sqlite3
 import time
-import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -31,93 +30,63 @@ HISTORY_GAMES = None
 MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
-# User's purchased Highlightly plan: 25,000 requests/day.
-# Keep a 500-request safety reserve.
-API_DAILY_LIMIT = 25000
-API_SAFETY_RESERVE = 500
-API_HARD_STOP = API_DAILY_LIMIT - API_SAFETY_RESERVE
-
-class APIQuotaExceeded(RuntimeError):
-    def __init__(self, provider):
-        self.provider = provider
-        super().__init__(f"{provider} API daily safety limit reached")
-
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
+API_HARD_STOP = 7000
+API_SAFETY_RESERVE = 100
 
-def _quota_provider(endpoint):
-    return "football"
-
-def _today_key():
+def _quota_today():
     return datetime.now(TZ).date().isoformat()
 
-def _quota_used(provider):
-    init_scanner_db()
-    conn = _db()
-    row = conn.execute("SELECT used FROM api_usage WHERE day=? AND provider=?", (_today_key(), provider)).fetchone()
-    conn.close()
-    return int(row[0]) if row else 0
+def _quota_init():
+    conn=_db(); conn.execute("CREATE TABLE IF NOT EXISTS api_usage (day TEXT NOT NULL, provider TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(day,provider))"); conn.execute("CREATE TABLE IF NOT EXISTS api_quota_locks (provider TEXT PRIMARY KEY, locked_day TEXT NOT NULL, reason TEXT NOT NULL)"); conn.commit(); conn.close()
 
-def _quota_add(provider, n=1):
-    conn = _db()
-    conn.execute("INSERT OR IGNORE INTO api_usage(day,provider,used) VALUES(?,?,0)", (_today_key(), provider))
-    conn.execute("UPDATE api_usage SET used=used+? WHERE day=? AND provider=?", (n, _today_key(), provider))
-    conn.commit()
-    conn.close()
+def _quota_used(provider="football"):
+    _quota_init(); conn=_db(); row=conn.execute("SELECT used FROM api_usage WHERE day=? AND provider=?",(_quota_today(),provider)).fetchone(); conn.close(); return int(row[0]) if row else 0
 
-def _quota_locked(provider):
-    conn = _db()
-    row = conn.execute("SELECT locked_day FROM api_quota_locks WHERE provider=?", (provider,)).fetchone()
-    if row and row[0] == _today_key():
-        conn.close(); return True
-    if row:
-        conn.execute("DELETE FROM api_quota_locks WHERE provider=?", (provider,)); conn.commit()
-    conn.close(); return False
+def _quota_locked(provider="football"):
+    _quota_init(); conn=_db(); row=conn.execute("SELECT locked_day FROM api_quota_locks WHERE provider=?",(provider,)).fetchone(); conn.close(); return bool(row and row[0]==_quota_today())
 
-def _lock_quota(provider, reason):
-    conn = _db()
-    conn.execute("INSERT OR REPLACE INTO api_quota_locks(provider,locked_day,reason) VALUES(?,?,?)", (provider,_today_key(),reason))
-    conn.commit(); conn.close()
+def _quota_lock(provider,reason):
+    _quota_init(); conn=_db(); conn.execute("INSERT OR REPLACE INTO api_quota_locks(provider,locked_day,reason) VALUES(?,?,?)",(provider,_quota_today(),str(reason)[:300])); conn.commit(); conn.close()
+
+def _quota_add(provider="football"):
+    _quota_init(); conn=_db(); conn.execute("INSERT OR IGNORE INTO api_usage(day,provider,used) VALUES(?,?,0)",(_quota_today(),provider)); conn.execute("UPDATE api_usage SET used=used+1 WHERE day=? AND provider=?",(_quota_today(),provider)); conn.commit(); conn.close()
+
 
 def _api(endpoint, params=None, timeout=25):
+    """Single-attempt Highlightly request.
+    429 is a hard stop: never retry and never burn additional quota attempts.
+    """
     global _LAST_API_CALL
-    provider = _quota_provider(endpoint)
-    with _API_LOCK:
-        if _quota_locked(provider):
-            raise APIQuotaExceeded(provider)
-        if _quota_used(provider) >= API_HARD_STOP:
-            _lock_quota(provider, "local safety limit")
-            raise APIQuotaExceeded(provider)
-        wait = _API_MIN_INTERVAL - (time.monotonic() - _LAST_API_CALL)
-        if wait > 0:
-            time.sleep(wait)
-        _LAST_API_CALL = time.monotonic()
-        _quota_add(provider)
-
+    if _quota_locked("football") or _quota_used("football") >= API_HARD_STOP:
+        _quota_lock("football", "local safety stop")
+        print("SCANNER FOOTBALL QUOTA STOP:", _quota_used("football"), "/ 7500")
+        return None
     try:
-        r = requests.get(
-            f"{BASE_URL}/{endpoint}",
-            headers=HEADERS,
-            params=params or {},
-            timeout=timeout,
-        )
-        remaining = r.headers.get("x-ratelimit-requests-remaining")
-        limit = r.headers.get("x-ratelimit-requests-limit")
-        print(f"FOOTBALL API: {endpoint} status={r.status_code} remaining={remaining}/{limit}")
+        with _API_LOCK:
+            wait = _API_MIN_INTERVAL - (time.monotonic() - _LAST_API_CALL)
+            if wait > 0:
+                time.sleep(wait)
+            _LAST_API_CALL = time.monotonic()
+        _quota_add("football")
+        r = requests.get(f"{BASE_URL}/{endpoint}", headers=HEADERS,
+                         params=params or {}, timeout=timeout)
+        remaining=r.headers.get("x-ratelimit-requests-remaining")
+        if remaining is not None:
+            try:
+                if int(float(remaining)) <= API_SAFETY_RESERVE:
+                    _quota_lock("football", f"provider remaining={remaining}")
+            except (TypeError, ValueError):
+                pass
         if r.status_code == 429:
-            _lock_quota(provider, "HTTP 429 daily quota/rate limit")
-            raise APIQuotaExceeded(provider)
-        try:
-            if remaining is not None and int(float(remaining)) <= API_SAFETY_RESERVE:
-                _lock_quota(provider, f"provider remaining={remaining}")
-                raise APIQuotaExceeded(provider)
-        except (TypeError, ValueError):
-            pass
-        if 500 <= r.status_code < 600:
-            print("SCANNER API SERVER ERROR:", endpoint, r.status_code)
+            _quota_lock("football", "HTTP 429")
+            print("SCANNER HIGHLIGHTLY 429: quota exhausted; no retry")
             return None
-        r.raise_for_status()
+        if r.status_code != 200:
+            print("SCANNER API HTTP ERROR:", endpoint, r.status_code)
+            return None
         payload = r.json()
         if isinstance(payload, list):
             return payload
@@ -126,9 +95,8 @@ def _api(endpoint, params=None, timeout=25):
                 print("SCANNER API ERROR:", endpoint, payload.get("errors"))
                 return None
             return payload.get("data", [])
+        print("SCANNER API ERROR:", endpoint, "unexpected response type", type(payload).__name__)
         return None
-    except APIQuotaExceeded:
-        raise
     except Exception as e:
         print("SCANNER REQUEST ERROR:", endpoint, repr(e))
         return None
@@ -164,27 +132,17 @@ def init_scanner_db():
         )
     """)
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS api_usage (
-            day TEXT NOT NULL, provider TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0,
-            PRIMARY KEY(day, provider)
+            CREATE TABLE IF NOT EXISTS scanner_upcoming_cache (
+            cache_key TEXT PRIMARY KEY,
+            data TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         )
     """)
     cur.execute("""
-        CREATE TABLE IF NOT EXISTS api_quota_locks (
-            provider TEXT PRIMARY KEY, locked_day TEXT NOT NULL, reason TEXT NOT NULL
-        )
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS scanner_sport_stats (
-            sport TEXT NOT NULL, team_id INTEGER NOT NULL, metric TEXT NOT NULL,
-            data TEXT NOT NULL, updated_at TEXT NOT NULL,
-            PRIMARY KEY(sport, team_id, metric)
-        )
-    """)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS scanner_sport_fixtures (
-            sport TEXT NOT NULL, day TEXT NOT NULL, data TEXT NOT NULL,
-            updated_at TEXT NOT NULL, PRIMARY KEY(sport, day)
+        CREATE TABLE IF NOT EXISTS scanner_odds_cache (
+            fixture_id INTEGER PRIMARY KEY,
+            data TEXT NOT NULL,
+            updated_at TEXT NOT NULL
         )
     """)
     conn.commit()
@@ -267,109 +225,91 @@ def _normalize_match(m):
 
 
 def get_fixtures_for_window(start_bg, end_bg):
-    days = []
-    d = start_bg.date()
+    init_scanner_db()
+    cache_key=f"{start_bg.isoformat()}|{end_bg.isoformat()}"
+    conn=_db(); row=conn.execute("SELECT data FROM scanner_upcoming_cache WHERE cache_key=?",(cache_key,)).fetchone(); conn.close()
+    if row:
+        try:
+            import json
+            cached=json.loads(row[0])
+            if isinstance(cached,list):
+                return cached
+        except Exception:
+            pass
+    days=[]; d=start_bg.date()
     while d <= end_bg.date():
-        days.append(d)
-        d += timedelta(days=1)
-    all_matches, seen = [], set()
+        days.append(d); d += timedelta(days=1)
+    all_matches=[]; seen=set()
     for day in days:
-        rows = _api("matches", {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100})
-        for raw in rows if isinstance(rows, list) else []:
-            m = _normalize_match(raw)
-            if not m:
-                continue
-            fid = (m.get("fixture") or {}).get("id")
-            dt_raw = (m.get("fixture") or {}).get("date")
-            if not fid or fid in seen or not dt_raw:
-                continue
+        rows=_api("matches", {"date":day.isoformat(),"timezone":"Europe/Sofia","limit":100})
+        for raw in rows if isinstance(rows,list) else []:
+            m=_normalize_match(raw)
+            if not m: continue
+            fid=(m.get("fixture") or {}).get("id"); dt_raw=(m.get("fixture") or {}).get("date")
+            if not fid or fid in seen or not dt_raw: continue
             try:
-                dt_utc = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00"))
-                dt_bg = dt_utc.astimezone(TZ)
-            except Exception:
-                continue
-            if dt_bg < start_bg or dt_bg >= end_bg or dt_utc <= datetime.now(timezone.utc):
-                continue
-            # GLOBAL BLOCK: Russia + Belarus are never scanned.
-            if _is_blocked_fixture(m):
-                continue
-            seen.add(fid)
-            all_matches.append(m)
-    all_matches.sort(key=lambda x: (x.get("fixture") or {}).get("date", ""))
+                dt_utc=datetime.fromisoformat(str(dt_raw).replace("Z","+00:00")); dt_bg=dt_utc.astimezone(TZ)
+            except Exception: continue
+            if dt_bg < start_bg or dt_bg >= end_bg or dt_utc <= datetime.now(timezone.utc): continue
+            if _is_blocked_fixture(m): continue
+            seen.add(fid); all_matches.append(m)
+    all_matches.sort(key=lambda x:(x.get("fixture") or {}).get("date",""))
+    import json
+    conn=_db(); conn.execute("INSERT OR REPLACE INTO scanner_upcoming_cache(cache_key,data,updated_at) VALUES (?,?,?)",(cache_key,json.dumps(all_matches),datetime.now(timezone.utc).isoformat())); conn.commit(); conn.close()
     return all_matches
+
+def get_cached_upcoming_matches(start_bg=None,end_bg=None):
+    if start_bg is None or end_bg is None:
+        now=datetime.now(TZ); start=now.replace(hour=12,minute=0,second=0,microsecond=0)
+        if now < start: start -= timedelta(days=1)
+        end=start+timedelta(days=1)
+    else: start,end=start_bg,end_bg
+    return get_fixtures_for_window(start,end)
+
 
 def get_team_history(team_id, season, league_id=None):
     team_id, season, league_id = int(team_id), int(season), int(league_id or 0)
-    key = (team_id, season, league_id)
-    if key in _SCAN_HISTORY:
-        return _SCAN_HISTORY[key]
-
-    # Persistent cache: the same season/team history must not be downloaded
-    # again on every daily run. League-specific cache is stored in the same
-    # JSON payload; when league_id is 0 the generic season cache is used.
-    conn = _db()
-    row = conn.execute("SELECT data, updated_at FROM scanner_team_season_history WHERE team_id=? AND season=?", (team_id, season)).fetchone()
-    conn.close()
+    conn=_db(); row=conn.execute("SELECT data FROM scanner_team_season_history WHERE team_id=? AND season=?",(team_id,season)).fetchone(); conn.close()
     if row:
         try:
-            updated = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
-            fresh_today = updated.astimezone(TZ).date() == datetime.now(TZ).date()
-            cached = json.loads(row[0])
-            if fresh_today and isinstance(cached, dict) and str(league_id) in cached:
-                result = cached[str(league_id)]
-                _SCAN_HISTORY[key] = result
-                return result
-        except Exception:
-            pass
-
+            import json
+            obj=json.loads(row[0])
+            if isinstance(obj,dict) and int(obj.get("league_id",0))==league_id and isinstance(obj.get("matches"),list):
+                _SCAN_HISTORY[(team_id,season,league_id)]=obj["matches"]
+                return obj["matches"]
+        except Exception: pass
     def fetch_team_matches(extra):
-        rows = _api("matches", {**extra, "limit": 100})
-        return [_normalize_match(x) for x in (rows if isinstance(rows, list) else []) if _normalize_match(x)]
-
-    primary = []
+        rows=_api("matches", {**extra,"limit":100})
+        out=[]
+        for x in rows if isinstance(rows,list) else []:
+            n=_normalize_match(x)
+            if n: out.append(n)
+        return out
+    primary=[]
     if league_id:
-        primary = fetch_team_matches({"leagueId": league_id, "season": season, "homeTeamId": team_id})
-        primary += fetch_team_matches({"leagueId": league_id, "season": season, "awayTeamId": team_id})
-
+        primary=fetch_team_matches({"leagueId":league_id,"season":season,"homeTeamId":team_id})
+        primary += fetch_team_matches({"leagueId":league_id,"season":season,"awayTeamId":team_id})
     def clean(rows):
-        out, seen = [], set()
+        out=[]; seen=set()
         for f in rows:
-            fid = (f.get("fixture") or {}).get("id")
-            lg = f.get("league") or {}
-            status = (f.get("fixture") or {}).get("status", {}).get("short", "")
-            if not fid or fid in seen or int(lg.get("season") or 0) != season or status not in {"FT", "AET", "PEN"}:
-                continue
-            name = str(lg.get("name") or "").casefold()
-            typ = str(lg.get("type") or "").casefold()
-            if typ == "friendly" or "friend" in name:
-                continue
+            fid=(f.get("fixture") or {}).get("id"); lg=f.get("league") or {}; status=(f.get("fixture") or {}).get("status",{}).get("short","")
+            if not fid or fid in seen or int(lg.get("season") or 0)!=season or status not in {"FT","AET","PEN"}: continue
+            name=str(lg.get("name") or "").casefold(); typ=str(lg.get("type") or "").casefold()
+            if typ=="friendly" or "friend" in name: continue
             seen.add(fid); out.append(f)
         return out
-
-    primary = clean(primary)
-    if len(primary) < 3:
-        fallback = fetch_team_matches({"season": season, "homeTeamId": team_id})
-        fallback += fetch_team_matches({"season": season, "awayTeamId": team_id})
-        primary = clean(primary + fallback)
-
-    primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""), reverse=True)
-    primary = primary[:12]
-    primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
-    _SCAN_HISTORY[key] = primary
-    try:
-        conn = _db()
-        row = conn.execute("SELECT data FROM scanner_team_season_history WHERE team_id=? AND season=?", (team_id, season)).fetchone()
-        payload = {}
-        if row:
-            try: payload = json.loads(row[0]) or {}
-            except Exception: payload = {}
-        payload[str(league_id)] = primary
-        conn.execute("INSERT OR REPLACE INTO scanner_team_season_history(team_id,season,data,updated_at) VALUES(?,?,?,?)", (team_id, season, json.dumps(payload), datetime.now(timezone.utc).isoformat()))
-        conn.commit(); conn.close()
-    except Exception as exc:
-        print("HISTORY CACHE WRITE ERROR:", exc)
-    print("HISTORY:", team_id, "matches=", len(primary))
+    primary=clean(primary)
+    if len(primary)<3:
+        fallback=fetch_team_matches({"season":season,"homeTeamId":team_id})
+        fallback += fetch_team_matches({"season":season,"awayTeamId":team_id})
+        primary=clean(primary+fallback)
+    primary.sort(key=lambda f:(f.get("fixture") or {}).get("date",""),reverse=True); primary=primary[:12]
+    primary.sort(key=lambda f:(f.get("fixture") or {}).get("date",""))
+    import json
+    conn=_db(); conn.execute("INSERT OR REPLACE INTO scanner_team_season_history(team_id,season,data,updated_at) VALUES (?,?,?,?)",(team_id,season,json.dumps({"league_id":league_id,"matches":primary}),datetime.now(timezone.utc).isoformat())); conn.commit(); conn.close()
+    _SCAN_HISTORY[(team_id,season,league_id)]=primary
     return primary
+
 
 def _read_cached_stat(fixture_id):
     conn = _db()
@@ -382,140 +322,138 @@ def _read_cached_stat(fixture_id):
         return None
     try:
         import json
-        return json.loads(row[0])
+        obj = json.loads(row[0])
+        # Invalidate statistics cached by the old parser.  The old cache could
+        # contain goals only, which would permanently suppress corners/shots/cards
+        # after the parser was fixed.
+        if not isinstance(obj, dict) or obj.get("_parser_version") != 2:
+            return None
+        obj.pop("_parser_version", None)
+        return obj
     except Exception:
         return None
 
-
 def _write_cached_stat(fixture_id, data):
     import json
+    payload = dict(data or {})
+    payload["_parser_version"] = 2
     conn = _db()
     conn.execute(
         "INSERT OR REPLACE INTO scanner_fixture_stats(fixture_id, data, updated_at) VALUES (?, ?, ?)",
-        (fixture_id, json.dumps(data), datetime.now(timezone.utc).isoformat()),
+        (fixture_id, json.dumps(payload), datetime.now(timezone.utc).isoformat()),
     )
     conn.commit()
     conn.close()
 
-
 def _fixture_market_values(fixture):
+    """Extract real per-team statistics from Highlightly /statistics/{matchId}.
+
+    Highlightly returns team blocks containing ``statistics`` records with
+    ``displayName`` and ``value``.  The scanner accepts the common Highlightly
+    labels and aliases them to the four canonical markets: corners, shots,
+    cards and goals. Missing statistics are never converted to zero.
     """
-    Extract per-team match statistics from the enriched /fixtures?ids response.
-    API-Football documents that the ids form can return fixture data enriched
-    with statistics; statistics themselves are only used when present.
-    """
-    fid=(fixture.get("fixture") or {}).get("id")
-    out={}
-    for block in fixture.get("statistics") or []:
-        tid=(block.get("team") or {}).get("id")
-        if not tid:
+    fid = (fixture.get("fixture") or {}).get("id")
+    out = {}
+    rows = fixture.get("statistics") or []
+    if isinstance(rows, dict):
+        rows = rows.get("data") or rows.get("statistics") or []
+    if not isinstance(rows, list):
+        rows = []
+
+    aliases = {
+        "corner kicks": "corner kicks",
+        "corners": "corner kicks",
+        "corner": "corner kicks",
+        "total shots": "total shots",
+        "shots": "total shots",
+        "total shot": "total shots",
+        "shots total": "total shots",
+        "yellow cards": "yellow cards",
+        "yellow card": "yellow cards",
+        "yellow cards total": "yellow cards",
+        "yellowcards": "yellow cards",
+    }
+
+    for block in rows:
+        if not isinstance(block, dict):
             continue
-        vals={}
-        for item in block.get("statistics") or []:
-            # Highlightly football statistics use {value, displayName}.
-            # Keep compatibility with the old API-Sports {type, value} shape.
-            raw_name = (
-                item.get("displayName")
-                or item.get("type")
-                or item.get("name")
-                or ""
-            )
-            typ = _norm(raw_name)
-            val = item.get("value")
-            if isinstance(val, str):
-                val = val.replace("%", "").strip()
-            try:
-                val = float(val) if val is not None else None
-            except (TypeError, ValueError):
-                val = None
-            if val is None:
+        team = block.get("team") or {}
+        try:
+            tid = int(team.get("id"))
+        except (TypeError, ValueError):
+            continue
+        vals = out.setdefault(tid, {})
+        items = block.get("statistics") or block.get("stats") or []
+        if isinstance(items, dict):
+            items = [items]
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
                 continue
+            label = item.get("displayName") or item.get("name") or item.get("type") or ""
+            norm = _norm(label)
+            compact = re.sub(r"[^a-z0-9]+", "", str(label).casefold())
+            key = aliases.get(norm)
+            if key is None:
+                key = {
+                    "cornerkicks": "corner kicks",
+                    "corners": "corner kicks",
+                    "corner": "corner kicks",
+                    "totalshots": "total shots",
+                    "shots": "total shots",
+                    "shotstotal": "total shots",
+                    "yellowcards": "yellow cards",
+                    "yellowcard": "yellow cards",
+                }.get(compact)
+            if key is None:
+                continue
+            value = item.get("value")
+            if isinstance(value, dict):
+                value = value.get("value") or value.get("total") or value.get("count")
+            value = _safe_float(value)
+            if value is not None:
+                vals[key] = value
 
-            # Canonical names used by build_profiles_from_histories().
-            aliases = {
-                "corners": {"corners", "corner kicks", "corner"},
-                "shots": {"total shots", "total shot", "shots", "shots total"},
-                "cards": {"yellow cards", "yellow card", "yellow cards total"},
-            }
-            canonical = typ
-            for name, names in aliases.items():
-                if typ in names:
-                    canonical = {
-                        "corners": "corner kicks",
-                        "shots": "total shots",
-                        "cards": "yellow cards",
-                    }[name]
-                    break
-            vals[canonical] = val
+    # Goals come from the completed match score and are always valid when present.
+    home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
+    away_id = (fixture.get("teams") or {}).get("away", {}).get("id")
+    goals = fixture.get("goals") or {}
+    try:
+        if home_id is not None and goals.get("home") is not None:
+            out.setdefault(int(home_id), {})["goals_scored"] = float(goals.get("home"))
+            out.setdefault(int(home_id), {})["goals_conceded"] = float(goals.get("away") or 0)
+        if away_id is not None and goals.get("away") is not None:
+            out.setdefault(int(away_id), {})["goals_scored"] = float(goals.get("away"))
+            out.setdefault(int(away_id), {})["goals_conceded"] = float(goals.get("home") or 0)
+    except (TypeError, ValueError):
+        pass
 
-        if vals:
-            out[int(tid)]=vals
-
-    # Goals are always available in the fixture itself.
-    home_id=(fixture.get("teams") or {}).get("home",{}).get("id")
-    away_id=(fixture.get("teams") or {}).get("away",{}).get("id")
-    goals=fixture.get("goals") or {}
-    if home_id:
-        out.setdefault(int(home_id),{})["goals_scored"]=float(goals.get("home") or 0)
-        out.setdefault(int(home_id),{})["goals_conceded"]=float(goals.get("away") or 0)
-    if away_id:
-        out.setdefault(int(away_id),{})["goals_scored"]=float(goals.get("away") or 0)
-        out.setdefault(int(away_id),{})["goals_conceded"]=float(goals.get("home") or 0)
-
-    return fid,out
-
+    return fid, out
 
 def load_historical_statistics(all_histories):
-    fixtures_by_id = {}
+    fixtures_by_id={}
     for history in all_histories:
         for f in history:
-            fid = (f.get("fixture") or {}).get("id")
-            if fid:
-                fixtures_by_id[int(fid)] = f
-
-    loaded = {}
-
-    for fid, base_fixture in fixtures_by_id.items():
-        cached = _read_cached_stat(fid)
-
+            fid=(f.get("fixture") or {}).get("id")
+            if fid: fixtures_by_id[int(fid)]=f
+    loaded={}; missing=[]
+    for fid in fixtures_by_id:
+        cached=_read_cached_stat(fid)
         if cached is not None:
-            has_match_stats = False
-
-            for team_data in cached.values():
-                if not isinstance(team_data, dict):
-                    continue
-
-                if any(
-                    key in team_data
-                    for key in (
-                        "corner kicks",
-                        "total shots",
-                        "yellow cards",
-                    )
-                ):
-                    has_match_stats = True
-                    break
-
-            if has_match_stats:
-                loaded[fid] = cached
-                continue
-
-        rows = _api(f"statistics/{fid}", {})
-        if rows is None:
-            continue
-
-        fake = dict(base_fixture)
-        fake["statistics"] = rows if isinstance(rows, list) else []
-
-        _, data = _fixture_market_values(fake)
-
-        loaded[fid] = data
-        _write_cached_stat(fid, data)
-
-    _SCAN_FIXTURE_STATS.clear()
-    _SCAN_FIXTURE_STATS.update(loaded)
-
+            loaded[fid]=cached
+        else:
+            missing.append(fid)
+    for fid in missing:
+        base_fixture=fixtures_by_id[fid]
+        rows=_api(f"statistics/{fid}",{})
+        fake=dict(base_fixture); fake["statistics"]=rows if isinstance(rows,list) else []
+        _,data=_fixture_market_values(fake); loaded[fid]=data; _write_cached_stat(fid,data)
+    _SCAN_FIXTURE_STATS.clear(); _SCAN_FIXTURE_STATS.update(loaded)
+    print("SCANNER STATS CACHE:", len(loaded)-len(missing), "hits /", len(missing), "API requests")
     return loaded
+
 
 def build_profiles_from_histories(histories_by_key, stats_by_fixture):
     profiles={}
@@ -798,6 +736,8 @@ def format_market(results, key, label, emoji):
 
 BLOCKED_COUNTRIES = {"belarus", "russia"}
 
+_COMPETITION_CACHE = {}
+
 def _is_blocked_fixture(match):
     country = str((match.get("league") or {}).get("country") or "").strip().casefold()
     return country in BLOCKED_COUNTRIES
@@ -809,10 +749,14 @@ def _is_cup_competition(league):
 
 def _team_stats_competition(match, team_id):
     league = match.get("league") or {}
+    cache_key=(int(team_id), int(league.get("season") or 0))
+    if cache_key in _COMPETITION_CACHE:
+        return _COMPETITION_CACHE[cache_key]
+
     lid = league.get("id")
     season = league.get("season")
     if not _is_cup_competition(league) and lid and season:
-        return int(lid), int(season)
+        value=(int(lid),int(season)); _COMPETITION_CACHE[cache_key]=value; return value
 
     # For cup fixtures, resolve the team's current league/season from Highlightly team statistics.
     from_date = f"{int(season) - 1 if season else datetime.now(TZ).year - 1}-07-01"
@@ -825,7 +769,9 @@ def _team_stats_competition(match, team_id):
         if lgid and sy and "cup" not in lname and "copa" not in lname and "knockout" not in lname:
             candidates.append((int(lgid), int(sy)))
     if candidates:
+        _COMPETITION_CACHE[cache_key]=candidates[0]
         return candidates[0]
+    _COMPETITION_CACHE[cache_key]=None
     return None
 
 # =========================================================
@@ -836,19 +782,55 @@ BETANO_BOOKMAKER_ID = 32
 
 
 def get_betano_prematch_markets(fixture_id):
-    result = {"match": False, "corners": False, "shots": False, "cards": False}
-    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
-    for row in rows if isinstance(rows, list) else []:
-        for market in row.get("odds", []) or []:
-            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
-                continue
-            result["match"] = True
-            name = str(market.get("market") or "").casefold()
-            if "corner" in name: result["corners"] = True
-            if "shot" in name: result["shots"] = True
-            if "card" in name or "booking" in name: result["cards"] = True
-    print("BETANO FILTER RESULT:", fixture_id, result)
+    init_scanner_db()
+    conn=_db(); row=conn.execute("SELECT data FROM scanner_odds_cache WHERE fixture_id=?",(int(fixture_id),)).fetchone(); conn.close()
+    if row:
+        try:
+            import json
+            cached=json.loads(row[0])
+            if isinstance(cached,dict) and "availability" in cached:
+                return cached["availability"]
+        except Exception: pass
+    result={"match":False,"corners":False,"shots":False,"cards":False}
+    rows=_api("odds", {"matchId":int(fixture_id),"bookmakerId":BETANO_BOOKMAKER_ID,"oddsType":"prematch","limit":5})
+    for row in rows if isinstance(rows,list) else []:
+        for market in row.get("odds",[]) or []:
+            if int(market.get("bookmakerId") or 0)!=BETANO_BOOKMAKER_ID: continue
+            result["match"]=True; name=str(market.get("market") or "").casefold()
+            if "corner" in name: result["corners"]=True
+            if "shot" in name: result["shots"]=True
+            if "card" in name or "booking" in name: result["cards"]=True
+    import json
+    conn=_db(); conn.execute("INSERT OR REPLACE INTO scanner_odds_cache(fixture_id,data,updated_at) VALUES (?,?,?)",(int(fixture_id),json.dumps({"availability":result,"raw":rows if isinstance(rows,list) else []}),datetime.now(timezone.utc).isoformat())); conn.commit(); conn.close()
+    print("BETANO FILTER RESULT:",fixture_id,result)
     return result
+
+def get_cached_v7_betano_odds(fixture_id):
+    init_scanner_db()
+    conn=_db(); row=conn.execute("SELECT data FROM scanner_odds_cache WHERE fixture_id=?",(int(fixture_id),)).fetchone(); conn.close()
+    if not row: return None
+    try:
+        import json
+        cached=json.loads(row[0])
+        raw=cached.get("raw") if isinstance(cached,dict) else None
+        if not isinstance(raw,list): return None
+        # Convert the same raw Highlightly odds payload to the legacy V7 shape.
+        out=[]
+        for item in raw:
+            if not isinstance(item,dict): continue
+            bets=[]
+            for market in item.get("odds",[]) or []:
+                if int(market.get("bookmakerId") or 0)!=BETANO_BOOKMAKER_ID: continue
+                vals=[]
+                for v in market.get("values",[]) or []:
+                    vals.append({"value":v.get("value"),"odd":v.get("odd"),"handicap":v.get("handicap")})
+                if vals: bets.append({"id":market.get("id"),"name":market.get("market"),"values":vals})
+            if bets: out.append({"fixture":{"id":int(fixture_id)},"bookmakers":[{"id":BETANO_BOOKMAKER_ID,"name":"Betano","bets":bets}]})
+        return out
+    except Exception:
+        return None
+
+
 
 def filter_matches_by_betano_markets(matches):
 
@@ -949,27 +931,9 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     matches = get_fixtures_for_window(start, end)
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
-    # Betano is a MARKET-AVAILABILITY filter, not a fixture filter.
-    # A missing Betano odds response must NOT erase a statistically valid match.
-    # Otherwise a temporary odds/API miss can turn a full scan into zero signals.
-    betano_markets = {}
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
-        futures = {
-            pool.submit(get_betano_prematch_markets, int(m["fixture"]["id"])): m
-            for m in matches
-        }
-        for fut in as_completed(futures):
-            m = futures[fut]
-            fid = int(m["fixture"]["id"])
-            try:
-                betano_markets[fid] = fut.result()
-            except Exception as exc:
-                print("BETANO AVAILABILITY ERROR:", fid, repr(exc))
-                betano_markets[fid] = {}
-
-            m["_betano_markets"] = betano_markets.get(fid, {})
-
-    # GLOBAL BLOCK: Russia + Belarus are never scanned.
+    # Do NOT query Betano for every fixture. First build statistical candidates.
+    # Goals do not need odds availability; odds are fetched only when a fixture
+    # actually has a corner/shot/card statistical candidate.
     matches = [m for m in matches if not _is_blocked_fixture(m)]
 
     # Resolve the correct statistics competition for every team.
@@ -1002,6 +966,27 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     print("SCANNER HISTORICAL FIXTURES WITH DATA:", sum(1 for v in stats_by_fixture.values() if v), "/", len(stats_by_fixture))
     print(_signal_text("SCANNER MARKET RULE: missing corner/card/shot stats are NOT treated as zero; each team needs >=3 actual observations."))
 
+    # Statistical pre-filter before Betano: this is the main quota saving.
+    statistical_candidates=[]
+    for m in matches:
+        home_id=int(m["teams"]["home"]["id"]); away_id=int(m["teams"]["away"]["id"])
+        hs=_team_stats_competition(m,home_id); aws=_team_stats_competition(m,away_id)
+        profiles={home_id:team_profiles.get((home_id,hs[0],hs[1]),{}) if hs else {},
+                  away_id:team_profiles.get((away_id,aws[0],aws[1]),{}) if aws else {}}
+        candidate=analyse_fixture(m,profiles)
+        mk=candidate.get("markets",{})
+        if any(k in mk for k in ("corners","shots","cards")):
+            statistical_candidates.append(m)
+        m["_statistical_result"]=candidate
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures={pool.submit(get_betano_prematch_markets,int(m["fixture"]["id"])):m for m in statistical_candidates}
+        for fut in as_completed(futures):
+            m=futures[fut]
+            try: m["_betano_markets"]=fut.result()
+            except Exception as exc:
+                print("BETANO AVAILABILITY ERROR:",int(m["fixture"]["id"]),repr(exc)); m["_betano_markets"]={}
+
     results = []
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
         def analyse_one(m):
@@ -1013,7 +998,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
                 home_id: team_profiles.get((home_id, hs[0], hs[1]), {}) if hs else {},
                 away_id: team_profiles.get((away_id, aws[0], aws[1]), {}) if aws else {},
             }
-            result = analyse_fixture(m, profiles)
+            result = m.get("_statistical_result") or analyse_fixture(m, profiles)
             betano = m.get("_betano_markets", {})
             # Never delete a statistical market because the odds endpoint
             # returned nothing. Delete it only when Betano explicitly confirms
@@ -1052,6 +1037,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 
     message = "\n".join(lines)
     print(message)
+    print("FOOTBALL SCANNER API USAGE:", _quota_used("football"), "/ 7500")
 
     # Telegram has a 4096-character message limit.  The complete
     # 7-sport report can legitimately exceed that limit, so send it
@@ -1114,6 +1100,23 @@ def _send_sport_report_chunks(message, send_func, max_chars=3700):
         print(f"SPORT TELEGRAM CHUNK {i}/{total}: {len(chunk)} chars")
         send_func(chunk)
 
+
+def get_cached_betano_odds(fixture_id):
+    """Return the daily scanner's cached Betano availability in V7-compatible shape."""
+    init_scanner_db()
+    conn=_db(); row=conn.execute("SELECT data FROM scanner_odds_cache WHERE fixture_id=?",(int(fixture_id),)).fetchone(); conn.close()
+    if not row: return None
+    try:
+        import json
+        x=json.loads(row[0])
+    except Exception: return None
+    vals=[]
+    if x.get("match"): vals.append({"value":"Match Winner","odd":1.0})
+    # Availability-only cache deliberately contains no fake odds. V7 should only
+    # use it as a cache-hit signal; actual prices still come from get_odds if needed.
+    return [] if not x.get("match") else None
+
+
 _START = time.time()
 
 
@@ -1159,44 +1162,42 @@ SPORTS_CONFIG = {
 
 _SPORT_API_CALLS = 0
 _SPORT_STATS_CACHE = {}
-_SPORT_API_LOCK = threading.Lock()
 
 
 def _sport_api_get(endpoint, params=None):
-    """Highlightly Sport API call with one request only and a 500-request safety reserve."""
+    """Call Highlightly Sport Ultra and return its data without inventing values."""
     global _SPORT_API_CALLS
-    provider = "sport"
-    with _SPORT_API_LOCK:
-        if _quota_locked(provider):
-            raise APIQuotaExceeded(provider)
-        if _quota_used(provider) >= API_HARD_STOP:
-            _lock_quota(provider, "local safety limit")
-            raise APIQuotaExceeded(provider)
-        _quota_add(provider)
-        _SPORT_API_CALLS += 1
+    _SPORT_API_CALLS += 1
+
     try:
         from config import HIGHLIGHTLY_API_KEY
-        headers = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": SPORT_API_HOST}
-        response = requests.get(f"{SPORT_API_BASE}/{endpoint}", headers=headers, params=params or {}, timeout=25)
-        remaining = response.headers.get("x-ratelimit-requests-remaining")
-        limit = response.headers.get("x-ratelimit-requests-limit")
-        print(f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} status={response.status_code} remaining={remaining}/{limit}")
-        if response.status_code == 429:
-            _lock_quota(provider, "HTTP 429 daily quota/rate limit")
-            raise APIQuotaExceeded(provider)
-        try:
-            if remaining is not None and int(float(remaining)) <= API_SAFETY_RESERVE:
-                _lock_quota(provider, f"provider remaining={remaining}")
-                raise APIQuotaExceeded(provider)
-        except (TypeError, ValueError):
-            pass
+        headers = {
+            "x-rapidapi-key": HIGHLIGHTLY_API_KEY,
+            "x-rapidapi-host": SPORT_API_HOST,
+        }
+        response = requests.get(
+            f"{SPORT_API_BASE}/{endpoint}",
+            headers=headers,
+            params=params or {},
+            timeout=25,
+        )
+        print(
+            f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} "
+            f"params={params or {}} status={response.status_code}"
+        )
         if response.status_code != 200:
             print("SPORT API ERROR:", response.text[:500])
             return []
+
         payload = response.json()
-        return payload.get("data", []) if isinstance(payload, dict) else (payload or [])
-    except APIQuotaExceeded:
-        raise
+        if isinstance(payload, dict):
+            data = payload.get("data", [])
+        else:
+            data = payload
+
+        if data is None:
+            return []
+        return data
     except Exception as exc:
         print("SPORT API REQUEST ERROR:", endpoint, repr(exc))
         return []
@@ -1336,28 +1337,12 @@ def _get_team_average(sport_key, team_id, metric):
         return _SPORT_STATS_CACHE[cache_key]
 
     cfg = SPORTS_CONFIG[sport_key]
-    conn = _db()
-    row = conn.execute("SELECT data, updated_at FROM scanner_sport_stats WHERE sport=? AND team_id=? AND metric=?", (sport_key, int(team_id), metric)).fetchone()
-    conn.close()
-    if row:
-        try:
-            updated = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
-            if updated.astimezone(TZ).date() == datetime.now(TZ).date():
-                result = json.loads(row[0])
-                _SPORT_STATS_CACHE[cache_key] = result
-                return result
-        except Exception:
-            pass
     rows = _sport_api_get(
         f"{cfg['stats']}/{int(team_id)}",
         {"fromDate": SPORT_HISTORY_FROM, "timezone": SPORT_API_TZ},
     )
     result = _extract_team_average(rows, metric)
     _SPORT_STATS_CACHE[cache_key] = result
-    if result:
-        conn = _db()
-        conn.execute("INSERT OR REPLACE INTO scanner_sport_stats(sport,team_id,metric,data,updated_at) VALUES(?,?,?,?,?)", (sport_key,int(team_id),metric,json.dumps(result),datetime.now(timezone.utc).isoformat()))
-        conn.commit(); conn.close()
 
     if result:
         print(
@@ -1386,7 +1371,16 @@ def _get_sport_fixtures(cfg, start, end):
         }
         rows = _sport_api_get(cfg["endpoint"], params)
 
-        # Never retry an empty response: a duplicate request only burns quota.
+        # Some Sport Ultra responses can be empty when timezone is combined with date.
+        # Retry the same date without timezone; results are still filtered locally in BG time.
+        if not isinstance(rows, list) or not rows:
+            fallback = _sport_api_get(
+                cfg["endpoint"],
+                {"date": day.isoformat(), "limit": SPORT_API_LIMIT},
+            )
+            if isinstance(fallback, list):
+                rows = fallback
+
         all_rows.extend(rows if isinstance(rows, list) else [])
 
     unique = {}
@@ -1543,7 +1537,7 @@ def run_sport_daily_scanner(send_func=None):
 
 
 # =========================================================
-# DAILY SCAN SCHEDULER — FOOTBALL + SPORT
+# DAILY SCAN SCHEDULER — SPORT ONLY
 # =========================================================
 
 
@@ -1568,8 +1562,6 @@ def run_due_scans(send_func):
                 )
                 mark_ran(football_key)
                 print(_signal_text("FOOTBALL DAILY SCANNER FINISHED"))
-            except APIQuotaExceeded as exc:
-                print(_signal_text(f"FOOTBALL DAILY SCANNER STOPPED: {exc}"))
             except Exception as exc:
                 print(_signal_text(f"FOOTBALL DAILY SCANNER ERROR: {exc!r}"))
 
@@ -1582,8 +1574,6 @@ def run_due_scans(send_func):
             run_sport_daily_scanner(send_func)
             mark_ran(sport_key)
             print(_signal_text("SPORT DAILY SCANNER FINISHED"))
-        except APIQuotaExceeded as exc:
-            print(_signal_text(f"SPORT DAILY SCANNER STOPPED: {exc}"))
         except Exception as exc:
             print(_signal_text(f"SPORT DAILY SCANNER ERROR: {exc!r}"))
 
