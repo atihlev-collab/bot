@@ -472,42 +472,49 @@ def load_historical_statistics(all_histories):
             fid = (f.get("fixture") or {}).get("id")
             if fid:
                 fixtures_by_id[int(fid)] = f
+
     loaded = {}
+
     for fid, base_fixture in fixtures_by_id.items():
-cached = _read_cached_stat(fid)
+        cached = _read_cached_stat(fid)
 
-if cached is not None:
-    # Стар кеш без реални corners/shots/cards е невалиден.
-    has_match_stats = False
+        if cached is not None:
+            has_match_stats = False
 
-    for team_data in cached.values():
-        if not isinstance(team_data, dict):
-            continue
+            for team_data in cached.values():
+                if not isinstance(team_data, dict):
+                    continue
 
-        if any(
-            key in team_data
-            for key in (
-                "corner kicks",
-                "total shots",
-                "yellow cards",
-            )
-        ):
-            has_match_stats = True
-            break
+                if any(
+                    key in team_data
+                    for key in (
+                        "corner kicks",
+                        "total shots",
+                        "yellow cards",
+                    )
+                ):
+                    has_match_stats = True
+                    break
 
-    if has_match_stats:
-        loaded[fid] = cached
-        continue
+            if has_match_stats:
+                loaded[fid] = cached
+                continue
+
         rows = _api(f"statistics/{fid}", {})
         if rows is None:
             continue
+
         fake = dict(base_fixture)
         fake["statistics"] = rows if isinstance(rows, list) else []
+
         _, data = _fixture_market_values(fake)
+
         loaded[fid] = data
         _write_cached_stat(fid, data)
+
     _SCAN_FIXTURE_STATS.clear()
     _SCAN_FIXTURE_STATS.update(loaded)
+
     return loaded
 
 def build_profiles_from_histories(histories_by_key, stats_by_fixture):
