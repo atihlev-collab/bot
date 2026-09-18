@@ -1675,4 +1675,5 @@ if __name__ == "__main__":
     try:
         run_due_scans(_telegram_send)
     except Exception as exc:
-        print("SCANNER FATAL ERROR:", repr(exc
+        print("SCANNER FATAL ERROR:", repr(exc))
+        raise
