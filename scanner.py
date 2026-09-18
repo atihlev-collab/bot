@@ -1,1 +1,1983 @@
+# BUILD: HIGHLIGHTLY-FOOTBALL-LEGACY-LOGIC-OPTIMIZED-20260918-V2
+# =========================================================
+# DAILY STATISTICAL SCANNER
+# =========================================================
+# Runs once per day at/after 10:30 Bulgaria time.
+# Fixture window: 12:00 BG -> next day 12:00 BG.
+# =========================================================
 
+import re
+import sqlite3
+import time
+import json
+import math
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timedelta, timezone, time as dt_time
+from zoneinfo import ZoneInfo
+
+import requests
+
+from config import API_KEY, CHAT_ID, HIGHLIGHTLY_API_KEY
+import threading
+
+# Backward-compatibility alias: older deployments referenced HIGHLIGHTLY.
+# Keep the canonical key name HIGHLIGHTLY_API_KEY everywhere else.
+HIGHLIGHTLY = HIGHLIGHTLY_API_KEY
+
+BASE_URL = "https://soccer.highlightly.net"
+HEADERS = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": "football-highlights-api.p.rapidapi.com"}
+TZ = ZoneInfo("Europe/Sofia")
+DB_FILE = "v3_ai.db"
+FOOTBALL_SCAN_BUILD = "20260918_FOOTBALL_OPT_V2"
+FOOTBALL_HISTORY_MAX = 12
+HISTORY_GAMES = None
+MAX_WORKERS = 8
+_SCAN_FIXTURE_STATS = {}
+_SCAN_HISTORY = {}
+# Highlightly plan is 7,500 requests/day per API product. Keep a 500-request
+# safety reserve so the scanner itself never intentionally drives the dashboard to 100%.
+API_DAILY_LIMIT = 25000
+API_SAFETY_RESERVE = 500
+API_HARD_STOP = API_DAILY_LIMIT - API_SAFETY_RESERVE
+
+class APIQuotaExceeded(RuntimeError):
+    def __init__(self, provider):
+        self.provider = provider
+        super().__init__(f"{provider} API daily safety limit reached")
+
+_API_LOCK = threading.Lock()
+_LAST_API_CALL = 0.0
+_API_MIN_INTERVAL = 0.12
+
+def _quota_provider(endpoint):
+    return "football"
+
+def _today_key():
+    return datetime.now(TZ).date().isoformat()
+
+def _quota_used(provider):
+    init_scanner_db()
+    conn = _db()
+    row = conn.execute("SELECT used FROM api_usage WHERE day=? AND provider=?", (_today_key(), provider)).fetchone()
+    conn.close()
+    return int(row[0]) if row else 0
+
+def _quota_add(provider, n=1):
+    conn = _db()
+    conn.execute("INSERT OR IGNORE INTO api_usage(day,provider,used) VALUES(?,?,0)", (_today_key(), provider))
+    conn.execute("UPDATE api_usage SET used=used+? WHERE day=? AND provider=?", (n, _today_key(), provider))
+    conn.commit()
+    conn.close()
+
+def _quota_locked(provider):
+    conn = _db()
+    row = conn.execute("SELECT locked_day FROM api_quota_locks WHERE provider=?", (provider,)).fetchone()
+    if row and row[0] == _today_key():
+        conn.close(); return True
+    if row:
+        conn.execute("DELETE FROM api_quota_locks WHERE provider=?", (provider,)); conn.commit()
+    conn.close(); return False
+
+def _lock_quota(provider, reason):
+    conn = _db()
+    conn.execute("INSERT OR REPLACE INTO api_quota_locks(provider,locked_day,reason) VALUES(?,?,?)", (provider,_today_key(),reason))
+    conn.commit(); conn.close()
+
+def _api(endpoint, params=None, timeout=25):
+    global _LAST_API_CALL
+    provider = _quota_provider(endpoint)
+    with _API_LOCK:
+        if _quota_locked(provider):
+            raise APIQuotaExceeded(provider)
+        if _quota_used(provider) >= API_HARD_STOP:
+            _lock_quota(provider, "local safety limit")
+            raise APIQuotaExceeded(provider)
+        wait = _API_MIN_INTERVAL - (time.monotonic() - _LAST_API_CALL)
+        if wait > 0:
+            time.sleep(wait)
+        _LAST_API_CALL = time.monotonic()
+        _quota_add(provider)
+
+    try:
+        r = requests.get(
+            f"{BASE_URL}/{endpoint}",
+            headers=HEADERS,
+            params=params or {},
+            timeout=timeout,
+        )
+        remaining = r.headers.get("x-ratelimit-requests-remaining")
+        limit = r.headers.get("x-ratelimit-requests-limit")
+        print(f"FOOTBALL API: {endpoint} status={r.status_code} remaining={remaining}/{limit}")
+        if r.status_code == 429:
+            _lock_quota(provider, "HTTP 429 daily quota/rate limit")
+            raise APIQuotaExceeded(provider)
+        try:
+            if remaining is not None and int(float(remaining)) <= API_SAFETY_RESERVE:
+                _lock_quota(provider, f"provider remaining={remaining}")
+                raise APIQuotaExceeded(provider)
+        except (TypeError, ValueError):
+            pass
+        if 500 <= r.status_code < 600:
+            print("SCANNER API SERVER ERROR:", endpoint, r.status_code)
+            return None
+        r.raise_for_status()
+        payload = r.json()
+        if isinstance(payload, list):
+            return payload
+        if isinstance(payload, dict):
+            if payload.get("errors"):
+                print("SCANNER API ERROR:", endpoint, payload.get("errors"))
+                return None
+            return payload.get("data", [])
+        return None
+    except APIQuotaExceeded:
+        raise
+    except Exception as e:
+        print("SCANNER REQUEST ERROR:", endpoint, repr(e))
+        return None
+
+
+def _db():
+    return sqlite3.connect(DB_FILE, timeout=30)
+
+
+def init_scanner_db():
+    conn = _db()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS daily_scanner_runs (
+            run_key TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_fixture_stats (
+            fixture_id INTEGER PRIMARY KEY,
+            data TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_team_season_history (
+            team_id INTEGER NOT NULL,
+            season INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (team_id, season)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_league_season_matches (
+            league_id INTEGER NOT NULL,
+            season INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (league_id, season)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_daily_reports (
+            run_key TEXT PRIMARY KEY,
+            report TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_betano_odds_cache (
+            fixture_id INTEGER PRIMARY KEY,
+            data TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS api_usage (
+            day TEXT NOT NULL, provider TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY(day, provider)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS api_quota_locks (
+            provider TEXT PRIMARY KEY, locked_day TEXT NOT NULL, reason TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_sport_stats (
+            sport TEXT NOT NULL, team_id INTEGER NOT NULL, metric TEXT NOT NULL,
+            data TEXT NOT NULL, updated_at TEXT NOT NULL,
+            PRIMARY KEY(sport, team_id, metric)
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS scanner_sport_fixtures (
+            sport TEXT NOT NULL, day TEXT NOT NULL, data TEXT NOT NULL,
+            updated_at TEXT NOT NULL, PRIMARY KEY(sport, day)
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def already_ran(run_key):
+    init_scanner_db()
+    conn = _db()
+    row = conn.execute(
+        "SELECT 1 FROM daily_scanner_runs WHERE run_key=?",
+        (run_key,),
+    ).fetchone()
+    conn.close()
+    return row is not None
+
+
+def mark_ran(run_key):
+    conn = _db()
+    conn.execute(
+        "INSERT OR REPLACE INTO daily_scanner_runs(run_key, created_at) VALUES (?, ?)",
+        (run_key, datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _norm(s):
+    return " ".join(str(s or "").strip().lower().replace("_", " ").split())
+
+
+def _safe_float(v):
+    if v is None:
+        return None
+    try:
+        if isinstance(v, str):
+            v = v.replace("%", "").strip()
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_match(m):
+    if not isinstance(m, dict):
+        return None
+    home = m.get("homeTeam") or {}
+    away = m.get("awayTeam") or {}
+    league = m.get("league") or {}
+    country = m.get("country") or {}
+    state = m.get("state") or {}
+    score = state.get("score") or {}
+    current = score.get("current")
+    hs = aw = 0
+    if isinstance(current, str) and "-" in current:
+        try:
+            hs, aw = [int(x.strip()) for x in current.split("-", 1)]
+        except Exception:
+            pass
+    elif isinstance(current, dict):
+        hs = int(current.get("home") or current.get("homeTeam") or 0)
+        aw = int(current.get("away") or current.get("awayTeam") or 0)
+    desc = str(state.get("description") or "")
+    up = desc.upper()
+    if any(x in up for x in ("FIRST HALF", "SECOND HALF", "IN PROGRESS", "HALF TIME", "BREAK", "EXTRA TIME", "PENALT")):
+        short = "LIVE"
+    elif "FINISHED" in up or "FINAL" in up:
+        short = "FT"
+    elif "POSTPONED" in up:
+        short = "PST"
+    elif "CANCEL" in up:
+        short = "CANC"
+    else:
+        short = "NS"
+    return {
+        "fixture": {"id": m.get("id"), "date": m.get("date"), "status": {"short": short, "long": desc, "elapsed": state.get("clock")}},
+        "league": {"id": league.get("id"), "name": league.get("name"), "season": league.get("season"), "country": country.get("name") or "", "type": league.get("type")},
+        "teams": {"home": {"id": home.get("id"), "name": home.get("name"), "logo": home.get("logo")}, "away": {"id": away.get("id"), "name": away.get("name"), "logo": away.get("logo")}},
+        "goals": {"home": hs, "away": aw},
+    }
+
+
+def get_fixtures_for_window(start_bg, end_bg):
+    days = []
+    d = start_bg.date()
+    while d <= end_bg.date():
+        days.append(d)
+        d += timedelta(days=1)
+    all_matches, seen = [], set()
+    for day in days:
+        rows = _api("matches", {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100})
+        for raw in rows if isinstance(rows, list) else []:
+            m = _normalize_match(raw)
+            if not m:
+                continue
+            fid = (m.get("fixture") or {}).get("id")
+            dt_raw = (m.get("fixture") or {}).get("date")
+            if not fid or fid in seen or not dt_raw:
+                continue
+            try:
+                dt_utc = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00"))
+                dt_bg = dt_utc.astimezone(TZ)
+            except Exception:
+                continue
+            if dt_bg < start_bg or dt_bg >= end_bg or dt_utc <= datetime.now(timezone.utc):
+                continue
+            # GLOBAL BLOCK: Russia + Belarus are never scanned.
+            if _is_blocked_fixture(m):
+                continue
+            seen.add(fid)
+            all_matches.append(m)
+    all_matches.sort(key=lambda x: (x.get("fixture") or {}).get("date", ""))
+    return all_matches
+
+def _clean_history_rows(rows, season, league_id=None):
+    out, seen = [], set()
+    for f in rows or []:
+        if not isinstance(f, dict):
+            continue
+        fid = (f.get("fixture") or {}).get("id")
+        lg = f.get("league") or {}
+        status = str(((f.get("fixture") or {}).get("status") or {}).get("short") or "").upper()
+        if not fid or fid in seen:
+            continue
+        if int(lg.get("season") or 0) != int(season):
+            continue
+        if league_id and int(lg.get("id") or 0) != int(league_id):
+            continue
+        if status not in {"FT", "AET", "PEN"}:
+            continue
+        name = str(lg.get("name") or "").casefold()
+        typ = str(lg.get("type") or "").casefold()
+        if typ == "friendly" or "friend" in name:
+            continue
+        seen.add(int(fid))
+        out.append(f)
+    out.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""), reverse=True)
+    return out
+
+
+def _load_league_season_matches(league_id, season):
+    """Load a whole league-season once, then build all team histories locally.
+
+    This is the main quota reduction versus the previous Football version:
+    instead of 2 match-list requests per team, one cached league-season request
+    (plus pagination only when required) supplies the historical fixtures for
+    every team in that competition.
+    """
+    league_id, season = int(league_id), int(season)
+    conn = _db()
+    row = conn.execute(
+        "SELECT data FROM scanner_league_season_matches WHERE league_id=? AND season=?",
+        (league_id, season),
+    ).fetchone()
+    conn.close()
+    if row and row[0]:
+        try:
+            data = json.loads(row[0])
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+
+    all_rows = []
+    offset = 0
+    page_size = 100
+    while True:
+        rows = _api("matches", {
+            "leagueId": league_id,
+            "season": season,
+            "limit": page_size,
+            "offset": offset,
+        })
+        if not isinstance(rows, list):
+            break
+        all_rows.extend(_normalize_match(x) for x in rows if _normalize_match(x))
+        if len(rows) < page_size:
+            break
+        offset += page_size
+        if offset >= 1000:
+            break
+
+    # Deduplicate and keep only valid normalized fixtures.
+    unique = {}
+    for m in all_rows:
+        fid = (m.get("fixture") or {}).get("id")
+        if fid:
+            unique[int(fid)] = m
+    all_rows = list(unique.values())
+
+    try:
+        conn = _db()
+        conn.execute(
+            "INSERT OR REPLACE INTO scanner_league_season_matches(league_id,season,data,updated_at) VALUES(?,?,?,?)",
+            (league_id, season, json.dumps(all_rows), datetime.now(timezone.utc).isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        print("LEAGUE HISTORY CACHE WRITE ERROR:", league_id, season, repr(exc))
+    return all_rows
+
+
+def get_team_history(team_id, season, league_id=None):
+    """Legacy history rule, ported to Highlightly with quota-safe caching.
+
+    1. Requested competition first.
+    2. If fewer than 3 official matches exist there, fall back to current-season
+       official matches for that team.
+    3. Friendly matches excluded.
+    4. Only FT/AET/PEN accepted.
+    5. Most recent 12 matches are retained, oldest -> newest for calculations.
+    """
+    team_id, season, league_id = int(team_id), int(season), int(league_id or 0)
+    key = (team_id, season, league_id)
+    if key in _SCAN_HISTORY:
+        return _SCAN_HISTORY[key]
+
+    # Persistent team cache survives Railway restarts.
+    conn = _db()
+    row = conn.execute(
+        "SELECT data FROM scanner_team_season_history WHERE team_id=? AND season=?",
+        (team_id, season),
+    ).fetchone()
+    conn.close()
+    if row and row[0]:
+        try:
+            cached = json.loads(row[0])
+            if isinstance(cached, dict) and str(league_id) in cached:
+                result = cached[str(league_id)]
+                _SCAN_HISTORY[key] = result
+                return result
+        except Exception:
+            pass
+
+    primary = []
+    if league_id:
+        league_rows = _load_league_season_matches(league_id, season)
+        team_rows = [
+            f for f in league_rows
+            if int(((f.get("teams") or {}).get("home") or {}).get("id") or 0) == team_id
+            or int(((f.get("teams") or {}).get("away") or {}).get("id") or 0) == team_id
+        ]
+        primary = _clean_history_rows(team_rows, season, league_id)
+
+    # Exact legacy fallback: only teams with <3 matches in the requested
+    # competition pay the extra API cost.
+    if len(primary) < 3:
+        print("HISTORY FALLBACK:", team_id, "competition_matches=", len(primary), "-> current-season official matches")
+        home_rows = _api("matches", {"season": season, "homeTeamId": team_id, "limit": 100})
+        away_rows = _api("matches", {"season": season, "awayTeamId": team_id, "limit": 100})
+        normalized_fallback = []
+        for x in (home_rows or []) + (away_rows or []):
+            if isinstance(x, dict):
+                nx = _normalize_match(x)
+                if nx:
+                    normalized_fallback.append(nx)
+        primary = _clean_history_rows(primary + normalized_fallback, season)
+
+    primary = primary[:FOOTBALL_HISTORY_MAX]
+    primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+    _SCAN_HISTORY[key] = primary
+
+    try:
+        conn = _db()
+        row = conn.execute("SELECT data FROM scanner_team_season_history WHERE team_id=? AND season=?", (team_id, season)).fetchone()
+        payload = {}
+        if row:
+            try:
+                payload = json.loads(row[0]) or {}
+            except Exception:
+                payload = {}
+        payload[str(league_id)] = primary
+        conn.execute(
+            "INSERT OR REPLACE INTO scanner_team_season_history(team_id,season,data,updated_at) VALUES(?,?,?,?)",
+            (team_id, season, json.dumps(payload), datetime.now(timezone.utc).isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        print("HISTORY CACHE WRITE ERROR:", exc)
+    print("HISTORY:", team_id, "matches=", len(primary))
+    return primary
+
+
+def _read_cached_stat(fixture_id):
+    conn = _db()
+    row = conn.execute(
+        "SELECT data FROM scanner_fixture_stats WHERE fixture_id=?",
+        (fixture_id,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    try:
+        import json
+        return json.loads(row[0])
+    except Exception:
+        return None
+
+
+def _write_cached_stat(fixture_id, data):
+    import json
+    conn = _db()
+    conn.execute(
+        "INSERT OR REPLACE INTO scanner_fixture_stats(fixture_id, data, updated_at) VALUES (?, ?, ?)",
+        (fixture_id, json.dumps(data), datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _fixture_market_values(fixture):
+    """Extract Highlightly match statistics into the scanner's canonical market fields."""
+    fid = (fixture.get("fixture") or {}).get("id") or fixture.get("id")
+    out = {}
+    aliases = {
+        "corners": {"corners", "corner kicks", "corner"},
+        "shots": {"total shots", "total shot", "shots", "shots total"},
+        "cards": {"yellow cards", "yellow card", "yellow cards total"},
+    }
+    for block in fixture.get("statistics") or []:
+        team = block.get("team") or {}
+        tid = team.get("id") or block.get("teamId")
+        if not tid:
+            continue
+        vals = {}
+        for item in block.get("statistics") or []:
+            raw_name = item.get("displayName") or item.get("name") or item.get("type") or ""
+            typ = _norm(raw_name)
+            val = item.get("value")
+            if isinstance(val, str):
+                val = val.replace("%", "").strip()
+            try:
+                val = float(val) if val is not None else None
+            except (TypeError, ValueError):
+                val = None
+            if val is None:
+                continue
+            vals[typ] = val
+            for canonical, names in aliases.items():
+                if typ in names:
+                    vals[canonical] = val
+        if vals:
+            out[int(tid)] = vals
+
+    # Goals come from the finished match score and are not dependent on stats coverage.
+    teams = fixture.get("teams") or {}
+    home_id = (teams.get("home") or {}).get("id")
+    away_id = (teams.get("away") or {}).get("id")
+    goals = fixture.get("goals") or {}
+    if home_id:
+        out.setdefault(int(home_id), {})["goals_scored"] = float(goals.get("home") or 0)
+        out.setdefault(int(home_id), {})["goals_conceded"] = float(goals.get("away") or 0)
+    if away_id:
+        out.setdefault(int(away_id), {})["goals_scored"] = float(goals.get("away") or 0)
+        out.setdefault(int(away_id), {})["goals_conceded"] = float(goals.get("home") or 0)
+    return fid, out
+
+def load_historical_statistics(all_histories):
+    """Load unique historical fixture statistics, cache-first.
+
+    Highlightly documents statistics as a match-id endpoint; unlike the old
+    API-Sports implementation there is no documented multi-id statistics
+    endpoint. Therefore we do NOT invent a batch endpoint. We make one request
+    only for a fixture absent from the persistent cache.
+    """
+    fixtures_by_id = {}
+    for history in all_histories:
+        for f in history or []:
+            fid = (f.get("fixture") or {}).get("id")
+            if fid:
+                fixtures_by_id[int(fid)] = f
+
+    loaded = {}
+    missing = []
+    for fid, base_fixture in fixtures_by_id.items():
+        cached = _read_cached_stat(fid)
+        if cached is not None:
+            loaded[fid] = cached
+        else:
+            missing.append((fid, base_fixture))
+
+    # Sequential requests are deliberate here. They prevent a restart or a
+    # transient provider response from multiplying quota usage through a large
+    # thread burst. Cache is written immediately after every successful call.
+    for fid, base_fixture in missing:
+        rows = _api(f"statistics/{fid}", {})
+        if rows is None:
+            continue
+        fake = dict(base_fixture)
+        fake["statistics"] = rows if isinstance(rows, list) else []
+        _, data = _fixture_market_values(fake)
+        loaded[fid] = data
+        _write_cached_stat(fid, data)
+
+    # Goals are always available from the history fixture itself, even when
+    # Highlightly has no statistics coverage for that match.
+    for fid, base_fixture in fixtures_by_id.items():
+        base = loaded.setdefault(fid, {})
+        _, goal_data = _fixture_market_values(base_fixture)
+        for tid, vals in goal_data.items():
+            base.setdefault(tid, {}).update({
+                k: v for k, v in vals.items()
+                if k in ("goals_scored", "goals_conceded")
+            })
+
+    _SCAN_FIXTURE_STATS.clear()
+    _SCAN_FIXTURE_STATS.update(loaded)
+    print("FOOTBALL HISTORICAL STATS:", "cached=", len(loaded) - len(missing), "missing_requested=", len(missing))
+    return loaded
+
+
+def build_profiles_from_histories(histories_by_key, stats_by_fixture):
+    profiles={}
+
+    for (team_id,league_id,season), history in histories_by_key.items():
+        sums={
+            "corners":0.0,
+            "cards":0.0,
+            "shots":0.0,
+            "goals_scored":0.0,
+            "goals_conceded":0.0,
+        }
+        counts={k:0 for k in sums}
+
+        for f in history:
+            fid=(f.get("fixture") or {}).get("id")
+            data=stats_by_fixture.get(int(fid),{}).get(int(team_id),{})
+            goals=(f.get("goals") or {})
+            home_id=(f.get("teams") or {}).get("home",{}).get("id")
+
+            if "goals_scored" not in data:
+                data["goals_scored"]=float(
+                    goals.get("home") if int(home_id or -1)==int(team_id)
+                    else goals.get("away") or 0
+                )
+            if "goals_conceded" not in data:
+                data["goals_conceded"]=float(
+                    goals.get("away") if int(home_id or -1)==int(team_id)
+                    else goals.get("home") or 0
+                )
+
+            mappings={
+                "corners":"corner kicks",
+                "shots":"total shots",
+                "cards":"yellow cards",
+                "goals_scored":"goals_scored",
+                "goals_conceded":"goals_conceded",
+            }
+
+            for market,stat_name in mappings.items():
+                value=data.get(stat_name)
+                if value is None:
+                    continue
+                sums[market]+=float(value)
+                counts[market]+=1
+
+        result={}
+        for market,total in sums.items():
+            if counts[market]:
+                result[market]=(total/counts[market],counts[market])
+        profiles[(int(team_id),int(league_id),int(season))]=result
+
+    return profiles
+
+
+def _stat_number(obj, *names):
+    if obj is None:
+        return None
+    if isinstance(obj,(int,float)):
+        return float(obj)
+    if isinstance(obj,str):
+        try:
+            return float(obj.replace("%","").replace(",","").strip())
+        except ValueError:
+            return None
+    if isinstance(obj,dict):
+        for name in names:
+            if name in obj:
+                value=_stat_number(obj[name])
+                if value is not None:
+                    return value
+    return None
+
+
+def build_team_profile(team_id, profile):
+    return profile if isinstance(profile,dict) else {}
+
+
+
+
+# Markets manually confirmed by the user as NOT offered on Betano.
+# Keys are normalized "home - away" fixture names.
+MANUAL_BETANO_MARKET_BLOCKS = {
+    "cards": {
+        "atletico escobar - defensores de vilelas",
+        "al-hilal saudi fc - neom",
+    },
+    "shots_countries": {"romania", "norway"},
+}
+
+def _market_allowed_on_betano(result, market):
+    home = _norm(result.get("home_name"))
+    away = _norm(result.get("away_name"))
+    fixture_key = f"{home} - {away}"
+    if fixture_key in MANUAL_BETANO_MARKET_BLOCKS.get(market, set()):
+        return False
+    if market == "shots" and _norm(result.get("country")) in MANUAL_BETANO_MARKET_BLOCKS["shots_countries"]:
+        return False
+    return True
+
+def filter_markets_by_bookmaker(result, bookmaker_markets=None):
+    """
+    bookmaker_markets:
+        {fixture_id: {"goals": bool, "corners": bool, "cards": bool, "shots": bool}}
+
+    Only a real bookmaker-market feed should populate this map. We deliberately
+    do not infer Betano availability from league statistics.
+    """
+    if not bookmaker_markets:
+        return result
+
+    fid = result.get("fixture_id")
+    available = bookmaker_markets.get(fid, {})
+    result["markets"] = {
+        market: value
+        for market, value in result.get("markets", {}).items()
+        if available.get(market) is True
+    }
+    return result
+
+
+
+def _market_allowed_by_betano(match, market):
+    """
+    Known Betano availability rules supplied for this scanner:
+      - Al-Hilal Saudi FC - NEOM: cards + corners remain allowed.
+      - Romania: shots are not offered.
+      - Norway 2. Division: shots are not offered.
+      - Norway top division: shots remain allowed.
+    Other markets are not removed unless explicitly known unavailable.
+    """
+    league = match.get("league") or {}
+    country = str(league.get("country") or "").strip().casefold()
+    league_name = str(league.get("name") or "").strip().casefold()
+
+    if market == "shots":
+        if country == "romania":
+            return False
+        if country == "norway" and (
+            "2. division" in league_name
+            or "2 division" in league_name
+            or "2.division" in league_name
+        ):
+            return False
+
+    return True
+
+
+
+ANSI_BOLD = "\033[1m"
+ANSI_RESET = "\033[0m"
+
+def _big(text):
+    return f"{ANSI_BOLD}{text}{ANSI_RESET}"
+
+
+def _signal_text(text):
+    """Make scanner output substantially more prominent in terminal/Railway logs."""
+    return f"\033[1m\033[4m{text}\033[0m"
+
+
+def analyse_fixture(fixture, team_profiles):
+    home = fixture["teams"]["home"]
+    away = fixture["teams"]["away"]
+
+    hp = build_team_profile(
+        home["id"],
+        team_profiles.get(home["id"], {}),
+    )
+    ap = build_team_profile(
+        away["id"],
+        team_profiles.get(away["id"], {}),
+    )
+
+    markets = {}
+
+    for market in ("corners", "shots", "cards"):
+        h = hp.get(market)
+        a = ap.get(market)
+        if h is not None and a is not None and h[1] >= 3 and a[1] >= 3:
+            markets[market] = {
+                "expected": h[0] + a[0],
+                "home": h[0],
+                "away": a[0],
+                "sample": min(h[1], a[1]),
+            }
+
+    hs = hp.get("goals_scored")
+    hc = hp.get("goals_conceded")
+    ass = ap.get("goals_scored")
+    ac = ap.get("goals_conceded")
+
+    if (
+        hs is not None and hc is not None and ass is not None and ac is not None
+        and hs[1] >= 3 and hc[1] >= 3 and ass[1] >= 3 and ac[1] >= 3
+    ):
+        home_xg = (hs[0] + ac[0]) / 2
+        away_xg = (ass[0] + hc[0]) / 2
+        markets["goals"] = {
+            "expected": home_xg + away_xg,
+            "home": home_xg,
+            "away": away_xg,
+            "sample": min(hs[1], hc[1], ass[1], ac[1]),
+        }
+
+    return {
+        "fixture_id": fixture["fixture"]["id"],
+        "home_name": home["name"],
+        "away_name": away["name"],
+        "league": fixture.get("league", {}).get("name", ""),
+        "country": fixture.get("league", {}).get("country", ""),
+        "date": fixture["fixture"]["date"],
+        "markets": markets,
+    }
+
+
+def _match_info(r):
+    try:
+        dt = datetime.fromisoformat(r["date"].replace("Z", "+00:00")).astimezone(TZ)
+        kickoff = dt.strftime("%H:%M")
+    except Exception:
+        kickoff = "?"
+    league = r.get("league") or "-"
+    country = r.get("country") or "-"
+    return (
+        f"   Лига: {league}\n"
+        f"   Държава: {country}\n"
+        f"   Начало: {kickoff} BG"
+    )
+
+
+def format_market(results, key, label, emoji):
+    valid = [
+        r for r in results
+        if key in r["markets"] and _market_allowed_on_betano(r, key)
+    ]
+
+    high = sorted(
+        valid,
+        key=lambda r: r["markets"][key]["expected"],
+        reverse=True,
+    )[:5]
+    low = sorted(
+        valid,
+        key=lambda r: r["markets"][key]["expected"],
+    )[:5]
+
+    lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
+
+    if high:
+        for i, r in enumerate(high, 1):
+            x = r["markets"][key]
+            lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
+            lines.append(
+                f"   {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}"
+            )
+            lines.append(_match_info(r))
+            if i < len(high):
+                lines.append("")
+    else:
+        lines.append("Няма достатъчно статистически данни.")
+
+    lines.extend(["", "❄️ ПОД"])
+
+    if low:
+        for i, r in enumerate(low, 1):
+            x = r["markets"][key]
+            lines.append(f"{i}. {r['home_name']} - {r['away_name']}")
+            lines.append(
+                f"   {x['home']:.2f} + {x['away']:.2f} = {x['expected']:.2f}"
+            )
+            lines.append(_match_info(r))
+            if i < len(low):
+                lines.append("")
+    else:
+        lines.append("Няма достатъчно статистически данни.")
+
+    return "\n".join(lines)
+
+
+BLOCKED_COUNTRIES = {"belarus", "russia"}
+
+def _is_blocked_fixture(match):
+    country = str((match.get("league") or {}).get("country") or "").strip().casefold()
+    return country in BLOCKED_COUNTRIES
+
+def _is_cup_competition(league):
+    name = str((league or {}).get("name") or "").casefold()
+    typ = str((league or {}).get("type") or "").casefold()
+    return "cup" in name or "copa" in name or "knockout" in typ
+
+def _team_stats_competition(match, team_id):
+    """Return the competition/season already present on the match; no extra API call."""
+    league = match.get("league") or {}
+    lid = league.get("id")
+    season = league.get("season")
+    if lid and season:
+        return int(lid), int(season)
+    return None
+
+# =========================================================
+# BETANO PREMATCH MARKET FILTER
+# =========================================================
+
+BETANO_BOOKMAKER_ID = 32
+
+
+def get_betano_prematch_markets(fixture_id):
+    result = {"match": False, "corners": False, "shots": False, "cards": False}
+    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
+    for row in rows if isinstance(rows, list) else []:
+        for market in row.get("odds", []) or []:
+            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
+                continue
+            result["match"] = True
+            name = str(market.get("market") or "").casefold()
+            if "corner" in name: result["corners"] = True
+            if "shot" in name: result["shots"] = True
+            if "card" in name or "booking" in name: result["cards"] = True
+    print("BETANO FILTER RESULT:", fixture_id, result)
+    return result
+
+def filter_matches_by_betano_markets(matches):
+
+    if not matches:
+        return []
+
+    betano_markets = {}
+
+    # Do the Betano checks in parallel.
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+
+        futures = {
+            pool.submit(
+                get_betano_prematch_markets,
+                int(m["fixture"]["id"])
+            ): m
+            for m in matches
+        }
+
+        for fut in as_completed(futures):
+
+            match = futures[fut]
+            fixture_id = int(
+                match["fixture"]["id"]
+            )
+
+            try:
+                betano_markets[fixture_id] = fut.result()
+
+            except Exception as exc:
+                print(
+                    "BETANO FILTER ERROR:",
+                    fixture_id,
+                    repr(exc)
+                )
+
+                betano_markets[fixture_id] = {
+                    "match": False,
+                    "corners": False,
+                    "shots": False,
+                    "cards": False,
+                }
+
+    filtered = []
+
+    for match in matches:
+
+        fixture_id = int(
+            match["fixture"]["id"]
+        )
+
+        available = betano_markets.get(
+            fixture_id,
+            {}
+        )
+
+        if not available.get("match"):
+            print(
+                "SCANNER SKIP — NO BETANO:",
+                fixture_id
+            )
+            continue
+
+        # Save availability on the fixture so
+        # analyse_one() can use it later.
+        match["_betano_markets"] = available
+
+        print(
+            "SCANNER BETANO:",
+            fixture_id,
+            available
+        )
+
+        filtered.append(match)
+
+    print(
+        "BETANO MATCH FILTER:",
+        len(matches),
+        "->",
+        len(filtered)
+    )
+
+    return filtered
+
+
+def _football_daily_run_key(mode, ref):
+    return f"{FOOTBALL_SCAN_BUILD}:{mode}:{ref.isoformat()}"
+
+
+def _read_daily_report(run_key):
+    conn = _db()
+    row = conn.execute("SELECT report FROM scanner_daily_reports WHERE run_key=?", (run_key,)).fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+def _save_daily_report(run_key, report):
+    conn = _db()
+    conn.execute(
+        "INSERT OR REPLACE INTO scanner_daily_reports(run_key,report,created_at) VALUES(?,?,?)",
+        (run_key, report, datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _get_betano_cached(fixture_id):
+    conn = _db()
+    row = conn.execute("SELECT data FROM scanner_betano_odds_cache WHERE fixture_id=?", (int(fixture_id),)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    try:
+        return json.loads(row[0])
+    except Exception:
+        return None
+
+
+def _save_betano_cached(fixture_id, data):
+    conn = _db()
+    conn.execute(
+        "INSERT OR REPLACE INTO scanner_betano_odds_cache(fixture_id,data,updated_at) VALUES(?,?,?)",
+        (int(fixture_id), json.dumps(data), datetime.now(timezone.utc).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_betano_prematch_markets(fixture_id):
+    cached = _get_betano_cached(fixture_id)
+    if cached is not None:
+        return cached
+    result = {"match": False, "corners": False, "shots": False, "cards": False}
+    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
+    for row in rows if isinstance(rows, list) else []:
+        for market in row.get("odds", []) or []:
+            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
+                continue
+            result["match"] = True
+            name = str(market.get("market") or "").casefold()
+            if "corner" in name: result["corners"] = True
+            if "shot" in name: result["shots"] = True
+            if "card" in name or "booking" in name: result["cards"] = True
+    _save_betano_cached(fixture_id, result)
+    return result
+
+
+def run_daily_scanner(mode="day", reference_date=None, send_func=None):
+    """Football daily scanner using the proven legacy statistical flow.
+
+    Quota protections:
+    - one persistent successful daily run per build/date/mode;
+    - one cached league-season match list for all teams in a competition;
+    - persistent per-fixture statistics cache;
+    - Betano is queried only after statistical candidates exist;
+    - no retries on 429 and no API call is made merely because the process restarted.
+    """
+    init_scanner_db()
+    started = time.time()
+    now_bg = datetime.now(TZ)
+    ref = reference_date or now_bg.date()
+    ref = ref if hasattr(ref, "year") else now_bg.date()
+    run_key = _football_daily_run_key(mode, ref)
+
+    # This is the critical restart protection. Once the Football daily report
+    # completed successfully, restarting Railway must NOT rescan the same day.
+    previous = _read_daily_report(run_key)
+    if previous:
+        print("FOOTBALL DAILY ALREADY COMPLETED — USING CACHED REPORT:", run_key)
+        if send_func:
+            send_func(previous)
+        return previous
+
+    start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
+    end = start + timedelta(days=1)
+    title = "10:30 ДНЕВЕН СКЕНЕР"
+
+    matches = get_fixtures_for_window(start, end)
+    matches = [m for m in matches if not _is_blocked_fixture(m)]
+    print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
+
+    # 1. Resolve unique team/competition pairs.
+    unique_requests = {}
+    for m in matches:
+        league = m.get("league") or {}
+        season = league.get("season")
+        league_id = league.get("id")
+        if not season or not league_id:
+            continue
+        for tid in (m["teams"]["home"]["id"], m["teams"]["away"]["id"]):
+            unique_requests[(int(tid), int(league_id), int(season))] = None
+
+    # 2. Build histories. League-season data is fetched once and reused by all
+    # teams in that competition. Team cache means restarts normally make zero
+    # historical requests after the first successful run.
+    histories = {}
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {
+            pool.submit(get_team_history, tid, season, league_id): (tid, league_id, season)
+            for tid, league_id, season in unique_requests
+        }
+        for fut in as_completed(futures):
+            key = futures[fut]
+            try:
+                histories[key] = fut.result()
+            except APIQuotaExceeded:
+                raise
+            except Exception as exc:
+                print("SCANNER HISTORY ERROR:", key, repr(exc))
+                histories[key] = []
+
+    # 3. Historical statistics: cache-first, one request only for each fixture
+    # that has never been stored before.
+    stats_by_fixture = load_historical_statistics(list(histories.values()))
+    team_profiles = build_profiles_from_histories(histories, stats_by_fixture)
+
+    print("SCANNER CURRENT-SEASON HISTORY:", sum(1 for v in histories.values() if v), "/", len(histories))
+    print("SCANNER HISTORICAL FIXTURES WITH DATA:", sum(1 for v in stats_by_fixture.values() if v), "/", len(stats_by_fixture))
+    print(_signal_text("SCANNER MARKET RULE: missing corner/card/shot stats are NOT treated as zero; each team needs >=3 actual observations."))
+
+    # 4. Statistical analysis BEFORE Betano, exactly as requested by the old
+    # working architecture. This avoids odds calls for weak/no-data matches.
+    results = []
+    for m in matches:
+        home_id = int(m["teams"]["home"]["id"])
+        away_id = int(m["teams"]["away"]["id"])
+        hs = _team_stats_competition(m, home_id)
+        aws = _team_stats_competition(m, away_id)
+        profiles = {
+            home_id: team_profiles.get((home_id, hs[0], hs[1]), {}) if hs else {},
+            away_id: team_profiles.get((away_id, aws[0], aws[1]), {}) if aws else {},
+        }
+        try:
+            result = analyse_fixture(m, profiles)
+            if result.get("markets"):
+                results.append(result)
+        except Exception as exc:
+            print("SCANNER MATCH ERROR:", repr(exc))
+
+    # 5. Betano only for statistical candidates, and cached permanently.
+    candidate_ids = sorted({int(r["fixture_id"]) for r in results})
+    betano_markets = {}
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = {pool.submit(get_betano_prematch_markets, fid): fid for fid in candidate_ids}
+        for fut in as_completed(futures):
+            fid = futures[fut]
+            try:
+                betano_markets[fid] = fut.result()
+            except APIQuotaExceeded:
+                raise
+            except Exception as exc:
+                print("BETANO AVAILABILITY ERROR:", fid, repr(exc))
+                betano_markets[fid] = {}
+
+    # 6. Apply Betano only to markets for which a real bookmaker market exists.
+    final_results = []
+    for result in results:
+        fid = int(result["fixture_id"])
+        betano = betano_markets.get(fid, {})
+        markets = {}
+        for market, value in result.get("markets", {}).items():
+            if market == "goals":
+                markets[market] = value
+            elif betano.get(market) is True:
+                markets[market] = value
+        result["markets"] = markets
+        if markets:
+            final_results.append(result)
+
+    final_results.sort(key=lambda x: x["date"])
+    lines = [
+        "📊 DAILY STATISTICAL SCANNER — СИГНАЛИ",
+        now_bg.strftime("%d.%m.%Y"),
+        f"\n{title}",
+        f"Мачове в прозореца: {len(matches)}",
+        f"Мачове с поне един валиден пазар: {sum(1 for r in final_results if r['markets'])}",
+        "История: всички завършени мачове от текущия сезон",
+        "",
+    ]
+    lines.append(format_market(final_results, "corners", "КОРНЕРИ", "🚩"))
+    lines.append("")
+    lines.append(format_market(final_results, "cards", "КАРТОНИ", "🟨"))
+    lines.append("")
+    lines.append(format_market(final_results, "shots", "УДАРИ", "🎯"))
+    lines.append("")
+    lines.append(format_market(final_results, "goals", "ГОЛОВЕ", "⚽"))
+    lines.append(f"\n⏱ Scan time: {time.time() - started:.1f}s")
+    lines.append(f"📡 FOOTBALL API REQUESTS: {_quota_used('football')}")
+    message = "\n".join(lines)
+
+    # Save only after the complete scan succeeded. If the process dies halfway,
+    # the next run can continue using the caches instead of falsely locking out
+    # the day.
+    _save_daily_report(run_key, message)
+    print("FOOTBALL DAILY REPORT SAVED:", run_key)
+    if send_func:
+        send_func(message)
+    return message
+
+
+def _send_sport_report_chunks(message, send_func, max_chars=3700):
+    """Send the full report in Telegram-safe chunks, preferably by sport section."""
+    if len(message) <= max_chars:
+        send_func(message)
+        return
+
+    # Split on the visual separator first so sport sections stay intact.
+    sections = message.split("\n────────────────────\n")
+    chunks = []
+    current = ""
+
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+
+        candidate = section if not current else current + "\n\n────────────────────\n\n" + section
+        if len(candidate) <= max_chars:
+            current = candidate
+            continue
+
+        if current:
+            chunks.append(current)
+            current = ""
+
+        # A single section should normally fit. If it does not, split
+        # safely by lines without cutting a line in half.
+        if len(section) > max_chars:
+            part = ""
+            for line in section.splitlines():
+                candidate = line if not part else part + "\n" + line
+                if len(candidate) <= max_chars:
+                    part = candidate
+                else:
+                    if part:
+                        chunks.append(part)
+                    part = line
+            if part:
+                current = part
+        else:
+            current = section
+
+    if current:
+        chunks.append(current)
+
+    total = len(chunks)
+    for i, chunk in enumerate(chunks, 1):
+        if total > 1:
+            chunk = f"📊 SPORT DAILY STATISTICAL SCANNER ({i}/{total})\n\n" + chunk
+        print(f"SPORT TELEGRAM CHUNK {i}/{total}: {len(chunk)} chars")
+        send_func(chunk)
+
+_START = time.time()
+
+
+# =========================================================
+# SPORT DAILY STATISTICAL SCANNER — HIGHLIGHTLY SPORT ULTRA
+# =========================================================
+# Football LIVE/PREMATCH is intentionally NOT called here.
+# Sport statistics use Highlightly Sport Ultra only.
+# =========================================================
+
+SPORT_API_BASE = "https://sports.highlightly.net"
+SPORT_API_HOST = "sport-highlights-api.p.rapidapi.com"
+SPORT_API_TZ = "Europe/Sofia"
+SPORT_API_LIMIT = 100
+SPORT_HISTORY_FROM = f"{datetime.now(TZ).year}-07-01"
+
+# Global exclusion: Russia and Belarus are blocked for every sport/league.
+BLOCKED_COUNTRIES = {"russia", "belarus"}
+
+def _sport_is_blocked_country(match):
+    _league = match.get("league") or {}
+    if isinstance(_league, dict):
+        _country = _league.get("country") or _league.get("countryName") or ""
+        if isinstance(_country, dict):
+            _country = _country.get("name") or _country.get("countryName") or ""
+    else:
+        _country = ""
+    if not _country:
+        _country = match.get("country") or match.get("countryName") or ""
+        if isinstance(_country, dict):
+            _country = _country.get("name") or _country.get("countryName") or ""
+    return str(_country).strip().casefold() in BLOCKED_COUNTRIES
+
+SPORTS_CONFIG = {
+    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
+    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
+    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
+    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
+    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
+    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
+    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
+}
+
+_SPORT_API_CALLS = 0
+_SPORT_STATS_CACHE = {}
+_SPORT_API_LOCK = threading.Lock()
+
+
+def _sport_api_get(endpoint, params=None):
+    """Highlightly Sport API call with one request only and a 500-request safety reserve."""
+    global _SPORT_API_CALLS
+    provider = "sport"
+    with _SPORT_API_LOCK:
+        if _quota_locked(provider):
+            raise APIQuotaExceeded(provider)
+        if _quota_used(provider) >= API_HARD_STOP:
+            _lock_quota(provider, "local safety limit")
+            raise APIQuotaExceeded(provider)
+        _quota_add(provider)
+        _SPORT_API_CALLS += 1
+    try:
+        from config import HIGHLIGHTLY_API_KEY
+        headers = {"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": SPORT_API_HOST}
+        response = requests.get(f"{SPORT_API_BASE}/{endpoint}", headers=headers, params=params or {}, timeout=25)
+        remaining = response.headers.get("x-ratelimit-requests-remaining")
+        limit = response.headers.get("x-ratelimit-requests-limit")
+        print(f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} status={response.status_code} remaining={remaining}/{limit}")
+        if response.status_code == 429:
+            # A provider 429 means the Sport API is unavailable for the
+            # current daily quota period. Persist the lock for this BG day
+            # so a scheduler restart cannot hammer the endpoint repeatedly.
+            _lock_quota(provider, "HTTP 429 daily quota/rate limit")
+            print("SPORT API QUOTA LOCKED: no further Sport API requests until the next Bulgaria calendar day.")
+            raise APIQuotaExceeded(provider)
+        try:
+            if remaining is not None and int(float(remaining)) <= API_SAFETY_RESERVE:
+                _lock_quota(provider, f"provider remaining={remaining}")
+                raise APIQuotaExceeded(provider)
+        except (TypeError, ValueError):
+            pass
+        if response.status_code != 200:
+            print("SPORT API ERROR:", response.text[:500])
+            return []
+        payload = response.json()
+        return payload.get("data", []) if isinstance(payload, dict) else (payload or [])
+    except APIQuotaExceeded:
+        raise
+    except Exception as exc:
+        print("SPORT API REQUEST ERROR:", endpoint, repr(exc))
+        return []
+
+
+def _sport_match_datetime(match):
+    raw = match.get("date") or match.get("startTime") or match.get("startDate")
+    if not raw:
+        return None
+    try:
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(TZ)
+    except Exception:
+        return None
+
+
+def _sport_team_id(team):
+    if isinstance(team, dict):
+        value = team.get("id") or team.get("teamId")
+    else:
+        value = team
+    try:
+        return int(value)
+    except Exception:
+        return None
+
+
+def _sport_team_name(team):
+    if not isinstance(team, dict):
+        return str(team or "Unknown")
+    return str(team.get("name") or team.get("displayName") or team.get("shortName") or "Unknown")
+
+
+def _sport_match_names(match):
+    home = match.get("homeTeam") or match.get("home") or {}
+    away = match.get("awayTeam") or match.get("away") or {}
+    return _sport_team_name(home), _sport_team_name(away)
+
+
+def _sport_league_country(match):
+    league = match.get("league") or {}
+    if isinstance(league, dict):
+        league_name = league.get("name") or league.get("leagueName") or ""
+        country = league.get("country") or {}
+        if isinstance(country, dict):
+            country_name = country.get("name") or country.get("countryName") or ""
+        else:
+            country_name = str(country or "")
+    else:
+        league_name = str(league or "")
+        country_name = ""
+
+    # Highlightly can provide country at match level rather than inside league.
+    if not country_name:
+        country = match.get("country") or match.get("countryName") or ""
+        if isinstance(country, dict):
+            country_name = country.get("name") or country.get("countryName") or ""
+        else:
+            country_name = str(country or "")
+
+    return str(league_name), str(country_name)
+
+
+def _recursive_number(obj, names):
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if str(key).casefold() in names:
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    return float(value)
+                if isinstance(value, str):
+                    try:
+                        return float(value.replace(",", "").strip())
+                    except ValueError:
+                        pass
+        for value in obj.values():
+            found = _recursive_number(value, names)
+            if found is not None:
+                return found
+    elif isinstance(obj, list):
+        for value in obj:
+            found = _recursive_number(value, names)
+            if found is not None:
+                return found
+    return None
+
+
+def _extract_team_average(stats_rows, metric):
+    """Extract scored average from Highlightly's current-season team statistics."""
+    if isinstance(stats_rows, dict):
+        stats_rows = stats_rows.get("data", stats_rows)
+        if isinstance(stats_rows, dict):
+            stats_rows = [stats_rows]
+    if not isinstance(stats_rows, list):
+        return None
+
+    metric_names = {
+        "points": {"scored", "score", "scoredpoints", "pointsscored", "points_scored"},
+        "goals": {"scored", "goals_scored", "goalsscored", "goals"},
+        "runs": {"scored", "runs_scored", "runsscored", "runs"},
+    }[metric]
+
+    candidates = []
+    for row in stats_rows:
+        if not isinstance(row, dict):
+            continue
+
+        total = row.get("total", row)
+        games = _recursive_number(total, {"played", "gamesplayed", "games", "matchesplayed"})
+        scored = _recursive_number(total, metric_names)
+        if scored is None:
+            scored = _recursive_number(row, metric_names)
+
+        if games and games > 0 and scored is not None:
+            season = _recursive_number(row, {"season", "seasonid", "year"}) or 0
+            candidates.append((season, games, scored, row))
+
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    season, games, scored, raw = candidates[0]
+    return {
+        "average": scored / games,
+        "games": int(games),
+        "season": int(season) if season else None,
+        "raw": raw,
+    }
+
+
+def _get_team_average(sport_key, team_id, metric):
+    if not team_id:
+        return None
+    cache_key = (sport_key, int(team_id), metric)
+    if cache_key in _SPORT_STATS_CACHE:
+        return _SPORT_STATS_CACHE[cache_key]
+
+    cfg = SPORTS_CONFIG[sport_key]
+    conn = _db()
+    row = conn.execute("SELECT data, updated_at FROM scanner_sport_stats WHERE sport=? AND team_id=? AND metric=?", (sport_key, int(team_id), metric)).fetchone()
+    conn.close()
+    if row:
+        try:
+            updated = datetime.fromisoformat(str(row[1]).replace("Z", "+00:00"))
+            if updated.astimezone(TZ).date() == datetime.now(TZ).date():
+                result = json.loads(row[0])
+                _SPORT_STATS_CACHE[cache_key] = result
+                return result
+        except Exception:
+            pass
+    rows = _sport_api_get(
+        f"{cfg['stats']}/{int(team_id)}",
+        {"fromDate": SPORT_HISTORY_FROM, "timezone": SPORT_API_TZ},
+    )
+    result = _extract_team_average(rows, metric)
+    _SPORT_STATS_CACHE[cache_key] = result
+    if result:
+        conn = _db()
+        conn.execute("INSERT OR REPLACE INTO scanner_sport_stats(sport,team_id,metric,data,updated_at) VALUES(?,?,?,?,?)", (sport_key,int(team_id),metric,json.dumps(result),datetime.now(timezone.utc).isoformat()))
+        conn.commit(); conn.close()
+
+    if result:
+        print(
+            f"SPORT HISTORY: {sport_key} team={team_id} "
+            f"average={result['average']:.2f} games={result['games']}"
+        )
+    else:
+        print(f"SPORT HISTORY: {sport_key} team={team_id} NO DATA")
+    return result
+
+
+def _get_sport_fixtures(cfg, start, end):
+    """Fetch the complete local-day window, with a safe fallback if timezone filtering returns empty."""
+    all_rows = []
+    dates = []
+    d = start.date()
+    while d <= end.date():
+        dates.append(d)
+        d += timedelta(days=1)
+
+    for day in dates:
+        params = {
+            "date": day.isoformat(),
+            "timezone": SPORT_API_TZ,
+            "limit": SPORT_API_LIMIT,
+        }
+        rows = _sport_api_get(cfg["endpoint"], params)
+
+        # Never retry an empty response: a duplicate request only burns quota.
+        all_rows.extend(rows if isinstance(rows, list) else [])
+
+    unique = {}
+    for match in all_rows:
+        if not isinstance(match, dict):
+            continue
+        dt = _sport_match_datetime(match)
+        if dt is None or not (start <= dt < end):
+            continue
+
+        # GLOBAL BLOCK: Russia + Belarus are never scanned.
+        if _sport_is_blocked_country(match):
+            continue
+
+        home = match.get("homeTeam") or match.get("home") or {}
+        away = match.get("awayTeam") or match.get("away") or {}
+        home_id = _sport_team_id(home)
+        away_id = _sport_team_id(away)
+        if not home_id or not away_id:
+            continue
+
+        mid = match.get("id") or match.get("matchId") or f"{home_id}-{away_id}-{dt.isoformat()}"
+        unique[mid] = match
+
+    return list(unique.values())
+
+
+def _format_sport_entry(index, item):
+    home, away = _sport_match_names(item["match"])
+    league, country = _sport_league_country(item["match"])
+    dt = item["datetime"]
+    return (
+        f"{index}. {home} - {away}\n"
+        f"   {item['home_avg']:.2f} + {item['away_avg']:.2f} = {item['expected']:.2f}\n"
+        f"   Лига: {league or '-'}\n"
+        f"   Държава: {country or '-'}\n"
+        f"   Дата: {dt.strftime('%d.%m.%Y')}\n"
+        f"   Начало: {dt.strftime('%H:%M')} BG"
+    )
+
+
+def _build_sport_section(sport_name, candidates):
+    if not candidates:
+        return f"{sport_name}\nНяма достатъчно исторически статистически данни."
+
+    # Top 5, but never invent entries when fewer are valid.
+    top_over = sorted(candidates, key=lambda x: x["expected"], reverse=True)[:5]
+    top_under = sorted(candidates, key=lambda x: x["expected"])[:5]
+
+    lines = [sport_name, "", "🔥 НАД"]
+    for i, item in enumerate(top_over, 1):
+        lines.append(_format_sport_entry(i, item))
+        if i < len(top_over):
+            lines.append("")
+
+    lines.extend(["", "❄️ ПОД"])
+    for i, item in enumerate(top_under, 1):
+        lines.append(_format_sport_entry(i, item))
+        if i < len(top_under):
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def run_sport_daily_scanner(send_func=None):
+    """Build Top 5 Over/Under from real current-season team statistics."""
+    global _SPORT_API_CALLS, _SPORT_STATS_CACHE
+    _SPORT_API_CALLS = 0
+    _SPORT_STATS_CACHE = {}
+    started = time.time()
+
+    now_bg = datetime.now(TZ)
+    start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+
+    lines = [
+        "📊 DAILY STATISTICAL SCANNER — СИГНАЛИ",
+        now_bg.strftime("%d.%m.%Y"),
+        "",
+        "Период:",
+        f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
+        "История: всички налични завършени мачове / текущосезонни team statistics от Sport Ultra",
+        "",
+    ]
+
+    for sport_key, cfg in SPORTS_CONFIG.items():
+        print(f"SPORT SCAN: {sport_key} — FIXTURES")
+        fixtures = _get_sport_fixtures(cfg, start, end)
+        candidates = []
+
+        for match in fixtures:
+            if _sport_is_blocked_country(match):
+                continue
+
+            # American football scope: NFL + NCAA Division I/II only.
+            if sport_key == "american-football":
+                league_name, _country_name = _sport_league_country(match)
+                lname = str(league_name or "").casefold()
+                allowed_american = (
+                    "nfl" in lname
+                    or "ncaa" in lname
+                    or "division i" in lname
+                    or "division ii" in lname
+                    or "division 1" in lname
+                    or "division 2" in lname
+                )
+                if not allowed_american:
+                    continue
+
+            home = match.get("homeTeam") or match.get("home") or {}
+            away = match.get("awayTeam") or match.get("away") or {}
+            home_id = _sport_team_id(home)
+            away_id = _sport_team_id(away)
+            if not home_id or not away_id:
+                continue
+
+            h = _get_team_average(sport_key, home_id, cfg["metric"])
+            a = _get_team_average(sport_key, away_id, cfg["metric"])
+            if not h or not a or h["games"] < 3 or a["games"] < 3:
+                continue
+
+            dt = _sport_match_datetime(match)
+            if not dt:
+                continue
+
+            candidates.append({
+                "match": match,
+                "datetime": dt,
+                "home_avg": h["average"],
+                "away_avg": a["average"],
+                "expected": h["average"] + a["average"],
+            })
+
+        lines.append(_build_sport_section(cfg["name"], candidates))
+        lines.append("")
+        lines.append("────────────────────")
+        lines.append("")
+
+        print(
+            f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} "
+            f"valid={len(candidates)}"
+        )
+
+    lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
+    lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
+
+    message = "\n".join(lines)
+    print(message)
+    if send_func:
+        # Telegram hard limit is 4096 characters. Keep a safety margin
+        # for the numbered chunk header and send the complete report.
+        _send_sport_report_chunks(message, send_func, max_chars=3700)
+    return message
+
+
+# =========================================================
+# DAILY SCAN SCHEDULER — FOOTBALL + SPORT
+# =========================================================
+
+
+def _run_daily_due_scans(send_func):
+    """Run football and Sport Statistics once per day."""
+    init_scanner_db()
+    now = datetime.now(TZ)
+    today = now.date()
+
+    # Football: once per day at/after 10:30 BG.
+    # The scanner uses the fixed 12:00 -> next-day 12:00 window.
+    if now.hour > 10 or (now.hour == 10 and now.minute >= 30):
+        football_key = f"football_daily:{today.isoformat()}"
+
+        if not already_ran(football_key) and not _quota_locked("football"):
+            print(_signal_text("FOOTBALL DAILY SCANNER STARTED"))
+            try:
+                run_daily_scanner(
+                    mode="day",
+                    reference_date=today,
+                    send_func=send_func,
+                )
+                mark_ran(football_key)
+                print(_signal_text("FOOTBALL DAILY SCANNER FINISHED"))
+            except APIQuotaExceeded as exc:
+                print(_signal_text(f"FOOTBALL DAILY SCANNER STOPPED: {exc}; no retry until next BG day"))
+                mark_ran(football_key)
+            except Exception as exc:
+                print(_signal_text(f"FOOTBALL DAILY SCANNER ERROR: {exc!r}"))
+
+    # Sport Statistics: once per day at/after 10:00 BG.
+    sport_key = f"sport_test:{today.isoformat()}"
+
+    if (now.hour > 10 or (now.hour == 10 and now.minute >= 0)) and not already_ran(sport_key) and not _quota_locked("sport"):
+        print(_signal_text("SPORT DAILY SCANNER STARTED"))
+        try:
+            run_sport_daily_scanner(send_func)
+            mark_ran(sport_key)
+            print(_signal_text("SPORT DAILY SCANNER FINISHED"))
+        except APIQuotaExceeded as exc:
+            print(_signal_text(f"SPORT DAILY SCANNER STOPPED: {exc}; no retry until next BG day"))
+            mark_ran(sport_key)
+        except Exception as exc:
+            print(_signal_text(f"SPORT DAILY SCANNER ERROR: {exc!r}"))
+
+    return True
+
+# =========================================================
+# ============================================================
+# HIGHLIGHTLY-ONLY PREMATCH / LIVE
+# ============================================================
+PREMATCH_TOP5=5
+BET_BUILDER_TOP3=3
+LIVE_START_HOUR=17
+LIVE_END_HOUR=24
+LIVE_INTERVAL_SECONDS=300
+_live_last=0.0
+
+def _odds_rows(params):
+    return _api("odds",params) or []
+
+def _odds_map(rows):
+    out={}
+    for row in rows:
+        try: fid=int(row.get("matchId"))
+        except (TypeError,ValueError): continue
+        for item in row.get("odds") or []:
+            if str(item.get("bookmakerName") or "").casefold()!="betano": continue
+            for v in item.get("values") or []:
+                try: odd=float(v.get("odd"))
+                except (TypeError,ValueError): continue
+                out.setdefault(fid,[]).append((str(item.get("market") or ""),str(v.get("value") or ""),odd))
+    return out
+
+def _odd(om,market,value):
+    for m,v,o in om:
+        if m.casefold()==market.casefold() and v.casefold()==value.casefold(): return o
+    return None
+
+def _goal_prob(lam):
+    return 100*(1-sum(math.exp(-lam)*lam**i/math.factorial(i) for i in range(3)))
+
+def _means(match):
+    t=match.get("teams") or {}; l=match.get("league") or {}; h=t.get("home") or {}; a=t.get("away") or {}
+    if not h.get("id") or not a.get("id"): return None
+    season=int(l.get("season") or datetime.now(TZ).year); lid=int(l.get("id") or 0)
+    H=get_team_history(h["id"],season,lid); A=get_team_history(a["id"],season,lid)
+    if len(H)<3 or len(A)<3: return None
+    def avg(rows,side):
+        x=[float((f.get("goals") or {}).get(side)) for f in rows if isinstance((f.get("goals") or {}).get(side),(int,float))]
+        return sum(x)/len(x) if x else 0
+    return avg(H,"home"),avg(A,"away")
+
+def run_prematch_highlightly(send_func):
+    key=f"prematch:{datetime.now(TZ).date().isoformat()}"
+    if already_ran(key): return 0
+    now=datetime.now(TZ); start=now.replace(hour=12,minute=0,second=0,microsecond=0); end=start+timedelta(days=1)
+    matches=get_fixtures_for_window(start,end)
+    rows=_odds_rows({"date":start.date().isoformat(),"timezone":"Europe/Sofia","oddsType":"prematch","bookmakerName":"Betano","limit":5})
+    rows+=_odds_rows({"date":end.date().isoformat(),"timezone":"Europe/Sofia","oddsType":"prematch","bookmakerName":"Betano","limit":5})
+    omap=_odds_map(rows); candidates=[]
+    for m in matches:
+        mm=_means(m)
+        if not mm: continue
+        hl,al=mm; lam=max(.05,hl+al); p25=_goal_prob(lam); pb=100*(1-math.exp(-hl))*(1-math.exp(-al)); fid=(m.get("fixture") or {}).get("id"); om=omap.get(fid,[])
+        legs=[]
+        for market,value,p in (("Total Goals","Over 2.5",p25),("Total Goals","Under 2.5",100-p25),("Both Teams to Score","Yes",pb),("Both Teams to Score","No",100-pb)):
+            o=_odd(om,market,value)
+            if o and 1.10<=o<=8: legs.append({"family":market,"market":value,"p":p,"odd":o})
+        for x in legs:
+            x.update(fid=fid,home_team=(m.get("teams") or {}).get("home",{}).get("name","HOME"),away_team=(m.get("teams") or {}).get("away",{}).get("name","AWAY"),edge=p-100/o)
+            candidates.append(x)
+    candidates.sort(key=lambda x:(x["edge"],x["p"]),reverse=True)
+    top=[]; used=set()
+    for x in candidates:
+        if x["fid"] in used: continue
+        used.add(x["fid"]); top.append(x)
+        if len(top)==PREMATCH_TOP5: break
+    if top and send_func: send_func("⚽ PREMATCH TOP 5\n\n"+"\n\n".join(f"{i}. {x['home_team']} - {x['away_team']}\n   {x['market']} | P {x['p']:.1f}% | Odd {x['odd']:.2f} | Edge {x['edge']:+.1f} pp" for i,x in enumerate(top,1)))
+    builders=[]
+    by={}
+    for x in candidates: by.setdefault(x["fid"],[]).append(x)
+    for fid,ls in by.items():
+        for i in range(len(ls)):
+            for j in range(i+1,len(ls)):
+                if ls[i]["family"]==ls[j]["family"]: continue
+                combined=ls[i]["odd"]*ls[j]["odd"]; joint=ls[i]["p"]*ls[j]["p"]/100; edge=joint-100/combined
+                if 1.5<=combined<=4.5 and joint>=50 and edge>=3: builders.append((edge,joint,combined,ls[i],ls[j]))
+    builders.sort(reverse=True,key=lambda x:(x[0],x[1]))
+    if builders and send_func: send_func("🏗 BET BUILDER TOP 3\n\n"+"\n\n".join(f"{i}. {b[3]['home_team']} - {b[3]['away_team']}\n   {b[3]['market']} + {b[4]['market']}\n   Combined odd {b[2]:.2f} | Joint P {b[1]:.1f}% | Edge {b[0]:+.1f} pp" for i,b in enumerate(builders[:3],1)))
+    mark_ran(key); return len(top)+min(3,len(builders))
+
+def run_live_highlightly(send_func):
+    global _live_last
+    now=datetime.now(TZ)
+    if now.hour<LIVE_START_HOUR or now.hour>=LIVE_END_HOUR or time.time()-_live_last<LIVE_INTERVAL_SECONDS: return 0
+    _live_last=time.time()
+    rows=_api("matches",{"date":now.date().isoformat(),"timezone":"Europe/Sofia","limit":100}) or []
+    live=[]
+    for raw in rows:
+        m=_normalize_match(raw)
+        if m and (m.get("fixture") or {}).get("status",{}).get("short") not in {"NS","TBD","FT","AET","PEN"}: live.append(m)
+    if not live: return 0
+    omap=_odds_map(_odds_rows({"date":now.date().isoformat(),"timezone":"Europe/Sofia","oddsType":"live","bookmakerName":"Betano","limit":5})); out=[]
+    for m in live:
+        fid=(m.get("fixture") or {}).get("id"); o=_odd(omap.get(fid,[]),"Total Goals","Over 1.5")
+        if not o: continue
+        st=(m.get("fixture") or {}).get("status",{}); minute=int(st.get("elapsed") or 0); g=m.get("goals") or {}; hg=int(g.get("home") or 0); ag=int(g.get("away") or 0); p=99 if hg+ag>=2 else min(90,55+max(0,90-minute)*.25); edge=p-100/o
+        if edge>=0: out.append((edge,m,p,o,minute,hg,ag))
+    out.sort(reverse=True,key=lambda x:x[0])
+    for edge,m,p,o,minute,hg,ag in out[:5]:
+        if send_func: send_func(f"🔴 LIVE\n{(m.get('teams') or {}).get('home',{}).get('name','HOME')} - {(m.get('teams') or {}).get('away',{}).get('name','AWAY')}\n⏱ {minute}'  {hg}:{ag}\n⚽ OVER 1.5 GOALS | P {p:.1f}% | Odd {o:.2f} | Edge {edge:+.1f} pp")
+    return len(out[:5])
+
+def run_due_scans(send_func):
+    init_scanner_db(); now=datetime.now(TZ); _run_daily_due_scans(send_func)
+    if now.hour>=10 or now.hour<1:
+        try: run_prematch_highlightly(send_func)
+        except APIQuotaExceeded as e: print("PREMATCH STOPPED:",e)
+        except Exception as e: print("PREMATCH ERROR:",repr(e))
+    if LIVE_START_HOUR<=now.hour<LIVE_END_HOUR:
+        try: run_live_highlightly(send_func)
+        except APIQuotaExceeded as e: print("LIVE STOPPED:",e)
+        except Exception as e: print("LIVE ERROR:",repr(e))
+
+# STANDALONE ENTRYPOINT
+# =========================================================
+
+def _telegram_send(text):
+    """
+    Optional standalone Telegram delivery.
+    Uses BOT_TOKEN / TELEGRAM_BOT_TOKEN and CHAT_ID only if explicitly
+    available in config or environment. Otherwise stdout remains the
+    authoritative output.
+    """
+    import os
+
+    token = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("BOT_TOKEN")
+    chat_id = os.getenv("CHAT_ID")
+
+    if not token or not chat_id:
+        try:
+            from config import CHAT_ID as CFG_CHAT_ID
+            chat_id = chat_id or CFG_CHAT_ID
+        except Exception:
+            pass
+
+        for name in ("TELEGRAM_BOT_TOKEN", "BOT_TOKEN", "TELEGRAM_TOKEN"):
+            if token:
+                break
+            try:
+                from config import __dict__ as _cfg
+                token = _cfg.get(name)
+            except Exception:
+                pass
+
+    if not token or not chat_id:
+        print("TELEGRAM: token/chat_id not configured; report kept in stdout.")
+        return False
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    # Keep each message safely below Telegram's 4096-character hard limit.
+    chunks = []
+    for part in text.split("\n────────────────────\n"):
+        part = part.strip()
+        if not part:
+            continue
+        if len(part) <= 3700:
+            chunks.append(part)
+        else:
+            buf = ""
+            for line in part.splitlines():
+                candidate = line if not buf else buf + "\n" + line
+                if len(candidate) > 3700:
+                    if buf:
+                        chunks.append(buf)
+                    buf = line[:3700]
+                else:
+                    buf = candidate
+            if buf:
+                chunks.append(buf)
+
+    ok = True
+    for chunk in chunks:
+        try:
+            r = requests.post(
+                url,
+                json={"chat_id": chat_id, "text": chunk},
+                timeout=20,
+            )
+            if r.status_code != 200:
+                ok = False
+                print("TELEGRAM SEND ERROR:", r.status_code, r.text[:500])
+        except Exception as exc:
+            ok = False
+            print("TELEGRAM SEND ERROR:", repr(exc))
+    return ok
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("📊 DAILY STATISTICAL SCANNER — START")
+    print("BUILD: FINAL 2026-09-17")
+    print("GLOBAL BLOCK: RUSSIA + BELARUS")
+    print("SPORT AMERICAN FOOTBALL: NFL + NCAA DIVISION I / II")
+    print("=" * 60)
+
+    try:
+        run_due_scans(_telegram_send)
+    except Exception as exc:
+        print("SCANNER FATAL ERROR:", repr(exc))
+        raise
