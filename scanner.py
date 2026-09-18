@@ -474,10 +474,30 @@ def load_historical_statistics(all_histories):
                 fixtures_by_id[int(fid)] = f
     loaded = {}
     for fid, base_fixture in fixtures_by_id.items():
-        cached = _read_cached_stat(fid)
-        if cached is not None:
-            loaded[fid] = cached
+cached = _read_cached_stat(fid)
+
+if cached is not None:
+    # Стар кеш без реални corners/shots/cards е невалиден.
+    has_match_stats = False
+
+    for team_data in cached.values():
+        if not isinstance(team_data, dict):
             continue
+
+        if any(
+            key in team_data
+            for key in (
+                "corner kicks",
+                "total shots",
+                "yellow cards",
+            )
+        ):
+            has_match_stats = True
+            break
+
+    if has_match_stats:
+        loaded[fid] = cached
+        continue
         rows = _api(f"statistics/{fid}", {})
         if rows is None:
             continue
