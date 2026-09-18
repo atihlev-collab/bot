@@ -62,7 +62,7 @@ def _api(endpoint, params=None, timeout=25):
     global _LAST_API_CALL
     if _quota_locked("football") or _quota_used("football") >= API_HARD_STOP:
         _quota_lock("football", "local safety stop")
-        print("SCANNER FOOTBALL QUOTA STOP:", _quota_used("football"), "/ 7500")
+        print("SCANNER FOOTBALL QUOTA STOP:", _quota_used("football"), "/ 25000")
         return None
     try:
         with _API_LOCK:
@@ -94,7 +94,7 @@ def _api(endpoint, params=None, timeout=25):
             if payload.get("errors"):
                 print("SCANNER API ERROR:", endpoint, payload.get("errors"))
                 return None
-            return payload.get("data", [])
+            return payload.get("data", payload)
         print("SCANNER API ERROR:", endpoint, "unexpected response type", type(payload).__name__)
         return None
     except Exception as e:
@@ -346,79 +346,83 @@ def _write_cached_stat(fixture_id, data):
     conn.close()
 
 def _fixture_market_values(fixture):
-    """Extract real per-team statistics from Highlightly /statistics/{matchId}.
+    """Extract per-team Football match statistics from Highlightly.
 
-    Highlightly returns team blocks containing ``statistics`` records with
-    ``displayName`` and ``value``.  The scanner accepts the common Highlightly
-    labels and aliases them to the four canonical markets: corners, shots,
-    cards and goals. Missing statistics are never converted to zero.
+    Accepts the documented team-block shape as well as common wrappers.
+    Missing values are skipped; they are never converted to zero.
     """
     fid = (fixture.get("fixture") or {}).get("id")
     out = {}
-    rows = fixture.get("statistics") or []
-    if isinstance(rows, dict):
-        rows = rows.get("data") or rows.get("statistics") or []
-    if not isinstance(rows, list):
-        rows = []
+    rows = fixture.get("statistics") or fixture.get("matchStatistics") or []
 
     aliases = {
-        "corner kicks": "corner kicks",
-        "corners": "corner kicks",
-        "corner": "corner kicks",
-        "total shots": "total shots",
-        "shots": "total shots",
-        "total shot": "total shots",
-        "shots total": "total shots",
-        "yellow cards": "yellow cards",
-        "yellow card": "yellow cards",
-        "yellow cards total": "yellow cards",
-        "yellowcards": "yellow cards",
+        "corner kicks": "corner kicks", "corners": "corner kicks",
+        "corner": "corner kicks", "corner kick": "corner kicks",
+        "total shots": "total shots", "shots": "total shots",
+        "total shot": "total shots", "shots total": "total shots",
+        "yellow cards": "yellow cards", "yellow card": "yellow cards",
+        "yellow cards total": "yellow cards", "yellowcards": "yellow cards",
     }
 
-    for block in rows:
-        if not isinstance(block, dict):
-            continue
+    def walk(node):
+        if isinstance(node, list):
+            for x in node:
+                yield from walk(x)
+        elif isinstance(node, dict):
+            yield node
+            for key in ("data", "statistics", "stats", "matchStatistics", "teams"):
+                value = node.get(key)
+                if isinstance(value, (list, dict)):
+                    yield from walk(value)
+
+    seen_blocks = set()
+    for block in walk(rows):
         team = block.get("team") or {}
+        tid = team.get("id") if isinstance(team, dict) else team
+        if tid is None:
+            tid = block.get("teamId")
         try:
-            tid = int(team.get("id"))
+            tid = int(tid)
         except (TypeError, ValueError):
             continue
-        vals = out.setdefault(tid, {})
-        items = block.get("statistics") or block.get("stats") or []
+
+        items = block.get("statistics") or block.get("stats")
         if isinstance(items, dict):
             items = [items]
         if not isinstance(items, list):
             continue
+
+        block_key = (tid, id(items))
+        if block_key in seen_blocks:
+            continue
+        seen_blocks.add(block_key)
+
+        vals = out.setdefault(tid, {})
         for item in items:
             if not isinstance(item, dict):
                 continue
-            label = item.get("displayName") or item.get("name") or item.get("type") or ""
+            label = item.get("displayName") or item.get("name") or item.get("type") or item.get("label") or ""
             norm = _norm(label)
             compact = re.sub(r"[^a-z0-9]+", "", str(label).casefold())
-            key = aliases.get(norm)
-            if key is None:
-                key = {
-                    "cornerkicks": "corner kicks",
-                    "corners": "corner kicks",
-                    "corner": "corner kicks",
-                    "totalshots": "total shots",
-                    "shots": "total shots",
-                    "shotstotal": "total shots",
-                    "yellowcards": "yellow cards",
-                    "yellowcard": "yellow cards",
-                }.get(compact)
+            key = aliases.get(norm) or {
+                "cornerkicks": "corner kicks", "corners": "corner kicks",
+                "corner": "corner kicks", "cornerkick": "corner kicks",
+                "totalshots": "total shots", "shots": "total shots",
+                "shotstotal": "total shots", "totalshot": "total shots",
+                "yellowcards": "yellow cards", "yellowcard": "yellow cards",
+            }.get(compact)
             if key is None:
                 continue
             value = item.get("value")
             if isinstance(value, dict):
-                value = value.get("value") or value.get("total") or value.get("count")
+                value = value.get("value", value.get("total", value.get("count")))
             value = _safe_float(value)
             if value is not None:
                 vals[key] = value
 
-    # Goals come from the completed match score and are always valid when present.
-    home_id = (fixture.get("teams") or {}).get("home", {}).get("id")
-    away_id = (fixture.get("teams") or {}).get("away", {}).get("id")
+    teams = fixture.get("teams") or {}
+    home_id = (teams.get("home") or {}).get("id")
+    away_id = (teams.get("away") or {}).get("id")
     goals = fixture.get("goals") or {}
     try:
         if home_id is not None and goals.get("home") is not None:
@@ -432,28 +436,64 @@ def _fixture_market_values(fixture):
 
     return fid, out
 
+def _has_target_match_stats(data):
+    targets = {"corner kicks", "total shots", "yellow cards"}
+    return isinstance(data, dict) and any(
+        isinstance(v, dict) and any(k in v for k in targets) for v in data.values()
+    )
+
 def load_historical_statistics(all_histories):
-    fixtures_by_id={}
+    fixtures_by_id = {}
     for history in all_histories:
         for f in history:
-            fid=(f.get("fixture") or {}).get("id")
-            if fid: fixtures_by_id[int(fid)]=f
-    loaded={}; missing=[]
-    for fid in fixtures_by_id:
-        cached=_read_cached_stat(fid)
-        if cached is not None:
-            loaded[fid]=cached
-        else:
-            missing.append(fid)
-    for fid in missing:
-        base_fixture=fixtures_by_id[fid]
-        rows=_api(f"statistics/{fid}",{})
-        fake=dict(base_fixture); fake["statistics"]=rows if isinstance(rows,list) else []
-        _,data=_fixture_market_values(fake); loaded[fid]=data; _write_cached_stat(fid,data)
-    _SCAN_FIXTURE_STATS.clear(); _SCAN_FIXTURE_STATS.update(loaded)
-    print("SCANNER STATS CACHE:", len(loaded)-len(missing), "hits /", len(missing), "API requests")
-    return loaded
+            fid = (f.get("fixture") or {}).get("id")
+            if fid:
+                fixtures_by_id[int(fid)] = f
 
+    loaded = {}
+    api_requests = 0
+    cache_hits = 0
+    for fid, base_fixture in fixtures_by_id.items():
+        cached = _read_cached_stat(fid)
+        # Old cache entries containing only goals are deliberately ignored.
+        if cached is not None and _has_target_match_stats(cached):
+            loaded[fid] = cached
+            cache_hits += 1
+            continue
+
+        # Highlightly Football API: detailed match endpoint is the documented
+        # source that can contain matchStatistics.
+        detail = _api(f"matches/{fid}", {})
+        api_requests += 1
+        if detail is None:
+            continue
+
+        fake = dict(base_fixture)
+        if isinstance(detail, dict):
+            # Preserve the complete detail response and explicitly expose the
+            # statistics field expected by the parser.
+            fake["statistics"] = (
+                detail.get("matchStatistics")
+                or detail.get("statistics")
+                or []
+            )
+        else:
+            fake["statistics"] = detail
+
+        _, data = _fixture_market_values(fake)
+
+        # Do not save goal-only data as a successful statistics cache.
+        if data and _has_target_match_stats(data):
+            loaded[fid] = data
+            _write_cached_stat(fid, data)
+        elif data:
+            # Keep goals in memory for this scan, but do not poison the cache.
+            loaded[fid] = data
+
+    _SCAN_FIXTURE_STATS.clear()
+    _SCAN_FIXTURE_STATS.update(loaded)
+    print(f"SCANNER STATS CACHE: {cache_hits} hits / {api_requests} API requests / {sum(1 for v in loaded.values() if _has_target_match_stats(v))} fixtures with corners/shots/cards")
+    return loaded
 
 def build_profiles_from_histories(histories_by_key, stats_by_fixture):
     profiles={}
@@ -1667,4 +1707,3 @@ if __name__ == "__main__":
     except Exception as exc:
         print("SCANNER FATAL ERROR:", repr(exc))
         raise
-    
