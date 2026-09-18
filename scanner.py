@@ -31,9 +31,9 @@ HISTORY_GAMES = None
 MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
-# Highlightly plan is 7,500 requests/day per API product. Keep a 500-request
-# safety reserve so the scanner itself never intentionally drives the dashboard to 100%.
-API_DAILY_LIMIT = 7500
+# User's purchased Highlightly plan: 25,000 requests/day.
+# Keep a 500-request safety reserve.
+API_DAILY_LIMIT = 25000
 API_SAFETY_RESERVE = 500
 API_HARD_STOP = API_DAILY_LIMIT - API_SAFETY_RESERVE
 
