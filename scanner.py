@@ -30,6 +30,9 @@ HISTORY_GAMES = None
 MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
+
+# Morning football fixture cache shared with PREMATCH/Bet Builder.
+_UPCOMING_FIXTURES_CACHE = {}
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
@@ -248,6 +251,19 @@ def _normalize_match(m):
     }
 
 
+def get_cached_upcoming_matches(start_bg, end_bg):
+    """Return the fixture window loaded by the morning football scan.
+
+    PREMATCH/Bet Builder must reuse this data instead of making another
+    football fixture-list request later in the day.
+    """
+    key = (start_bg.isoformat(), end_bg.isoformat())
+    cached = _UPCOMING_FIXTURES_CACHE.get(key)
+    if not cached:
+        return []
+    return list(cached)
+
+
 def get_fixtures_for_window(start_bg, end_bg):
     """Fetch EVERY fixture in the BG window, not only the first 100 per date.
 
@@ -373,11 +389,20 @@ def get_team_history(team_id, season, league_id=None):
         fallback += fetch_team_matches({"season": season, "awayTeamId": team_id})
         primary = clean(primary + fallback)
 
-    # Keep every completed fixture available for the requested season.
+    # Keep every completed official fixture available for the requested season.
     # Do not silently truncate the season to the latest 12 matches.
     primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+
+    # Hard rule: if the team still has fewer than 3 official completed
+    # matches in the current season after the all-competition fallback,
+    # there is NO prediction for a fixture involving this team.
+    if len(primary) < 3:
+        print("HISTORY INSUFFICIENT:", team_id, "season=", season, "matches=", len(primary))
+        _SCAN_HISTORY[key] = []
+        return []
+
     _SCAN_HISTORY[key] = primary
-    print("HISTORY:", team_id, "matches=", len(primary))
+    print("HISTORY:", team_id, "season=", season, "matches=", len(primary))
     return primary
 
 def _read_cached_stat(fixture_id):
@@ -760,7 +785,7 @@ def _match_info(r):
     )
 
 
-def format_market(results, key, label, emoji):
+def format_market(results, key, label, emoji, max_items=5):
     valid = [
         r for r in results
         if key in r["markets"] and _market_allowed_on_betano(r, key)
@@ -770,11 +795,11 @@ def format_market(results, key, label, emoji):
         valid,
         key=lambda r: r["markets"][key]["expected"],
         reverse=True,
-    )[:5]
+    )[:max_items]
     low = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
-    )[:5]
+    )[:max_items]
 
     lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
 
@@ -975,6 +1000,12 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         raise
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
+    # Publish the exact morning fixture set to PREMATCH/Bet Builder.
+    # They must reuse this set and make no additional football fixture-list
+    # calls later in the day.
+    _UPCOMING_FIXTURES_CACHE.clear()
+    _UPCOMING_FIXTURES_CACHE[(start.isoformat(), end.isoformat())] = list(matches)
+
     # REAL BETANO MATCH FILTER
     matches = filter_matches_by_betano_markets(matches)
 
@@ -1060,13 +1091,13 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         "История: всички завършени мачове от текущия сезон",
         "",
     ]
-    lines.append(format_market(results, "corners", "КОРНЕРИ", "🚩"))
+    lines.append(format_market(results, "corners", "КОРНЕРИ", "🚩", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "cards", "КАРТОНИ", "🟨"))
+    lines.append(format_market(results, "cards", "КАРТОНИ", "🟨", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "shots", "УДАРИ", "🎯"))
+    lines.append(format_market(results, "shots", "УДАРИ", "🎯", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "goals", "ГОЛОВЕ", "⚽"))
+    lines.append(format_market(results, "goals", "ГОЛОВЕ", "⚽", max_items=5))
     lines.append(f"\n⏱ Scan time: {time.time() - _START:.1f}s")
 
     message = "\n".join(lines)
