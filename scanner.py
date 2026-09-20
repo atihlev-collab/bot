@@ -1137,21 +1137,39 @@ def _sport_match_score(match):
     Supports several Highlightly-style score layouts.
     """
 
-    score = match.get("score") or match.get("scores") or {}
+    # Highlightly Sport API stores the final/current score under
+    # state.score.current (for example: "88 - 82").  Some sport
+    # endpoints also expose score/scores directly, so keep those
+    # formats as fallbacks.
+    state = match.get("state") or {}
+    score = (state.get("score") if isinstance(state, dict) else None)
+    if not isinstance(score, dict):
+        score = match.get("score") or match.get("scores") or {}
 
     if not isinstance(score, dict):
         return None, None
 
+    current = score.get("current")
+    if isinstance(current, str) and "-" in current:
+        parts = current.split("-", 1)
+        try:
+            return float(parts[0].strip()), float(parts[1].strip())
+        except (TypeError, ValueError):
+            pass
+
+    # Alternate Highlightly score layouts.
     home = (
         score.get("home")
         or score.get("homeScore")
         or score.get("homePoints")
+        or score.get("homeTeam")
     )
 
     away = (
         score.get("away")
         or score.get("awayScore")
         or score.get("awayPoints")
+        or score.get("awayTeam")
     )
 
     # Nested score objects
@@ -1336,6 +1354,7 @@ def run_sport_daily_scanner(send_func=None):
         matches = _sport_api_get_once(
             cfg["endpoint"],
             {
+                "date": start.strftime("%Y-%m-%d"),
                 "timezone": SPORT_API_TZ,
                 "limit": SPORT_API_LIMIT,
             },
