@@ -34,6 +34,35 @@ _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
 
+# ---------------------------------------------------------
+# DAILY API QUOTA GUARD
+# ---------------------------------------------------------
+
+_QUOTA_LOCKS = {}
+_QUOTA_LOCK_DATES = {}
+
+
+class APIQuotaExceeded(Exception):
+    """Raised when Highlightly reports that the daily quota is exhausted."""
+    pass
+
+
+def _quota_locked(scope="football"):
+    """Return True when this scanner scope is locked for today's BG date."""
+    today = datetime.now(TZ).date().isoformat()
+
+    if _QUOTA_LOCK_DATES.get(scope) != today:
+        _QUOTA_LOCKS[scope] = False
+        _QUOTA_LOCK_DATES[scope] = today
+
+    return bool(_QUOTA_LOCKS.get(scope, False))
+
+
+def _set_quota_lock(scope="football"):
+    today = datetime.now(TZ).date().isoformat()
+    _QUOTA_LOCKS[scope] = True
+    _QUOTA_LOCK_DATES[scope] = today
+
 
 def _api(endpoint, params=None, timeout=25):
     global _LAST_API_CALL
@@ -47,18 +76,24 @@ def _api(endpoint, params=None, timeout=25):
                 _LAST_API_CALL = time.monotonic()
 
             r = requests.get(
-                f"{BASE_URL}/{endpoint}",
+                BASE_URL + endpoint,
                 headers=HEADERS,
                 params=params or {},
                 timeout=timeout,
             )
 
-            if r.status_code == 429 or 500 <= r.status_code < 600:
+            if r.status_code == 429:
+                _set_quota_lock("football")
+                print("SCANNER QUOTA LOCKED: Highlightly returned HTTP 429")
+                raise APIQuotaExceeded("Highlightly daily quota exhausted")
+
+            if 500 <= r.status_code < 600:
                 retry_after = r.headers.get("Retry-After")
                 try:
                     delay = float(retry_after)
                 except (TypeError, ValueError):
                     delay = min(1.0 * (2 ** attempt), 8.0)
+
                 time.sleep(delay)
                 continue
 
@@ -1085,6 +1120,11 @@ def _sport_api_get(endpoint, params=None):
             f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} "
             f"params={params or {}} status={response.status_code}"
         )
+        if response.status_code == 429:
+            _set_quota_lock("sport")
+            print("SPORT QUOTA LOCKED: Highlightly Sport returned HTTP 429")
+            raise APIQuotaExceeded("Highlightly Sport daily quota exhausted")
+        
         if response.status_code != 200:
             print("SPORT API ERROR:", response.text[:500])
             return []
