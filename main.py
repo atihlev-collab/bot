@@ -23939,7 +23939,7 @@ def main_loop():
                 # the Bulgaria calendar day changes. Mark today's attempt
                 # as consumed even on 429 so the 30-second scheduler loop
                 # cannot repeatedly hit the exhausted provider.
-                if daily_scanner._quota_locked("sport"):
+                if hasattr(daily_scanner, "_quota_locked") and daily_scanner._quota_locked("sport"):
                     logging.warning("SPORT DAILY: quota locked for %s; no more Sport API requests today", day)
                     last_day_sport = day
                 else:
