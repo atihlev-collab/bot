@@ -79,8 +79,15 @@ def _api(endpoint, params=None, timeout=25):
                     time.sleep(wait)
                 _LAST_API_CALL = time.monotonic()
 
+            url = f"{BASE_URL.rstrip('/')}/{str(endpoint).lstrip('/')}"
+
+            print(
+                f"SCANNER API REQUEST: {url} "
+                f"params={params or {}}"
+            )
+            
             r = requests.get(
-                BASE_URL + endpoint,
+                url,
                 headers=HEADERS,
                 params=params or {},
                 timeout=timeout,
@@ -280,6 +287,13 @@ def get_fixtures_for_window(start_bg, end_bg):
             "limit": 100,
             "offset": 0,
         })
+
+        print(
+            f"SCANNER FIXTURE DEBUG | "
+            f"date={day.isoformat()} | "
+            f"rows={len(rows) if isinstance(rows, list) else 'NONE'}"
+        )
+        
         before = len(all_matches)
         collect(rows)
 
@@ -316,6 +330,15 @@ def get_fixtures_for_window(start_bg, end_bg):
     all_matches.sort(key=lambda x: (x.get("fixture") or {}).get("date", ""))
     _UPCOMING_FIXTURE_CACHE[cache_key] = list(all_matches)
     print(f"SCANNER FIXTURE FEED: {len(all_matches)} matches in 12:00->12:00 window")
+
+
+    print(
+        f"SCANNER FIXTURE FEED: "
+        f"{len(all_matches)} matches in "
+        f"{start_bg.strftime('%d.%m %H:%M')} -> "
+        f"{end_bg.strftime('%d.%m %H:%M')} window"
+    )
+    
     return all_matches
 
 def get_cached_upcoming_matches(start_bg, end_bg):
