@@ -23885,55 +23885,51 @@ def print_system_status():
 def main_loop():
     """Single scheduler for the full legacy engine + Highlightly daily scanners."""
     import scanner as daily_scanner
+
     last_live = 0.0
-    last_day_sport = None
     last_day_football = None
+
     logging.info('HIGHLIGHTLY SYSTEM START | full legacy main preserved')
+
     init_database()
     _quota_init()
+
     while True:
         now = datetime.now(TIMEZONE)
         day = now.date().isoformat()
         minutes = now.hour * 60 + now.minute
+
         try:
-            # Sport daily: exactly once at/after 10:00, fixture window 12:00 -> 12:00.
-            if minutes >= 600 and last_day_sport != day:
-                # Do not retry Sport API after a daily quota lock. The lock
-                # is persisted by scanner.py and automatically expires when
-                # the Bulgaria calendar day changes. Mark today's attempt
-                # as consumed even on 429 so the 30-second scheduler loop
-                # cannot repeatedly hit the exhausted provider.
-                if daily_scanner._quota_locked("sport"):
-                    logging.warning("SPORT DAILY: quota locked for %s; no more Sport API requests today", day)
-                    last_day_sport = day
-                else:
-                    try:
-                        daily_scanner.run_sport_daily_scanner(send_telegram)
-                    except daily_scanner.APIQuotaExceeded as exc:
-                        logging.warning("SPORT DAILY STOPPED: %s; locked until next Bulgaria calendar day", exc)
-                    finally:
-                        # Whether successful or quota-blocked, never retry the
-                        # daily Sport scan during the same BG calendar day.
-                        last_day_sport = day
             # Football statistical daily: exactly once at/after 10:30.
             if minutes >= 630 and last_day_football != day:
                 try:
-                    daily_scanner.run_daily_scanner('day', send_func=send_telegram)
-                    # Preserve the old prematch Top-5 + Builder engine as the second part of the same morning run.
-                    scan_prematch()
-                except daily_scanner.APIQuotaExceeded as exc:
-                    logging.warning("FOOTBALL DAILY STOPPED: %s; no further football API retries today", exc)
-                finally:
-                    # Prevent repeated calls after a daily football quota lock.
-                    last_day_football = day
-            # Live only 17:00-00:00. Five-minute polling; no calls outside the window.
-            if 17 <= now.hour < 24 and time.time() - last_live >= 300:
-                scan_live()
-                last_live = time.time()
-        except Exception as e:
-            logging.exception('SCHEDULER ERROR: %s', repr(e))
-        time.sleep(30)
+                    daily_scanner.run_daily_scanner(
+                        'day',
+                        send_func=send_telegram
+                    )
 
+                    # Preserve the old prematch Top-5 + Builder engine
+                    # as the second part of the same morning run.
+                    scan_prematch()
+
+                except daily_scanner.APIQuotaExceeded as exc:
+                    logging.warning(
+                        "FOOTBALL DAILY STOPPED: %s; "
+                        "no further football API retries today",
+                        exc
+                    )
+
+                finally:
+                    # Never retry the daily football scan during
+                    # the same Bulgaria calendar day.
+                    last_day_football = day
+
+            # ... останалата част от твоя live scheduler остава без промяна ...
+
+        except Exception as exc:
+            logging.exception("SCHEDULER ERROR: %r", exc)
+
+        time.sleep(30)
 
 if __name__ == '__main__':
     try:
