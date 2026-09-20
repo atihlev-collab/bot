@@ -972,10 +972,13 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
                 away_id: team_profiles.get((away_id, aws[0], aws[1]), {}) if aws else {},
             }
             result = analyse_fixture(m, profiles)
-            betano = m.get("_betano_markets", {})
+            # Статистическите пазари се запазват.
+            # Betano правилата се прилагат при самото форматиране
+            # на пазара, а не чрез изтриване на статистиката тук.
             result["markets"] = {
-                k: v for k, v in result.get("markets", {}).items()
-                if k == "goals" or betano.get(k) is True
+                k: v
+                for k, v in result.get("markets", {}).items()
+                if _market_allowed_by_betano(result, k)
             }
             return result
 
