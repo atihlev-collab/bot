@@ -1439,6 +1439,18 @@ def run_sport_daily_scanner(send_func=None):
         fixtures = _get_sport_fixtures(cfg, start, end)
         candidates = []
 
+        # GLOBAL BLOCK — Russia / Belarus
+        fixtures = [
+            match for match in fixtures
+            if str(
+                (
+                    (match.get("league") or {}).get("country")
+                    or (match.get("country") or "")
+                )
+            ).strip().casefold() not in {"russia", "belarus"}
+        ]
+        
+
         for match in fixtures:
             home = match.get("homeTeam") or match.get("home") or {}
             away = match.get("awayTeam") or match.get("away") or {}
