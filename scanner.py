@@ -249,32 +249,68 @@ def _normalize_match(m):
 
 
 def get_fixtures_for_window(start_bg, end_bg):
+    """Fetch EVERY fixture in the BG window, not only the first 100 per date.
+
+    Highlightly documents ``limit`` + ``offset`` pagination for /matches.
+    Germany, Netherlands and other busy football dates can exceed one page,
+    so stopping after the first 100 silently drops fixtures.
+    """
     days = []
     d = start_bg.date()
     while d <= end_bg.date():
         days.append(d)
         d += timedelta(days=1)
+
     all_matches, seen = [], set()
+    page_size = 100
+
     for day in days:
-        rows = _api("matches", {"date": day.isoformat(), "timezone": "Europe/Sofia", "limit": 100})
-        for raw in rows if isinstance(rows, list) else []:
-            m = _normalize_match(raw)
-            if not m:
-                continue
-            fid = (m.get("fixture") or {}).get("id")
-            dt_raw = (m.get("fixture") or {}).get("date")
-            if not fid or fid in seen or not dt_raw:
-                continue
-            try:
-                dt_utc = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00"))
-                dt_bg = dt_utc.astimezone(TZ)
-            except Exception:
-                continue
-            if dt_bg < start_bg or dt_bg >= end_bg or dt_utc <= datetime.now(timezone.utc):
-                continue
-            seen.add(fid)
-            all_matches.append(m)
+        offset = 0
+        while True:
+            rows = _api(
+                "matches",
+                {
+                    "date": day.isoformat(),
+                    "timezone": "Europe/Sofia",
+                    "limit": page_size,
+                    "offset": offset,
+                },
+            )
+
+            if not isinstance(rows, list) or not rows:
+                break
+
+            for raw in rows:
+                m = _normalize_match(raw)
+                if not m:
+                    continue
+                fid = (m.get("fixture") or {}).get("id")
+                dt_raw = (m.get("fixture") or {}).get("date")
+                if not fid or fid in seen or not dt_raw:
+                    continue
+                try:
+                    dt_utc = datetime.fromisoformat(str(dt_raw).replace("Z", "+00:00"))
+                    dt_bg = dt_utc.astimezone(TZ)
+                except Exception:
+                    continue
+                if dt_bg < start_bg or dt_bg >= end_bg or dt_utc <= datetime.now(timezone.utc):
+                    continue
+                seen.add(fid)
+                all_matches.append(m)
+
+            # A short page is the documented end of the result set.
+            if len(rows) < page_size:
+                break
+
+            offset += page_size
+
+            # Hard safety guard against a broken API returning the same full page forever.
+            if offset > 5000:
+                print("SCANNER FIXTURE PAGINATION SAFETY STOP:", day.isoformat())
+                break
+
     all_matches.sort(key=lambda x: (x.get("fixture") or {}).get("date", ""))
+    print("SCANNER FIXTURES COMPLETE:", len(all_matches), "window", start_bg, "->", end_bg)
     return all_matches
 
 def get_team_history(team_id, season, league_id=None):
@@ -917,7 +953,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     ref = reference_date or now_bg.date()
     ref = ref if hasattr(ref, "year") else now_bg.date()
 
-    # One football daily scan: sent at 10:30 BG.
+    # One football daily scan: sent at 10:00 BG.
     # Fixture window is always 12:00 BG -> next day 12:00 BG.
     start = datetime(ref.year, ref.month, ref.day, 12, 0, tzinfo=TZ)
     end = start + timedelta(days=1)
@@ -1720,9 +1756,9 @@ def run_due_scans(send_func):
     now = datetime.now(TZ)
     today = now.date()
 
-    # Football: once per day at/after 10:30 BG.
+    # Football: once per day at/after 10:00 BG.
     # The scanner uses the fixed 12:00 -> next-day 12:00 window.
-    if now.hour > 10 or (now.hour == 10 and now.minute >= 30):
+    if now.hour > 10 or (now.hour == 10 and now.minute >= 0):
         football_key = f"football_daily:{today.isoformat()}"
 
         if not already_ran(football_key):
