@@ -1437,6 +1437,58 @@ def run_sport_daily_scanner(send_func=None):
     for sport_key, cfg in SPORTS_CONFIG.items():
         print(f"SPORT SCAN: {sport_key} — FIXTURES")
         fixtures = _get_sport_fixtures(cfg, start, end)
+
+
+        # GLOBAL BLOCK — Russia / Belarus
+        filtered_fixtures = []
+
+        for match in fixtures:
+            league = match.get("league") or {}
+
+            country = ""
+
+            if isinstance(league, dict):
+                country = (
+                    league.get("country")
+                    or league.get("countryName")
+                    or ""
+                )
+
+                if isinstance(country, dict):
+                    country = (
+                        country.get("name")
+                        or country.get("countryName")
+                        or ""
+                    )
+
+            if not country:
+                country = (
+                    match.get("country")
+                    or match.get("countryName")
+                    or ""
+                )
+
+                if isinstance(country, dict):
+                    country = (
+                        country.get("name")
+                        or country.get("countryName")
+                        or ""
+                    )
+
+            country = str(country).strip().casefold()
+
+            if country in {"russia", "belarus"}:
+                print(
+                    f"SPORT BLOCKED COUNTRY: "
+                    f"{match.get('id')} — {country}"
+                )
+                continue
+
+            filtered_fixtures.append(match)
+
+        fixtures = filtered_fixtures
+        
+        
         candidates = []
 
         # GLOBAL BLOCK — Russia / Belarus
