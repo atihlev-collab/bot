@@ -1528,7 +1528,8 @@ def run_sport_daily_scanner(send_func=None):
                 "expected": h["average"] + a["average"],
             })
 
-        lines.append(_build_sport_section(cfg["name"], candidates))
+        sport_section = _build_sport_section(cfg["name"], candidates)
+        lines.append(sport_section)
         lines.append("")
         lines.append("────────────────────")
         lines.append("")
@@ -1538,16 +1539,25 @@ def run_sport_daily_scanner(send_func=None):
             f"valid={len(candidates)}"
         )
 
+        # Send each completed sport section immediately.
+        # The full 7-sport scan can take a long time because team statistics
+        # are loaded separately; do not wait for every sport before delivering
+        # an already-computed signal.
+        if send_func and candidates:
+            send_func(
+                "📊 SPORT DAILY STATISTICAL SCANNER\n\n"
+                + sport_section
+            )
+
     lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
     lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
 
     message = "\n".join(lines)
     print(message)
+    # The individual sport sections have already been delivered above.
+    # Also send the complete report once the entire scan finishes.
     if send_func:
-        # Telegram hard limit is 4096 characters. Keep a safety margin
-        # for the numbered chunk header and send the complete report.
         _send_sport_report_chunks(message, send_func, max_chars=3700)
-    mark_ran(run_key)
     mark_ran(run_key)
     return message
 
