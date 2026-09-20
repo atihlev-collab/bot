@@ -1436,128 +1436,145 @@ def run_sport_daily_scanner(send_func=None):
 
     for sport_key, cfg in SPORTS_CONFIG.items():
         print(f"SPORT SCAN: {sport_key} — FIXTURES")
-        fixtures = _get_sport_fixtures(cfg, start, end)
+        try:
+            fixtures = _get_sport_fixtures(cfg, start, end)
 
 
-        # GLOBAL BLOCK — Russia / Belarus
-        filtered_fixtures = []
+            # GLOBAL BLOCK — Russia / Belarus
+            filtered_fixtures = []
 
-        for match in fixtures:
-            league = match.get("league") or {}
+            for match in fixtures:
+                league = match.get("league") or {}
 
-            country = ""
+                country = ""
 
-            if isinstance(league, dict):
-                country = (
-                    league.get("country")
-                    or league.get("countryName")
-                    or ""
-                )
-
-                if isinstance(country, dict):
+                if isinstance(league, dict):
                     country = (
-                        country.get("name")
-                        or country.get("countryName")
+                        league.get("country")
+                        or league.get("countryName")
                         or ""
                     )
 
-            if not country:
-                country = (
-                    match.get("country")
-                    or match.get("countryName")
-                    or ""
-                )
+                    if isinstance(country, dict):
+                        country = (
+                            country.get("name")
+                            or country.get("countryName")
+                            or ""
+                        )
 
-                if isinstance(country, dict):
+                if not country:
                     country = (
-                        country.get("name")
-                        or country.get("countryName")
+                        match.get("country")
+                        or match.get("countryName")
                         or ""
                     )
 
-            country = str(country).strip().casefold()
+                    if isinstance(country, dict):
+                        country = (
+                            country.get("name")
+                            or country.get("countryName")
+                            or ""
+                        )
 
-            if country in {"russia", "belarus"}:
-                print(
-                    f"SPORT BLOCKED COUNTRY: "
-                    f"{match.get('id')} — {country}"
-                )
-                continue
+                country = str(country).strip().casefold()
 
-            filtered_fixtures.append(match)
+                if country in {"russia", "belarus"}:
+                    print(
+                        f"SPORT BLOCKED COUNTRY: "
+                        f"{match.get('id')} — {country}"
+                    )
+                    continue
 
-        fixtures = filtered_fixtures
+                filtered_fixtures.append(match)
+
+            fixtures = filtered_fixtures
         
         
-        candidates = []
+            candidates = []
 
-        # GLOBAL BLOCK — Russia / Belarus
-        fixtures = [
-            match for match in fixtures
-            if str(
-                (
-                    (match.get("league") or {}).get("country")
-                    or (match.get("country") or "")
-                )
-            ).strip().casefold() not in {"russia", "belarus"}
-        ]
+            # GLOBAL BLOCK — Russia / Belarus
+            fixtures = [
+                match for match in fixtures
+                if str(
+                    (
+                        (match.get("league") or {}).get("country")
+                        or (match.get("country") or "")
+                    )
+                ).strip().casefold() not in {"russia", "belarus"}
+            ]
         
 
-        for match in fixtures:
-            home = match.get("homeTeam") or match.get("home") or {}
-            away = match.get("awayTeam") or match.get("away") or {}
-            home_id = _sport_team_id(home)
-            away_id = _sport_team_id(away)
-            if not home_id or not away_id:
-                continue
+            for match in fixtures:
+                home = match.get("homeTeam") or match.get("home") or {}
+                away = match.get("awayTeam") or match.get("away") or {}
+                home_id = _sport_team_id(home)
+                away_id = _sport_team_id(away)
+                if not home_id or not away_id:
+                    continue
 
-            h = _get_team_average(sport_key, home_id, cfg["metric"])
-            a = _get_team_average(sport_key, away_id, cfg["metric"])
-            if not h or not a or h["games"] < 3 or a["games"] < 3:
-                continue
+                h = _get_team_average(sport_key, home_id, cfg["metric"])
+                a = _get_team_average(sport_key, away_id, cfg["metric"])
+                if not h or not a or h["games"] < 3 or a["games"] < 3:
+                    continue
 
-            dt = _sport_match_datetime(match)
-            if not dt:
-                continue
+                dt = _sport_match_datetime(match)
+                if not dt:
+                    continue
 
-            candidates.append({
-                "match": match,
-                "datetime": dt,
-                "home_avg": h["average"],
-                "away_avg": a["average"],
-                "expected": h["average"] + a["average"],
-            })
+                candidates.append({
+                    "match": match,
+                    "datetime": dt,
+                    "home_avg": h["average"],
+                    "away_avg": a["average"],
+                    "expected": h["average"] + a["average"],
+                })
 
-        sport_section = _build_sport_section(cfg["name"], candidates)
-        lines.append(sport_section)
-        lines.append("")
-        lines.append("────────────────────")
-        lines.append("")
+            sport_section = _build_sport_section(cfg["name"], candidates)
+            lines.append(sport_section)
+            lines.append("")
+            lines.append("────────────────────")
+            lines.append("")
 
-        print(
-            f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} "
-            f"valid={len(candidates)}"
-        )
-
-        # Send each completed sport section immediately.
-        # The full 7-sport scan can take a long time because team statistics
-        # are loaded separately; do not wait for every sport before delivering
-        # an already-computed signal.
-        if send_func and candidates:
-            send_func(
-                "📊 SPORT DAILY STATISTICAL SCANNER\n\n"
-                + sport_section
+            print(
+                f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} "
+                f"valid={len(candidates)}"
             )
+
+            # Send every completed sport immediately. A later sport must never
+            # prevent the already-computed sections from being delivered.
+            if send_func:
+                try:
+                    send_func(
+                        "📊 SPORT DAILY STATISTICAL SCANNER\n\n"
+                        + sport_section
+                    )
+                except Exception as exc:
+                    print(f"SPORT TELEGRAM ERROR: {sport_key}: {exc!r}")
+
+        except Exception as exc:
+            # One broken sport/API response must not abort the remaining six sports.
+            print(f"SPORT SCAN ERROR: {sport_key}: {exc!r}")
+            sport_section = (
+                f"{cfg['name']}\n"
+                "Няма достатъчно исторически статистически данни.\n"
+                f"Причина: API/скенер грешка ({type(exc).__name__})."
+            )
+            lines.append(sport_section)
+            lines.append("")
+            lines.append("────────────────────")
+            lines.append("")
+            if send_func:
+                try:
+                    send_func("📊 SPORT DAILY STATISTICAL SCANNER\n\n" + sport_section)
+                except Exception as send_exc:
+                    print(f"SPORT TELEGRAM ERROR: {sport_key}: {send_exc!r}")
 
     lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
     lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
 
     message = "\n".join(lines)
     print(message)
-    # The individual sport sections have already been delivered above.
-    # Also send the complete report once the entire scan finishes.
-    if send_func:
-        _send_sport_report_chunks(message, send_func, max_chars=3700)
+    # Each sport section is already delivered immediately above.
     mark_ran(run_key)
     return message
 
