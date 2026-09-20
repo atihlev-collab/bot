@@ -1322,6 +1322,169 @@ def _get_team_average(sport_key, team_id, metric):
     return result
 
 
+
+
+def _volleyball_set_points(score):
+    """Return total rally points for one team from completed volleyball set scores."""
+    if not isinstance(score, dict):
+        return None
+
+    totals = {"home": 0, "away": 0}
+    found = 0
+
+    for key, value in score.items():
+        name = str(key).casefold()
+        if "set" not in name or name == "current":
+            continue
+
+        home_points = away_points = None
+        if isinstance(value, str) and "-" in value:
+            parts = value.split("-", 1)
+            try:
+                home_points = int(parts[0].strip())
+                away_points = int(parts[1].strip())
+            except (TypeError, ValueError):
+                continue
+        elif isinstance(value, dict):
+            try:
+                home_points = int(
+                    value.get("home")
+                    or value.get("homeTeam")
+                    or value.get("homePoints")
+                )
+                away_points = int(
+                    value.get("away")
+                    or value.get("awayTeam")
+                    or value.get("awayPoints")
+                )
+            except (TypeError, ValueError):
+                continue
+
+        if home_points is None or away_points is None:
+            continue
+
+        totals["home"] += home_points
+        totals["away"] += away_points
+        found += 1
+
+    if found == 0:
+        return None
+
+    return totals["home"], totals["away"]
+
+
+def _get_volleyball_team_average(team_id, league_id=None, season=None):
+    """
+    Volleyball uses TOTAL RALLY POINTS, not sets won.
+
+    Highlightly's volleyball team-statistics endpoint exposes a "points"
+    field that is not the same thing as total rally points scored in all
+    sets. Therefore the scanner derives the average from completed
+    current-season matches and their set-by-set scores.
+    """
+    if not team_id:
+        return None
+
+    cache_key = ("volleyball_total_points", int(team_id), int(league_id or 0), int(season or 0))
+    if cache_key in _SPORT_STATS_CACHE:
+        return _SPORT_STATS_CACHE[cache_key]
+
+    total_points = 0
+    games = 0
+    seen = set()
+
+    base = {"season": int(season)} if season else {}
+    if league_id:
+        base["leagueId"] = int(league_id)
+
+    for side_key in ("homeTeamId", "awayTeamId"):
+        offset = 0
+        while True:
+            params = dict(base)
+            params[side_key] = int(team_id)
+            params["limit"] = SPORT_API_LIMIT
+            params["offset"] = offset
+
+            rows = _sport_api_get("volleyball/matches", params)
+            if not isinstance(rows, list) or not rows:
+                break
+
+            for match in rows:
+                if not isinstance(match, dict):
+                    continue
+
+                mid = match.get("id") or match.get("matchId")
+                if mid is not None and mid in seen:
+                    continue
+
+                dt = _sport_match_datetime(match)
+                if dt is None or dt >= datetime.now(TZ):
+                    continue
+
+                league = match.get("league") or {}
+                if isinstance(league, dict):
+                    if league_id and league.get("id") and int(league.get("id")) != int(league_id):
+                        continue
+                    if season and league.get("season") and int(league.get("season")) != int(season):
+                        continue
+
+                state = match.get("state") or {}
+                description = str(state.get("description") or "").casefold()
+                if description and not any(
+                    marker in description
+                    for marker in ("finished", "final", "ended", "completed")
+                ):
+                    continue
+
+                score = state.get("score") or {}
+                points = _volleyball_set_points(score)
+                if points is None:
+                    continue
+
+                home = match.get("homeTeam") or match.get("home") or {}
+                away = match.get("awayTeam") or match.get("away") or {}
+                home_id = _sport_team_id(home)
+                away_id = _sport_team_id(away)
+
+                if home_id == int(team_id):
+                    scored = points[0]
+                elif away_id == int(team_id):
+                    scored = points[1]
+                else:
+                    continue
+
+                if mid is not None:
+                    seen.add(mid)
+
+                total_points += scored
+                games += 1
+
+            if len(rows) < SPORT_API_LIMIT:
+                break
+            offset += SPORT_API_LIMIT
+            if offset > 2000:
+                break
+
+    result = None
+    if games >= 1:
+        result = {
+            "average": total_points / games,
+            "games": games,
+            "season": int(season) if season else None,
+            "raw": {"total_rally_points": total_points},
+        }
+
+    _SPORT_STATS_CACHE[cache_key] = result
+
+    if result:
+        print(
+            f"SPORT HISTORY: volleyball team={team_id} "
+            f"total-points-average={result['average']:.2f} games={result['games']}"
+        )
+    else:
+        print(f"SPORT HISTORY: volleyball team={team_id} TOTAL POINTS NO DATA")
+
+    return result
 def _get_sport_fixtures(cfg, start, end):
     """Fetch the complete local-day window, with a safe fallback if timezone filtering returns empty."""
     all_rows = []
@@ -1430,7 +1593,7 @@ def run_sport_daily_scanner(send_func=None):
         "",
         "Период:",
         f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "История: всички налични текущо-сезонни team statistics от Sport Ultra",
+        "История: всички налични текущо-сезонни team statistics; волейбол — общи rally points от завършените мачове",
         "",
     ]
 
@@ -1499,8 +1662,15 @@ def run_sport_daily_scanner(send_func=None):
             if not home_id or not away_id:
                 continue
 
-            h = _get_team_average(sport_key, home_id, cfg["metric"])
-            a = _get_team_average(sport_key, away_id, cfg["metric"])
+            if sport_key == "volleyball":
+                league = match.get("league") or {}
+                league_id = league.get("id") if isinstance(league, dict) else None
+                season = league.get("season") if isinstance(league, dict) else None
+                h = _get_volleyball_team_average(home_id, league_id, season)
+                a = _get_volleyball_team_average(away_id, league_id, season)
+            else:
+                h = _get_team_average(sport_key, home_id, cfg["metric"])
+                a = _get_team_average(sport_key, away_id, cfg["metric"])
             if not h or not a or h["games"] < 3 or a["games"] < 3:
                 continue
 
