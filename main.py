@@ -23756,6 +23756,84 @@ def calculate_pressure(team):
     return min(pressure, 100)
 
 
+# =========================================================
+# CARD PRESSURE
+# =========================================================
+
+def calculate_card_pressure(
+    minute,
+    home_fouls,
+    away_fouls,
+    home_yellow,
+    away_yellow,
+    home_red,
+    away_red,
+    home_danger,
+    away_danger
+):
+    pressure = 50
+
+    total_fouls = (
+        home_fouls
+        +
+        away_fouls
+    )
+
+    total_yellow = (
+        home_yellow
+        +
+        away_yellow
+    )
+
+    total_red = (
+        home_red
+        +
+        away_red
+    )
+
+    total_danger = (
+        home_danger
+        +
+        away_danger
+    )
+
+    pressure += min(
+        20,
+        total_fouls
+    )
+
+    pressure += min(
+        24,
+        total_yellow
+        *
+        8
+    )
+
+    pressure += min(
+        10,
+        total_red
+        *
+        5
+    )
+
+    pressure += min(
+        15,
+        total_danger
+        //
+        10
+    )
+
+    if minute >= 70:
+        pressure += 10
+    elif minute >= 55:
+        pressure += 5
+
+    return min(
+        95,
+        pressure
+    )
+
+
 def analyze_live_match(fixture):
     try:
         fixture_id = fixture["fixture"]["id"]
