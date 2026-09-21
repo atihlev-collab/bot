@@ -1,4 +1,4 @@
- # BUILD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
+# BUILD: HIGHLIGHTLY-FOOTBALL-API-SCANNER-FIX-1
 # =========================================================
 # DAILY STATISTICAL SCANNER
 # =========================================================
@@ -209,6 +209,25 @@ def _safe_float(v):
         return None
 
 
+def _team_display_name(team):
+    """Prefer Highlightly's full/display team name over short nickname."""
+    if not isinstance(team, dict):
+        return str(team or "Unknown")
+    for key in (
+        "displayName",
+        "fullName",
+        "longName",
+        "teamDisplayName",
+        "teamName",
+        "name",
+        "shortName",
+    ):
+        value = team.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return "Unknown"
+
+
 def _normalize_match(m):
     if not isinstance(m, dict):
         return None
@@ -243,7 +262,10 @@ def _normalize_match(m):
     return {
         "fixture": {"id": m.get("id"), "date": m.get("date"), "status": {"short": short, "long": desc, "elapsed": state.get("clock")}},
         "league": {"id": league.get("id"), "name": league.get("name"), "season": league.get("season"), "country": country.get("name") or "", "type": league.get("type")},
-        "teams": {"home": {"id": home.get("id"), "name": home.get("name"), "logo": home.get("logo")}, "away": {"id": away.get("id"), "name": away.get("name"), "logo": away.get("logo")}},
+        "teams": {
+            "home": {"id": home.get("id"), "name": _team_display_name(home), "logo": home.get("logo")},
+            "away": {"id": away.get("id"), "name": _team_display_name(away), "logo": away.get("logo")},
+        },
         "goals": {"home": hs, "away": aw},
     }
 
@@ -484,7 +506,12 @@ def load_historical_statistics(all_histories):
                 fixtures_by_id[int(fid)] = f
 
     loaded, cached, fetched, fallback = {}, 0, 0, 0
-    stat_keys = ("corner kicks", "corners", "corner kicks won", "total shots", "shots", "yellow cards", "yellow card", "cards")
+    stat_keys = (
+        "corner kicks", "corners", "corner kicks won",
+        "total shots", "shots", "shots total", "total shots attempted",
+        "shots attempted", "shots on target", "shots off target",
+        "yellow cards", "yellow card", "cards"
+    )
     for fid, base_fixture in fixtures_by_id.items():
         cached_data = _read_cached_stat(fid)
         if isinstance(cached_data, dict) and cached_data:
@@ -493,12 +520,21 @@ def load_historical_statistics(all_histories):
                 for team_data in cached_data.values()
                 if isinstance(team_data, dict)
             )
-            if has_real_stat:
+            has_shots = any(
+                any(k in team_data for k in (
+                    "total shots", "shots", "shots total",
+                    "total shots attempted", "shots attempted"
+                ))
+                for team_data in cached_data.values()
+                if isinstance(team_data, dict)
+            )
+            if has_real_stat and has_shots:
                 loaded[fid] = cached_data
                 cached += 1
                 continue
-            # Old cache entries may contain only goals. They are not enough
-            # for corners/shots/cards, so refresh them once.
+            # Existing caches may contain corners/cards/goals but no shots.
+            # Refresh those entries so the newly supported shot aliases can be
+            # populated instead of permanently accepting the incomplete cache.
 
         rows = _api(f"statistics/{fid}", {})
         data = {}
@@ -506,7 +542,18 @@ def load_historical_statistics(all_histories):
             fake = dict(base_fixture); fake["statistics"] = rows
             _, data = _fixture_market_values(fake)
 
-        if not any(any(k in td for k in stat_keys) for td in data.values()):
+        # If the primary statistics response still has no shots, inspect the
+        # detailed match response and MERGE its statistics instead of replacing
+        # corners/cards that were already obtained.
+        have_shots = any(
+            any(k in td for k in (
+                "total shots", "shots", "shots total",
+                "total shots attempted", "shots attempted"
+            ))
+            for td in data.values()
+            if isinstance(td, dict)
+        )
+        if not have_shots:
             detail = _api(f"matches/{fid}", {})
             if isinstance(detail, list) and detail and isinstance(detail[0], dict):
                 fake = dict(base_fixture); fake.update(detail[0])
@@ -514,7 +561,11 @@ def load_historical_statistics(all_histories):
                     fake["statistics"] = detail[0]["statistics"]
                 _, detail_data = _fixture_market_values(fake)
                 if detail_data:
-                    data = detail_data; fallback += 1
+                    for tid, vals in detail_data.items():
+                        data.setdefault(tid, {})
+                        if isinstance(vals, dict):
+                            data[tid].update(vals)
+                    fallback += 1
 
         if data:
             _write_cached_stat(fid, data); fetched += 1
@@ -558,7 +609,7 @@ def build_profiles_from_histories(histories_by_key, stats_by_fixture):
             # Accept the documented names plus common provider variants.
             mappings={
                 "corners": ("corner kicks", "corners", "corner kicks won"),
-                "shots": ("total shots", "shots"),
+                "shots": ("total shots", "shots", "shots total", "total shots attempted", "shots attempted"),
                 "cards": ("yellow cards", "yellow card", "cards"),
                 "goals_scored": ("goals_scored",),
                 "goals_conceded": ("goals_conceded",),
@@ -734,19 +785,10 @@ def analyse_fixture(fixture, team_profiles):
             "sample": min(hs[1], hc[1], ass[1], ac[1]),
         }
 
-    def _display_team_name(team):
-        if not isinstance(team, dict):
-            return ""
-        for key in ("displayName", "fullName", "longName", "teamDisplayName", "teamName", "name", "shortName"):
-            value = team.get(key)
-            if value is not None and str(value).strip():
-                return str(value).strip()
-        return ""
-
     return {
         "fixture_id": fixture["fixture"]["id"],
-        "home_name": _display_team_name(home),
-        "away_name": _display_team_name(away),
+        "home_name": home["name"],
+        "away_name": away["name"],
         "league": fixture.get("league", {}).get("name", ""),
         "country": fixture.get("league", {}).get("country", ""),
         "date": fixture["fixture"]["date"],
@@ -769,23 +811,21 @@ def _match_info(r):
     )
 
 
-def format_market(results, key, label, emoji, max_items=None):
+def format_market(results, key, label, emoji):
     valid = [
         r for r in results
         if key in r["markets"] and _market_allowed_on_betano(r, key)
     ]
 
-    if max_items is None:
-        max_items = 5 if key == "goals" else 3
     high = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
         reverse=True,
-    )[:max_items]
+    )[:5]
     low = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
-    )[:max_items]
+    )[:5]
 
     lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
 
@@ -860,72 +900,18 @@ BETANO_BOOKMAKER_ID = 32
 
 
 def get_betano_prematch_markets(fixture_id):
-    """Check Betano availability without falsely rejecting fixtures.
-
-    Highlightly's football odds endpoint supports Total Goals and several
-    result markets, but it does not expose corner/card/shot markets as
-    documented odds markets. Therefore exact Betano availability can be
-    verified for goals, while corners/cards/shots are gated by the presence
-    of a real Betano prematch feed for the fixture.
-    """
-    result = {
-        "match": False,
-        "goals": False,
-        "corners": False,
-        "shots": False,
-        "cards": False,
-    }
-    try:
-        rows = _api(
-            "odds",
-            {
-                "matchId": int(fixture_id),
-                "bookmakerName": "Betano",
-                "oddsType": "prematch",
-                "limit": 5,
-                "offset": 0,
-            },
-        )
-    except Exception as exc:
-        print("BETANO FILTER ERROR:", fixture_id, repr(exc))
-        return result
-
-    market_names = []
+    result = {"match": False, "corners": False, "shots": False, "cards": False}
+    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
     for row in rows if isinstance(rows, list) else []:
         for market in row.get("odds", []) or []:
-            bookmaker_name = str(market.get("bookmakerName") or "").casefold()
-            bookmaker_id = market.get("bookmakerId")
-            # The query already asks for Betano, but verify the returned
-            # bookmaker so another provider can never be accepted by mistake.
-            if bookmaker_name and "betano" not in bookmaker_name:
+            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
                 continue
-            if not bookmaker_name and bookmaker_id is not None and int(bookmaker_id or 0) != BETANO_BOOKMAKER_ID:
-                continue
-
             result["match"] = True
-            name = str(
-                market.get("market")
-                or market.get("name")
-                or market.get("marketName")
-                or ""
-            ).casefold()
-            if name:
-                market_names.append(name)
-
-            if (
-                "total goals" in name
-                or "total goal" in name
-                or "over/under goals" in name
-            ):
-                result["goals"] = True
-            if "corner" in name:
-                result["corners"] = True
-            if "shot" in name:
-                result["shots"] = True
-            if "card" in name or "booking" in name:
-                result["cards"] = True
-
-    print("BETANO FILTER RESULT:", fixture_id, result, "MARKETS=", market_names)
+            name = str(market.get("market") or "").casefold()
+            if "corner" in name: result["corners"] = True
+            if "shot" in name: result["shots"] = True
+            if "card" in name or "booking" in name: result["cards"] = True
+    print("BETANO FILTER RESULT:", fixture_id, result)
     return result
 
 def filter_matches_by_betano_markets(matches):
@@ -1082,7 +1068,10 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         for team_data in fixture_data.values():
             if "corner kicks" in team_data or "corners" in team_data:
                 stat_counts["corners"] += 1
-            if "total shots" in team_data or "shots" in team_data:
+            if any(k in team_data for k in (
+                "total shots", "shots", "shots total",
+                "total shots attempted", "shots attempted"
+            )):
                 stat_counts["shots"] += 1
             if "yellow cards" in team_data or "yellow card" in team_data or "cards" in team_data:
                 stat_counts["cards"] += 1
@@ -1102,19 +1091,10 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
             }
             result = analyse_fixture(m, profiles)
             betano = m.get("_betano_markets", {})
-            # Highlightly exposes exact Betano Total Goals availability.
-            # For corners/cards/shots, its football odds endpoint does not
-            # expose those market types, so requiring betano[k] would wrongly
-            # turn valid statistical markets into zero candidates. Keep the
-            # fixture-level Betano gate for those statistics.
-            gated = {}
-            for k, v in result.get("markets", {}).items():
-                if k == "goals":
-                    if betano.get("goals") is True:
-                        gated[k] = v
-                elif betano.get("match") is True:
-                    gated[k] = v
-            result["markets"] = gated
+            result["markets"] = {
+                k: v for k, v in result.get("markets", {}).items()
+                if k == "goals" or betano.get(k) is True
+            }
             return result
 
         futures = {pool.submit(analyse_one, m): m for m in matches}
@@ -1224,17 +1204,18 @@ SPORT_API_LIMIT = 100
 SPORT_HISTORY_FROM = "2025-07-01"
 
 SPORTS_CONFIG = {
-    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
-    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
-    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
-    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
-    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
-    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
-    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
+    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "teams": "basketball/teams", "metric": "points"},
+    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "teams": "hockey/teams", "metric": "goals"},
+    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "teams": "american-football/teams", "metric": "points"},
+    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "teams": "baseball/teams", "metric": "runs"},
+    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "teams": "rugby/teams", "metric": "points"},
+    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "teams": "volleyball/teams", "metric": "points"},
+    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "teams": "handball/teams", "metric": "goals"},
 }
 
 _SPORT_API_CALLS = 0
 _SPORT_STATS_CACHE = {}
+_SPORT_TEAM_NAMES = {}
 
 
 def _sport_api_get(endpoint, params=None):
@@ -1308,7 +1289,24 @@ def _sport_team_id(team):
 def _sport_team_name(team):
     if not isinstance(team, dict):
         return str(team or "Unknown")
-    return str(team.get("name") or team.get("displayName") or team.get("shortName") or "Unknown")
+    team_id = _sport_team_id(team)
+    if team_id and team_id in _SPORT_TEAM_NAMES:
+        return _SPORT_TEAM_NAMES[team_id]
+    for key in (
+        "displayName",
+        "fullName",
+        "longName",
+        "teamDisplayName",
+        "name",
+        "shortName",
+    ):
+        value = team.get(key)
+        if value is not None and str(value).strip():
+            name = str(value).strip()
+            if team_id:
+                _SPORT_TEAM_NAMES[team_id] = name
+            return name
+    return "Unknown"
 
 
 def _sport_match_names(match):
@@ -1420,6 +1418,27 @@ def _get_team_average(sport_key, team_id, metric):
         {"fromDate": SPORT_HISTORY_FROM, "timezone": SPORT_API_TZ},
     )
     result = _extract_team_average(rows, metric)
+
+    # Sport match payloads normally expose both `name` and `displayName`.
+    # If a particular match only supplied the nickname, resolve the team's
+    # canonical display name once and cache it for the rest of the scan.
+    if int(team_id) not in _SPORT_TEAM_NAMES:
+        team_rows = _sport_api_get(f"{cfg.get('teams', '')}/{int(team_id)}", {}) if cfg.get("teams") else []
+        if isinstance(team_rows, list) and team_rows:
+            team_obj = team_rows[0] if isinstance(team_rows[0], dict) else {}
+        elif isinstance(team_rows, dict):
+            team_obj = team_rows
+        else:
+            team_obj = {}
+        name = None
+        for key in ("displayName", "fullName", "longName", "teamDisplayName", "name", "shortName"):
+            value = team_obj.get(key) if isinstance(team_obj, dict) else None
+            if value is not None and str(value).strip():
+                name = str(value).strip()
+                break
+        if name:
+            _SPORT_TEAM_NAMES[int(team_id)] = name
+
     _SPORT_STATS_CACHE[cache_key] = result
 
     if result:
