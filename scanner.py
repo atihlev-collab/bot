@@ -30,6 +30,9 @@ HISTORY_GAMES = None
 MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
+
+# Morning football fixture cache shared with PREMATCH/Bet Builder.
+_UPCOMING_FIXTURES_CACHE = {}
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
@@ -248,6 +251,19 @@ def _normalize_match(m):
     }
 
 
+def get_cached_upcoming_matches(start_bg, end_bg):
+    """Return the fixture window loaded by the morning football scan.
+
+    PREMATCH/Bet Builder must reuse this data instead of making another
+    football fixture-list request later in the day.
+    """
+    key = (start_bg.isoformat(), end_bg.isoformat())
+    cached = _UPCOMING_FIXTURES_CACHE.get(key)
+    if not cached:
+        return []
+    return list(cached)
+
+
 def get_fixtures_for_window(start_bg, end_bg):
     """Fetch EVERY fixture in the BG window, not only the first 100 per date.
 
@@ -373,11 +389,20 @@ def get_team_history(team_id, season, league_id=None):
         fallback += fetch_team_matches({"season": season, "awayTeamId": team_id})
         primary = clean(primary + fallback)
 
-    # Keep every completed fixture available for the requested season.
+    # Keep every completed official fixture available for the requested season.
     # Do not silently truncate the season to the latest 12 matches.
     primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+
+    # Hard rule: if the team still has fewer than 3 official completed
+    # matches in the current season after the all-competition fallback,
+    # there is NO prediction for a fixture involving this team.
+    if len(primary) < 3:
+        print("HISTORY INSUFFICIENT:", team_id, "season=", season, "matches=", len(primary))
+        _SCAN_HISTORY[key] = []
+        return []
+
     _SCAN_HISTORY[key] = primary
-    print("HISTORY:", team_id, "matches=", len(primary))
+    print("HISTORY:", team_id, "season=", season, "matches=", len(primary))
     return primary
 
 def _read_cached_stat(fixture_id):
@@ -734,19 +759,10 @@ def analyse_fixture(fixture, team_profiles):
             "sample": min(hs[1], hc[1], ass[1], ac[1]),
         }
 
-    def _display_team_name(team):
-        if not isinstance(team, dict):
-            return ""
-        for key in ("displayName", "fullName", "longName", "teamDisplayName", "teamName", "name", "shortName"):
-            value = team.get(key)
-            if value is not None and str(value).strip():
-                return str(value).strip()
-        return ""
-
     return {
         "fixture_id": fixture["fixture"]["id"],
-        "home_name": _display_team_name(home),
-        "away_name": _display_team_name(away),
+        "home_name": home["name"],
+        "away_name": away["name"],
         "league": fixture.get("league", {}).get("name", ""),
         "country": fixture.get("league", {}).get("country", ""),
         "date": fixture["fixture"]["date"],
@@ -769,14 +785,12 @@ def _match_info(r):
     )
 
 
-def format_market(results, key, label, emoji, max_items=None):
+def format_market(results, key, label, emoji, max_items=5):
     valid = [
         r for r in results
         if key in r["markets"] and _market_allowed_on_betano(r, key)
     ]
 
-    if max_items is None:
-        max_items = 5 if key == "goals" else 3
     high = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
@@ -860,72 +874,18 @@ BETANO_BOOKMAKER_ID = 32
 
 
 def get_betano_prematch_markets(fixture_id):
-    """Check Betano availability without falsely rejecting fixtures.
-
-    Highlightly's football odds endpoint supports Total Goals and several
-    result markets, but it does not expose corner/card/shot markets as
-    documented odds markets. Therefore exact Betano availability can be
-    verified for goals, while corners/cards/shots are gated by the presence
-    of a real Betano prematch feed for the fixture.
-    """
-    result = {
-        "match": False,
-        "goals": False,
-        "corners": False,
-        "shots": False,
-        "cards": False,
-    }
-    try:
-        rows = _api(
-            "odds",
-            {
-                "matchId": int(fixture_id),
-                "bookmakerName": "Betano",
-                "oddsType": "prematch",
-                "limit": 5,
-                "offset": 0,
-            },
-        )
-    except Exception as exc:
-        print("BETANO FILTER ERROR:", fixture_id, repr(exc))
-        return result
-
-    market_names = []
+    result = {"match": False, "corners": False, "shots": False, "cards": False}
+    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
     for row in rows if isinstance(rows, list) else []:
         for market in row.get("odds", []) or []:
-            bookmaker_name = str(market.get("bookmakerName") or "").casefold()
-            bookmaker_id = market.get("bookmakerId")
-            # The query already asks for Betano, but verify the returned
-            # bookmaker so another provider can never be accepted by mistake.
-            if bookmaker_name and "betano" not in bookmaker_name:
+            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
                 continue
-            if not bookmaker_name and bookmaker_id is not None and int(bookmaker_id or 0) != BETANO_BOOKMAKER_ID:
-                continue
-
             result["match"] = True
-            name = str(
-                market.get("market")
-                or market.get("name")
-                or market.get("marketName")
-                or ""
-            ).casefold()
-            if name:
-                market_names.append(name)
-
-            if (
-                "total goals" in name
-                or "total goal" in name
-                or "over/under goals" in name
-            ):
-                result["goals"] = True
-            if "corner" in name:
-                result["corners"] = True
-            if "shot" in name:
-                result["shots"] = True
-            if "card" in name or "booking" in name:
-                result["cards"] = True
-
-    print("BETANO FILTER RESULT:", fixture_id, result, "MARKETS=", market_names)
+            name = str(market.get("market") or "").casefold()
+            if "corner" in name: result["corners"] = True
+            if "shot" in name: result["shots"] = True
+            if "card" in name or "booking" in name: result["cards"] = True
+    print("BETANO FILTER RESULT:", fixture_id, result)
     return result
 
 def filter_matches_by_betano_markets(matches):
@@ -1040,6 +1000,12 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         raise
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
+    # Publish the exact morning fixture set to PREMATCH/Bet Builder.
+    # They must reuse this set and make no additional football fixture-list
+    # calls later in the day.
+    _UPCOMING_FIXTURES_CACHE.clear()
+    _UPCOMING_FIXTURES_CACHE[(start.isoformat(), end.isoformat())] = list(matches)
+
     # REAL BETANO MATCH FILTER
     matches = filter_matches_by_betano_markets(matches)
 
@@ -1102,19 +1068,10 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
             }
             result = analyse_fixture(m, profiles)
             betano = m.get("_betano_markets", {})
-            # Highlightly exposes exact Betano Total Goals availability.
-            # For corners/cards/shots, its football odds endpoint does not
-            # expose those market types, so requiring betano[k] would wrongly
-            # turn valid statistical markets into zero candidates. Keep the
-            # fixture-level Betano gate for those statistics.
-            gated = {}
-            for k, v in result.get("markets", {}).items():
-                if k == "goals":
-                    if betano.get("goals") is True:
-                        gated[k] = v
-                elif betano.get("match") is True:
-                    gated[k] = v
-            result["markets"] = gated
+            result["markets"] = {
+                k: v for k, v in result.get("markets", {}).items()
+                if k == "goals" or betano.get(k) is True
+            }
             return result
 
         futures = {pool.submit(analyse_one, m): m for m in matches}
@@ -1134,13 +1091,13 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         "История: всички завършени мачове от текущия сезон",
         "",
     ]
-    lines.append(format_market(results, "corners", "КОРНЕРИ", "🚩"))
+    lines.append(format_market(results, "corners", "КОРНЕРИ", "🚩", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "cards", "КАРТОНИ", "🟨"))
+    lines.append(format_market(results, "cards", "КАРТОНИ", "🟨", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "shots", "УДАРИ", "🎯"))
+    lines.append(format_market(results, "shots", "УДАРИ", "🎯", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "goals", "ГОЛОВЕ", "⚽"))
+    lines.append(format_market(results, "goals", "ГОЛОВЕ", "⚽", max_items=5))
     lines.append(f"\n⏱ Scan time: {time.time() - _START:.1f}s")
 
     message = "\n".join(lines)
@@ -1224,56 +1181,15 @@ SPORT_API_LIMIT = 100
 SPORT_HISTORY_FROM = "2025-07-01"
 
 SPORTS_CONFIG = {
-    "basketball": {
-        "name": "🏀 БАСКЕТБОЛ",
-        "endpoint": "basketball/matches",
-        "stats": "basketball/teams/statistics",
-        "teams": "basketball/teams",
-        "metric": "points"
-    },
-    "hockey": {
-        "name": "🏒 ХОКЕЙ",
-        "endpoint": "hockey/matches",
-        "stats": "hockey/teams/statistics",
-        "teams": "hockey/teams",
-        "metric": "goals"
-    },
-    "american-football": {
-        "name": "🏈 NFL / NCAA — Division I / Division II",
-        "endpoint": "american-football/matches",
-        "stats": "american-football/teams/statistics",
-        "teams": "american-football/teams",
-        "metric": "points"
-    },
-    "baseball": {
-        "name": "⚾ БЕЙЗБОЛ",
-        "endpoint": "baseball/matches",
-        "stats": "baseball/teams/statistics",
-        "teams": "baseball/teams",
-        "metric": "runs"
-    },
-    "rugby": {
-        "name": "🏉 РЪГБИ",
-        "endpoint": "rugby/matches",
-        "stats": "rugby/teams/statistics",
-        "teams": "rugby/teams",
-        "metric": "points"
-    },
-    "volleyball": {
-        "name": "🏐 ВОЛЕЙБОЛ",
-        "endpoint": "volleyball/matches",
-        "stats": "volleyball/teams/statistics",
-        "teams": "volleyball/teams",
-        "metric": "points"
-    },
-    "handball": {
-        "name": "🤾 ХАНДБАЛ",
-        "endpoint": "handball/matches",
-        "stats": "handball/teams/statistics",
-        "teams": "handball/teams",
-        "metric": "goals"
-    },
+    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
+    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
+    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
+    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
+    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
+    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
+    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
 }
+
 _SPORT_API_CALLS = 0
 _SPORT_STATS_CACHE = {}
 
@@ -1349,113 +1265,12 @@ def _sport_team_id(team):
 def _sport_team_name(team):
     if not isinstance(team, dict):
         return str(team or "Unknown")
-
-    for key in (
-        "displayName",
-        "fullName",
-        "longName",
-        "teamDisplayName",
-        "teamName",
-        "name",
-        "shortName",
-    ):
-        value = team.get(key)
-        if value is not None and str(value).strip():
-            return str(value).strip()
-
-    return "Unknown"
+    return str(team.get("name") or team.get("displayName") or team.get("shortName") or "Unknown")
 
 
-_SPORT_TEAM_NAMES = {}
-
-
-def _get_full_sport_team_name(sport_key, team):
-    """Resolve full team name from match data or team endpoint."""
-
-    if not isinstance(team, dict):
-        return str(team or "Unknown")
-
-    team_id = _sport_team_id(team)
-
-    # 1. Вече имаме пълно име в самия match response
-    for key in (
-        "displayName",
-        "fullName",
-        "longName",
-        "teamDisplayName",
-        "teamName",
-    ):
-        value = team.get(key)
-        if value is not None and str(value).strip():
-            name = str(value).strip()
-            if team_id:
-                _SPORT_TEAM_NAMES[(sport_key, team_id)] = name
-            return name
-
-    # 2. Вече сме го намерили по-рано
-    if team_id:
-        cached = _SPORT_TEAM_NAMES.get((sport_key, team_id))
-        if cached:
-            return cached
-
-    # 3. Вземаме пълното име от /teams/{id}
-    if team_id:
-        try:
-            cfg = SPORTS_CONFIG.get(sport_key, {})
-            endpoint = cfg.get("teams")
-
-            if endpoint:
-                rows = _sport_api_get(
-                    f"{endpoint}/{int(team_id)}",
-                    {}
-                )
-
-                candidates = rows if isinstance(rows, list) else [rows]
-
-                for row in candidates:
-                    if not isinstance(row, dict):
-                        continue
-
-                    for key in (
-                        "displayName",
-                        "fullName",
-                        "longName",
-                        "teamDisplayName",
-                        "teamName",
-                        "name",
-                    ):
-                        value = row.get(key)
-                        if value is not None and str(value).strip():
-                            name = str(value).strip()
-                            _SPORT_TEAM_NAMES[(sport_key, team_id)] = name
-                            return name
-
-        except Exception as exc:
-            print(
-                "SPORT TEAM NAME ERROR:",
-                sport_key,
-                team_id,
-                repr(exc)
-            )
-
-    # 4. Последен fallback
-    return str(
-        team.get("name")
-        or team.get("shortName")
-        or "Unknown"
-    )
-
-
-def _sport_match_names(match, sport_key=None):
+def _sport_match_names(match):
     home = match.get("homeTeam") or match.get("home") or {}
     away = match.get("awayTeam") or match.get("away") or {}
-
-    if sport_key:
-        return (
-            _get_full_sport_team_name(sport_key, home),
-            _get_full_sport_team_name(sport_key, away),
-        )
-
     return _sport_team_name(home), _sport_team_name(away)
 
 
