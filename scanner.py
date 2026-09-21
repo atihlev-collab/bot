@@ -30,6 +30,9 @@ HISTORY_GAMES = None
 MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
+
+# Morning football fixture cache shared with PREMATCH/Bet Builder.
+_UPCOMING_FIXTURES_CACHE = {}
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
@@ -209,25 +212,6 @@ def _safe_float(v):
         return None
 
 
-def _team_display_name(team):
-    """Prefer Highlightly's full/display team name over short nickname."""
-    if not isinstance(team, dict):
-        return str(team or "Unknown")
-    for key in (
-        "displayName",
-        "fullName",
-        "longName",
-        "teamDisplayName",
-        "teamName",
-        "name",
-        "shortName",
-    ):
-        value = team.get(key)
-        if value is not None and str(value).strip():
-            return str(value).strip()
-    return "Unknown"
-
-
 def _normalize_match(m):
     if not isinstance(m, dict):
         return None
@@ -262,12 +246,22 @@ def _normalize_match(m):
     return {
         "fixture": {"id": m.get("id"), "date": m.get("date"), "status": {"short": short, "long": desc, "elapsed": state.get("clock")}},
         "league": {"id": league.get("id"), "name": league.get("name"), "season": league.get("season"), "country": country.get("name") or "", "type": league.get("type")},
-        "teams": {
-            "home": {"id": home.get("id"), "name": _team_display_name(home), "logo": home.get("logo")},
-            "away": {"id": away.get("id"), "name": _team_display_name(away), "logo": away.get("logo")},
-        },
+        "teams": {"home": {"id": home.get("id"), "name": home.get("name"), "logo": home.get("logo")}, "away": {"id": away.get("id"), "name": away.get("name"), "logo": away.get("logo")}},
         "goals": {"home": hs, "away": aw},
     }
+
+
+def get_cached_upcoming_matches(start_bg, end_bg):
+    """Return the fixture window loaded by the morning football scan.
+
+    PREMATCH/Bet Builder must reuse this data instead of making another
+    football fixture-list request later in the day.
+    """
+    key = (start_bg.isoformat(), end_bg.isoformat())
+    cached = _UPCOMING_FIXTURES_CACHE.get(key)
+    if not cached:
+        return []
+    return list(cached)
 
 
 def get_fixtures_for_window(start_bg, end_bg):
@@ -395,11 +389,20 @@ def get_team_history(team_id, season, league_id=None):
         fallback += fetch_team_matches({"season": season, "awayTeamId": team_id})
         primary = clean(primary + fallback)
 
-    # Keep every completed fixture available for the requested season.
+    # Keep every completed official fixture available for the requested season.
     # Do not silently truncate the season to the latest 12 matches.
     primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+
+    # Hard rule: if the team still has fewer than 3 official completed
+    # matches in the current season after the all-competition fallback,
+    # there is NO prediction for a fixture involving this team.
+    if len(primary) < 3:
+        print("HISTORY INSUFFICIENT:", team_id, "season=", season, "matches=", len(primary))
+        _SCAN_HISTORY[key] = []
+        return []
+
     _SCAN_HISTORY[key] = primary
-    print("HISTORY:", team_id, "matches=", len(primary))
+    print("HISTORY:", team_id, "season=", season, "matches=", len(primary))
     return primary
 
 def _read_cached_stat(fixture_id):
@@ -506,12 +509,7 @@ def load_historical_statistics(all_histories):
                 fixtures_by_id[int(fid)] = f
 
     loaded, cached, fetched, fallback = {}, 0, 0, 0
-    stat_keys = (
-        "corner kicks", "corners", "corner kicks won",
-        "total shots", "shots", "shots total", "total shots attempted",
-        "shots attempted", "shots on target", "shots off target",
-        "yellow cards", "yellow card", "cards"
-    )
+    stat_keys = ("corner kicks", "corners", "corner kicks won", "total shots", "shots", "shots total", "total shots attempted", "shots attempted", "yellow cards", "yellow card", "cards")
     for fid, base_fixture in fixtures_by_id.items():
         cached_data = _read_cached_stat(fid)
         if isinstance(cached_data, dict) and cached_data:
@@ -520,21 +518,18 @@ def load_historical_statistics(all_histories):
                 for team_data in cached_data.values()
                 if isinstance(team_data, dict)
             )
-            has_shots = any(
-                any(k in team_data for k in (
-                    "total shots", "shots", "shots total",
-                    "total shots attempted", "shots attempted"
-                ))
-                for team_data in cached_data.values()
-                if isinstance(team_data, dict)
-            )
-            if has_real_stat and has_shots:
+            # A cache record is usable for the statistical scanner only when
+            # it contains all three requested real-stat families. Old cache
+            # entries may contain corners/cards but no shots.
+            cache_has_corner = any("corner kicks" in td or "corners" in td or "corner kicks won" in td for td in cached_data.values() if isinstance(td, dict))
+            cache_has_shots = any(any(k in td for k in ("total shots", "shots", "shots total", "total shots attempted", "shots attempted")) for td in cached_data.values() if isinstance(td, dict))
+            cache_has_cards = any(any(k in td for k in ("yellow cards", "yellow card", "cards")) for td in cached_data.values() if isinstance(td, dict))
+            if has_real_stat and cache_has_corner and cache_has_shots and cache_has_cards:
                 loaded[fid] = cached_data
                 cached += 1
                 continue
-            # Existing caches may contain corners/cards/goals but no shots.
-            # Refresh those entries so the newly supported shot aliases can be
-            # populated instead of permanently accepting the incomplete cache.
+            # Old cache entries may contain only goals. They are not enough
+            # for corners/shots/cards, so refresh them once.
 
         rows = _api(f"statistics/{fid}", {})
         data = {}
@@ -542,18 +537,10 @@ def load_historical_statistics(all_histories):
             fake = dict(base_fixture); fake["statistics"] = rows
             _, data = _fixture_market_values(fake)
 
-        # If the primary statistics response still has no shots, inspect the
-        # detailed match response and MERGE its statistics instead of replacing
-        # corners/cards that were already obtained.
-        have_shots = any(
-            any(k in td for k in (
-                "total shots", "shots", "shots total",
-                "total shots attempted", "shots attempted"
-            ))
-            for td in data.values()
-            if isinstance(td, dict)
-        )
-        if not have_shots:
+        data_has_corner = any(any(k in td for k in ("corner kicks", "corners", "corner kicks won")) for td in data.values() if isinstance(td, dict))
+        data_has_shots = any(any(k in td for k in ("total shots", "shots", "shots total", "total shots attempted", "shots attempted")) for td in data.values() if isinstance(td, dict))
+        data_has_cards = any(any(k in td for k in ("yellow cards", "yellow card", "cards")) for td in data.values() if isinstance(td, dict))
+        if not (data_has_corner and data_has_shots and data_has_cards):
             detail = _api(f"matches/{fid}", {})
             if isinstance(detail, list) and detail and isinstance(detail[0], dict):
                 fake = dict(base_fixture); fake.update(detail[0])
@@ -561,10 +548,10 @@ def load_historical_statistics(all_histories):
                     fake["statistics"] = detail[0]["statistics"]
                 _, detail_data = _fixture_market_values(fake)
                 if detail_data:
+                    # Merge fallback detail stats with the primary response so
+                    # one endpoint cannot erase statistics supplied by the other.
                     for tid, vals in detail_data.items():
-                        data.setdefault(tid, {})
-                        if isinstance(vals, dict):
-                            data[tid].update(vals)
+                        data.setdefault(tid, {}).update(vals)
                     fallback += 1
 
         if data:
@@ -811,7 +798,7 @@ def _match_info(r):
     )
 
 
-def format_market(results, key, label, emoji):
+def format_market(results, key, label, emoji, max_items=5):
     valid = [
         r for r in results
         if key in r["markets"] and _market_allowed_on_betano(r, key)
@@ -821,11 +808,11 @@ def format_market(results, key, label, emoji):
         valid,
         key=lambda r: r["markets"][key]["expected"],
         reverse=True,
-    )[:5]
+    )[:max_items]
     low = sorted(
         valid,
         key=lambda r: r["markets"][key]["expected"],
-    )[:5]
+    )[:max_items]
 
     lines = [f"{emoji} {label.upper()}", "🔥 НАД"]
 
@@ -1026,6 +1013,12 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         raise
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
+    # Publish the exact morning fixture set to PREMATCH/Bet Builder.
+    # They must reuse this set and make no additional football fixture-list
+    # calls later in the day.
+    _UPCOMING_FIXTURES_CACHE.clear()
+    _UPCOMING_FIXTURES_CACHE[(start.isoformat(), end.isoformat())] = list(matches)
+
     # REAL BETANO MATCH FILTER
     matches = filter_matches_by_betano_markets(matches)
 
@@ -1068,10 +1061,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         for team_data in fixture_data.values():
             if "corner kicks" in team_data or "corners" in team_data:
                 stat_counts["corners"] += 1
-            if any(k in team_data for k in (
-                "total shots", "shots", "shots total",
-                "total shots attempted", "shots attempted"
-            )):
+            if any(k in team_data for k in ("total shots", "shots", "shots total", "total shots attempted", "shots attempted")):
                 stat_counts["shots"] += 1
             if "yellow cards" in team_data or "yellow card" in team_data or "cards" in team_data:
                 stat_counts["cards"] += 1
@@ -1093,7 +1083,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
             betano = m.get("_betano_markets", {})
             result["markets"] = {
                 k: v for k, v in result.get("markets", {}).items()
-                if k == "goals" or betano.get(k) is True
+                if betano.get(k) is True
             }
             return result
 
@@ -1114,13 +1104,13 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         "История: всички завършени мачове от текущия сезон",
         "",
     ]
-    lines.append(format_market(results, "corners", "КОРНЕРИ", "🚩"))
+    lines.append(format_market(results, "corners", "КОРНЕРИ", "🚩", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "cards", "КАРТОНИ", "🟨"))
+    lines.append(format_market(results, "cards", "КАРТОНИ", "🟨", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "shots", "УДАРИ", "🎯"))
+    lines.append(format_market(results, "shots", "УДАРИ", "🎯", max_items=3))
     lines.append("")
-    lines.append(format_market(results, "goals", "ГОЛОВЕ", "⚽"))
+    lines.append(format_market(results, "goals", "ГОЛОВЕ", "⚽", max_items=5))
     lines.append(f"\n⏱ Scan time: {time.time() - _START:.1f}s")
 
     message = "\n".join(lines)
@@ -1204,18 +1194,17 @@ SPORT_API_LIMIT = 100
 SPORT_HISTORY_FROM = "2025-07-01"
 
 SPORTS_CONFIG = {
-    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "teams": "basketball/teams", "metric": "points"},
-    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "teams": "hockey/teams", "metric": "goals"},
-    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "teams": "american-football/teams", "metric": "points"},
-    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "teams": "baseball/teams", "metric": "runs"},
-    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "teams": "rugby/teams", "metric": "points"},
-    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "teams": "volleyball/teams", "metric": "points"},
-    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "teams": "handball/teams", "metric": "goals"},
+    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
+    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
+    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
+    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
+    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
+    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
+    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
 }
 
 _SPORT_API_CALLS = 0
 _SPORT_STATS_CACHE = {}
-_SPORT_TEAM_NAMES = {}
 
 
 def _sport_api_get(endpoint, params=None):
@@ -1289,24 +1278,7 @@ def _sport_team_id(team):
 def _sport_team_name(team):
     if not isinstance(team, dict):
         return str(team or "Unknown")
-    team_id = _sport_team_id(team)
-    if team_id and team_id in _SPORT_TEAM_NAMES:
-        return _SPORT_TEAM_NAMES[team_id]
-    for key in (
-        "displayName",
-        "fullName",
-        "longName",
-        "teamDisplayName",
-        "name",
-        "shortName",
-    ):
-        value = team.get(key)
-        if value is not None and str(value).strip():
-            name = str(value).strip()
-            if team_id:
-                _SPORT_TEAM_NAMES[team_id] = name
-            return name
-    return "Unknown"
+    return str(team.get("name") or team.get("displayName") or team.get("shortName") or "Unknown")
 
 
 def _sport_match_names(match):
@@ -1418,27 +1390,6 @@ def _get_team_average(sport_key, team_id, metric):
         {"fromDate": SPORT_HISTORY_FROM, "timezone": SPORT_API_TZ},
     )
     result = _extract_team_average(rows, metric)
-
-    # Sport match payloads normally expose both `name` and `displayName`.
-    # If a particular match only supplied the nickname, resolve the team's
-    # canonical display name once and cache it for the rest of the scan.
-    if int(team_id) not in _SPORT_TEAM_NAMES:
-        team_rows = _sport_api_get(f"{cfg.get('teams', '')}/{int(team_id)}", {}) if cfg.get("teams") else []
-        if isinstance(team_rows, list) and team_rows:
-            team_obj = team_rows[0] if isinstance(team_rows[0], dict) else {}
-        elif isinstance(team_rows, dict):
-            team_obj = team_rows
-        else:
-            team_obj = {}
-        name = None
-        for key in ("displayName", "fullName", "longName", "teamDisplayName", "name", "shortName"):
-            value = team_obj.get(key) if isinstance(team_obj, dict) else None
-            if value is not None and str(value).strip():
-                name = str(value).strip()
-                break
-        if name:
-            _SPORT_TEAM_NAMES[int(team_id)] = name
-
     _SPORT_STATS_CACHE[cache_key] = result
 
     if result:
