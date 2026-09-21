@@ -1012,39 +1012,6 @@ def filter_matches_by_betano_markets(matches):
     return filtered
 
 
-_UPCOMING_FIXTURE_CACHE = {}
-
-
-def get_cached_upcoming_matches(start_bg, end_bg):
-    key = (
-        start_bg.isoformat(),
-        end_bg.isoformat(),
-    )
-
-    cached = _UPCOMING_FIXTURE_CACHE.get(key)
-
-    if cached is not None:
-        print(
-            f"PREMATCH FIXTURE CACHE HIT: "
-            f"{len(cached)} fixtures | {start_bg} -> {end_bg}"
-        )
-        return list(cached)
-
-    fixtures = get_fixtures_for_window(start_bg, end_bg)
-
-    if fixtures is None:
-        fixtures = []
-
-    _UPCOMING_FIXTURE_CACHE[key] = list(fixtures)
-
-    print(
-        f"PREMATCH FIXTURE CACHE SET: "
-        f"{len(fixtures)} fixtures | {start_bg} -> {end_bg}"
-    )
-
-    return list(fixtures)
-
-
 def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     init_scanner_db()
     now_bg = datetime.now(TZ)
@@ -1067,7 +1034,7 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         return ""
 
     try:
-        matches = get_cached_upcoming_matches(start_bg, end_bg)
+        matches = get_fixtures_for_window(start, end)
     except APIQuotaExceeded:
         mark_ran(run_key)
         raise
