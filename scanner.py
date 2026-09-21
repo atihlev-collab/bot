@@ -1224,15 +1224,56 @@ SPORT_API_LIMIT = 100
 SPORT_HISTORY_FROM = "2025-07-01"
 
 SPORTS_CONFIG = {
-    "basketball": {"name": "🏀 БАСКЕТБОЛ", "endpoint": "basketball/matches", "stats": "basketball/teams/statistics", "metric": "points"},
-    "hockey": {"name": "🏒 ХОКЕЙ", "endpoint": "hockey/matches", "stats": "hockey/teams/statistics", "metric": "goals"},
-    "american-football": {"name": "🏈 NFL / NCAA — Division I / Division II", "endpoint": "american-football/matches", "stats": "american-football/teams/statistics", "metric": "points"},
-    "baseball": {"name": "⚾ БЕЙЗБОЛ", "endpoint": "baseball/matches", "stats": "baseball/teams/statistics", "metric": "runs"},
-    "rugby": {"name": "🏉 РЪГБИ", "endpoint": "rugby/matches", "stats": "rugby/teams/statistics", "metric": "points"},
-    "volleyball": {"name": "🏐 ВОЛЕЙБОЛ", "endpoint": "volleyball/matches", "stats": "volleyball/teams/statistics", "metric": "points"},
-    "handball": {"name": "🤾 ХАНДБАЛ", "endpoint": "handball/matches", "stats": "handball/teams/statistics", "metric": "goals"},
+    "basketball": {
+        "name": "🏀 БАСКЕТБОЛ",
+        "endpoint": "basketball/matches",
+        "stats": "basketball/teams/statistics",
+        "teams": "basketball/teams",
+        "metric": "points"
+    },
+    "hockey": {
+        "name": "🏒 ХОКЕЙ",
+        "endpoint": "hockey/matches",
+        "stats": "hockey/teams/statistics",
+        "teams": "hockey/teams",
+        "metric": "goals"
+    },
+    "american-football": {
+        "name": "🏈 NFL / NCAA — Division I / Division II",
+        "endpoint": "american-football/matches",
+        "stats": "american-football/teams/statistics",
+        "teams": "american-football/teams",
+        "metric": "points"
+    },
+    "baseball": {
+        "name": "⚾ БЕЙЗБОЛ",
+        "endpoint": "baseball/matches",
+        "stats": "baseball/teams/statistics",
+        "teams": "baseball/teams",
+        "metric": "runs"
+    },
+    "rugby": {
+        "name": "🏉 РЪГБИ",
+        "endpoint": "rugby/matches",
+        "stats": "rugby/teams/statistics",
+        "teams": "rugby/teams",
+        "metric": "points"
+    },
+    "volleyball": {
+        "name": "🏐 ВОЛЕЙБОЛ",
+        "endpoint": "volleyball/matches",
+        "stats": "volleyball/teams/statistics",
+        "teams": "volleyball/teams",
+        "metric": "points"
+    },
+    "handball": {
+        "name": "🤾 ХАНДБАЛ",
+        "endpoint": "handball/matches",
+        "stats": "handball/teams/statistics",
+        "teams": "handball/teams",
+        "metric": "goals"
+    },
 }
-
 _SPORT_API_CALLS = 0
 _SPORT_STATS_CACHE = {}
 
@@ -1308,12 +1349,113 @@ def _sport_team_id(team):
 def _sport_team_name(team):
     if not isinstance(team, dict):
         return str(team or "Unknown")
-    return str(team.get("name") or team.get("displayName") or team.get("shortName") or "Unknown")
+
+    for key in (
+        "displayName",
+        "fullName",
+        "longName",
+        "teamDisplayName",
+        "teamName",
+        "name",
+        "shortName",
+    ):
+        value = team.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+
+    return "Unknown"
 
 
-def _sport_match_names(match):
+_SPORT_TEAM_NAMES = {}
+
+
+def _get_full_sport_team_name(sport_key, team):
+    """Resolve full team name from match data or team endpoint."""
+
+    if not isinstance(team, dict):
+        return str(team or "Unknown")
+
+    team_id = _sport_team_id(team)
+
+    # 1. Вече имаме пълно име в самия match response
+    for key in (
+        "displayName",
+        "fullName",
+        "longName",
+        "teamDisplayName",
+        "teamName",
+    ):
+        value = team.get(key)
+        if value is not None and str(value).strip():
+            name = str(value).strip()
+            if team_id:
+                _SPORT_TEAM_NAMES[(sport_key, team_id)] = name
+            return name
+
+    # 2. Вече сме го намерили по-рано
+    if team_id:
+        cached = _SPORT_TEAM_NAMES.get((sport_key, team_id))
+        if cached:
+            return cached
+
+    # 3. Вземаме пълното име от /teams/{id}
+    if team_id:
+        try:
+            cfg = SPORTS_CONFIG.get(sport_key, {})
+            endpoint = cfg.get("teams")
+
+            if endpoint:
+                rows = _sport_api_get(
+                    f"{endpoint}/{int(team_id)}",
+                    {}
+                )
+
+                candidates = rows if isinstance(rows, list) else [rows]
+
+                for row in candidates:
+                    if not isinstance(row, dict):
+                        continue
+
+                    for key in (
+                        "displayName",
+                        "fullName",
+                        "longName",
+                        "teamDisplayName",
+                        "teamName",
+                        "name",
+                    ):
+                        value = row.get(key)
+                        if value is not None and str(value).strip():
+                            name = str(value).strip()
+                            _SPORT_TEAM_NAMES[(sport_key, team_id)] = name
+                            return name
+
+        except Exception as exc:
+            print(
+                "SPORT TEAM NAME ERROR:",
+                sport_key,
+                team_id,
+                repr(exc)
+            )
+
+    # 4. Последен fallback
+    return str(
+        team.get("name")
+        or team.get("shortName")
+        or "Unknown"
+    )
+
+
+def _sport_match_names(match, sport_key=None):
     home = match.get("homeTeam") or match.get("home") or {}
     away = match.get("awayTeam") or match.get("away") or {}
+
+    if sport_key:
+        return (
+            _get_full_sport_team_name(sport_key, home),
+            _get_full_sport_team_name(sport_key, away),
+        )
+
     return _sport_team_name(home), _sport_team_name(away)
 
 
