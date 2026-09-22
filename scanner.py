@@ -1004,25 +1004,28 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
     try:
         matches = get_fixtures_for_window(start, end)
 
-    # Publish the exact morning fixture set.
-    # PREMATCH + Bet Builder reuse this cache.
-    _UPCOMING_FIXTURES_CACHE.clear()
-    _UPCOMING_FIXTURES_CACHE[
-        (start.isoformat(), end.isoformat())
-    ] = list(matches)
+        # Publish the exact morning fixture set.
+        # PREMATCH + Bet Builder reuse this cache.
+        _UPCOMING_FIXTURES_CACHE.clear()
+        _UPCOMING_FIXTURES_CACHE[
+            (start.isoformat(), end.isoformat())
+        ] = list(matches)
 
-    print(
-        "SCANNER MORNING FIXTURE CACHE SET:",
-        len(matches),
-        start,
-        "->",
-        end
-    )
+        print(
+            "SCANNER MORNING FIXTURE CACHE SET:",
+            len(matches),
+            start,
+            "->",
+            end
+        )
 
-except APIQuotaExceeded:
-    mark_ran(run_key)
-    raise
-    print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
+    except APIQuotaExceeded:
+        mark_ran(run_key)
+        raise
+
+    print(_signal_text(
+        f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"
+    ))
 
     
 
