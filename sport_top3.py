@@ -1855,32 +1855,176 @@ def _sport_probability(expected, side):
     return market, round(prob * 100, 1)
 
 
-def _sport_winner_probability(home_avg, away_avg):
-    """Simple statistical winner estimate using team scoring averages."""
+def _sport_score_pair(match, metric):
+    """Extract completed-match home/away score without inventing values."""
+    if not isinstance(match, dict):
+        return None
+    state = match.get("state") or {}
+    score = state.get("score") or match.get("score") or {}
+    if not isinstance(score, dict):
+        return None
+
+    candidates = [score]
+    for key in ("current", "final", "fullTime", "fulltime", "total"):
+        value = score.get(key)
+        if isinstance(value, dict):
+            candidates.insert(0, value)
+
+    metric_names = {
+        "goals": ("goals", "score", "points"),
+        "points": ("points", "score", "goals"),
+        "runs": ("runs", "score", "points"),
+    }.get(metric, ("score", "points", "goals"))
+
+    for obj in candidates:
+        if not isinstance(obj, dict):
+            continue
+        for hkey in ("home", "homeScore", "homePoints", "homeGoals", "homeRuns"):
+            for akey in ("away", "awayScore", "awayPoints", "awayGoals", "awayRuns"):
+                hv, av = obj.get(hkey), obj.get(akey)
+                if isinstance(hv, (int, float)) and isinstance(av, (int, float)):
+                    return float(hv), float(av)
+        # Some responses nest the score by metric.
+        for key in metric_names:
+            value = obj.get(key)
+            if isinstance(value, dict):
+                hv = value.get("home") or value.get("homeScore") or value.get("homePoints")
+                av = value.get("away") or value.get("awayScore") or value.get("awayPoints")
+                if isinstance(hv, (int, float)) and isinstance(av, (int, float)):
+                    return float(hv), float(av)
+    return None
+
+
+def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=5):
+    """Current-season form/context for one team, based only on completed matches."""
+    if not team_id:
+        return None
+    cache_key = ("context", sport_key, int(team_id), int(league_id or 0), int(season or 0), metric, last_n)
+    cached = _SPORT_STATS_CACHE.get(cache_key)
+    if cached is not None:
+        return cached
+
+    cfg = SPORTS_CONFIG[sport_key]
+    rows = []
+    offset = 0
+    while True:
+        params = {"teamId": int(team_id), "limit": SPORT_API_LIMIT, "offset": offset}
+        if season:
+            params["season"] = int(season)
+        if league_id:
+            params["leagueId"] = int(league_id)
+        batch = _sport_api_get(cfg["endpoint"], params)
+        if not isinstance(batch, list) or not batch:
+            break
+        rows.extend(batch)
+        if len(batch) < SPORT_API_LIMIT:
+            break
+        offset += SPORT_API_LIMIT
+        if offset > 2000:
+            break
+
+    completed = []
+    for match in rows:
+        if not isinstance(match, dict):
+            continue
+        dt = _sport_match_datetime(match)
+        if dt is None or dt >= datetime.now(TZ):
+            continue
+        league = match.get("league") or {}
+        if isinstance(league, dict):
+            if league_id and league.get("id") and int(league.get("id")) != int(league_id):
+                continue
+            if season and league.get("season") and int(league.get("season")) != int(season):
+                continue
+        pair = _sport_score_pair(match, metric)
+        if pair is None:
+            continue
+        home = match.get("homeTeam") or match.get("home") or {}
+        away = match.get("awayTeam") or match.get("away") or {}
+        hid, aid = _sport_team_id(home), _sport_team_id(away)
+        if hid == int(team_id):
+            scored, conceded = pair
+            is_home = True
+        elif aid == int(team_id):
+            scored, conceded = pair[1], pair[0]
+            is_home = False
+        else:
+            continue
+        if scored > conceded:
+            result, points = "W", 3
+        elif scored < conceded:
+            result, points = "L", 0
+        else:
+            result, points = "D", 1
+        completed.append({"dt": dt, "scored": scored, "conceded": conceded, "result": result, "points": points, "home": is_home})
+
+    completed.sort(key=lambda x: x["dt"], reverse=True)
+    last = completed[:last_n]
+    result = {
+        "games": len(completed),
+        "form": "".join(x["result"] for x in reversed(last)),
+        "form_points": sum(x["points"] for x in last),
+        "last_games": len(last),
+        "last_scored": (sum(x["scored"] for x in last) / len(last)) if last else None,
+        "last_conceded": (sum(x["conceded"] for x in last) / len(last)) if last else None,
+        "home_points": sum(x["points"] for x in completed if x["home"]),
+        "away_points": sum(x["points"] for x in completed if not x["home"]),
+        "all_points": sum(x["points"] for x in completed),
+    }
+    _SPORT_STATS_CACHE[cache_key] = result
+    return result
+
+
+def _sport_winner_probability(home_avg, away_avg, home_ctx=None, away_ctx=None):
+    """Winner model using attack, recent form, defence and home/away context."""
     if home_avg is None or away_avg is None or home_avg <= 0 or away_avg <= 0:
         return None
+
+    # Base attack signal. Unlike the old model, this is only one component.
     total = home_avg + away_avg
-    if total <= 0:
-        return None
-    # Expected-share model. It is deliberately labelled as model probability.
-    home_p = home_avg / total
-    away_p = away_avg / total
-    draw_p = 0.0
-    return round(home_p * 100, 1), round(away_p * 100, 1), draw_p
+    home_attack = home_avg / total
+
+    # Recent form: last 5 completed matches.
+    if home_ctx and away_ctx and home_ctx["last_games"] >= 3 and away_ctx["last_games"] >= 3:
+        hf = home_ctx["form_points"] / (3 * home_ctx["last_games"])
+        af = away_ctx["form_points"] / (3 * away_ctx["last_games"])
+        form_edge = hf - af
+
+        # Recent scoring/defence edge.
+        h_recent_diff = (home_ctx["last_scored"] or 0) - (home_ctx["last_conceded"] or 0)
+        a_recent_diff = (away_ctx["last_scored"] or 0) - (away_ctx["last_conceded"] or 0)
+        diff_scale = max(1.0, (home_avg + away_avg) / 4.0)
+        recent_edge = max(-1.0, min(1.0, (h_recent_diff - a_recent_diff) / diff_scale))
+
+        # Home advantage is based on the team's actual home/away record, not a fixed winner.
+        h_home_rate = home_ctx["home_points"] / max(1, 3 * sum(1 for _ in range(1))) if False else None
+        # Use the observed home/away points only as a small directional signal.
+        home_split = home_ctx["home_points"] / max(1, home_ctx["games"])
+        away_split = away_ctx["away_points"] / max(1, away_ctx["games"])
+        split_edge = max(-1.0, min(1.0, (home_split - away_split) / 3.0))
+
+        score = (home_attack - 0.5) * 0.45 + form_edge * 0.30 + recent_edge * 0.15 + split_edge * 0.10
+    else:
+        score = (home_attack - 0.5) * 0.45
+
+    # Convert the edge into a bounded two-way model probability.
+    home_p = max(0.05, min(0.95, 0.5 + score))
+    away_p = 1.0 - home_p
+    return round(home_p * 100, 1), round(away_p * 100, 1), 0.0
 
 
-def _sport_market_candidates(home_avg, away_avg):
-    """Return two statistical pre-match markets: winner and total."""
+def _sport_market_candidates(home_avg, away_avg, home_ctx=None, away_ctx=None):
+    """Return winner + total markets using the richer statistical winner model."""
     total = home_avg + away_avg
     markets = []
 
-    win = _sport_winner_probability(home_avg, away_avg)
+    win = _sport_winner_probability(home_avg, away_avg, home_ctx, away_ctx)
     if win:
         hp, ap, _ = win
         if hp >= ap:
-            markets.append((f"ПОБЕДИТЕЛ: HOME", hp))
+            markets.append(("ПОБЕДИТЕЛ: HOME", hp))
         else:
-            markets.append((f"ПОБЕДИТЕЛ: AWAY", ap))
+            markets.append(("ПОБЕДИТЕЛ: AWAY", ap))
 
     over_market, over_prob = _sport_probability(total, "over")
     under_market, under_prob = _sport_probability(total, "under")
@@ -2209,7 +2353,15 @@ def run_sport_top3_daily_scanner(send_func=None):
                 continue
 
             expected = h["average"] + a["average"]
-            markets = _sport_market_candidates(h["average"], a["average"])
+
+            league = match.get("league") or {}
+            league_id = league.get("id") if isinstance(league, dict) else None
+            season = league.get("season") if isinstance(league, dict) else None
+            home_ctx = _sport_team_context(sport_key, home_id, league_id, season, cfg["metric"], last_n=5)
+            away_ctx = _sport_team_context(sport_key, away_id, league_id, season, cfg["metric"], last_n=5)
+            markets = _sport_market_candidates(
+                h["average"], a["average"], home_ctx, away_ctx
+            )
             if len(markets) < 2:
                 continue
 
@@ -2222,6 +2374,8 @@ def run_sport_top3_daily_scanner(send_func=None):
                 "away_games": a["games"],
                 "expected": expected,
                 "markets": markets,
+                "home_context": home_ctx,
+                "away_context": away_ctx,
             })
 
         lines.append(_build_sport_top3_section(cfg["name"], candidates))
