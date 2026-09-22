@@ -1001,8 +1001,8 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         mark_ran(run_key)
         return ""
 
-try:
-    matches = get_fixtures_for_window(start, end)
+    try:
+        matches = get_fixtures_for_window(start, end)
 
     # Publish the exact morning fixture set.
     # PREMATCH + Bet Builder reuse this cache.
