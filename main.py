@@ -24554,11 +24554,12 @@ def main_loop():
                         # 1) ORIGINAL SPORT SCANNER — preserve existing output/logic.
                         daily_scanner.run_sport_daily_scanner(send_telegram)
 
-                       # 2) NEW SPORT TOP 3 — separate sport_top3.py; old scanner remains unchanged.
-                       try:
-                           sport_top3.run_sport_top3_daily_scanner(send_telegram)
-                       except Exception as exc:
-                           logging.warning("SPORT TOP 3 ERROR: %s", exc)
+                        # 2) NEW SPORT TOP 3 — separate sport_top3.py; old scanner remains unchanged.
+                        try:
+                            sport_top3.run_sport_top3_daily_scanner(send_telegram)
+                        except Exception as exc:
+                            logging.warning("SPORT TOP 3 ERROR: %s", exc)
+
                     except Exception as exc:
                         logging.warning("SPORT DAILY STOPPED: %s", exc)
                     finally:
@@ -24566,7 +24567,6 @@ def main_loop():
         except Exception as e:
             logging.exception('SCHEDULER ERROR: %s', repr(e))
         time.sleep(30)
-
 
 if __name__ == '__main__':
     try:
