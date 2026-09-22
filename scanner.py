@@ -1024,11 +1024,7 @@ except APIQuotaExceeded:
     raise
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
-    # Publish the exact morning fixture set to PREMATCH/Bet Builder.
-    # They must reuse this set and make no additional football fixture-list
-    # calls later in the day.
-    _UPCOMING_FIXTURES_CACHE.clear()
-    _UPCOMING_FIXTURES_CACHE[(start.isoformat(), end.isoformat())] = list(matches)
+    
 
     # REAL BETANO MATCH FILTER
     matches = filter_matches_by_betano_markets(matches)
