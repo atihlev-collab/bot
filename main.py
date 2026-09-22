@@ -66,6 +66,7 @@ import logging
 import sqlite3
 import threading
 import time
+import sport_top3
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -24483,6 +24484,7 @@ def main_loop():
     last_day_sport = None
     last_day_football = None
     last_day_football_daily = None
+    last_day_sport_top3 = None
     logging.info('HIGHLIGHTLY SYSTEM START | full legacy main preserved')
     init_database()
     _quota_init()
@@ -24552,12 +24554,11 @@ def main_loop():
                         # 1) ORIGINAL SPORT SCANNER — preserve existing output/logic.
                         daily_scanner.run_sport_daily_scanner(send_telegram)
 
-                        # 2) NEW SPORT TOP 3 — additional block; does not replace the old scanner.
-                        top3_runner = getattr(daily_scanner, "run_sport_top3_daily_scanner", None)
-                        if top3_runner is not None:
-                            top3_runner(send_telegram)
-                        else:
-                            logging.warning("SPORT TOP 3: function not available in scanner")
+                       # 2) NEW SPORT TOP 3 — separate sport_top3.py; old scanner remains unchanged.
+                       try:
+                           sport_top3.run_sport_top3(send_telegram)
+                       except Exception as exc:
+                           logging.warning("SPORT TOP 3 ERROR: %s", exc)
                     except Exception as exc:
                         logging.warning("SPORT DAILY STOPPED: %s", exc)
                     finally:
