@@ -33,6 +33,14 @@ _SCAN_HISTORY = {}
 
 # Morning football fixture cache shared with PREMATCH/Bet Builder.
 _UPCOMING_FIXTURES_CACHE = {}
+
+def get_cached_upcoming_matches(start_bg, end_bg):
+    key = (start_bg.isoformat(), end_bg.isoformat())
+    cached = _UPCOMING_FIXTURES_CACHE.get(key)
+    if not cached:
+        return []
+    return list(cached)
+    
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
@@ -994,10 +1002,26 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
         return ""
 
     try:
-        matches = get_fixtures_for_window(start, end)
-    except APIQuotaExceeded:
-        mark_ran(run_key)
-        raise
+    matches = get_fixtures_for_window(start, end)
+
+    # Publish the exact morning fixture set.
+    # PREMATCH + Bet Builder reuse this cache.
+    _UPCOMING_FIXTURES_CACHE.clear()
+    _UPCOMING_FIXTURES_CACHE[
+        (start.isoformat(), end.isoformat())
+    ] = list(matches)
+
+    print(
+        "SCANNER MORNING FIXTURE CACHE SET:",
+        len(matches),
+        start,
+        "->",
+        end
+    )
+
+except APIQuotaExceeded:
+    mark_ran(run_key)
+    raise
     print(_signal_text(f"SCANNER {mode.upper()}: {len(matches)} upcoming fixtures"))
 
     # Publish the exact morning fixture set to PREMATCH/Bet Builder.
