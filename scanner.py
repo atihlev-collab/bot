@@ -7,6 +7,7 @@
 # =========================================================
 
 import re
+import math
 import sqlite3
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -30,11 +31,7 @@ HISTORY_GAMES = None
 MAX_WORKERS = 8
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
-
-
-# Morning football fixture cache shared with PREMATCH / Bet Builder.
 _UPCOMING_FIXTURES_CACHE = {}
-
 _API_LOCK = threading.Lock()
 _LAST_API_CALL = 0.0
 _API_MIN_INTERVAL = 0.12
@@ -254,16 +251,10 @@ def _normalize_match(m):
 
 
 def get_cached_upcoming_matches(start_bg, end_bg):
-    """Return the fixture window loaded by the morning football scan.
-
-    PREMATCH/Bet Builder reuse this data instead of making
-    another football fixture-list request.
-    """
+    """Return the exact morning fixture window for PREMATCH/Bet Builder."""
     key = (start_bg.isoformat(), end_bg.isoformat())
     cached = _UPCOMING_FIXTURES_CACHE.get(key)
-    if not cached:
-        return []
-    return list(cached)
+    return list(cached) if cached else []
 
 
 def get_fixtures_for_window(start_bg, end_bg):
@@ -331,6 +322,33 @@ def get_fixtures_for_window(start_bg, end_bg):
     print("SCANNER FIXTURES COMPLETE:", len(all_matches), "window", start_bg, "->", end_bg)
     return all_matches
 
+def _persist_team_season_history(team_id, season, league_id, matches):
+    """Persist scanner history so PREMATCH/Builder can reuse it without API calls."""
+    try:
+        conn = _db()
+        row = conn.execute(
+            "SELECT data FROM scanner_team_season_history WHERE team_id=? AND season=?",
+            (int(team_id), int(season)),
+        ).fetchone()
+        payload = {}
+        if row:
+            try:
+                obj = json.loads(row[0])
+                if isinstance(obj, dict):
+                    payload = obj
+            except Exception:
+                payload = {}
+        payload[str(int(league_id or 0))] = matches
+        conn.execute(
+            "INSERT OR REPLACE INTO scanner_team_season_history(team_id, season, data, updated_at) VALUES (?, ?, ?, ?)",
+            (int(team_id), int(season), json.dumps(payload), datetime.now(timezone.utc).isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as exc:
+        print("SCANNER HISTORY CACHE WRITE ERROR:", team_id, season, repr(exc))
+
+
 def get_team_history(team_id, season, league_id=None):
     team_id, season, league_id = int(team_id), int(season), int(league_id or 0)
     key = (team_id, season, league_id)
@@ -395,7 +413,8 @@ def get_team_history(team_id, season, league_id=None):
     # Do not silently truncate the season to the latest 12 matches.
     primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
     _SCAN_HISTORY[key] = primary
-    print("HISTORY:", team_id, "matches=", len(primary))
+    _persist_team_season_history(team_id, season, league_id, primary)
+    print("HISTORY:", team_id, "matches=", len(primary), "cached=", len(primary))
     return primary
 
 def _read_cached_stat(fixture_id):
@@ -1053,22 +1072,11 @@ def run_daily_scanner(mode="day", reference_date=None, send_func=None):
 
     try:
         matches = get_fixtures_for_window(start, end)
-
-
-        # Publish the exact morning fixture set to PREMATCH / Bet Builder.
-        # They must reuse this fixture set and must not make another
-        # football fixture-list request.
+        # Publish the exact morning fixture set for PREMATCH / Bet Builder.
+        # They reuse this list and never issue a second fixture-list request.
         _UPCOMING_FIXTURES_CACHE.clear()
         _UPCOMING_FIXTURES_CACHE[(start.isoformat(), end.isoformat())] = list(matches)
-        
-        print(
-            "SCANNER MORNING FIXTURE CACHE SET:",
-            len(matches),
-            start,
-            "->",
-            end,
-        )
-    
+        print("SCANNER MORNING FIXTURE CACHE SET:", len(matches), start, "->", end)
     except APIQuotaExceeded:
         mark_ran(run_key)
         raise
@@ -1821,13 +1829,48 @@ def _get_sport_fixtures(cfg, start, end):
     return list(unique.values())
 
 
+def _poisson_cdf(k, lam):
+    if k < 0 or lam < 0:
+        return 0.0
+    term = math.exp(-lam)
+    total = term
+    for i in range(1, int(k) + 1):
+        term *= lam / i
+        total += term
+    return max(0.0, min(1.0, total))
+
+
+def _sport_probability(expected, side):
+    """Model probability from the two-team historical mean using Poisson total.
+
+    The line is chosen half a point below/above the expected total so the
+    displayed percentage is tied to an explicit statistical market, not a
+    popularity score. This is a model estimate, not bookmaker probability.
+    """
+    if expected is None or expected <= 0:
+        return None, None
+    if side == "over":
+        line = max(0.5, math.floor(expected * 2 - 1) / 2)
+        # P(total > line) = 1 - P(total <= floor(line))
+        prob = 1.0 - _poisson_cdf(math.floor(line), expected)
+        market = f"OVER {line:.1f}"
+    else:
+        line = math.ceil(expected * 2 + 1) / 2
+        # P(total < line) = P(total <= floor(line-1e-9))
+        prob = _poisson_cdf(math.ceil(line - 1e-9) - 1, expected)
+        market = f"UNDER {line:.1f}"
+    return market, round(prob * 100, 1)
+
+
 def _format_sport_entry(index, item):
     home, away = _sport_match_names(item["match"])
     league, country = _sport_league_country(item["match"])
     dt = item["datetime"]
     return (
         f"{index}. {home} - {away}\n"
-        f"   {item['home_avg']:.2f} + {item['away_avg']:.2f} = {item['expected']:.2f}\n"
+        f"   🎯 Пазар: {item['market']}\n"
+        f"   📊 Вероятност: {item['probability']:.1f}%\n"
+        f"   📈 Очаквано: {item['expected']:.2f}\n"
         f"   Лига: {league or '-'}\n"
         f"   Държава: {country or '-'}\n"
         f"   Дата: {dt.strftime('%d.%m.%Y')}\n"
@@ -1839,27 +1882,19 @@ def _build_sport_section(sport_name, candidates):
     if not candidates:
         return f"{sport_name}\nНяма достатъчно исторически статистически данни."
 
-    # Top 4, but never invent a fourth entry when fewer are valid.
-    top_over = sorted(candidates, key=lambda x: x["expected"], reverse=True)[:4]
-    top_under = sorted(candidates, key=lambda x: x["expected"])[:4]
+    # Exactly one best statistical market per fixture, then Top 3 fixtures.
+    ranked = sorted(candidates, key=lambda x: (x["probability"], x["expected"]), reverse=True)[:3]
 
-    lines = [sport_name, "", "🔥 НАД"]
-    for i, item in enumerate(top_over, 1):
+    lines = [sport_name, "", "🏆 TOP 3"]
+    for i, item in enumerate(ranked, 1):
         lines.append(_format_sport_entry(i, item))
-        if i < len(top_over):
+        if i < len(ranked):
             lines.append("")
-
-    lines.extend(["", "❄️ ПОД"])
-    for i, item in enumerate(top_under, 1):
-        lines.append(_format_sport_entry(i, item))
-        if i < len(top_under):
-            lines.append("")
-
     return "\n".join(lines)
 
 
 def run_sport_daily_scanner(send_func=None):
-    """Build Top 4 Over/Under from real current-season team statistics."""
+    """Build Top 3 for every configured sport in the 12:00→12:00 window."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
     _SPORT_STATS_CACHE = {}
@@ -1964,12 +1999,19 @@ def run_sport_daily_scanner(send_func=None):
             if not dt:
                 continue
 
+            expected = h["average"] + a["average"]
+            market, probability = _sport_probability(expected, "over")
+            if market is None or probability is None:
+                continue
+
             candidates.append({
                 "match": match,
                 "datetime": dt,
                 "home_avg": h["average"],
                 "away_avg": a["average"],
-                "expected": h["average"] + a["average"],
+                "expected": expected,
+                "market": market,
+                "probability": probability,
             })
 
         lines.append(_build_sport_section(cfg["name"], candidates))
