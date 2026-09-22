@@ -1920,6 +1920,169 @@ def _build_sport_section(sport_name, candidates):
     if not candidates:
         return f"{sport_name}\nНяма достатъчно исторически статистически данни."
 
+    # Top 4, but never invent a fourth entry when fewer are valid.
+    top_over = sorted(candidates, key=lambda x: x["expected"], reverse=True)[:4]
+    top_under = sorted(candidates, key=lambda x: x["expected"])[:4]
+
+    lines = [sport_name, "", "🔥 НАД"]
+    for i, item in enumerate(top_over, 1):
+        lines.append(_format_sport_entry(i, item))
+        if i < len(top_over):
+            lines.append("")
+
+    lines.extend(["", "❄️ ПОД"])
+    for i, item in enumerate(top_under, 1):
+        lines.append(_format_sport_entry(i, item))
+        if i < len(top_under):
+            lines.append("")
+
+    return "\n".join(lines)
+
+
+def run_sport_daily_scanner(send_func=None):
+    """Build Top 4 Over/Under from real current-season team statistics."""
+    global _SPORT_API_CALLS, _SPORT_STATS_CACHE
+    _SPORT_API_CALLS = 0
+    _SPORT_STATS_CACHE = {}
+    started = time.time()
+
+    now_bg = datetime.now(TZ)
+    run_key = f"sport_daily:{now_bg.date().isoformat()}"
+    if already_ran(run_key):
+        print(_signal_text(f"SPORT DAILY SCANNER ALREADY RAN: {now_bg.date().isoformat()}"))
+        return ""
+    start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+
+    lines = [
+        "📊 DAILY STATISTICAL SCANNER — СИГНАЛИ",
+        now_bg.strftime("%d.%m.%Y"),
+        "",
+        "Период:",
+        f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
+        "История: всички налични текущо-сезонни team statistics; волейбол — общи rally points от завършените мачове",
+        "",
+    ]
+
+    for sport_key, cfg in SPORTS_CONFIG.items():
+        print(f"SPORT SCAN: {sport_key} — FIXTURES")
+        fixtures = _get_sport_fixtures(cfg, start, end)
+
+
+        # GLOBAL BLOCK — Russia / Belarus
+        filtered_fixtures = []
+
+        for match in fixtures:
+            league = match.get("league") or {}
+
+            country = ""
+
+            if isinstance(league, dict):
+                country = (
+                    league.get("country")
+                    or league.get("countryName")
+                    or ""
+                )
+
+                if isinstance(country, dict):
+                    country = (
+                        country.get("name")
+                        or country.get("countryName")
+                        or ""
+                    )
+
+            if not country:
+                country = (
+                    match.get("country")
+                    or match.get("countryName")
+                    or ""
+                )
+
+                if isinstance(country, dict):
+                    country = (
+                        country.get("name")
+                        or country.get("countryName")
+                        or ""
+                    )
+
+            country = str(country).strip().casefold()
+
+            if country in {"russia", "belarus"}:
+                print(
+                    f"SPORT BLOCKED COUNTRY: "
+                    f"{match.get('id')} — {country}"
+                )
+                continue
+
+            filtered_fixtures.append(match)
+
+        fixtures = filtered_fixtures
+        
+        
+        candidates = []
+
+        for match in fixtures:
+            home = match.get("homeTeam") or match.get("home") or {}
+            away = match.get("awayTeam") or match.get("away") or {}
+            home_id = _sport_team_id(home)
+            away_id = _sport_team_id(away)
+            if not home_id or not away_id:
+                continue
+
+            if sport_key == "volleyball":
+                league = match.get("league") or {}
+                league_id = league.get("id") if isinstance(league, dict) else None
+                season = league.get("season") if isinstance(league, dict) else None
+                h = _get_volleyball_team_average(home_id, league_id, season)
+                a = _get_volleyball_team_average(away_id, league_id, season)
+            else:
+                h = _get_team_average(sport_key, home_id, cfg["metric"])
+                a = _get_team_average(sport_key, away_id, cfg["metric"])
+            if not h or not a or h["games"] < 3 or a["games"] < 3:
+                continue
+
+            dt = _sport_match_datetime(match)
+            if not dt:
+                continue
+
+            candidates.append({
+                "match": match,
+                "datetime": dt,
+                "home_avg": h["average"],
+                "away_avg": a["average"],
+                "expected": h["average"] + a["average"],
+            })
+
+        lines.append(_build_sport_section(cfg["name"], candidates))
+        lines.append("")
+        lines.append("────────────────────")
+        lines.append("")
+
+        print(
+            f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} "
+            f"valid={len(candidates)}"
+        )
+
+    lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
+    lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
+
+    message = "\n".join(lines)
+    print(message)
+    if send_func:
+        # Telegram hard limit is 4096 characters. Keep a safety margin
+        # for the numbered chunk header and send the complete report.
+        _send_sport_report_chunks(message, send_func, max_chars=3700)
+    mark_ran(run_key)
+    return message
+
+# =========================================================
+# NEW SPORT TOP 3 — ADDITIONAL BLOCK
+# =========================================================
+
+def _build_sport_top3_section(sport_name, candidates):
+    if not candidates:
+        return f"{sport_name}\nНяма достатъчно исторически статистически данни."
+
     ranked = sorted(
         candidates,
         key=lambda x: max((p for _m, p in x["markets"]), default=0.0),
@@ -1933,7 +2096,7 @@ def _build_sport_section(sport_name, candidates):
             lines.append("")
     return "\n".join(lines)
 
-def run_sport_daily_scanner(send_func=None):
+def run_sport_top3_daily_scanner(send_func=None):
     """Build Top 3 for every configured sport in the 12:00→12:00 window."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
@@ -1941,7 +2104,7 @@ def run_sport_daily_scanner(send_func=None):
     started = time.time()
 
     now_bg = datetime.now(TZ)
-    run_key = f"sport_daily:{now_bg.date().isoformat()}"
+    run_key = f"sport_top3:{now_bg.date().isoformat()}"
     if already_ran(run_key):
         print(_signal_text(f"SPORT DAILY SCANNER ALREADY RAN: {now_bg.date().isoformat()}"))
         return ""
@@ -2061,7 +2224,7 @@ def run_sport_daily_scanner(send_func=None):
                 "markets": markets,
             })
 
-        lines.append(_build_sport_section(cfg["name"], candidates))
+        lines.append(_build_sport_top3_section(cfg["name"], candidates))
         lines.append("")
         lines.append("────────────────────")
         lines.append("")
@@ -2082,7 +2245,6 @@ def run_sport_daily_scanner(send_func=None):
         _send_sport_report_chunks(message, send_func, max_chars=3700)
     mark_ran(run_key)
     return message
-
 
 # =========================================================
 # DAILY SCAN SCHEDULER — SPORT ONLY
