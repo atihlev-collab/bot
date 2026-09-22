@@ -1129,7 +1129,7 @@ except APIQuotaExceeded:
     if send_func:
         _send_sport_report_chunks(message, send_func)
 
-        return message
+    return message
 
 
 def _send_sport_report_chunks(message, send_func, max_chars=3700):
