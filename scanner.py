@@ -1841,49 +1841,90 @@ def _poisson_cdf(k, lam):
 
 
 def _sport_probability(expected, side):
-    """Model probability from the two-team historical mean using Poisson total.
-
-    The line is chosen half a point below/above the expected total so the
-    displayed percentage is tied to an explicit statistical market, not a
-    popularity score. This is a model estimate, not bookmaker probability.
-    """
+    """Probability for a total-points/goals market from the statistical mean."""
     if expected is None or expected <= 0:
         return None, None
     if side == "over":
         line = max(0.5, math.floor(expected * 2 - 1) / 2)
-        # P(total > line) = 1 - P(total <= floor(line))
         prob = 1.0 - _poisson_cdf(math.floor(line), expected)
         market = f"OVER {line:.1f}"
     else:
-        line = math.ceil(expected * 2 + 1) / 2
-        # P(total < line) = P(total <= floor(line-1e-9))
+        line = max(0.5, math.ceil(expected * 2 - 1) / 2)
         prob = _poisson_cdf(math.ceil(line - 1e-9) - 1, expected)
         market = f"UNDER {line:.1f}"
     return market, round(prob * 100, 1)
+
+
+def _sport_winner_probability(home_avg, away_avg):
+    """Simple statistical winner estimate using team scoring averages."""
+    if home_avg is None or away_avg is None or home_avg <= 0 or away_avg <= 0:
+        return None
+    total = home_avg + away_avg
+    if total <= 0:
+        return None
+    # Expected-share model. It is deliberately labelled as model probability.
+    home_p = home_avg / total
+    away_p = away_avg / total
+    draw_p = 0.0
+    return round(home_p * 100, 1), round(away_p * 100, 1), draw_p
+
+
+def _sport_market_candidates(home_avg, away_avg):
+    """Return two statistical pre-match markets: winner and total."""
+    total = home_avg + away_avg
+    markets = []
+
+    win = _sport_winner_probability(home_avg, away_avg)
+    if win:
+        hp, ap, _ = win
+        if hp >= ap:
+            markets.append((f"ПОБЕДИТЕЛ: HOME", hp))
+        else:
+            markets.append((f"ПОБЕДИТЕЛ: AWAY", ap))
+
+    over_market, over_prob = _sport_probability(total, "over")
+    under_market, under_prob = _sport_probability(total, "under")
+    if over_market and under_market:
+        if over_prob >= under_prob:
+            markets.append((over_market, over_prob))
+        else:
+            markets.append((under_market, under_prob))
+
+    return markets[:2]
 
 
 def _format_sport_entry(index, item):
     home, away = _sport_match_names(item["match"])
     league, country = _sport_league_country(item["match"])
     dt = item["datetime"]
-    return (
-        f"{index}. {home} - {away}\n"
-        f"   🎯 Пазар: {item['market']}\n"
-        f"   📊 Вероятност: {item['probability']:.1f}%\n"
-        f"   📈 Очаквано: {item['expected']:.2f}\n"
-        f"   Лига: {league or '-'}\n"
-        f"   Държава: {country or '-'}\n"
-        f"   Дата: {dt.strftime('%d.%m.%Y')}\n"
-        f"   Начало: {dt.strftime('%H:%M')} BG"
-    )
+    lines = [
+        f"{index}. {home} - {away}",
+        "   📊 СТАТИСТИКА",
+        f"   {home}: средно {item['home_avg']:.2f} | мачове: {item['home_games']}",
+        f"   {away}: средно {item['away_avg']:.2f} | мачове: {item['away_games']}",
+        f"   📈 Очаквано общо: {item['expected']:.2f}",
+    ]
+    for market, probability in item["markets"]:
+        lines.append(f"   🎯 Пазар: {market}")
+        lines.append(f"   📊 Вероятност: {probability:.1f}%")
+    lines.extend([
+        f"   Лига: {league or '-'}",
+        f"   Държава: {country or '-'}",
+        f"   Дата: {dt.strftime('%d.%m.%Y')}",
+        f"   Начало: {dt.strftime('%H:%M')} BG",
+    ])
+    return "\n".join(lines)
 
 
 def _build_sport_section(sport_name, candidates):
     if not candidates:
         return f"{sport_name}\nНяма достатъчно исторически статистически данни."
 
-    # Exactly one best statistical market per fixture, then Top 3 fixtures.
-    ranked = sorted(candidates, key=lambda x: (x["probability"], x["expected"]), reverse=True)[:3]
+    ranked = sorted(
+        candidates,
+        key=lambda x: max((p for _m, p in x["markets"]), default=0.0),
+        reverse=True,
+    )[:3]
 
     lines = [sport_name, "", "🏆 TOP 3"]
     for i, item in enumerate(ranked, 1):
@@ -1891,7 +1932,6 @@ def _build_sport_section(sport_name, candidates):
         if i < len(ranked):
             lines.append("")
     return "\n".join(lines)
-
 
 def run_sport_daily_scanner(send_func=None):
     """Build Top 3 for every configured sport in the 12:00→12:00 window."""
@@ -1960,6 +2000,12 @@ def run_sport_daily_scanner(send_func=None):
                     )
 
             country = str(country).strip().casefold()
+            league_name, _ = _sport_league_country(match)
+            league_name_cf = str(league_name or "").strip().casefold()
+
+            if "friendly" in league_name_cf or "club friendly" in league_name_cf:
+                print(f"SPORT BLOCKED FRIENDLY: {match.get('id')} — {league_name}")
+                continue
 
             if country in {"russia", "belarus"}:
                 print(
@@ -2000,8 +2046,8 @@ def run_sport_daily_scanner(send_func=None):
                 continue
 
             expected = h["average"] + a["average"]
-            market, probability = _sport_probability(expected, "over")
-            if market is None or probability is None:
+            markets = _sport_market_candidates(h["average"], a["average"])
+            if len(markets) < 2:
                 continue
 
             candidates.append({
@@ -2009,9 +2055,10 @@ def run_sport_daily_scanner(send_func=None):
                 "datetime": dt,
                 "home_avg": h["average"],
                 "away_avg": a["average"],
+                "home_games": h["games"],
+                "away_games": a["games"],
                 "expected": expected,
-                "market": market,
-                "probability": probability,
+                "markets": markets,
             })
 
         lines.append(_build_sport_section(cfg["name"], candidates))
