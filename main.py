@@ -24556,7 +24556,7 @@ def main_loop():
 
                        # 2) NEW SPORT TOP 3 — separate sport_top3.py; old scanner remains unchanged.
                        try:
-                           sport_top3.run_sport_top3(send_telegram)
+                           sport_top3.run_sport_top3_daily_scanner(send_telegram)
                        except Exception as exc:
                            logging.warning("SPORT TOP 3 ERROR: %s", exc)
                     except Exception as exc:
