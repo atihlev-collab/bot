@@ -477,17 +477,38 @@ def api_get(endpoint, params=None):
         hl_path = 'matches'
         if 'id' in hl_params:
             hl_params = {'matchId': hl_params.pop('id'), **hl_params}
-        elif 'team' in hl_params:
-            tid = hl_params.pop('team')
-            last = int(hl_params.pop('last', 10) or 10)
-            # Highlightly has separate home/away team filters. Two requests are merged below.
-            results=[]
-            for key in ('homeTeamId','awayTeamId'):
-                q=dict(hl_params); q[key]=tid; q['limit']=min(max(last,1),100)
-                r=api_get('matches', q)
-                results.extend(r.get('response',[]) if isinstance(r,dict) else [])
-            seen={}; [seen.setdefault(x.get('fixture',{}).get('id'),x) for x in results if isinstance(x,dict)]
-            vals=[x for x in seen.values() if x]
+elif 'team' in hl_params:
+    tid = hl_params.pop('team')
+    last = int(hl_params.pop('last', 10) or 10)
+
+    # Highlightly: never send teamId to /matches.
+    # Use separate homeTeamId / awayTeamId filters.
+    results = []
+
+    for key in ('homeTeamId', 'awayTeamId'):
+        q = dict(hl_params)
+        q.pop('teamId', None)
+        q[key] = tid
+        q['limit'] = min(max(last, 1), 100)
+
+        r = api_get('matches', q)
+
+        results.extend(
+            r.get('response', [])
+            if isinstance(r, dict)
+            else []
+        )
+
+    seen = {}
+    for x in results:
+        if not isinstance(x, dict):
+            continue
+
+        fixture_id = (x.get('fixture') or {}).get('id')
+        if fixture_id:
+            seen.setdefault(fixture_id, x)
+
+    vals = list(seen.values())
             return {'response': vals[-last:]}
         elif 'live' in hl_params:
             # Highlightly live filtering is done client-side from today's match list.
