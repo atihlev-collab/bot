@@ -24420,13 +24420,30 @@ def main_loop():
             if minutes >= 600 and last_day_football_daily != day:
                 try:
                     if hasattr(daily_scanner, "_quota_locked") and daily_scanner._quota_locked("football"):
-                        logging.warning("FOOTBALL DAILY: quota locked for %s; statistical scanner will not retry", day)
+                        logging.warning(
+                            "FOOTBALL DAILY: quota locked for %s; statistical scanner will not retry",
+                            day
+                        )
                     else:
-                        daily_scanner.run_daily_scanner('day', send_func=send_telegram)
+                        threading.Thread(
+                            target=daily_scanner.run_daily_scanner,
+                            kwargs={
+                                "mode": "day",
+                                "send_func": send_telegram
+                            },
+                            daemon=True
+                        ).start()
+
                 except daily_scanner.APIQuotaExceeded as exc:
-                    logging.warning("FOOTBALL STATISTICAL DAILY STOPPED: %s", exc)
+                    logging.warning(
+                        "FOOTBALL STATISTICAL DAILY STOPPED: %s",
+                        exc
+                    )
                 except Exception as exc:
-                    logging.exception("FOOTBALL STATISTICAL DAILY ERROR: %s", exc)
+                    logging.exception(
+                        "FOOTBALL STATISTICAL DAILY ERROR: %s",
+                        exc
+                    )
                 finally:
                     last_day_football_daily = day
 
