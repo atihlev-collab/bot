@@ -1974,17 +1974,29 @@ while True:
 
     completed.sort(key=lambda x: x["dt"], reverse=True)
     last = completed[:last_n]
+
     result = {
         "games": len(completed),
         "form": "".join(x["result"] for x in reversed(last)),
         "form_points": sum(x["points"] for x in last),
         "last_games": len(last),
-        "last_scored": (sum(x["scored"] for x in last) / len(last)) if last else None,
-        "last_conceded": (sum(x["conceded"] for x in last) / len(last)) if last else None,
-        "home_points": sum(x["points"] for x in completed if x["home"]),
-        "away_points": sum(x["points"] for x in completed if not x["home"]),
-        "all_points": sum(x["points"] for x in completed),
+        "last_scored": (
+            sum(x["scored"] for x in last) / len(last)
+        ) if last else None,
+        "last_conceded": (
+            sum(x["conceded"] for x in last) / len(last)
+        ) if last else None,
+        "home_points": sum(
+            x["points"] for x in completed if x["home"]
+        ),
+        "away_points": sum(
+            x["points"] for x in completed if not x["home"]
+        ),
+        "all_points": sum(
+            x["points"] for x in completed
+        ),
     }
+
     _SPORT_STATS_CACHE[cache_key] = result
     return result
 
