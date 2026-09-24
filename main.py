@@ -510,13 +510,13 @@ elif 'team' in hl_params:
             seen.setdefault(fixture_id, x)
 
     vals = list(seen.values())
-            return {'response': vals[-last:]}
-        elif 'live' in hl_params:
-            # Highlightly live filtering is done client-side from today's match list.
-            hl_params.pop('live', None)
-            hl_params['date'] = datetime.now(TIMEZONE).strftime('%Y-%m-%d')
-            hl_params['timezone'] = 'Europe/Sofia'
-            transform = 'live_filter'
+    return {'response': vals[-last:]}
+elif 'live' in hl_params:
+    # Highlightly live filtering is done client-side from today's match list.
+    hl_params.pop('live', None)
+    hl_params['date'] = datetime.now(TIMEZONE).strftime('%Y-%m-%d')
+    hl_params['timezone'] = 'Europe/Sofia'
+    transform = 'live_filter'
         else:
             transform = 'matches'
     elif path == 'fixtures/statistics':
