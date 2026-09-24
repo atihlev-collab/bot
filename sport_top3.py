@@ -1907,13 +1907,27 @@ def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=5)
     cfg = SPORTS_CONFIG[sport_key]
     rows = []
     offset = 0
-    while True:
-        params = {"teamId": int(team_id), "limit": SPORT_API_LIMIT, "offset": offset}
-        if season:
-            params["season"] = int(season)
-        if league_id:
-            params["leagueId"] = int(league_id)
-        batch = _sport_api_get(cfg["endpoint"], params)
+while True:
+    base_params = {
+        "limit": SPORT_API_LIMIT,
+        "offset": offset,
+    }
+
+    if season:
+        base_params["season"] = int(season)
+    if league_id:
+        base_params["leagueId"] = int(league_id)
+
+    batch = []
+
+    for team_key in ("homeTeamId", "awayTeamId"):
+        params = dict(base_params)
+        params[team_key] = int(team_id)
+
+        rows = _sport_api_get(cfg["endpoint"], params)
+
+        if isinstance(rows, list):
+            batch.extend(rows)
         if not isinstance(batch, list) or not batch:
             break
         rows.extend(batch)
