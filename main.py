@@ -473,10 +473,11 @@ def api_get(endpoint, params=None):
     hl_params = dict(params)
     transform = 'generic'
 
-    if path == 'fixtures':
-        hl_path = 'matches'
-        if 'id' in hl_params:
-            hl_params = {'matchId': hl_params.pop('id'), **hl_params}
+if path == 'fixtures':
+    hl_path = 'matches'
+    if 'id' in hl_params:
+        hl_params = {'matchId': hl_params.pop('id'), **hl_params}
+
 elif 'team' in hl_params:
     tid = hl_params.pop('team')
     last = int(hl_params.pop('last', 10) or 10)
