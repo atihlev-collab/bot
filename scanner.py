@@ -1757,6 +1757,12 @@ def run_sport_daily_scanner(send_func=None):
             if not home_id or not away_id:
                 continue
 
+            print(
+                f"SPORT HISTORY DEBUG: {sport_key} "
+                f"match={match.get('id')} "
+                f"home={home_id} away={away_id}"
+            )
+
             if sport_key == "volleyball":
                 league = match.get("league") or {}
                 league_id = league.get("id") if isinstance(league, dict) else None
