@@ -473,50 +473,53 @@ def api_get(endpoint, params=None):
     hl_params = dict(params)
     transform = 'generic'
 
-if path == 'fixtures':
-    hl_path = 'matches'
-    if 'id' in hl_params:
-        hl_params = {'matchId': hl_params.pop('id'), **hl_params}
+    if path == 'fixtures':
+        hl_path = 'matches'
 
-elif 'team' in hl_params:
-    tid = hl_params.pop('team')
-    last = int(hl_params.pop('last', 10) or 10)
+        if 'id' in hl_params:
+            hl_params = {'matchId': hl_params.pop('id'), **hl_params}
 
-    # Highlightly: never send teamId to /matches.
-    # Use separate homeTeamId / awayTeamId filters.
-    results = []
+        elif 'team' in hl_params:
+            tid = hl_params.pop('team')
+            last = int(hl_params.pop('last', 10) or 10)
 
-    for key in ('homeTeamId', 'awayTeamId'):
-        q = dict(hl_params)
-        q.pop('teamId', None)
-        q[key] = tid
-        q['limit'] = min(max(last, 1), 100)
+            # Highlightly: never send teamId to /matches.
+            # Use separate homeTeamId / awayTeamId filters.
+            results = []
 
-        r = api_get('matches', q)
+            for key in ('homeTeamId', 'awayTeamId'):
+                q = dict(hl_params)
+                q.pop('teamId', None)
+                q[key] = tid
+                q['limit'] = min(max(last, 1), 100)
 
-        results.extend(
-            r.get('response', [])
-            if isinstance(r, dict)
-            else []
-        )
+                r = api_get('matches', q)
 
-    seen = {}
-    for x in results:
-        if not isinstance(x, dict):
-            continue
+                results.extend(
+                    r.get('response', [])
+                    if isinstance(r, dict)
+                    else []
+                )
 
-        fixture_id = (x.get('fixture') or {}).get('id')
-        if fixture_id:
-            seen.setdefault(fixture_id, x)
+            seen = {}
+            for x in results:
+                if not isinstance(x, dict):
+                    continue
 
-    vals = list(seen.values())
-    return {'response': vals[-last:]}
-elif 'live' in hl_params:
-    # Highlightly live filtering is done client-side from today's match list.
-    hl_params.pop('live', None)
-    hl_params['date'] = datetime.now(TIMEZONE).strftime('%Y-%m-%d')
-    hl_params['timezone'] = 'Europe/Sofia'
-    transform = 'live_filter'
+                fixture_id = (x.get('fixture') or {}).get('id')
+                if fixture_id:
+                    seen.setdefault(fixture_id, x)
+
+            vals = list(seen.values())
+            return {'response': vals[-last:]}
+
+        elif 'live' in hl_params:
+            # Highlightly live filtering is done client-side from today's match list.
+            hl_params.pop('live', None)
+            hl_params['date'] = datetime.now(TIMEZONE).strftime('%Y-%m-%d')
+            hl_params['timezone'] = 'Europe/Sofia'
+            transform = 'live_filter'
+
         else:
             transform = 'matches'
     elif path == 'fixtures/statistics':
