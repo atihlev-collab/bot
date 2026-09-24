@@ -1220,6 +1220,11 @@ _SPORT_STATS_CACHE = {}
 def _sport_api_get(endpoint, params=None):
     """Call Highlightly Sport Ultra and return its data without inventing values."""
     global _SPORT_API_CALLS
+
+    print(
+        f"SPORT API SOURCE DEBUG | file={__file__} | "
+        f"endpoint={endpoint} | params={params or {}}"
+    )
     _SPORT_API_CALLS += 1
 
     try:
