@@ -1899,107 +1899,204 @@ def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=5)
     """Current-season form/context for one team, based only on completed matches."""
     if not team_id:
         return None
-    cache_key = ("context", sport_key, int(team_id), int(league_id or 0), int(season or 0), metric, last_n)
+
+    cache_key = (
+        "context",
+        sport_key,
+        int(team_id),
+        int(league_id or 0),
+        int(season or 0),
+        metric,
+        last_n,
+    )
+
     cached = _SPORT_STATS_CACHE.get(cache_key)
     if cached is not None:
         return cached
 
     cfg = SPORTS_CONFIG[sport_key]
+
     rows = []
-    offset = 0
-while True:
-    base_params = {
-        "limit": SPORT_API_LIMIT,
-        "offset": offset,
-    }
 
-    if season:
-        base_params["season"] = int(season)
-    if league_id:
-        base_params["leagueId"] = int(league_id)
-
-    batch = []
-
+    # Highlightly does NOT accept teamId on /matches.
+    # Query homeTeamId and awayTeamId separately.
     for team_key in ("homeTeamId", "awayTeamId"):
-        params = dict(base_params)
-        params[team_key] = int(team_id)
+        offset = 0
 
-        rows = _sport_api_get(cfg["endpoint"], params)
+        while True:
+            params = {
+                team_key: int(team_id),
+                "limit": SPORT_API_LIMIT,
+                "offset": offset,
+            }
 
-        if isinstance(rows, list):
-            batch.extend(rows)
-        if not isinstance(batch, list) or not batch:
-            break
-        rows.extend(batch)
-        if len(batch) < SPORT_API_LIMIT:
-            break
-        offset += SPORT_API_LIMIT
-        if offset > 2000:
-            break
+            if season:
+                params["season"] = int(season)
+
+            if league_id:
+                params["leagueId"] = int(league_id)
+
+            batch = _sport_api_get(
+                cfg["endpoint"],
+                params,
+            )
+
+            if not isinstance(batch, list) or not batch:
+                break
+
+            rows.extend(batch)
+
+            if len(batch) < SPORT_API_LIMIT:
+                break
+
+            offset += SPORT_API_LIMIT
+
+            if offset > 2000:
+                break
 
     completed = []
+
     for match in rows:
         if not isinstance(match, dict):
             continue
+
         dt = _sport_match_datetime(match)
+
         if dt is None or dt >= datetime.now(TZ):
             continue
+
         league = match.get("league") or {}
+
         if isinstance(league, dict):
-            if league_id and league.get("id") and int(league.get("id")) != int(league_id):
+            if (
+                league_id
+                and league.get("id")
+                and int(league.get("id")) != int(league_id)
+            ):
                 continue
-            if season and league.get("season") and int(league.get("season")) != int(season):
+
+            if (
+                season
+                and league.get("season")
+                and int(league.get("season")) != int(season)
+            ):
                 continue
+
         pair = _sport_score_pair(match, metric)
+
         if pair is None:
             continue
-        home = match.get("homeTeam") or match.get("home") or {}
-        away = match.get("awayTeam") or match.get("away") or {}
-        hid, aid = _sport_team_id(home), _sport_team_id(away)
+
+        home = (
+            match.get("homeTeam")
+            or match.get("home")
+            or {}
+        )
+
+        away = (
+            match.get("awayTeam")
+            or match.get("away")
+            or {}
+        )
+
+        hid = _sport_team_id(home)
+        aid = _sport_team_id(away)
+
         if hid == int(team_id):
             scored, conceded = pair
             is_home = True
+
         elif aid == int(team_id):
             scored, conceded = pair[1], pair[0]
             is_home = False
+
         else:
             continue
-        if scored > conceded:
-            result, points = "W", 3
-        elif scored < conceded:
-            result, points = "L", 0
-        else:
-            result, points = "D", 1
-        completed.append({"dt": dt, "scored": scored, "conceded": conceded, "result": result, "points": points, "home": is_home})
 
-    completed.sort(key=lambda x: x["dt"], reverse=True)
+        if scored > conceded:
+            result_code, points = "W", 3
+
+        elif scored < conceded:
+            result_code, points = "L", 0
+
+        else:
+            result_code, points = "D", 1
+
+        completed.append({
+            "dt": dt,
+            "scored": scored,
+            "conceded": conceded,
+            "result": result_code,
+            "points": points,
+            "home": is_home,
+        })
+
+    # Remove duplicates because the same match can only belong
+    # to one of home/away queries but defensive deduplication is useful.
+    unique = {}
+
+    for item in completed:
+        key = (
+            item["dt"],
+            item["scored"],
+            item["conceded"],
+            item["home"],
+        )
+        unique[key] = item
+
+    completed = list(unique.values())
+
+    completed.sort(
+        key=lambda x: x["dt"],
+        reverse=True,
+    )
+
     last = completed[:last_n]
 
     result = {
         "games": len(completed),
-        "form": "".join(x["result"] for x in reversed(last)),
-        "form_points": sum(x["points"] for x in last),
+
+        "form": "".join(
+            x["result"]
+            for x in reversed(last)
+        ),
+
+        "form_points": sum(
+            x["points"]
+            for x in last
+        ),
+
         "last_games": len(last),
+
         "last_scored": (
             sum(x["scored"] for x in last) / len(last)
         ) if last else None,
+
         "last_conceded": (
             sum(x["conceded"] for x in last) / len(last)
         ) if last else None,
+
         "home_points": sum(
-            x["points"] for x in completed if x["home"]
+            x["points"]
+            for x in completed
+            if x["home"]
         ),
+
         "away_points": sum(
-            x["points"] for x in completed if not x["home"]
+            x["points"]
+            for x in completed
+            if not x["home"]
         ),
+
         "all_points": sum(
-            x["points"] for x in completed
+            x["points"]
+            for x in completed
         ),
     }
 
     _SPORT_STATS_CACHE[cache_key] = result
-    return result
 
+    return result
 
 def _sport_winner_probability(home_avg, away_avg, home_ctx=None, away_ctx=None):
     """Winner model using attack, recent form, defence and home/away context."""
