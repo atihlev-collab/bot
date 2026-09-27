@@ -24429,133 +24429,133 @@ def main_loop():
         day = now.date().isoformat()
         minutes = now.hour * 60 + now.minute
         try:
-# ============================================================
-# 1) FOOTBALL STATISTICAL DAILY — once at/after 10:00 BG
-# ============================================================
-# IMPORTANT:
-# - Start the complete old daily scanner in background.
-# - Do NOT block PREMATCH / BET BUILDER / LIVE.
-# - The old scanner logic itself is unchanged.
-# - PREMATCH reuses scanner.py's shared fixture cache.
-# ============================================================
-
-if minutes >= 600 and last_day_football_daily != day:
-
-    try:
-        if (
-            hasattr(daily_scanner, "_quota_locked")
-            and daily_scanner._quota_locked("football")
-        ):
-            logging.warning(
-                "FOOTBALL DAILY: quota locked for %s; "
-                "statistical scanner will not retry",
-                day
-            )
-
-            # Consume today's attempt.
-            last_day_football_daily = day
-
-        else:
-            logging.info(
-                "FOOTBALL STATISTICAL DAILY START | %s",
-                day
-            )
-
-            def _run_football_daily_background():
+            # ============================================================
+            # 1) FOOTBALL STATISTICAL DAILY — once at/after 10:00 BG
+            # ============================================================
+            # IMPORTANT:
+            # - Start the complete old daily scanner in background.
+            # - Do NOT block PREMATCH / BET BUILDER / LIVE.
+            # - The old scanner logic itself is unchanged.
+            # - PREMATCH reuses scanner.py's shared fixture cache.
+            # ============================================================
+            
+            if minutes >= 600 and last_day_football_daily != day:
+            
                 try:
-                    daily_scanner.run_daily_scanner(
-                        mode="day",
-                        send_func=send_telegram
-                    )
-
-                    logging.info(
-                        "FOOTBALL STATISTICAL DAILY END | %s",
-                        day
-                    )
-
-                except daily_scanner.APIQuotaExceeded as exc:
-                    logging.warning(
-                        "FOOTBALL STATISTICAL DAILY STOPPED: %s",
-                        exc
-                    )
-
+                    if (
+                        hasattr(daily_scanner, "_quota_locked")
+                        and daily_scanner._quota_locked("football")
+                    ):
+                        logging.warning(
+                            "FOOTBALL DAILY: quota locked for %s; "
+                            "statistical scanner will not retry",
+                            day
+                        )
+            
+                        # Consume today's attempt.
+                        last_day_football_daily = day
+            
+                    else:
+                        logging.info(
+                            "FOOTBALL STATISTICAL DAILY START | %s",
+                            day
+                        )
+            
+                        def _run_football_daily_background():
+                            try:
+                                daily_scanner.run_daily_scanner(
+                                    mode="day",
+                                    send_func=send_telegram
+                                )
+            
+                                logging.info(
+                                    "FOOTBALL STATISTICAL DAILY END | %s",
+                                    day
+                                )
+            
+                            except daily_scanner.APIQuotaExceeded as exc:
+                                logging.warning(
+                                    "FOOTBALL STATISTICAL DAILY STOPPED: %s",
+                                    exc
+                                )
+            
+                            except Exception as exc:
+                                logging.exception(
+                                    "FOOTBALL STATISTICAL DAILY ERROR: %s",
+                                    exc
+                                )
+            
+                        _football_daily_thread = threading.Thread(
+                            target=_run_football_daily_background,
+                            name="football-daily-scanner",
+                            daemon=True
+                        )
+            
+                        _football_daily_thread.start()
+            
+                        # IMPORTANT:
+                        # Do not wait for the whole statistical scanner.
+                        # Wait only until scanner.py publishes the morning
+                        # fixture cache needed by PREMATCH / BET BUILDER.
+                        cache_start = datetime(
+                            day.year,
+                            day.month,
+                            day.day,
+                            12,
+                            0,
+                            tzinfo=TIMEZONE
+                        )
+                        cache_end = cache_start + timedelta(days=1)
+            
+                        cache_ready = False
+            
+                        for _ in range(60):
+                            try:
+                                cached_fixtures = (
+                                    daily_scanner.get_cached_upcoming_matches(
+                                        cache_start,
+                                        cache_end
+                                    )
+                                )
+            
+                                if cached_fixtures:
+                                    logging.info(
+                                        "FOOTBALL DAILY CACHE READY | "
+                                        "fixtures=%s | %s -> %s",
+                                        len(cached_fixtures),
+                                        cache_start,
+                                        cache_end
+                                    )
+            
+                                    cache_ready = True
+                                    break
+            
+                            except Exception as cache_exc:
+                                logging.warning(
+                                    "FOOTBALL DAILY CACHE CHECK ERROR: %s",
+                                    repr(cache_exc)
+                                )
+            
+                            time.sleep(1)
+            
+                        if not cache_ready:
+                            logging.warning(
+                                "FOOTBALL DAILY CACHE NOT READY after 60s | "
+                                "PREMATCH will use its existing cache-only behavior"
+                            )
+            
+                        # IMPORTANT:
+                        # Mark today's daily run immediately.
+                        # The background thread continues independently.
+                        last_day_football_daily = day
+            
                 except Exception as exc:
                     logging.exception(
-                        "FOOTBALL STATISTICAL DAILY ERROR: %s",
+                        "FOOTBALL STATISTICAL DAILY START ERROR: %s",
                         exc
                     )
-
-            _football_daily_thread = threading.Thread(
-                target=_run_football_daily_background,
-                name="football-daily-scanner",
-                daemon=True
-            )
-
-            _football_daily_thread.start()
-
-            # IMPORTANT:
-            # Do not wait for the whole statistical scanner.
-            # Wait only until scanner.py publishes the morning
-            # fixture cache needed by PREMATCH / BET BUILDER.
-            cache_start = datetime(
-                day.year,
-                day.month,
-                day.day,
-                12,
-                0,
-                tzinfo=TIMEZONE
-            )
-            cache_end = cache_start + timedelta(days=1)
-
-            cache_ready = False
-
-            for _ in range(60):
-                try:
-                    cached_fixtures = (
-                        daily_scanner.get_cached_upcoming_matches(
-                            cache_start,
-                            cache_end
-                        )
-                    )
-
-                    if cached_fixtures:
-                        logging.info(
-                            "FOOTBALL DAILY CACHE READY | "
-                            "fixtures=%s | %s -> %s",
-                            len(cached_fixtures),
-                            cache_start,
-                            cache_end
-                        )
-
-                        cache_ready = True
-                        break
-
-                except Exception as cache_exc:
-                    logging.warning(
-                        "FOOTBALL DAILY CACHE CHECK ERROR: %s",
-                        repr(cache_exc)
-                    )
-
-                time.sleep(1)
-
-            if not cache_ready:
-                logging.warning(
-                    "FOOTBALL DAILY CACHE NOT READY after 60s | "
-                    "PREMATCH will use its existing cache-only behavior"
-                )
-
-            # IMPORTANT:
-            # Mark today's daily run immediately.
-            # The background thread continues independently.
-            last_day_football_daily = day
-
-    except Exception as exc:
-        logging.exception(
-            "FOOTBALL STATISTICAL DAILY START ERROR: %s",
-            exc
-        )
-
-        last_day_football_daily = day
+            
+                    last_day_football_daily = day
 
             # ============================================================
             # 2) FOOTBALL PREMATCH + BET BUILDER
