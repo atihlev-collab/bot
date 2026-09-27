@@ -895,7 +895,7 @@ def get_betano_prematch_markets(fixture_id):
             "matchId": int(fixture_id),
             "bookmakerId": BETANO_BOOKMAKER_ID,
             "oddsType": "prematch",
-            "limit": 100,
+            "limit": 5,
         },
     )
 
