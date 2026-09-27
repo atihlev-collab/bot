@@ -24417,33 +24417,51 @@ def main_loop():
             # fixture window into scanner.py's shared cache. PREMATCH and
             # Bet Builder then reuse that same fixture set without another
             # football fixture-list request.
+            # ============================================================
+            # 1) FOOTBALL STATISTICAL DAILY — once at/after 10:00 BG
+            # ============================================================
+            # MUST FINISH before PREMATCH + BET BUILDER starts.
             if minutes >= 600 and last_day_football_daily != day:
                 try:
-                    if hasattr(daily_scanner, "_quota_locked") and daily_scanner._quota_locked("football"):
+                    if (
+                        hasattr(daily_scanner, "_quota_locked")
+                        and daily_scanner._quota_locked("football")
+                    ):
                         logging.warning(
-                            "FOOTBALL DAILY: quota locked for %s; statistical scanner will not retry",
+                            "FOOTBALL DAILY: quota locked for %s; "
+                            "statistical scanner will not retry",
                             day
                         )
                     else:
-                        threading.Thread(
-                            target=daily_scanner.run_daily_scanner,
-                            kwargs={
-                                "mode": "day",
-                                "send_func": send_telegram
-                            },
-                            daemon=True
-                        ).start()
+                        logging.info(
+                            "FOOTBALL STATISTICAL DAILY START | %s",
+                            day
+                        )
+
+                        # IMPORTANT:
+                        # Run synchronously. Do NOT use threading here.
+                        daily_scanner.run_daily_scanner(
+                            mode="day",
+                            send_func=send_telegram
+                        )
+
+                        logging.info(
+                            "FOOTBALL STATISTICAL DAILY END | %s",
+                            day
+                        )
 
                 except daily_scanner.APIQuotaExceeded as exc:
                     logging.warning(
                         "FOOTBALL STATISTICAL DAILY STOPPED: %s",
                         exc
                     )
+
                 except Exception as exc:
                     logging.exception(
                         "FOOTBALL STATISTICAL DAILY ERROR: %s",
                         exc
                     )
+
                 finally:
                     last_day_football_daily = day
 
