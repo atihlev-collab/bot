@@ -882,18 +882,97 @@ BETANO_BOOKMAKER_ID = 32
 
 
 def get_betano_prematch_markets(fixture_id):
-    result = {"match": False, "corners": False, "shots": False, "cards": False}
-    rows = _api("odds", {"matchId": int(fixture_id), "bookmakerId": BETANO_BOOKMAKER_ID, "oddsType": "prematch", "limit": 5})
+    result = {
+        "match": False,
+        "corners": False,
+        "shots": False,
+        "cards": False,
+    }
+
+    rows = _api(
+        "odds",
+        {
+            "matchId": int(fixture_id),
+            "bookmakerId": BETANO_BOOKMAKER_ID,
+            "oddsType": "prematch",
+            "limit": 100,
+        },
+    )
+
+    def scan_market(obj):
+        if not isinstance(obj, dict):
+            return
+
+        # Mark the fixture as available on Betano only when
+        # the bookmaker ID actually belongs to Betano.
+        bookmaker_id = obj.get("bookmakerId")
+
+        if bookmaker_id is not None:
+            try:
+                if int(bookmaker_id) == BETANO_BOOKMAKER_ID:
+                    result["match"] = True
+            except (TypeError, ValueError):
+                pass
+
+        # Highlightly may expose the market name under different fields.
+        market_names = (
+            obj.get("market"),
+            obj.get("marketName"),
+            obj.get("name"),
+            obj.get("displayName"),
+            obj.get("type"),
+            obj.get("marketType"),
+            obj.get("label"),
+        )
+
+        names = [
+            str(x).strip().casefold()
+            for x in market_names
+            if x is not None
+        ]
+
+        for name in names:
+            if (
+                "corner" in name
+                or "corners" in name
+            ):
+                result["corners"] = True
+
+            if (
+                "shot" in name
+                or "shots" in name
+                or "total shots" in name
+            ):
+                result["shots"] = True
+
+            if (
+                "card" in name
+                or "cards" in name
+                or "booking" in name
+                or "bookings" in name
+            ):
+                result["cards"] = True
+
+        # Some Highlightly responses nest the actual market inside
+        # another object/list. Scan nested structures too.
+        for value in obj.values():
+            if isinstance(value, dict):
+                scan_market(value)
+
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, dict):
+                        scan_market(item)
+
     for row in rows if isinstance(rows, list) else []:
-        for market in row.get("odds", []) or []:
-            if int(market.get("bookmakerId") or 0) != BETANO_BOOKMAKER_ID:
-                continue
-            result["match"] = True
-            name = str(market.get("market") or "").casefold()
-            if "corner" in name: result["corners"] = True
-            if "shot" in name: result["shots"] = True
-            if "card" in name or "booking" in name: result["cards"] = True
-    print("BETANO FILTER RESULT:", fixture_id, result)
+        scan_market(row)
+
+    print(
+        "BETANO FILTER RESULT:",
+        fixture_id,
+        result
+    )
+
     return result
 
 def filter_matches_by_betano_markets(matches):
