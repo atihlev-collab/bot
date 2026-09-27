@@ -401,10 +401,9 @@ def get_team_history(team_id, season, league_id=None):
     # Do not silently truncate the season to the latest 12 matches.
     primary.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
 
-    # Hard rule: if the team still has fewer than 3 official completed
-    # matches in the current season after the all-competition fallback,
-    # there is NO prediction for a fixture involving this team.
-    if len(primary) < 3:
+    # Allow 1 or 2 completed official matches.
+    # Only 0 matches means there is no history available.
+    if len(primary) == 0:
         print("HISTORY INSUFFICIENT:", team_id, "season=", season, "matches=", len(primary))
         _SCAN_HISTORY[key] = []
         return []
