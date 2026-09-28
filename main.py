@@ -24446,6 +24446,7 @@ def main_loop():
     last_prematch_scan = 0.0
     last_day_sport = None
     last_day_football_daily = None
+    last_day_football = None
     last_day_sport_top3 = None
     logging.info('HIGHLIGHTLY SYSTEM START | full legacy main preserved')
     logging.info('FINAL FLOWS: PREMATCH+BUILDER >=10:00 | LIVE 17:00-00:00 | LIVE/PREMATCH odds >=1.50')
