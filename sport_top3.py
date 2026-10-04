@@ -1895,7 +1895,7 @@ def _sport_score_pair(match, metric):
     return None
 
 
-def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=5):
+def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=7):
     """Current-season form/context for one team, based only on completed matches."""
     if not team_id:
         return None
@@ -2082,8 +2082,20 @@ def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=5)
             if x["home"]
         ),
 
+        "home_games": sum(
+            1
+            for x in completed
+            if x["home"]
+        ),
+
         "away_points": sum(
             x["points"]
+            for x in completed
+            if not x["home"]
+        ),
+
+        "away_games": sum(
+            1
             for x in completed
             if not x["home"]
         ),
@@ -2099,56 +2111,95 @@ def _sport_team_context(sport_key, team_id, league_id, season, metric, last_n=5)
     return result
 
 def _sport_winner_probability(home_avg, away_avg, home_ctx=None, away_ctx=None):
-    """Winner model using attack, recent form, defence and home/away context."""
+    """Conservative winner model.
+
+    IMPORTANT: scoring average is only one component. A winner is returned
+    only when recent form, attack/defence and home/away evidence agree enough.
+    Otherwise the function returns None so the scanner does not force a side.
+    """
     if home_avg is None or away_avg is None or home_avg <= 0 or away_avg <= 0:
         return None
 
-    # Base attack signal. Unlike the old model, this is only one component.
-    total = home_avg + away_avg
-    home_attack = home_avg / total
+    if not home_ctx or not away_ctx:
+        return None
 
-    # Recent form: last 5 completed matches.
-    if home_ctx and away_ctx and home_ctx["last_games"] >= 3 and away_ctx["last_games"] >= 3:
-        hf = home_ctx["form_points"] / (3 * home_ctx["last_games"])
-        af = away_ctx["form_points"] / (3 * away_ctx["last_games"])
-        form_edge = hf - af
+    if home_ctx.get("last_games", 0) < 5 or away_ctx.get("last_games", 0) < 5:
+        return None
 
-        # Recent scoring/defence edge.
-        h_recent_diff = (home_ctx["last_scored"] or 0) - (home_ctx["last_conceded"] or 0)
-        a_recent_diff = (away_ctx["last_scored"] or 0) - (away_ctx["last_conceded"] or 0)
-        diff_scale = max(1.0, (home_avg + away_avg) / 4.0)
-        recent_edge = max(-1.0, min(1.0, (h_recent_diff - a_recent_diff) / diff_scale))
+    # 1) Recent 7-match form: 35%
+    hf = home_ctx["form_points"] / (3.0 * home_ctx["last_games"])
+    af = away_ctx["form_points"] / (3.0 * away_ctx["last_games"])
+    form_edge = max(-1.0, min(1.0, hf - af))
 
-        # Home advantage is based on the team's actual home/away record, not a fixed winner.
-        h_home_rate = home_ctx["home_points"] / max(1, 3 * sum(1 for _ in range(1))) if False else None
-        # Use the observed home/away points only as a small directional signal.
-        home_split = home_ctx["home_points"] / max(1, home_ctx["games"])
-        away_split = away_ctx["away_points"] / max(1, away_ctx["games"])
-        split_edge = max(-1.0, min(1.0, (home_split - away_split) / 3.0))
+    # 2) Attack strength: 20%
+    avg_scale = max(1.0, (home_avg + away_avg) / 2.0)
+    attack_edge = max(-1.0, min(1.0, (home_avg - away_avg) / avg_scale))
 
-        score = (home_attack - 0.5) * 0.45 + form_edge * 0.30 + recent_edge * 0.15 + split_edge * 0.10
-    else:
-        score = (home_attack - 0.5) * 0.45
+    # 3) Recent attack + defence differential: 20%
+    h_net = (home_ctx.get("last_scored") or 0.0) - (home_ctx.get("last_conceded") or 0.0)
+    a_net = (away_ctx.get("last_scored") or 0.0) - (away_ctx.get("last_conceded") or 0.0)
+    recent_scale = max(1.0, avg_scale)
+    recent_edge = max(-1.0, min(1.0, (h_net - a_net) / recent_scale))
 
-    # Convert the edge into a bounded two-way model probability.
-    home_p = max(0.05, min(0.95, 0.5 + score))
-    away_p = 1.0 - home_p
-    return round(home_p * 100, 1), round(away_p * 100, 1), 0.0
+    # 4) Actual home/away record: 15%
+    home_games = max(1, int(home_ctx.get("home_games", 0)))
+    away_games = max(1, int(away_ctx.get("away_games", 0)))
+    home_split = home_ctx.get("home_points", 0) / (3.0 * home_games)
+    away_split = away_ctx.get("away_points", 0) / (3.0 * away_games)
+    split_edge = max(-1.0, min(1.0, home_split - away_split))
+
+    # 5) Stability / sample quality: 10%
+    sample = min(home_ctx["last_games"], away_ctx["last_games"])
+    sample_strength = min(1.0, sample / 7.0)
+    consistency_edge = max(-1.0, min(1.0,
+        (hf - 0.5) * 2.0 * 0.5 + (af - 0.5) * -2.0 * 0.5
+    ))
+
+    # Weighted directional score. No component can dominate by itself.
+    score = (
+        form_edge * 0.35
+        + attack_edge * 0.20
+        + recent_edge * 0.20
+        + split_edge * 0.15
+        + consistency_edge * 0.10
+    )
+
+    score *= (0.70 + 0.30 * sample_strength)
+
+    # Convert to a conservative two-way probability.
+    home_p = 50.0 + score * 45.0
+    home_p = max(5.0, min(95.0, home_p))
+    away_p = 100.0 - home_p
+    edge = abs(home_p - away_p)
+
+    # Do not force a winner on a weak statistical difference.
+    WINNER_MIN_PROB = 57.0
+    WINNER_MIN_EDGE = 7.0
+    best = max(home_p, away_p)
+    if best < WINNER_MIN_PROB or edge < WINNER_MIN_EDGE:
+        return None
+
+    return round(home_p, 1), round(away_p, 1), round(edge, 1)
 
 
 def _sport_market_candidates(home_avg, away_avg, home_ctx=None, away_ctx=None):
-    """Return winner + total markets using the richer statistical winner model."""
+    """Return only statistically supported winner/total markets."""
+    if home_avg is None or away_avg is None:
+        return []
+
     total = home_avg + away_avg
     markets = []
 
+    # Winner is optional: weak winner evidence means NO winner market.
     win = _sport_winner_probability(home_avg, away_avg, home_ctx, away_ctx)
     if win:
-        hp, ap, _ = win
+        hp, ap, edge = win
         if hp >= ap:
             markets.append(("ПОБЕДИТЕЛ: HOME", hp))
         else:
             markets.append(("ПОБЕДИТЕЛ: AWAY", ap))
 
+    # Total model remains separate from winner model.
     over_market, over_prob = _sport_probability(total, "over")
     under_market, under_prob = _sport_probability(total, "under")
     if over_market and under_market:
@@ -2158,7 +2209,6 @@ def _sport_market_candidates(home_avg, away_avg, home_ctx=None, away_ctx=None):
             markets.append((under_market, under_prob))
 
     return markets[:2]
-
 
 def _format_sport_entry(index, item):
     home, away = _sport_match_names(item["match"])
@@ -2480,8 +2530,8 @@ def run_sport_top3_daily_scanner(send_func=None):
             league = match.get("league") or {}
             league_id = league.get("id") if isinstance(league, dict) else None
             season = league.get("season") if isinstance(league, dict) else None
-            home_ctx = _sport_team_context(sport_key, home_id, league_id, season, cfg["metric"], last_n=5)
-            away_ctx = _sport_team_context(sport_key, away_id, league_id, season, cfg["metric"], last_n=5)
+            home_ctx = _sport_team_context(sport_key, home_id, league_id, season, cfg["metric"], last_n=7)
+            away_ctx = _sport_team_context(sport_key, away_id, league_id, season, cfg["metric"], last_n=7)
             markets = _sport_market_candidates(
                 h["average"], a["average"], home_ctx, away_ctx
             )
