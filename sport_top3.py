@@ -998,32 +998,36 @@ def _sport_market_candidates(home_avg, away_avg, home_ctx=None, away_ctx=None):
 
     return markets[:2]
 
-def _format_sport_entry(index, item):
+def _format_sport_stats_entry(index, item):
     home, away = _sport_match_names(item["match"])
     league, country = _sport_league_country(item["match"])
     dt = item["datetime"]
-    lines = [
+    return "\n".join([
         f"{index}. {home} - {away}",
-        "   📊 СТАТИСТИКА",
         f"   {home}: средно {item['home_avg']:.2f} | мачове: {item['home_games']}",
         f"   {away}: средно {item['away_avg']:.2f} | мачове: {item['away_games']}",
-        f"   📈 Очаквано общо: {item['expected']:.2f}",
-    ]
-    for market, probability in item["markets"]:
-        lines.append(f"   🎯 Пазар: {market}")
-        lines.append(f"   📊 Вероятност: {probability:.1f}%")
-    lines.extend([
         f"   Лига: {league or '-'}",
         f"   Държава: {country or '-'}",
         f"   Дата: {dt.strftime('%d.%m.%Y')}",
         f"   Начало: {dt.strftime('%H:%M')} BG",
     ])
+
+
+def _format_sport_prediction_entry(index, item):
+    home, away = _sport_match_names(item["match"])
+    dt = item["datetime"]
+    lines = [
+        f"{index}. {home} - {away}",
+        f"   📈 Очаквано общо: {item['expected']:.2f}",
+    ]
+    for market, probability in item["markets"]:
+        lines.append(f"   🎯 Прогноза: {market}")
+        lines.append(f"   📊 Вероятност: {probability:.1f}%")
+    lines.extend([
+        f"   📅 {dt.strftime('%d.%m.%Y')} | {dt.strftime('%H:%M')} BG",
+    ])
     return "\n".join(lines)
 
-
-# =========================================================
-# NEW SPORT TOP 3 — ADDITIONAL BLOCK
-# =========================================================
 
 def _build_sport_top3_section(sport_name, candidates):
     # Sport Daily is PREMATCH only: only fixtures that have not started yet
@@ -1043,12 +1047,24 @@ def _build_sport_top3_section(sport_name, candidates):
         reverse=True,
     )[:3]
 
-    lines = [f"🏁 {sport_name} — PREMATCH", "", "🏆 TOP 3 ПРЕДИ МАЧА"]
+    # Deliberately output BOTH layers: raw statistics first, predictions second.
+    lines = [
+        f"🏁 {sport_name} — PREMATCH",
+        "",
+        "📊 СТАТИСТИКА — TOP 3",
+    ]
     for i, item in enumerate(ranked, 1):
-        lines.append(_format_sport_entry(i, item))
+        lines.append(_format_sport_stats_entry(i, item))
+        if i < len(ranked):
+            lines.append("")
+
+    lines.extend(["", "🎯 ПРОГНОЗИ — TOP 3"])
+    for i, item in enumerate(ranked, 1):
+        lines.append(_format_sport_prediction_entry(i, item))
         if i < len(ranked):
             lines.append("")
     return "\n".join(lines)
+
 
 def run_sport_top3_daily_scanner(send_func=None):
     """Build and send Sport Top 3 safely, without one bad match stopping the report."""
