@@ -1026,16 +1026,24 @@ def _format_sport_entry(index, item):
 # =========================================================
 
 def _build_sport_top3_section(sport_name, candidates):
-    if not candidates:
-        return f"{sport_name}\nНяма достатъчно исторически статистически данни."
+    # Sport Daily is PREMATCH only: only fixtures that have not started yet
+    # may enter the final report.
+    now_bg = datetime.now(TZ)
+    prematch = [
+        item for item in candidates
+        if item.get("datetime") and item["datetime"] > now_bg
+    ]
+
+    if not prematch:
+        return f"🏁 {sport_name} — PREMATCH\nНяма достатъчно валидни бъдещи срещи."
 
     ranked = sorted(
-        candidates,
+        prematch,
         key=lambda x: max((p for _m, p in x["markets"]), default=0.0),
         reverse=True,
     )[:3]
 
-    lines = [sport_name, "", "🏆 TOP 3"]
+    lines = [f"🏁 {sport_name} — PREMATCH", "", "🏆 TOP 3 ПРЕДИ МАЧА"]
     for i, item in enumerate(ranked, 1):
         lines.append(_format_sport_entry(i, item))
         if i < len(ranked):
@@ -1059,8 +1067,10 @@ def run_sport_top3_daily_scanner(send_func=None):
     end = start + timedelta(days=1)
 
     lines = [
-        "📊 DAILY STATISTICAL SCANNER — СИГНАЛИ",
+        "📊 DAILY STATISTICAL SCANNER — PREMATCH СИГНАЛИ",
         now_bg.strftime("%d.%m.%Y"),
+        "",
+        "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         "",
         "Период:",
         f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
@@ -1105,11 +1115,33 @@ def run_sport_top3_daily_scanner(send_func=None):
                     print(f"SPORT FILTER ERROR: {sport_key} {exc!r}", flush=True)
             fixtures = filtered_fixtures
 
-            # Stage 1: HARD-CAP THE FIXTURE SET BEFORE ANY TEAM-STATISTICS CALLS.
-            # The old version fetched team statistics for every fixture first;
-            # that is why the log could reach 50+ requests while still inside
-            # basketball. We now select a small, deterministic evaluation set
-            # and only then ask Highlightly for team statistics.
+            # PREMATCH FILTER MUST HAPPEN BEFORE THE FIXTURE CAP.
+            # Otherwise the cap can consume the earliest games of the 12:00->12:00
+            # window even when those games have already started, leaving the
+            # actual future matches out of the evaluation set.
+            now_scan = datetime.now(TZ)
+            prematch_fixtures = []
+            for match in fixtures:
+                dt = _sport_match_datetime(match)
+                if dt is None:
+                    continue
+                if dt > now_scan:
+                    prematch_fixtures.append(match)
+                else:
+                    print(
+                        f"SPORT PREMATCH SKIP: {sport_key} match={match.get('id')} "
+                        f"start={dt.strftime('%Y-%m-%d %H:%M')} already_started",
+                        flush=True,
+                    )
+
+            fixtures = prematch_fixtures
+            print(
+                f"SPORT PREMATCH FILTER: {sport_key} future={len(fixtures)} now={now_scan.strftime('%H:%M:%S')} BG",
+                flush=True,
+            )
+
+            # Stage 1: HARD-CAP ONLY AFTER THE PREMATCH FILTER.
+            # This guarantees that the cap is spent only on future matches.
             fixtures.sort(key=lambda m: (_sport_match_datetime(m) or end))
 
             if len(fixtures) > MAX_FIXTURES_TO_EVALUATE:
@@ -1266,7 +1298,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             lines.append("")
             lines.append("────────────────────")
             lines.append("")
-            print(f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} valid={len(candidates)}", flush=True)
+            print(f"SPORT PREMATCH RESULT: {sport_key} fixtures={len(fixtures)} valid_prematch={len(candidates)}", flush=True)
 
         except APIQuotaExceeded:
             # Quota exhaustion is a daily stop. Keep already-built sections and
