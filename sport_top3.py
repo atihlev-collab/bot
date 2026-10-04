@@ -145,7 +145,7 @@ _SPORT_STATS_CACHE = {}
 # Hard limits: prevent one sport with many fixtures from exhausting the daily
 # Sport API quota before the scanner reaches the other sports.
 MAX_FIXTURES_TO_EVALUATE = 10
-MAX_CONTEXT_CANDIDATES = 6
+MAX_CONTEXT_CANDIDATES = 10
 
 
 def _sport_api_get(endpoint, params=None):
@@ -1006,6 +1006,7 @@ def _format_sport_stats_entry(index, item):
         f"{index}. {home} - {away}",
         f"   {home}: средно {item['home_avg']:.2f} | мачове: {item['home_games']}",
         f"   {away}: средно {item['away_avg']:.2f} | мачове: {item['away_games']}",
+        f"   📊 Общо средно: {item['home_avg'] + item['away_avg']:.2f}",
         f"   Лига: {league or '-'}",
         f"   Държава: {country or '-'}",
         f"   Дата: {dt.strftime('%d.%m.%Y')}",
@@ -1051,14 +1052,14 @@ def _build_sport_top3_section(sport_name, candidates):
     lines = [
         f"🏁 {sport_name} — PREMATCH",
         "",
-        "📊 СТАТИСТИКА — TOP 3",
+        "📊 СТАТИСТИКА — TOP 5",
     ]
     for i, item in enumerate(ranked, 1):
         lines.append(_format_sport_stats_entry(i, item))
         if i < len(ranked):
             lines.append("")
 
-    lines.extend(["", "🎯 ПРОГНОЗИ — TOP 3"])
+    lines.extend(["", "🎯 ПРОГНОЗИ — TOP 5"])
     for i, item in enumerate(ranked, 1):
         lines.append(_format_sport_prediction_entry(i, item))
         if i < len(ranked):
@@ -1074,11 +1075,24 @@ def run_sport_top3_daily_scanner(send_func=None):
     started = time.time()
 
     now_bg = datetime.now(TZ)
+
+    # HARD LAUNCH WINDOW: the Sport API may only be queried during the
+    # morning daily launch (10:00-10:05 BG). A restart later in the day must
+    # NOT trigger a catch-up scan or any Sport API requests.
+    if not (now_bg.hour == 10 and 0 <= now_bg.minute <= 5):
+        print(
+            f"SPORT SCAN BLOCKED: outside 10:00-10:05 BG launch window | now={now_bg:%Y-%m-%d %H:%M:%S}",
+            flush=True,
+        )
+        return ""
+
     run_key = f"sport_top3:{now_bg.date().isoformat()}"
     if already_ran(run_key):
         print(_signal_text(f"SPORT DAILY SCANNER ALREADY RAN: {now_bg.date().isoformat()}"), flush=True)
         return ""
 
+    # The report is generated at 10:00, but its fixture window is fixed to
+    # 12:00 BG today -> 12:00 BG tomorrow (exactly 24 hours).
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=1)
 
@@ -1262,7 +1276,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             )
 
             # Recent-form/home-away context is the expensive stage. Only the
-            # six strongest base candidates get it; all others stay out of the
+            # up to ten strongest base candidates get it; all others stay out of the
             # API pipeline.
             context_candidates = base_candidates[:MAX_CONTEXT_CANDIDATES]
 
@@ -1301,7 +1315,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             # If the context stage found nothing, keep the strongest average
             # candidates as total-only signals rather than sending an empty sport.
             if not candidates and base_candidates:
-                for item in base_candidates[:3]:
+                for item in base_candidates[:5]:
                     over_market, over_prob = _sport_probability(item["expected"], "over")
                     under_market, under_prob = _sport_probability(item["expected"], "under")
                     if over_market and under_market:
