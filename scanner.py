@@ -29,6 +29,13 @@ TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
 HISTORY_GAMES = None
 MAX_WORKERS = 8
+# PREMATCH quota protection: Betano availability is cached between scans.
+BETANO_CACHE_TTL = 900  # 15 minutes
+_BETANO_CACHE = {}
+# Never let one PREMATCH pass consume the whole daily Highlightly quota on
+# historical fixture statistics. Cached stats are always reused first.
+MAX_STATS_API_FETCH_PER_SCAN = 500
+MAX_STATS_DETAIL_FALLBACK_PER_SCAN = 100
 _SCAN_FIXTURE_STATS = {}
 _SCAN_HISTORY = {}
 _UPCOMING_FIXTURES_CACHE = {}
@@ -351,53 +358,38 @@ def _persist_team_season_history(team_id, season, league_id, matches):
 
 
 def _load_persisted_team_season_history(team_id, season, league_id=None):
-    """Load history already saved by the scanner without spending an API request.
-
-    History is stored once per (team, season) and may contain multiple league
-    buckets.  PREMATCH needs the merged team history, so do not require the
-    exact league bucket requested by the caller.
-    """
-    import json
-
+    """Restore season history from SQLite before spending a Highlightly request."""
     try:
+        import json
         conn = _db()
         row = conn.execute(
             "SELECT data FROM scanner_team_season_history WHERE team_id=? AND season=?",
             (int(team_id), int(season)),
         ).fetchone()
         conn.close()
+        if not row:
+            return []
+        payload = json.loads(row[0])
+        if not isinstance(payload, dict):
+            return []
+        rows = []
+        for bucket in payload.values():
+            if isinstance(bucket, list):
+                rows.extend(bucket)
+        out, seen = [], set()
+        for f in rows:
+            if not isinstance(f, dict):
+                continue
+            fid = (f.get("fixture") or {}).get("id")
+            if not fid or int(fid) in seen:
+                continue
+            seen.add(int(fid))
+            out.append(f)
+        out.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
+        return out
     except Exception as exc:
         print("SCANNER HISTORY CACHE READ ERROR:", team_id, season, repr(exc))
         return []
-
-    if not row:
-        return []
-
-    try:
-        payload = json.loads(row[0])
-    except Exception:
-        return []
-
-    if not isinstance(payload, dict):
-        return []
-
-    merged = []
-    seen = set()
-    for value in payload.values():
-        if not isinstance(value, list):
-            continue
-        for game in value:
-            if not isinstance(game, dict):
-                continue
-            fid = (game.get("fixture") or {}).get("id")
-            marker = fid if fid is not None else id(game)
-            if marker in seen:
-                continue
-            seen.add(marker)
-            merged.append(game)
-
-    merged.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""))
-    return merged
 
 
 def get_team_history(team_id, season, league_id=None):
@@ -406,21 +398,10 @@ def get_team_history(team_id, season, league_id=None):
     if key in _SCAN_HISTORY:
         return _SCAN_HISTORY[key]
 
-    # IMPORTANT: reuse persisted scanner history before making ANY API request.
-    # This is the main fix for PREMATCH after a restart: history already saved
-    # during the morning scan must not be discarded just because _SCAN_HISTORY
-    # was reset with the new Python process.
     persisted = _load_persisted_team_season_history(team_id, season, league_id)
     if persisted:
         _SCAN_HISTORY[key] = persisted
-        print(
-            "HISTORY CACHE RESTORED:",
-            team_id,
-            "season=", season,
-            "matches=", len(persisted),
-            "source=sqlite",
-            flush=True,
-        )
+        print("HISTORY CACHE RESTORED:", team_id, "season=", season, "matches=", len(persisted), "source=sqlite")
         return persisted
 
     def fetch_team_matches(extra):
@@ -580,16 +561,31 @@ def _fixture_market_values(fixture):
 
 
 def load_historical_statistics(all_histories):
-    """Load historical match statistics with persistent caching and fallback."""
+    """Load recent real match statistics with persistent caching and a hard API budget.
+
+    Only the latest 7 completed fixtures per team are relevant to PREMATCH.
+    Cached fixture statistics are always reused. New Highlightly statistics are
+    capped per scan so PREMATCH cannot burn the daily quota.
+    """
     fixtures_by_id = {}
+    fixture_frequency = {}
     for history in all_histories:
-        for f in history:
+        if not isinstance(history, list):
+            continue
+        completed = [f for f in history if isinstance(f, dict)]
+        completed.sort(key=lambda f: (f.get("fixture") or {}).get("date", ""), reverse=True)
+        for f in completed[:7]:
             fid = (f.get("fixture") or {}).get("id")
             if fid:
-                fixtures_by_id[int(fid)] = f
+                fid = int(fid)
+                fixtures_by_id[fid] = f
+                fixture_frequency[fid] = fixture_frequency.get(fid, 0) + 1
 
     loaded, cached, fetched, fallback = {}, 0, 0, 0
     stat_keys = ("corner kicks", "corners", "corner kicks won", "total shots", "shots", "yellow cards", "yellow card", "cards")
+
+    # First pass: persistent cache only. Zero API cost.
+    missing = []
     for fid, base_fixture in fixtures_by_id.items():
         cached_data = _read_cached_stat(fid)
         if isinstance(cached_data, dict) and cached_data:
@@ -602,31 +598,58 @@ def load_historical_statistics(all_histories):
                 loaded[fid] = cached_data
                 cached += 1
                 continue
-            # Old cache entries may contain only goals. They are not enough
-            # for corners/shots/cards, so refresh them once.
+        missing.append((fid, base_fixture))
 
+    # Prefer fixtures shared by both teams, then newest fixtures.
+    missing.sort(key=lambda item: (
+        fixture_frequency.get(item[0], 0),
+        (item[1].get("fixture") or {}).get("date", "")
+    ), reverse=True)
+
+    api_budget = min(MAX_STATS_API_FETCH_PER_SCAN, len(missing))
+    fallback_budget = MAX_STATS_DETAIL_FALLBACK_PER_SCAN
+
+    for idx, (fid, base_fixture) in enumerate(missing[:api_budget]):
         rows = _api(f"statistics/{fid}", {})
         data = {}
         if isinstance(rows, list):
             fake = dict(base_fixture); fake["statistics"] = rows
             _, data = _fixture_market_values(fake)
 
-        if not any(any(k in td for k in stat_keys) for td in data.values()):
+        # Detail fallback is expensive (second request), so only use it for
+        # the highest-priority fixtures while a small fallback budget remains.
+        if not any(any(k in td for k in stat_keys) for td in data.values()) and fallback_budget > 0:
             detail = _api(f"matches/{fid}", {})
+            fallback_budget -= 1
             if isinstance(detail, list) and detail and isinstance(detail[0], dict):
                 fake = dict(base_fixture); fake.update(detail[0])
                 if isinstance(detail[0].get("statistics"), list):
                     fake["statistics"] = detail[0]["statistics"]
                 _, detail_data = _fixture_market_values(fake)
                 if detail_data:
-                    data = detail_data; fallback += 1
+                    data = detail_data
+                    fallback += 1
 
         if data:
-            _write_cached_stat(fid, data); fetched += 1
+            _write_cached_stat(fid, data)
+            fetched += 1
         loaded[fid] = data
 
+    # Fixtures outside the hard budget remain empty this pass; they can be
+    # filled by later scans from cache without ever causing a quota spike.
+    for fid, _ in missing[api_budget:]:
+        loaded.setdefault(fid, {})
+
     _SCAN_FIXTURE_STATS.clear(); _SCAN_FIXTURE_STATS.update(loaded)
-    print("SCANNER STATS LOAD:", f"fixtures={len(fixtures_by_id)}", f"cached={cached}", f"fetched={fetched}", f"detail_fallback={fallback}", f"with_data={sum(1 for v in loaded.values() if v)}")
+    print(
+        "SCANNER STATS LOAD:",
+        f"fixtures={len(fixtures_by_id)}",
+        f"cached={cached}",
+        f"fetched={fetched}",
+        f"detail_fallback={fallback}",
+        f"with_data={sum(1 for v in loaded.values() if v)}",
+        f"api_budget={api_budget}",
+    )
     return loaded
 
 def build_profiles_from_histories(histories_by_key, stats_by_fixture):
@@ -973,6 +996,11 @@ def get_betano_prematch_markets(fixture_id):
     verified for goals, while corners/cards/shots are gated by the presence
     of a real Betano prematch feed for the fixture.
     """
+    now_mono = time.monotonic()
+    cached = _BETANO_CACHE.get(int(fixture_id))
+    if cached and now_mono - cached[0] < BETANO_CACHE_TTL:
+        return dict(cached[1])
+
     result = {
         "match": False,
         "goals": False,
@@ -1030,6 +1058,7 @@ def get_betano_prematch_markets(fixture_id):
             if "card" in name or "booking" in name:
                 result["cards"] = True
 
+    _BETANO_CACHE[int(fixture_id)] = (time.monotonic(), dict(result))
     print("BETANO FILTER RESULT:", fixture_id, result, "MARKETS=", market_names)
     return result
 
