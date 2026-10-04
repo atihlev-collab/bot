@@ -929,38 +929,52 @@ def _sport_winner_probability(home_avg, away_avg, home_ctx=None, away_ctx=None):
     if hn < 5 or an < 5:
         return None
 
-    # Recent form (30%): points earned in the last 7 completed games.
+    # Winner model weights:
+    # 35% recent 7-match form
+    # 20% attack strength
+    # 20% recent attack + defence differential
+    # 15% actual home/away record
+    # 10% sample quality / stability
     hf=float(home_ctx.get("form_points",0) or 0)/(3.0*hn)
     af=float(away_ctx.get("form_points",0) or 0)/(3.0*an)
     form_edge=max(-1.0,min(1.0,hf-af))
 
-    # Scoring strength (15%) and recent net performance (20%).
     avg_scale=max(1.0,(home_avg+away_avg)/2.0)
     attack_edge=max(-1.0,min(1.0,(home_avg-away_avg)/avg_scale))
+
     hnet=float(home_ctx.get("last_scored") or 0)-float(home_ctx.get("last_conceded") or 0)
     anet=float(away_ctx.get("last_scored") or 0)-float(away_ctx.get("last_conceded") or 0)
     net_edge=max(-1.0,min(1.0,(hnet-anet)/avg_scale))
 
-    # Correct home/away split: denominator is home_games / away_games, not total games.
-    hgames=int(home_ctx.get("home_games",0) or 0); agames=int(away_ctx.get("away_games",0) or 0)
+    # Actual home/away record. Use only games played in the relevant split.
+    hgames=int(home_ctx.get("home_games",0) or 0)
+    agames=int(away_ctx.get("away_games",0) or 0)
     if hgames < 3 or agames < 3:
         return None
     hsplit=float(home_ctx.get("home_points",0) or 0)/(3.0*hgames)
     asplit=float(away_ctx.get("away_points",0) or 0)/(3.0*agames)
     split_edge=max(-1.0,min(1.0,hsplit-asplit))
 
-    # Sample quality (15%): weak samples shrink the signal rather than creating a side.
+    # Sample quality / stability: minimum 5 recent games is mandatory.
     sample=min(hn,an,hgames,agames)
     quality=min(1.0,sample/7.0)
-    score=(form_edge*0.30 + attack_edge*0.15 + net_edge*0.20 + split_edge*0.35)
-    score *= (0.55 + 0.45*quality)
+
+    base_score=(
+        form_edge*0.35
+        + attack_edge*0.20
+        + net_edge*0.20
+        + split_edge*0.15
+    )
+    # The remaining 10% is sample quality. Weak samples shrink the score
+    # instead of manufacturing a winner.
+    score=base_score*(0.90 + 0.10*quality)
 
     home_p=max(5.0,min(95.0,50.0+score*45.0))
     away_p=100.0-home_p
     edge=abs(home_p-away_p)
 
-    # No forced 50–59% winner. Totals can still be published independently.
-    if max(home_p,away_p) < 60.0 or edge < 12.0:
+    # Winner only when the model has a meaningful advantage.
+    if max(home_p,away_p) < 57.0 or edge < 7.0:
         return None
     return round(home_p,1),round(away_p,1),round(edge,1)
 
