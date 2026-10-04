@@ -153,7 +153,7 @@ def _sport_api_get(endpoint, params=None):
         response = requests.get(
             f"{SPORT_API_BASE}/{endpoint}",
             headers={"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": SPORT_API_HOST},
-            params=params or {}, timeout=25,
+            params=params or {}, timeout=10,
         )
         print(f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} params={params or {}} status={response.status_code}")
         if response.status_code == 429:
@@ -929,52 +929,38 @@ def _sport_winner_probability(home_avg, away_avg, home_ctx=None, away_ctx=None):
     if hn < 5 or an < 5:
         return None
 
-    # Winner model weights:
-    # 35% recent 7-match form
-    # 20% attack strength
-    # 20% recent attack + defence differential
-    # 15% actual home/away record
-    # 10% sample quality / stability
+    # Recent form (30%): points earned in the last 7 completed games.
     hf=float(home_ctx.get("form_points",0) or 0)/(3.0*hn)
     af=float(away_ctx.get("form_points",0) or 0)/(3.0*an)
     form_edge=max(-1.0,min(1.0,hf-af))
 
+    # Scoring strength (15%) and recent net performance (20%).
     avg_scale=max(1.0,(home_avg+away_avg)/2.0)
     attack_edge=max(-1.0,min(1.0,(home_avg-away_avg)/avg_scale))
-
     hnet=float(home_ctx.get("last_scored") or 0)-float(home_ctx.get("last_conceded") or 0)
     anet=float(away_ctx.get("last_scored") or 0)-float(away_ctx.get("last_conceded") or 0)
     net_edge=max(-1.0,min(1.0,(hnet-anet)/avg_scale))
 
-    # Actual home/away record. Use only games played in the relevant split.
-    hgames=int(home_ctx.get("home_games",0) or 0)
-    agames=int(away_ctx.get("away_games",0) or 0)
+    # Correct home/away split: denominator is home_games / away_games, not total games.
+    hgames=int(home_ctx.get("home_games",0) or 0); agames=int(away_ctx.get("away_games",0) or 0)
     if hgames < 3 or agames < 3:
         return None
     hsplit=float(home_ctx.get("home_points",0) or 0)/(3.0*hgames)
     asplit=float(away_ctx.get("away_points",0) or 0)/(3.0*agames)
     split_edge=max(-1.0,min(1.0,hsplit-asplit))
 
-    # Sample quality / stability: minimum 5 recent games is mandatory.
+    # Sample quality (15%): weak samples shrink the signal rather than creating a side.
     sample=min(hn,an,hgames,agames)
     quality=min(1.0,sample/7.0)
-
-    base_score=(
-        form_edge*0.35
-        + attack_edge*0.20
-        + net_edge*0.20
-        + split_edge*0.15
-    )
-    # The remaining 10% is sample quality. Weak samples shrink the score
-    # instead of manufacturing a winner.
-    score=base_score*(0.90 + 0.10*quality)
+    score=(form_edge*0.30 + attack_edge*0.15 + net_edge*0.20 + split_edge*0.35)
+    score *= (0.55 + 0.45*quality)
 
     home_p=max(5.0,min(95.0,50.0+score*45.0))
     away_p=100.0-home_p
     edge=abs(home_p-away_p)
 
-    # Winner only when the model has a meaningful advantage.
-    if max(home_p,away_p) < 57.0 or edge < 7.0:
+    # No forced 50–59% winner. Totals can still be published independently.
+    if max(home_p,away_p) < 60.0 or edge < 12.0:
         return None
     return round(home_p,1),round(away_p,1),round(edge,1)
 
@@ -1052,7 +1038,7 @@ def _build_sport_top3_section(sport_name, candidates):
     return "\n".join(lines)
 
 def run_sport_top3_daily_scanner(send_func=None):
-    """Build Top 3 for every configured sport in the 12:00→12:00 window."""
+    """Build and send Sport Top 3 safely, without one bad match stopping the report."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
     _SPORT_STATS_CACHE = {}
@@ -1061,8 +1047,9 @@ def run_sport_top3_daily_scanner(send_func=None):
     now_bg = datetime.now(TZ)
     run_key = f"sport_top3:{now_bg.date().isoformat()}"
     if already_ran(run_key):
-        print(_signal_text(f"SPORT DAILY SCANNER ALREADY RAN: {now_bg.date().isoformat()}"))
+        print(_signal_text(f"SPORT DAILY SCANNER ALREADY RAN: {now_bg.date().isoformat()}"), flush=True)
         return ""
+
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=1)
 
@@ -1072,144 +1059,187 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
         "Период:",
         f"{start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "История: всички налични текущо-сезонни team statistics; волейбол — общи rally points от завършените мачове",
+        "История: текущо-сезонни team statistics; волейбол — общи rally points от завършените мачове",
         "",
     ]
 
+    # Process every sport independently. A single API/match failure must not
+    # abort the complete daily report.
     for sport_key, cfg in SPORTS_CONFIG.items():
-        print(f"SPORT SCAN: {sport_key} — FIXTURES")
-        fixtures = _get_sport_fixtures(cfg, start, end)
-
-
-        # GLOBAL BLOCK — Russia / Belarus
-        filtered_fixtures = []
-
-        for match in fixtures:
-            league = match.get("league") or {}
-
-            country = ""
-
-            if isinstance(league, dict):
-                country = (
-                    league.get("country")
-                    or league.get("countryName")
-                    or ""
-                )
-
-                if isinstance(country, dict):
-                    country = (
-                        country.get("name")
-                        or country.get("countryName")
-                        or ""
-                    )
-
-            if not country:
-                country = (
-                    match.get("country")
-                    or match.get("countryName")
-                    or ""
-                )
-
-                if isinstance(country, dict):
-                    country = (
-                        country.get("name")
-                        or country.get("countryName")
-                        or ""
-                    )
-
-            country = str(country).strip().casefold()
-            league_name, _ = _sport_league_country(match)
-            league_name_cf = str(league_name or "").strip().casefold()
-
-            if "friendly" in league_name_cf or "club friendly" in league_name_cf:
-                print(f"SPORT BLOCKED FRIENDLY: {match.get('id')} — {league_name}")
-                continue
-
-            if country in {"russia", "belarus"}:
-                print(
-                    f"SPORT BLOCKED COUNTRY: "
-                    f"{match.get('id')} — {country}"
-                )
-                continue
-
-            filtered_fixtures.append(match)
-
-        fixtures = filtered_fixtures
-        
-        
+        print(f"SPORT SCAN: {sport_key} — FIXTURES", flush=True)
         candidates = []
+        fixtures = []
+        try:
+            fixtures = _get_sport_fixtures(cfg, start, end)
 
-        for match in fixtures:
-            home = match.get("homeTeam") or match.get("home") or {}
-            away = match.get("awayTeam") or match.get("away") or {}
-            home_id = _sport_team_id(home)
-            away_id = _sport_team_id(away)
-            if not home_id or not away_id:
-                continue
+            # Russia / Belarus + friendly matches are blocked globally.
+            filtered_fixtures = []
+            for match in fixtures:
+                try:
+                    league = match.get("league") or {}
+                    country = ""
+                    if isinstance(league, dict):
+                        country = league.get("country") or league.get("countryName") or ""
+                        if isinstance(country, dict):
+                            country = country.get("name") or country.get("countryName") or ""
+                    if not country:
+                        country = match.get("country") or match.get("countryName") or ""
+                        if isinstance(country, dict):
+                            country = country.get("name") or country.get("countryName") or ""
+                    country = str(country).strip().casefold()
+                    league_name, _ = _sport_league_country(match)
+                    league_name_cf = str(league_name or "").strip().casefold()
+                    if "friendly" in league_name_cf or "club friendly" in league_name_cf:
+                        print(f"SPORT BLOCKED FRIENDLY: {match.get('id')} — {league_name}", flush=True)
+                        continue
+                    if country in {"russia", "belarus"}:
+                        print(f"SPORT BLOCKED COUNTRY: {match.get('id')} — {country}", flush=True)
+                        continue
+                    filtered_fixtures.append(match)
+                except Exception as exc:
+                    print(f"SPORT FILTER ERROR: {sport_key} {exc!r}", flush=True)
+            fixtures = filtered_fixtures
 
-            if sport_key == "volleyball":
-                league = match.get("league") or {}
-                league_id = league.get("id") if isinstance(league, dict) else None
-                season = league.get("season") if isinstance(league, dict) else None
-                h = _get_volleyball_team_average(home_id, league_id, season)
-                a = _get_volleyball_team_average(away_id, league_id, season)
-            else:
-                h = _get_team_average(sport_key, home_id, cfg["metric"])
-                a = _get_team_average(sport_key, away_id, cfg["metric"])
-            if not h or not a or h["games"] < 3 or a["games"] < 3:
-                continue
+            # Stage 1: cheap/current team averages for all fixtures.
+            # Stage 2: expensive recent-form context only for the strongest
+            # candidates. This prevents dozens of unnecessary history calls.
+            base_candidates = []
+            for match in fixtures:
+                try:
+                    home = match.get("homeTeam") or match.get("home") or {}
+                    away = match.get("awayTeam") or match.get("away") or {}
+                    home_id = _sport_team_id(home)
+                    away_id = _sport_team_id(away)
+                    if not home_id or not away_id:
+                        continue
 
-            dt = _sport_match_datetime(match)
-            if not dt:
-                continue
+                    league = match.get("league") or {}
+                    league_id = league.get("id") if isinstance(league, dict) else None
+                    season = league.get("season") if isinstance(league, dict) else None
 
-            expected = h["average"] + a["average"]
+                    if sport_key == "volleyball":
+                        h = _get_volleyball_team_average(home_id, league_id, season)
+                        a = _get_volleyball_team_average(away_id, league_id, season)
+                    else:
+                        h = _get_team_average(sport_key, home_id, cfg["metric"])
+                        a = _get_team_average(sport_key, away_id, cfg["metric"])
 
-            league = match.get("league") or {}
-            league_id = league.get("id") if isinstance(league, dict) else None
-            season = league.get("season") if isinstance(league, dict) else None
-            home_ctx = _sport_team_context(sport_key, home_id, league_id, season, cfg["metric"], last_n=7)
-            away_ctx = _sport_team_context(sport_key, away_id, league_id, season, cfg["metric"], last_n=7)
-            markets = _sport_market_candidates(
-                h["average"], a["average"], home_ctx, away_ctx
+                    if not h or not a or h.get("games", 0) < 3 or a.get("games", 0) < 3:
+                        continue
+                    dt = _sport_match_datetime(match)
+                    if not dt:
+                        continue
+
+                    expected = h["average"] + a["average"]
+                    base_candidates.append({
+                        "match": match,
+                        "datetime": dt,
+                        "home_avg": h["average"],
+                        "away_avg": a["average"],
+                        "home_games": h["games"],
+                        "away_games": a["games"],
+                        "expected": expected,
+                        "league_id": league_id,
+                        "season": season,
+                    })
+                except APIQuotaExceeded:
+                    raise
+                except Exception as exc:
+                    print(f"SPORT MATCH ERROR: {sport_key} {exc!r}", flush=True)
+                    continue
+
+            # Highest statistical opportunities first. Only these need the
+            # expensive recent-form/home-away context calculation.
+            base_candidates.sort(
+                key=lambda x: (x["expected"], abs(x["home_avg"] - x["away_avg"])),
+                reverse=True,
             )
-            # Winner is optional. A strong total remains a valid candidate even
-            # when winner evidence is inconclusive. This removes the hidden
-            # requirement to manufacture a winner just to keep the match.
-            if not markets:
-                continue
+            context_limit = 20
 
-            candidates.append({
-                "match": match,
-                "datetime": dt,
-                "home_avg": h["average"],
-                "away_avg": a["average"],
-                "home_games": h["games"],
-                "away_games": a["games"],
-                "expected": expected,
-                "markets": markets,
-                "home_context": home_ctx,
-                "away_context": away_ctx,
-            })
+            for item in base_candidates[:context_limit]:
+                try:
+                    home = item["match"].get("homeTeam") or item["match"].get("home") or {}
+                    away = item["match"].get("awayTeam") or item["match"].get("away") or {}
+                    home_id = _sport_team_id(home)
+                    away_id = _sport_team_id(away)
+                    home_ctx = _sport_team_context(
+                        sport_key, home_id, item["league_id"], item["season"], cfg["metric"], last_n=7
+                    )
+                    away_ctx = _sport_team_context(
+                        sport_key, away_id, item["league_id"], item["season"], cfg["metric"], last_n=7
+                    )
+                    markets = _sport_market_candidates(
+                        item["home_avg"], item["away_avg"], home_ctx, away_ctx
+                    )
+                    # If context is unavailable, totals are still valid and
+                    # must not be lost just because Winner is inconclusive.
+                    if not markets:
+                        over_market, over_prob = _sport_probability(item["expected"], "over")
+                        under_market, under_prob = _sport_probability(item["expected"], "under")
+                        if over_market and under_market:
+                            markets = [(over_market, over_prob)] if over_prob >= under_prob else [(under_market, under_prob)]
+                    if not markets:
+                        continue
+                    item["markets"] = markets
+                    item["home_context"] = home_ctx
+                    item["away_context"] = away_ctx
+                    candidates.append(item)
+                except APIQuotaExceeded:
+                    raise
+                except Exception as exc:
+                    print(f"SPORT CONTEXT ERROR: {sport_key} {exc!r}", flush=True)
+                    continue
 
-        lines.append(_build_sport_top3_section(cfg["name"], candidates))
-        lines.append("")
-        lines.append("────────────────────")
-        lines.append("")
+            # If the context stage found nothing, keep the strongest average
+            # candidates as total-only signals rather than sending an empty sport.
+            if not candidates and base_candidates:
+                for item in base_candidates[:3]:
+                    over_market, over_prob = _sport_probability(item["expected"], "over")
+                    under_market, under_prob = _sport_probability(item["expected"], "under")
+                    if over_market and under_market:
+                        item["markets"] = [(over_market, over_prob)] if over_prob >= under_prob else [(under_market, under_prob)]
+                        item["home_context"] = None
+                        item["away_context"] = None
+                        candidates.append(item)
 
-        print(
-            f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} "
-            f"valid={len(candidates)}"
-        )
+            lines.append(_build_sport_top3_section(cfg["name"], candidates))
+            lines.append("")
+            lines.append("────────────────────")
+            lines.append("")
+            print(f"SPORT RESULT: {sport_key} fixtures={len(fixtures)} valid={len(candidates)}", flush=True)
+
+        except APIQuotaExceeded:
+            # Quota exhaustion is a daily stop. Keep already-built sections and
+            # add an explicit status instead of losing the Telegram report.
+            print(f"SPORT QUOTA STOP: {sport_key}", flush=True)
+            lines.append(f"{cfg['name']}\nAPI quota exhausted — remaining sports skipped.")
+            lines.append("")
+            lines.append("────────────────────")
+            lines.append("")
+            break
+        except Exception as exc:
+            print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
+            lines.append(f"{cfg['name']}\nВременна API грешка — спортът е пропуснат, останалите продължават.")
+            lines.append("")
+            lines.append("────────────────────")
+            lines.append("")
+            continue
 
     lines.append(f"📡 API заявки: {_SPORT_API_CALLS}")
     lines.append(f"⏱ Scan time: {time.time() - started:.1f}s")
-
     message = "\n".join(lines)
-    print(message)
+    print(message, flush=True)
+
+    # ALWAYS attempt Telegram before marking the run complete.
     if send_func:
-        # Telegram hard limit is 4096 characters. Keep a safety margin
-        # for the numbered chunk header and send the complete report.
-        _send_sport_report_chunks(message, send_func, max_chars=3700)
+        try:
+            _send_sport_report_chunks(message, send_func, max_chars=3700)
+            print("SPORT TELEGRAM REPORT SENT", flush=True)
+        except Exception as exc:
+            print(f"SPORT TELEGRAM ERROR: {exc!r}", flush=True)
+            # Do not mark the run as complete when Telegram itself failed.
+            return message
+
     mark_ran(run_key)
+    print(f"SPORT DAILY COMPLETE | day={now_bg.date().isoformat()} | api_calls={_SPORT_API_CALLS}", flush=True)
     return message
