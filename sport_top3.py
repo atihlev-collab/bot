@@ -142,6 +142,11 @@ SPORTS_CONFIG = {
 _SPORT_API_CALLS = 0
 _SPORT_STATS_CACHE = {}
 
+# Hard limits: prevent one sport with many fixtures from exhausting the daily
+# Sport API quota before the scanner reaches the other sports.
+MAX_FIXTURES_TO_EVALUATE = 10
+MAX_CONTEXT_CANDIDATES = 6
+
 
 def _sport_api_get(endpoint, params=None):
     """Call Sport Ultra with a persistent daily quota guard."""
@@ -1100,11 +1105,33 @@ def run_sport_top3_daily_scanner(send_func=None):
                     print(f"SPORT FILTER ERROR: {sport_key} {exc!r}", flush=True)
             fixtures = filtered_fixtures
 
-            # Stage 1: cheap/current team averages for all fixtures.
-            # Stage 2: expensive recent-form context only for the strongest
-            # candidates. This prevents dozens of unnecessary history calls.
+            # Stage 1: HARD-CAP THE FIXTURE SET BEFORE ANY TEAM-STATISTICS CALLS.
+            # The old version fetched team statistics for every fixture first;
+            # that is why the log could reach 50+ requests while still inside
+            # basketball. We now select a small, deterministic evaluation set
+            # and only then ask Highlightly for team statistics.
+            fixtures.sort(key=lambda m: (_sport_match_datetime(m) or end))
+
+            if len(fixtures) > MAX_FIXTURES_TO_EVALUATE:
+                # Keep the earliest fixtures in the 12:00 -> 12:00 window.
+                # This is deterministic, bounded and avoids silently spending
+                # the quota on the long tail of minor competitions.
+                selected_fixtures = fixtures[:MAX_FIXTURES_TO_EVALUATE]
+                print(
+                    f"SPORT FIXTURE CAP: {sport_key} "
+                    f"total={len(fixtures)} selected={len(selected_fixtures)} "
+                    f"cap={MAX_FIXTURES_TO_EVALUATE}",
+                    flush=True,
+                )
+            else:
+                selected_fixtures = fixtures
+
+            # Fetch the base team averages concurrently. This reduces wall time
+            # without increasing the number of API requests beyond the cap.
             base_candidates = []
-            for match in fixtures:
+            team_jobs = []
+
+            for match in selected_fixtures:
                 try:
                     home = match.get("homeTeam") or match.get("home") or {}
                     away = match.get("awayTeam") or match.get("away") or {}
@@ -1116,14 +1143,50 @@ def run_sport_top3_daily_scanner(send_func=None):
                     league = match.get("league") or {}
                     league_id = league.get("id") if isinstance(league, dict) else None
                     season = league.get("season") if isinstance(league, dict) else None
+                    team_jobs.append((match, home_id, away_id, league_id, season))
+                except Exception as exc:
+                    print(f"SPORT MATCH PREP ERROR: {sport_key} {exc!r}", flush=True)
 
+            # Threading is intentionally limited. The hard fixture cap is the
+            # quota protection; workers only make the bounded set finish faster.
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                futures = {}
+                for match, home_id, away_id, league_id, season in team_jobs:
                     if sport_key == "volleyball":
-                        h = _get_volleyball_team_average(home_id, league_id, season)
-                        a = _get_volleyball_team_average(away_id, league_id, season)
+                        futures[pool.submit(
+                            _get_volleyball_team_average, home_id, league_id, season
+                        )] = ("home", match, home_id, away_id, league_id, season)
+                        futures[pool.submit(
+                            _get_volleyball_team_average, away_id, league_id, season
+                        )] = ("away", match, home_id, away_id, league_id, season)
                     else:
-                        h = _get_team_average(sport_key, home_id, cfg["metric"])
-                        a = _get_team_average(sport_key, away_id, cfg["metric"])
+                        futures[pool.submit(
+                            _get_team_average, sport_key, home_id, cfg["metric"]
+                        )] = ("home", match, home_id, away_id, league_id, season)
+                        futures[pool.submit(
+                            _get_team_average, sport_key, away_id, cfg["metric"]
+                        )] = ("away", match, home_id, away_id, league_id, season)
 
+                pair_results = {}
+                for future in as_completed(futures):
+                    side, match, home_id, away_id, league_id, season = futures[future]
+                    key = id(match)
+                    try:
+                        pair_results.setdefault(key, {})[side] = future.result()
+                        pair_results[key]["meta"] = (
+                            match, home_id, away_id, league_id, season
+                        )
+                    except APIQuotaExceeded:
+                        raise
+                    except Exception as exc:
+                        print(f"SPORT STATS ERROR: {sport_key} {exc!r}", flush=True)
+
+            for result in pair_results.values():
+                try:
+                    match, home_id, away_id, league_id, season = result["meta"]
+                    h = result.get("home")
+                    a = result.get("away")
                     if not h or not a or h.get("games", 0) < 3 or a.get("games", 0) < 3:
                         continue
                     dt = _sport_match_datetime(match)
@@ -1142,21 +1205,20 @@ def run_sport_top3_daily_scanner(send_func=None):
                         "league_id": league_id,
                         "season": season,
                     })
-                except APIQuotaExceeded:
-                    raise
                 except Exception as exc:
-                    print(f"SPORT MATCH ERROR: {sport_key} {exc!r}", flush=True)
-                    continue
+                    print(f"SPORT CANDIDATE ERROR: {sport_key} {exc!r}", flush=True)
 
-            # Highest statistical opportunities first. Only these need the
-            # expensive recent-form/home-away context calculation.
             base_candidates.sort(
                 key=lambda x: (x["expected"], abs(x["home_avg"] - x["away_avg"])),
                 reverse=True,
             )
-            context_limit = 20
 
-            for item in base_candidates[:context_limit]:
+            # Recent-form/home-away context is the expensive stage. Only the
+            # six strongest base candidates get it; all others stay out of the
+            # API pipeline.
+            context_candidates = base_candidates[:MAX_CONTEXT_CANDIDATES]
+
+            for item in context_candidates:
                 try:
                     home = item["match"].get("homeTeam") or item["match"].get("home") or {}
                     away = item["match"].get("awayTeam") or item["match"].get("away") or {}
@@ -1171,8 +1233,6 @@ def run_sport_top3_daily_scanner(send_func=None):
                     markets = _sport_market_candidates(
                         item["home_avg"], item["away_avg"], home_ctx, away_ctx
                     )
-                    # If context is unavailable, totals are still valid and
-                    # must not be lost just because Winner is inconclusive.
                     if not markets:
                         over_market, over_prob = _sport_probability(item["expected"], "over")
                         under_market, under_prob = _sport_probability(item["expected"], "under")
@@ -1243,3 +1303,6 @@ def run_sport_top3_daily_scanner(send_func=None):
     mark_ran(run_key)
     print(f"SPORT DAILY COMPLETE | day={now_bg.date().isoformat()} | api_calls={_SPORT_API_CALLS}", flush=True)
     return message
+
+
+
