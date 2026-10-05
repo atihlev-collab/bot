@@ -1108,92 +1108,103 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
     ]
 
-    # Process every sport independently. A single API/match failure must not
-    # abort the complete daily report.
-    for sport_key, cfg in SPORTS_CONFIG.items():
-        print(f"SPORT SCAN: {sport_key} — FIXTURES", flush=True)
-        candidates = []
-        fixtures = []
+# Process every sport independently. A single API/match failure must not
+# abort the complete daily report.
+for sport_key, cfg in SPORTS_CONFIG.items():
+    print(f"SPORT SCAN: {sport_key} — FIXTURES", flush=True)
+    candidates = []
+    fixtures = []
+
+    try:
+        fixtures = _get_sport_fixtures(cfg, start, end)
+
+    except Exception as exc:
+        print(
+            f"SPORT FIXTURE ERROR: {sport_key} {exc!r}",
+            flush=True
+        )
+        continue
+
+    # Russia / Belarus / Philippines / Singapore + friendly matches
+    # are blocked globally for ALL SPORTS.
+    filtered_fixtures = []
+
+    for match in fixtures:
         try:
-            fixtures = _get_sport_fixtures(cfg, start, end)
+            league = match.get("league") or {}
+            country = ""
 
-        # Russia / Belarus / Philippines / Singapore + friendly matches
-        # are blocked globally for ALL SPORTS.
-        filtered_fixtures = []
-
-        for match in fixtures:
-            try:
-                league = match.get("league") or {}
-                country = ""
-
-                if isinstance(league, dict):
-                    country = (
-                        league.get("country")
-                        or league.get("countryName")
-                        or ""
-                    )
-
-                    if isinstance(country, dict):
-                        country = (
-                            country.get("name")
-                            or country.get("countryName")
-                            or ""
-                        )
-
-                if not country:
-                    country = (
-                        match.get("country")
-                        or match.get("countryName")
-                        or ""
-                    )
-
-                    if isinstance(country, dict):
-                        country = (
-                            country.get("name")
-                            or country.get("countryName")
-                            or ""
-                        )
-
-                country = str(country).strip().casefold()
-
-                league_name, _ = _sport_league_country(match)
-                league_name_cf = str(league_name or "").strip().casefold()
-
-                # BLOCK FRIENDLY MATCHES
-                if (
-                    "friendly" in league_name_cf
-                    or "club friendly" in league_name_cf
-                ):
-                    print(
-                        f"SPORT BLOCKED FRIENDLY: "
-                        f"{match.get('id')} — {league_name}",
-                        flush=True
-                    )
-                    continue
-
-                # BLOCKED COUNTRIES — ALL SPORTS
-                if country in {
-                    "russia",
-                    "belarus",
-                    "philippines",
-                    "singapore",
-                }:
-                    print(
-                        f"SPORT BLOCKED COUNTRY: "
-                        f"{match.get('id')} — {country}",
-                        flush=True
-                    )
-                    continue
-
-                filtered_fixtures.append(match)
-
-            except Exception as exc:
-                print(
-                    f"SPORT FILTER ERROR: {sport_key} {exc!r}",
-                    flush=True
+            if isinstance(league, dict):
+                country = (
+                    league.get("country")
+                    or league.get("countryName")
+                    or ""
                 )
 
-        fixtures = filtered_fixtures
+                if isinstance(country, dict):
+                    country = (
+                        country.get("name")
+                        or country.get("countryName")
+                        or ""
+                    )
+
+            if not country:
+                country = (
+                    match.get("country")
+                    or match.get("countryName")
+                    or ""
+                )
+
+                if isinstance(country, dict):
+                    country = (
+                        country.get("name")
+                        or country.get("countryName")
+                        or ""
+                    )
+
+            country = str(country).strip().casefold()
+
+            league_name, _ = _sport_league_country(match)
+            league_name_cf = str(
+                league_name or ""
+            ).strip().casefold()
+
+            # BLOCK FRIENDLY MATCHES
+            if (
+                "friendly" in league_name_cf
+                or "club friendly" in league_name_cf
+            ):
+                print(
+                    f"SPORT BLOCKED FRIENDLY: "
+                    f"{match.get('id')} — {league_name}",
+                    flush=True
+                )
+                continue
+
+            # BLOCKED COUNTRIES — ALL SPORTS
+            if country in {
+                "russia",
+                "belarus",
+                "philippines",
+                "singapore",
+            }:
+                print(
+                    f"SPORT BLOCKED COUNTRY: "
+                    f"{match.get('id')} — {country}",
+                    flush=True
+                )
+                continue
+
+            filtered_fixtures.append(match)
+
+        except Exception as exc:
+            print(
+                f"SPORT FILTER ERROR: "
+                f"{sport_key} {exc!r}",
+                flush=True
+            )
+
+    fixtures = filtered_fixtures
 
             # PREMATCH FILTER MUST HAPPEN BEFORE THE FIXTURE CAP.
             # Otherwise the cap can consume the earliest games of the 12:00->12:00
