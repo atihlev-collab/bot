@@ -464,7 +464,7 @@ def _betano_odd_for_market(sport_key, match, market_label):
             "matchId": mid,
             "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
-            "limit": 100,
+            "limit": 5,
             "offset": 0,
         },
     )
@@ -580,7 +580,7 @@ def _betano_safe_options(sport_key, match):
             "matchId": mid,
             "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
-            "limit": 100,
+            "limit": 5,
             "offset": 0,
         },
     )
@@ -618,8 +618,6 @@ def _betano_safe_options(sport_key, match):
                 market.get("market") or market.get("name") or market.get("type") or ""
             ).strip()
             norm_market = _normalize_label(market_name)
-            if not any(word in norm_market for word in allowed_market_words):
-                continue
             if any(word in norm_market for word in blocked_words):
                 continue
 
@@ -644,17 +642,22 @@ def _betano_safe_options(sport_key, match):
                 if odd < MIN_ODDS or odd > 1.80:
                     continue
 
-                combined = f"{norm_market} {_normalize_label(label)}"
-                # Reject obvious player/special props even if the market name is generic.
+                norm_label = _normalize_label(label)
+                combined = f"{norm_market} {norm_label}"
                 if any(word in combined for word in blocked_words):
                     continue
 
-                # Require a recognizable side/selection for the conservative core markets.
-                recognizable = (
-                    any(x in combined for x in ("home", "away", "1", "2", "over", "under", "draw", "x"))
-                    or label in {home, away}
+                core_market = any(word in combined for word in allowed_market_words)
+                recognizable_selection = (
+                    norm_label in {"1", "2", "x", "home", "away", "draw", "over", "under"}
+                    or norm_label == _normalize_label(home)
+                    or norm_label == _normalize_label(away)
+                    or "over" in norm_label
+                    or "under" in norm_label
+                    or "home" in norm_label
+                    or "away" in norm_label
                 )
-                if not recognizable:
+                if not core_market and not recognizable_selection:
                     continue
 
                 key = (norm_market, _normalize_label(label), round(odd, 3))
@@ -902,4 +905,5 @@ def main_loop():
 
 if __name__ == "__main__":
     main_loop()
+
 
