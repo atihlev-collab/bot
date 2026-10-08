@@ -10,7 +10,14 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-import sport_top3_V6_FINAL as sport_top3
+try:
+    import sport_top3_V6_FINAL as sport_top3
+    print("SPORT MODULE IMPORT OK", flush=True)
+except Exception as exc:
+    import traceback
+    print(f"SPORT MODULE IMPORT ERROR: {exc!r}", flush=True)
+    traceback.print_exc()
+    raise
 from config import BOT_TOKEN, CHAT_ID
 
 TZ = ZoneInfo("Europe/Sofia")
