@@ -1,6 +1,6 @@
-# SPORT-ONLY MAIN — 23:25 BG
+# SPORT-ONLY MAIN — 10:00 BG
 # Football is NOT started here.
-# Sport scanner runs once daily, strictly 23:25-23:30 BG.
+# Sport scanner runs once daily, strictly 10:00-10:05 BG.
 # Fixture window remains controlled inside the sport scanner:
 # 12:00 BG today -> 12:00 BG next day.
 
@@ -16,9 +16,9 @@ from config import BOT_TOKEN, CHAT_ID
 
 TZ = ZoneInfo("Europe/Sofia")
 
-# STRICT DAILY LAUNCH: 23:25 -> 23:30 BG ONLY.
-SPORT_START_MINUTES = 23 * 60 + 25
-SPORT_LAUNCH_END_MINUTES = 23 * 60 + 30
+# STRICT DAILY LAUNCH: 10:00 -> 10:05 BG ONLY.
+SPORT_START_MINUTES = 10 * 60
+SPORT_LAUNCH_END_MINUTES = 10 * 60 + 5
 
 SPORT_DONE_DAY = None
 SPORT_RUNNING = False
@@ -858,7 +858,7 @@ def main_loop():
         flush=True,
     )
     print(
-        "SPORT SCHEDULER READY | daily trigger 23:25-23:30 BG ONLY | "
+        "SPORT SCHEDULER READY | daily trigger 10:00-10:05 BG ONLY | "
         "fixture window 12:00 -> next day 12:00",
         flush=True,
     )
@@ -875,7 +875,7 @@ def main_loop():
         )
 
         # HARD DAILY WINDOW:
-        # Never launch before 23:25 and never catch up after 23:30.
+        # Never launch before 10:00 and never catch up after 10:05.
         in_launch_window = (
             SPORT_START_MINUTES <= minutes <= SPORT_LAUNCH_END_MINUTES
         )
@@ -890,7 +890,7 @@ def main_loop():
             else:
                 SPORT_RUNNING = True
                 print(
-                    f"SPORT TRIGGER | day={day} | launch=23:25-23:30 BG",
+                    f"SPORT TRIGGER | day={day} | launch=10:00-10:05 BG",
                     flush=True,
                 )
 
