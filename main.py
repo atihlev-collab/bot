@@ -679,10 +679,22 @@ def _betano_safe_options(sport_key, match):
     return options
 
 
+
 def _format_sport_simple_signal(index, item):
     dt = item["datetime"]
+
+    sport_name = item.get("sport_name") or {
+        "basketball": "🏀 БАСКЕТБОЛ",
+        "hockey": "🏒 ХОКЕЙ",
+        "american-football": "🏈 АМЕРИКАНСКИ ФУТБОЛ",
+        "baseball": "⚾ БЕЙЗБОЛ",
+        "rugby": "🏉 РЪГБИ",
+        "volleyball": "🏐 ВОЛЕЙБОЛ",
+        "handball": "🤾 ХАНДБАЛ",
+    }.get(item.get("sport_key"), "🏟️ СПОРТ")
+
     return "\n".join([
-        f"{index}. {item['home']} - {item['away']}",
+        f"{index}. {sport_name} — {item['home']} - {item['away']}",
         f"   🎯 Пазар: {item['market']}",
         f"   📊 Betano избор: {item['selection']}",
         f"   💰 Коефициент: {item['odd']:.2f}",
