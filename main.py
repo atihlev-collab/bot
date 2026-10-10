@@ -502,7 +502,8 @@ def _betano_odd_for_market(sport_key, match, market_label):
         if isinstance(bookmaker_value, dict):
             bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
         bookmaker = str(bookmaker_value).strip().lower()
-        if bookmaker and "betano" not in bookmaker
+        if bookmaker and "betano" not in bookmaker:
+            continue
 
         market_list = row.get("odds") or row.get("markets") or []
         if not isinstance(market_list, list):
