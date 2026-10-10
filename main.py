@@ -855,11 +855,16 @@ def run_sport_top3_daily_scanner(send_func=None):
     started = time.time()
 
     now_bg = datetime.now(TZ)
-    hour_key = now_bg.strftime("%Y-%m-%d-%H")
-    run_key = f"sport_prematch:{hour_key}"
+    day_key = now_bg.strftime("%Y-%m-%d")
+    run_key = f"sport_prematch:{day_key}"
     if already_ran(run_key):
-        print(_signal_text(f"SPORT SCANNER ALREADY RAN THIS HOUR: {hour_key} BG"), flush=True)
+        print(_signal_text(f"SPORT SCANNER ALREADY RAN TODAY: {day_key} BG"), flush=True)
         return ""
+
+    # Consume today's run before making any API calls. Even if Telegram fails
+    # or the process restarts mid-scan, the scheduler will not spend requests again today.
+    mark_ran(run_key)
+    print(f"SPORT DAILY RUN LOCKED | day={day_key} | next scheduled run=10:00 Europe/Sofia", flush=True)
 
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
     end = start + timedelta(days=1)
@@ -976,7 +981,7 @@ def run_sport_top3_daily_scanner(send_func=None):
     )
 
     lines = [
-        "📊 SPORT PREMATCH — ЧАСОВА ПРОВЕРКА",
+        "📊 SPORT PREMATCH — ДНЕВЕН ОТЧЕТ (10:00 BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"),
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
@@ -1006,7 +1011,7 @@ def run_sport_top3_daily_scanner(send_func=None):
                 if i < len(sport_items):
                     lines.extend(["", "────────────────────", ""])
     else:
-        lines.append("🎯 Няма нов подходящ PREMATCH сигнал в този час.")
+        lines.append("🎯 Няма нов подходящ PREMATCH сигнал за днешния отчет.")
 
     lines.extend([
         "",
@@ -1025,47 +1030,50 @@ def run_sport_top3_daily_scanner(send_func=None):
             print(f"SPORT TELEGRAM ERROR: {exc!r}", flush=True)
             return message
     elif not final:
-        print("SPORT HOURLY RESULT | no new qualifying odds; no signal sent", flush=True)
+        print("SPORT DAILY RESULT | no new qualifying odds; no signal sent", flush=True)
 
-    mark_ran(run_key)
-    print(f"SPORT HOURLY COMPLETE | hour={hour_key} | signals={len(final)} | api_calls={_SPORT_API_CALLS}", flush=True)
+    print(f"SPORT DAILY COMPLETE | day={day_key} | signals={len(final)} | api_calls={_SPORT_API_CALLS}", flush=True)
     return message
 
-def _run_sport(hour_key):
+def _run_sport(day_key):
     global SPORT_RUNNING, SPORT_DONE_HOUR
     try:
-        print(f"SPORT HOURLY THREAD START | hour={hour_key}", flush=True)
+        print(f"SPORT DAILY THREAD START | day={day_key}", flush=True)
         report = run_sport_top3_daily_scanner(send_telegram)
-        print(f"SPORT HOURLY THREAD RESULT | hour={hour_key} | report={bool(report)}", flush=True)
+        print(f"SPORT DAILY THREAD RESULT | day={day_key} | report={bool(report)}", flush=True)
     except APIQuotaExceeded as exc:
-        print(f"SPORT HOURLY QUOTA STOP | hour={hour_key} | {exc}", flush=True)
+        print(f"SPORT DAILY QUOTA STOP | day={day_key} | {exc}", flush=True)
     except Exception as exc:
-        print(f"SPORT HOURLY ERROR | hour={hour_key} | {exc!r}", flush=True)
-        logging.exception("SPORT HOURLY ERROR")
+        print(f"SPORT DAILY ERROR | day={day_key} | {exc!r}", flush=True)
+        logging.exception("SPORT DAILY ERROR")
     finally:
-        SPORT_DONE_HOUR = hour_key
+        SPORT_DONE_HOUR = day_key
         SPORT_RUNNING = False
-        print(f"SPORT HOURLY THREAD END | hour={hour_key}", flush=True)
+        print(f"SPORT DAILY THREAD END | day={day_key}", flush=True)
 
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | once per clock hour Europe/Sofia | fixture window 12:00 BG -> next day 12:00 BG | hard stop 24,500 Highlightly requests/day", flush=True)
+    print("SPORT SCHEDULER READY | once daily at 10:00 Europe/Sofia | fixture window 12:00 BG -> next day 12:00 BG | no scheduled API requests after daily scan | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
-        hour_key = now.strftime("%Y-%m-%d-%H")
-        if not SPORT_RUNNING and SPORT_DONE_HOUR != hour_key:
-            hourly_key = f"sport_prematch:{hour_key}"
-            if already_ran(hourly_key):
-                SPORT_DONE_HOUR = hour_key
-                print(f"SPORT SCHEDULER SKIP | hour={hour_key} | already ran", flush=True)
+        day_key = now.strftime("%Y-%m-%d")
+        daily_key = f"sport_prematch:{day_key}"
+
+        # Trigger only during the 10:00 minute. If deployment/restart happens
+        # later in the day, wait for the next day's 10:00 run instead of scanning late.
+        in_daily_window = now.hour == 10 and now.minute == 0
+        if in_daily_window and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
+            if already_ran(daily_key):
+                SPORT_DONE_HOUR = day_key
+                print(f"SPORT SCHEDULER SKIP | day={day_key} | already ran today", flush=True)
             elif _quota_locked("highlightly_sport"):
-                SPORT_DONE_HOUR = hour_key
-                print(f"SPORT SCHEDULER SKIP | hour={hour_key} | daily quota lock", flush=True)
+                SPORT_DONE_HOUR = day_key
+                print(f"SPORT SCHEDULER SKIP | day={day_key} | daily quota lock", flush=True)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT HOURLY TRIGGER | hour={hour_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(hour_key,), daemon=True).start()
+                print(f"SPORT DAILY TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key,), daemon=True).start()
         time.sleep(30)
 
 
