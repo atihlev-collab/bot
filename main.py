@@ -526,7 +526,7 @@ def _betano_odd_for_market(sport_key, match, market_label):
             "matchId": mid,
             "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
-            "limit": 100,
+            "limit": 5,
             "offset": 0,
         },
     )
@@ -645,7 +645,7 @@ def _betano_safe_options(sport_key, match):
             "matchId": mid,
             "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
-            "limit": 100,
+            "limit": 5,
             "offset": 0,
         },
     )
