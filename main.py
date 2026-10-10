@@ -770,6 +770,36 @@ def _available_prematch_options(sport_key, match):
                     "implied": implied,
                 })
 
+    # Rugby has returned odds rows but no eligible options in recent logs.
+    # Emit compact raw-shape diagnostics only when a rugby fixture produces
+    # zero options, so the next run shows whether the provider uses a different
+    # selection/odds field or whether the available prices are outside 1.50–1.80.
+    if not options and sport_key == "rugby":
+        samples = []
+        for row in rows[:2]:
+            if not isinstance(row, dict):
+                continue
+            markets = row.get("odds") or row.get("markets") or []
+            if not isinstance(markets, list):
+                continue
+            for market in markets[:3]:
+                if not isinstance(market, dict):
+                    continue
+                values = market.get("values") or market.get("odds") or market.get("selections") or []
+                first_value = values[0] if isinstance(values, list) and values else None
+                samples.append({
+                    "market": str(market.get("market") or market.get("name") or market.get("type") or "")[:60],
+                    "values_type": type(values).__name__,
+                    "values_count": len(values) if isinstance(values, list) else None,
+                    "selection_keys": list(first_value.keys())[:10] if isinstance(first_value, dict) else [],
+                    "selection_sample": str(first_value)[:180] if first_value is not None else None,
+                })
+        print(
+            f"SPORT RUGBY ODDS PARSER DEBUG | match={mid} | "
+            f"allowed_range={MIN_ODDS:.2f}-1.80 | samples={samples[:6]}",
+            flush=True,
+        )
+
     # Keep the highest eligible odds per fixture; do not publish multiple
     # correlated markets from the same fixture.
     options.sort(key=lambda x: (-x["odd"], x["implied"]))
