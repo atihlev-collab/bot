@@ -655,7 +655,7 @@ def _available_prematch_options(sport_key, match):
     SPORT intentionally has no historical/statistical model. The selection is
     based on markets returned by the odds provider for the exact fixture.
     Keep standard prematch market families and rank by highest available odds
-    within the configured 1.50–1.80 range. This is odds ranking, not a claim
+    at or above the configured minimum odds of 1.50. This is odds ranking, not a claim
     that the highest odds have the highest chance of winning.
     """
     mid = _match_id(match)
@@ -742,7 +742,7 @@ def _available_prematch_options(sport_key, match):
                     )
                 except (TypeError, ValueError):
                     continue
-                if not math.isfinite(odd) or odd < MIN_ODDS or odd > 1.80:
+                if not math.isfinite(odd) or odd < MIN_ODDS:
                     continue
 
                 norm_label = _normalize_label(label)
@@ -788,7 +788,7 @@ def _available_prematch_options(sport_key, match):
     # Rugby has returned odds rows but no eligible options in recent logs.
     # Emit compact raw-shape diagnostics only when a rugby fixture produces
     # zero options, so the next run shows whether the provider uses a different
-    # selection/odds field or whether the available prices are outside 1.50–1.80.
+    # selection/odds field or whether the available prices are below 1.50.
     if not options and sport_key in {"rugby", "volleyball"}:
         samples = []
         for row in rows[:2]:
@@ -811,7 +811,7 @@ def _available_prematch_options(sport_key, match):
                 })
         print(
             f"SPORT ODDS PARSER DEBUG | sport={sport_key} | match={mid} | "
-            f"allowed_range={MIN_ODDS:.2f}-1.80 | samples={samples[:6]}",
+            f"minimum_odds={MIN_ODDS:.2f} | no_maximum | samples={samples[:6]}",
             flush=True,
         )
 
@@ -866,8 +866,9 @@ def run_sport_top3_daily_scanner(send_func=None):
     mark_ran(run_key)
     print(f"SPORT DAILY RUN LOCKED | day={day_key} | next scheduled run=10:00 Europe/Sofia", flush=True)
 
+    # Fixed 24-hour fixture window in Bulgaria time: today at 12:00 -> tomorrow at 12:00.
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
-    end = start + timedelta(days=1)
+    end = start + timedelta(hours=24)
     now_scan = datetime.now(TZ)
 
     all_signals = []
@@ -988,7 +989,7 @@ def run_sport_top3_daily_scanner(send_func=None):
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "Подбор: отделно за всеки спорт; до 5 срещи на спорт, подредени по най-висок коефициент",
         "Метод: без историческа статистика; по-висок коефициент не означава по-голяма вероятност за печалба",
-        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала на спорт",
+        f"Коефициент: минимум {MIN_ODDS:.2f}, без максимален праг | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала на спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
@@ -1004,7 +1005,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             lines.append(f"{cfg['name']} — ТОП {len(sport_items)}")
             lines.append("")
             if not sport_items:
-                lines.append("Няма нови срещи с подходящ коефициент 1.50–1.80.")
+                lines.append("Няма нови срещи с коефициент поне 1.50.")
                 continue
             for i, item in enumerate(sport_items, 1):
                 lines.append(_format_sport_simple_signal(i, item))
