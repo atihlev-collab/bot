@@ -717,6 +717,13 @@ def _available_prematch_options(sport_key, match):
             if any(word in norm_market for word in blocked_words):
                 continue
 
+            # Volleyball: only full-match winner markets. Do not use totals,
+            # over/under points, handicaps, or set-specific winner markets.
+            if sport_key == "volleyball" and not any(
+                word in norm_market for word in ("match winner", "winner", "moneyline")
+            ):
+                continue
+
             values = market.get("values") or market.get("odds") or market.get("selections") or []
             if not isinstance(values, list):
                 continue
@@ -742,6 +749,14 @@ def _available_prematch_options(sport_key, match):
                 combined = f"{norm_market} {norm_label}"
                 if any(word in combined for word in blocked_words):
                     continue
+
+                # Volleyball picks are strictly match winner: home or away.
+                # Accept provider labels Home/Away, 1/2, or the actual team names.
+                if sport_key == "volleyball":
+                    home_label = _normalize_label(home)
+                    away_label = _normalize_label(away)
+                    if norm_label not in {"home", "away", "1", "2", home_label, away_label}:
+                        continue
 
                 core_market = any(word in combined for word in allowed_market_words)
                 recognizable_selection = (
