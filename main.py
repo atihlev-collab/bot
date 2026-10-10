@@ -305,7 +305,7 @@ MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.50
-MAX_TOTAL_SIGNALS = 5
+MAX_SIGNALS_PER_SPORT = 5
 
 
 def _sport_match_datetime(match):
@@ -902,52 +902,31 @@ def run_sport_top3_daily_scanner(send_func=None):
         except Exception as exc:
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
-    # GLOBAL ranking across every configured sport: highest eligible odds first.
-    # Keep one candidate per fixture. Odds are not the same as true win probability.
-    all_signals.sort(key=lambda x: (-x["odd"], -x["implied"], x["sport_key"], str(x["match_id"])))
-    sport_candidate_counts = {}
-    for candidate in all_signals:
-        sport_candidate_counts[candidate["sport_key"]] = sport_candidate_counts.get(candidate["sport_key"], 0) + 1
-    print(
-        "SPORT GLOBAL RANKING | "
-        f"valid_candidates={len(all_signals)} | by_sport={sport_candidate_counts} | "
-        f"ranking=highest_odds_first",
-        flush=True,
-    )
+    # Rank independently inside each sport. This prevents one sport from
+    # taking all available slots just because it has more markets/fixtures.
     already_sent = _sent_sport_fixture_keys()
     unseen_signals = [
         item for item in all_signals
         if (str(item["sport_key"]), str(item["match_id"])) not in already_sent
     ]
 
-    # Highest odds always win. When odds are tied, rotate between sports so
-    # alphabetical sport names cannot monopolize all five slots.
-    ranked_unseen = []
-    odds_levels = sorted({round(float(item["odd"]), 3) for item in unseen_signals}, reverse=True)
-    for odds_level in odds_levels:
-        tier = [
-            item for item in unseen_signals
-            if round(float(item["odd"]), 3) == odds_level
-        ]
-        by_sport = {}
-        for item in tier:
-            by_sport.setdefault(item["sport_key"], []).append(item)
-        for sport_items in by_sport.values():
-            sport_items.sort(key=lambda x: (-x["implied"], str(x["match_id"])))
-        sport_order = sorted(by_sport)
-        while any(by_sport[sport] for sport in sport_order):
-            for sport in sport_order:
-                if by_sport[sport]:
-                    ranked_unseen.append(by_sport[sport].pop(0))
-
-    final = ranked_unseen[:MAX_TOTAL_SIGNALS]
+    final = []
     selected_by_sport = {}
-    for item in final:
-        selected_by_sport[item["sport_key"]] = selected_by_sport.get(item["sport_key"], 0) + 1
+    for sport_key in SPORTS_CONFIG:
+        sport_items = [
+            item for item in unseen_signals
+            if item["sport_key"] == sport_key
+        ]
+        sport_items.sort(key=lambda x: (-x["odd"], -x["implied"], str(x["match_id"])))
+        selected = sport_items[:MAX_SIGNALS_PER_SPORT]
+        final.extend(selected)
+        if selected:
+            selected_by_sport[sport_key] = len(selected)
+
     print(
-        "SPORT GLOBAL TOP FIVE | "
-        f"selected={len(final)} | by_sport={selected_by_sport} | "
-        f"odds={[item['odd'] for item in final]}",
+        "SPORT TOP FIVE PER SPORT | "
+        f"selected_total={len(final)} | by_sport={selected_by_sport} | "
+        f"max_per_sport={MAX_SIGNALS_PER_SPORT} | ranking=highest_odds_first",
         flush=True,
     )
 
@@ -957,19 +936,30 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: глобално от всички спортове; първо най-високият коефициент в диапазона 1.50–1.80",
+        "Подбор: отделно за всеки спорт; до 5 срещи на спорт, подредени по най-висок коефициент",
         "Метод: без историческа статистика; по-висок коефициент не означава по-голяма вероятност за печалба",
-        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} нови сигнала общо за всички спортове",
+        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала на спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
 
     if final:
-        lines.extend(["🎯 НАЙ-ДОБРИТЕ PREMATCH СРЕЩИ ЗА ДЕНЯ", ""])
-        for i, item in enumerate(final, 1):
-            lines.append(_format_sport_simple_signal(i, item))
-            if i < len(final):
+        lines.extend(["🎯 PREMATCH — ТОП СРЕЩИ ПО СПОРТОВЕ", ""])
+        first_section = True
+        for sport_key, cfg in SPORTS_CONFIG.items():
+            sport_items = [item for item in final if item["sport_key"] == sport_key]
+            if not first_section:
                 lines.extend(["", "────────────────────", ""])
+            first_section = False
+            lines.append(f"{cfg['name']} — ТОП {len(sport_items)}")
+            lines.append("")
+            if not sport_items:
+                lines.append("Няма нови срещи с подходящ коефициент 1.50–1.80.")
+                continue
+            for i, item in enumerate(sport_items, 1):
+                lines.append(_format_sport_simple_signal(i, item))
+                if i < len(sport_items):
+                    lines.extend(["", "────────────────────", ""])
     else:
         lines.append("🎯 Няма нов подходящ PREMATCH сигнал в този час.")
 
