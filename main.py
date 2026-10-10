@@ -128,7 +128,34 @@ def _sport_api_get(endpoint, params=None):
             print(f"SPORT API INVALID JSON | endpoint={endpoint} | body={response.text[:300]}", flush=True)
             return []
         data = payload.get("data", []) if isinstance(payload, dict) else payload
-        return data if isinstance(data, list) else []
+        if isinstance(payload, dict):
+            plan = payload.get("plan") or {}
+            if isinstance(plan, dict) and (plan.get("tier") or plan.get("message")):
+                print(
+                    f"SPORT API PLAN | endpoint={endpoint} | tier={plan.get('tier', 'unknown')} "
+                    f"| message={str(plan.get('message', ''))[:180]}",
+                    flush=True,
+                )
+        if not isinstance(data, list):
+            print(
+                f"SPORT API DATA SHAPE ERROR | endpoint={endpoint} | "
+                f"payload_type={type(payload).__name__} | data_type={type(data).__name__} "
+                f"| top_keys={list(payload.keys())[:15] if isinstance(payload, dict) else 'n/a'}",
+                flush=True,
+            )
+            return []
+        if endpoint.endswith("/odds") and data:
+            first = data[0] if isinstance(data[0], dict) else {}
+            markets = first.get("odds") or first.get("markets") or []
+            first_market = markets[0] if isinstance(markets, list) and markets and isinstance(markets[0], dict) else {}
+            print(
+                f"SPORT API ODDS SHAPE | endpoint={endpoint} | rows={len(data)} "
+                f"| row_keys={list(first.keys())[:15]} | market_count={len(markets) if isinstance(markets, list) else 'non-list'} "
+                f"| market_keys={list(first_market.keys())[:12]} "
+                f"| market={str(first_market.get('market') or first_market.get('name') or first_market.get('type') or '')[:80]}",
+                flush=True,
+            )
+        return data
     except APIQuotaExceeded:
         raise
     except requests.RequestException as exc:
@@ -663,10 +690,9 @@ def _available_prematch_options(sport_key, match):
     for row in rows:
         if not isinstance(row, dict):
             continue
-        bookmaker_value = row.get("bookmakerName") or row.get("bookmaker") or row.get("bookmaker_name") or ""
-        if isinstance(bookmaker_value, dict):
-            bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
-        bookmaker = str(bookmaker_value).strip().casefold()
+        row_bookmaker = row.get("bookmakerName") or row.get("bookmaker") or row.get("bookmaker_name") or ""
+        if isinstance(row_bookmaker, dict):
+            row_bookmaker = row_bookmaker.get("name") or row_bookmaker.get("bookmakerName") or row_bookmaker.get("title") or ""
 
         market_list = row.get("odds") or row.get("markets") or []
         if not isinstance(market_list, list):
@@ -678,6 +704,15 @@ def _available_prematch_options(sport_key, match):
             market_name = str(
                 market.get("market") or market.get("name") or market.get("type") or ""
             ).strip()
+            bookmaker_value = (
+                market.get("bookmakerName") or market.get("bookmaker") or
+                market.get("bookmaker_name") or row_bookmaker
+            )
+            if isinstance(bookmaker_value, dict):
+                bookmaker_value = (
+                    bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or
+                    bookmaker_value.get("title") or ""
+                )
             norm_market = _normalize_label(market_name)
             if any(word in norm_market for word in blocked_words):
                 continue
@@ -825,7 +860,8 @@ def run_sport_top3_daily_scanner(send_func=None):
             for match in future:
                 try:
                     mid = _match_id(match)
-                    if not mid or mid in seen_matches:
+                    fixture_key = (sport_key, str(mid))
+                    if not mid or fixture_key in seen_matches:
                         continue
                     options = _available_prematch_options(sport_key, match)
                     print(
@@ -854,7 +890,7 @@ def run_sport_top3_daily_scanner(send_func=None):
                         "country": country,
                         "datetime": dt,
                     })
-                    seen_matches.add(mid)
+                    seen_matches.add(fixture_key)
                 except APIQuotaExceeded:
                     raise
                 except Exception as exc:
