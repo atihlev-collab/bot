@@ -941,10 +941,12 @@ def run_sport_top3_daily_scanner(send_func=None):
                     ranked_unseen.append(by_sport[sport].pop(0))
 
     final = ranked_unseen[:MAX_TOTAL_SIGNALS]
+    selected_by_sport = {}
+    for item in final:
+        selected_by_sport[item["sport_key"]] = selected_by_sport.get(item["sport_key"], 0) + 1
     print(
         "SPORT GLOBAL TOP FIVE | "
-        f"selected={len(final)} | "
-        f"by_sport={ {key: sum(1 for item in final if item['sport_key'] == key) for key in sorted({item['sport_key'] for item in final})} } | "
+        f"selected={len(final)} | by_sport={selected_by_sport} | "
         f"odds={[item['odd'] for item in final]}",
         flush=True,
     )
