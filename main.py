@@ -654,9 +654,9 @@ def _available_prematch_options(sport_key, match):
 
     SPORT intentionally has no historical/statistical model. The selection is
     based on markets returned by the odds provider for the exact fixture.
-    We keep the standard low-odds prematch families and rank them by implied
-    probability (lower odds = higher implied probability), while respecting
-    the global minimum odds floor.
+    Keep standard prematch market families and rank by highest available odds
+    within the configured 1.50–1.80 range. This is odds ranking, not a claim
+    that the highest odds have the highest chance of winning.
     """
     mid = _match_id(match)
     if not mid:
@@ -770,9 +770,9 @@ def _available_prematch_options(sport_key, match):
                     "implied": implied,
                 })
 
-    # Lowest odds are the strongest bookmaker-implied candidates. Do not publish
-    # multiple correlated markets from the same fixture.
-    options.sort(key=lambda x: (x["odd"], -x["implied"]))
+    # Keep the highest eligible odds per fixture; do not publish multiple
+    # correlated markets from the same fixture.
+    options.sort(key=lambda x: (-x["odd"], x["implied"]))
     return options
 
 
@@ -902,16 +902,16 @@ def run_sport_top3_daily_scanner(send_func=None):
         except Exception as exc:
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
-    # GLOBAL ranking across every configured sport: the lowest odds imply
-    # the highest bookmaker-implied probability. Keep one candidate per fixture.
-    all_signals.sort(key=lambda x: (-x["implied"], x["odd"], x["sport_key"], str(x["match_id"])))
+    # GLOBAL ranking across every configured sport: highest eligible odds first.
+    # Keep one candidate per fixture. Odds are not the same as true win probability.
+    all_signals.sort(key=lambda x: (-x["odd"], -x["implied"], x["sport_key"], str(x["match_id"])))
     sport_candidate_counts = {}
     for candidate in all_signals:
         sport_candidate_counts[candidate["sport_key"]] = sport_candidate_counts.get(candidate["sport_key"], 0) + 1
     print(
         "SPORT GLOBAL RANKING | "
         f"valid_candidates={len(all_signals)} | by_sport={sport_candidate_counts} | "
-        f"ranking=highest_implied_probability_first",
+        f"ranking=highest_odds_first",
         flush=True,
     )
     already_sent = _sent_sport_fixture_keys()
@@ -927,8 +927,8 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: глобално от всички спортове; първо най-високата имплицитна вероятност според коефициента",
-        "Метод: без историческа статистика; това е вероятност, подразбирана от коефициента, не доказана реална вероятност за печалба",
+        "Подбор: глобално от всички спортове; първо най-високият коефициент в диапазона 1.50–1.80",
+        "Метод: без историческа статистика; по-висок коефициент не означава по-голяма вероятност за печалба",
         f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} нови сигнала общо за всички спортове",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
