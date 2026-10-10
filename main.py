@@ -278,7 +278,6 @@ MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.50
-BETANO_BOOKMAKER = "Betano"
 MAX_TOTAL_SIGNALS = 5
 
 
@@ -510,7 +509,7 @@ def _normalize_label(value):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _betano_odd_for_market(sport_key, match, market_label):
+def _odd_for_market(sport_key, match, market_label):
     """Return the Betano odd for the exact model market, or None.
 
     Supports winner, match totals, team totals and handicap/spread labels.
@@ -524,7 +523,6 @@ def _betano_odd_for_market(sport_key, match, market_label):
         f"{sport_key}/odds",
         {
             "matchId": mid,
-            "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
             "limit": 5,
             "offset": 0,
@@ -564,8 +562,6 @@ def _betano_odd_for_market(sport_key, match, market_label):
         if isinstance(bookmaker_value, dict):
             bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
         bookmaker = str(bookmaker_value).strip().lower()
-        if "betano" not in bookmaker:
-            continue
 
         market_list = row.get("odds") or row.get("markets") or []
         if not isinstance(market_list, list):
@@ -626,11 +622,11 @@ def _betano_odd_for_market(sport_key, match, market_label):
     return None
 
 
-def _betano_safe_options(sport_key, match):
-    """Read real Betano prematch markets and return only conservative options.
+def _available_prematch_options(sport_key, match):
+    """Read available prematch markets and return only conservative options.
 
     SPORT intentionally has no historical/statistical model. The selection is
-    based only on markets that Betano actually offers for the exact fixture.
+    based on markets returned by the odds provider for the exact fixture.
     We keep the standard low-odds prematch families and rank them by implied
     probability (lower odds = higher implied probability), while respecting
     the global minimum odds floor.
@@ -643,7 +639,6 @@ def _betano_safe_options(sport_key, match):
         f"{sport_key}/odds",
         {
             "matchId": mid,
-            "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
             "limit": 5,
             "offset": 0,
@@ -672,8 +667,6 @@ def _betano_safe_options(sport_key, match):
         if isinstance(bookmaker_value, dict):
             bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
         bookmaker = str(bookmaker_value).strip().casefold()
-        if "betano" not in bookmaker:
-            continue
 
         market_list = row.get("odds") or row.get("markets") or []
         if not isinstance(market_list, list):
@@ -735,6 +728,7 @@ def _betano_safe_options(sport_key, match):
 
                 implied = round((1.0 / odd) * 100.0, 1)
                 options.append({
+                    "bookmaker": str(bookmaker_value).strip() or "Unknown bookmaker",
                     "market": market_name or "PREMATCH",
                     "selection": label or "-",
                     "odd": odd,
@@ -764,7 +758,8 @@ def _format_sport_simple_signal(index, item):
     return "\n".join([
         f"{index}. {sport_name} — {item['home']} - {item['away']}",
         f"   🎯 Пазар: {item['market']}",
-        f"   📊 Betano избор: {item['selection']}",
+        f"   📊 Избор: {item['selection']}",
+        f"   🏪 Букмейкър: {item.get('bookmaker') or 'Unknown bookmaker'}",
         f"   💰 Коефициент: {item['odd']:.2f}",
         f"   📌 Имплицитна вероятност: {item['implied']:.1f}%",
         f"   🏆 Лига: {item['league'] or '-'} | Държава: {item['country'] or '-'}",
@@ -773,7 +768,7 @@ def _format_sport_simple_signal(index, item):
 
 
 def run_sport_top3_daily_scanner(send_func=None):
-    """SPORT PREMATCH only: no historical/team statistics; rank real Betano markets globally."""
+    """SPORT PREMATCH only: no historical/team statistics; rank available bookmaker markets globally."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
     _SPORT_STATS_CACHE = {}
@@ -832,9 +827,9 @@ def run_sport_top3_daily_scanner(send_func=None):
                     mid = _match_id(match)
                     if not mid or mid in seen_matches:
                         continue
-                    options = _betano_safe_options(sport_key, match)
+                    options = _available_prematch_options(sport_key, match)
                     print(
-                        f"SPORT BETANO RESULT | sport={sport_key} match={mid} "
+                        f"SPORT ODDS RESULT | sport={sport_key} match={mid} "
                         f"safe_options={len(options)}",
                         flush=True,
                     )
@@ -850,6 +845,7 @@ def run_sport_top3_daily_scanner(send_func=None):
                         "match_id": mid,
                         "home": home,
                         "away": away,
+                        "bookmaker": best.get("bookmaker") or "Unknown bookmaker",
                         "market": best["market"],
                         "selection": best["selection"],
                         "odd": best["odd"],
@@ -884,20 +880,20 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Метод: без историческа статистика; само реални PREMATCH пазари в Betano",
+        "Метод: без историческа статистика; използват се наличните PREMATCH пазари от odds API",
         f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} нови сигнала за тази проверка",
-        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Само потвърдени Betano PREMATCH пазари; LIVE е изключен.",
+        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
 
     if final:
-        lines.extend(["🎯 НАЙ-СИЛНИТЕ PREMATCH СРЕЩИ ЗА ДЕНЯ", ""])
+        lines.extend(["🎯 НАЙ-ДОБРИТЕ PREMATCH СРЕЩИ ЗА ДЕНЯ", ""])
         for i, item in enumerate(final, 1):
             lines.append(_format_sport_simple_signal(i, item))
             if i < len(final):
                 lines.extend(["", "────────────────────", ""])
     else:
-        lines.append("🎯 Няма нов подходящ Betano PREMATCH сигнал в този час.")
+        lines.append("🎯 Няма нов подходящ PREMATCH сигнал в този час.")
 
     lines.extend([
         "",
@@ -916,7 +912,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             print(f"SPORT TELEGRAM ERROR: {exc!r}", flush=True)
             return message
     elif not final:
-        print("SPORT HOURLY RESULT | no new qualifying Betano match; no signal sent", flush=True)
+        print("SPORT HOURLY RESULT | no new qualifying odds; no signal sent", flush=True)
 
     mark_ran(run_key)
     print(f"SPORT HOURLY COMPLETE | hour={hour_key} | signals={len(final)} | api_calls={_SPORT_API_CALLS}", flush=True)
