@@ -464,7 +464,7 @@ def _betano_odd_for_market(sport_key, match, market_label):
             "matchId": mid,
             "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
-            "limit": 5,
+            "limit": 100,
             "offset": 0,
         },
     )
@@ -498,9 +498,11 @@ def _betano_odd_for_market(sport_key, match, market_label):
     for row in rows:
         if not isinstance(row, dict):
             continue
-        bookmaker = str(row.get("bookmakerName") or row.get("bookmaker") or "").strip().lower()
-        if bookmaker and "betano" not in bookmaker:
-            continue
+        bookmaker_value = row.get("bookmakerName") or row.get("bookmaker") or row.get("bookmaker_name") or ""
+        if isinstance(bookmaker_value, dict):
+            bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
+        bookmaker = str(bookmaker_value).strip().lower()
+        if bookmaker and "betano" not in bookmaker
 
         market_list = row.get("odds") or row.get("markets") or []
         if not isinstance(market_list, list):
@@ -580,7 +582,7 @@ def _betano_safe_options(sport_key, match):
             "matchId": mid,
             "bookmakerName": BETANO_BOOKMAKER,
             "oddsType": "prematch",
-            "limit": 5,
+            "limit": 100,
             "offset": 0,
         },
     )
@@ -603,7 +605,10 @@ def _betano_safe_options(sport_key, match):
     for row in rows:
         if not isinstance(row, dict):
             continue
-        bookmaker = str(row.get("bookmakerName") or row.get("bookmaker") or "").strip().casefold()
+        bookmaker_value = row.get("bookmakerName") or row.get("bookmaker") or row.get("bookmaker_name") or ""
+        if isinstance(bookmaker_value, dict):
+            bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
+        bookmaker = str(bookmaker_value).strip().casefold()
         if bookmaker and "betano" not in bookmaker:
             continue
 
@@ -744,9 +749,15 @@ def run_sport_top3_daily_scanner(send_func=None):
                 future.append(match)
 
             future.sort(key=lambda m: _sport_match_datetime(m) or end)
-            # Limit fixture odds calls so the daily scan stays cheap.
-            future = future[:10]
-            print(f"SPORT PREMATCH ODDS: {sport_key} future={len(future)}", flush=True)
+            # Wider fixture pool like the football scanner, with a hard cap
+            # to keep daily API usage controlled and leave room for every sport.
+            future = future[:MAX_FIXTURES_TO_EVALUATE]
+            print(
+                f"SPORT FIXTURE SUMMARY | sport={sport_key} fetched={len(fixtures)} "
+                f"future_candidates={sum(1 for m in fixtures if (_sport_match_datetime(m) is not None and _sport_match_datetime(m) > now_scan))} "
+                f"odds_checks={len(future)}",
+                flush=True,
+            )
 
             for match in future:
                 try:
@@ -754,6 +765,11 @@ def run_sport_top3_daily_scanner(send_func=None):
                     if not mid or mid in seen_matches:
                         continue
                     options = _betano_safe_options(sport_key, match)
+                    print(
+                        f"SPORT BETANO RESULT | sport={sport_key} match={mid} "
+                        f"safe_options={len(options)}",
+                        flush=True,
+                    )
                     if not options:
                         continue
                     best = options[0]
