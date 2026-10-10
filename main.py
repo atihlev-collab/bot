@@ -1,65 +1,18 @@
-# SPORT-ONLY MAIN — 10:00 BG
-# Football is NOT started here.
-# Sport scanner runs once daily, strictly 10:00-10:05 BG.
-# Fixture window remains controlled inside the sport scanner:
-# 12:00 BG today -> 12:00 BG next day.
+# SPORT-ONLY MAIN — HOURLY PREMATCH
+# Football and LIVE are intentionally disabled here.
+# SPORT keeps its own Highlightly provider; never use API-Football in this file.
 
 import logging
 import threading
 import time
-from datetime import datetime
-from zoneinfo import ZoneInfo
-
-import requests
-
-from config import BOT_TOKEN, CHAT_ID
-
-TZ = ZoneInfo("Europe/Sofia")
-
-# STRICT DAILY LAUNCH: 10:00 -> 10:05 BG ONLY.
-SPORT_START_MINUTES = 10 * 60
-SPORT_LAUNCH_END_MINUTES = 10 * 60 + 5
-
-SPORT_DONE_DAY = None
-SPORT_RUNNING = False
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s | %(levelname)s | %(message)s",
-    force=True,
-)
-
-
-def send_telegram(message):
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    response = requests.post(
-        url,
-        json={"chat_id": CHAT_ID, "text": message},
-        timeout=20,
-    )
-    response.raise_for_status()
-    print(f"SPORT TELEGRAM SENT | status={response.status_code}", flush=True)
-
-
-
-# ============================================================
-# EMBEDDED SPORT ENGINE — previously sport_top3.py
-# ============================================================
-
-# SPORT TOP 3 — HIGHLIGHTLY SPORT ULTRA
-# Standalone Sport Daily scanner. Football scanner is intentionally separate.
-# Fixture window: 12:00 BG -> next day 12:00 BG.
-
 import math
 import re
 import sqlite3
-import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-
 import requests
 
-from config import HIGHLIGHTLY_API_KEY
+from config import BOT_TOKEN, CHAT_ID, HIGHLIGHTLY_API_KEY
 
 TZ = ZoneInfo("Europe/Sofia")
 DB_FILE = "v3_ai.db"
@@ -68,31 +21,172 @@ SPORT_API_HOST = "sport-highlights-api.p.rapidapi.com"
 SPORT_API_TZ = "Europe/Sofia"
 SPORT_API_LIMIT = 100
 
-_QUOTA_LOCKS = {}
-_QUOTA_LOCK_DATES = {}
+SPORT_DONE_HOUR = None
+SPORT_RUNNING = False
+SPORT_API_DAILY_LIMIT = 25000
+SPORT_API_SAFETY_RESERVE = 500
+SPORT_API_HARD_STOP = SPORT_API_DAILY_LIMIT - SPORT_API_SAFETY_RESERVE
+SPORT_API_MIN_INTERVAL = 0.18
+_SPORT_API_LAST_REQUEST_AT = 0.0
+_SPORT_API_REQUEST_LOCK = threading.Lock()
+_SPORT_API_CALLS = 0
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s", force=True)
 
 class APIQuotaExceeded(Exception):
     pass
 
-def _quota_locked(scope="sport"):
-    today = datetime.now(TZ).date().isoformat()
-    if _QUOTA_LOCK_DATES.get(scope) != today:
-        _QUOTA_LOCKS[scope] = False
-        _QUOTA_LOCK_DATES[scope] = today
-    return bool(_QUOTA_LOCKS.get(scope, False))
-
-def _set_quota_lock(scope="sport"):
-    today = datetime.now(TZ).date().isoformat()
-    _QUOTA_LOCKS[scope] = True
-    _QUOTA_LOCK_DATES[scope] = today
-
 def _db():
     return sqlite3.connect(DB_FILE, timeout=30)
 
+def _quota_init():
+    with _db() as conn:
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("CREATE TABLE IF NOT EXISTS sport_api_usage (day TEXT NOT NULL, provider TEXT NOT NULL, used INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(day, provider))")
+        conn.execute("CREATE TABLE IF NOT EXISTS sport_api_quota_locks (provider TEXT PRIMARY KEY, locked_day TEXT NOT NULL, reason TEXT NOT NULL)")
+
+def _sport_today():
+    return datetime.now(TZ).date().isoformat()
+
+def _quota_locked(scope="highlightly_sport"):
+    _quota_init()
+    today = _sport_today()
+    with _db() as conn:
+        row = conn.execute("SELECT locked_day FROM sport_api_quota_locks WHERE provider=?", (scope,)).fetchone()
+        if row and row[0] == today:
+            return True
+        if row:
+            conn.execute("DELETE FROM sport_api_quota_locks WHERE provider=?", (scope,))
+    return False
+
+def _set_quota_lock(scope="highlightly_sport", reason="provider quota exhausted"):
+    _quota_init()
+    with _db() as conn:
+        conn.execute("INSERT OR REPLACE INTO sport_api_quota_locks(provider, locked_day, reason) VALUES(?,?,?)", (scope, _sport_today(), str(reason)[:300]))
+
+def _reserve_sport_request(scope="highlightly_sport"):
+    """Atomically reserve one Highlightly request and keep a 500-request safety reserve."""
+    _quota_init()
+    today = _sport_today()
+    with _db() as conn:
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("BEGIN IMMEDIATE")
+        lock = conn.execute("SELECT locked_day, reason FROM sport_api_quota_locks WHERE provider=?", (scope,)).fetchone()
+        if lock and lock[0] == today:
+            row = conn.execute("SELECT used FROM sport_api_usage WHERE day=? AND provider=?", (today, scope)).fetchone()
+            return False, int(row[0]) if row else 0, f"daily lock: {lock[1]}"
+        if lock:
+            conn.execute("DELETE FROM sport_api_quota_locks WHERE provider=?", (scope,))
+        conn.execute("INSERT OR IGNORE INTO sport_api_usage(day, provider, used) VALUES(?,?,0)", (today, scope))
+        row = conn.execute("SELECT used FROM sport_api_usage WHERE day=? AND provider=?", (today, scope)).fetchone()
+        used = int(row[0]) if row else 0
+        if used >= SPORT_API_HARD_STOP:
+            conn.execute("INSERT OR REPLACE INTO sport_api_quota_locks(provider, locked_day, reason) VALUES(?,?,?)", (scope, today, "local safety hard stop"))
+            return False, used, "local safety hard stop"
+        used += 1
+        conn.execute("UPDATE sport_api_usage SET used=? WHERE day=? AND provider=?", (used, today, scope))
+        return True, used, "reserved"
+
+def _sport_api_get(endpoint, params=None):
+    """Highlightly-only adapter with persisted budget control and request pacing."""
+    global _SPORT_API_CALLS, _SPORT_API_LAST_REQUEST_AT
+    params = dict(params or {})
+    scope = "highlightly_sport"
+    if _quota_locked(scope):
+        raise APIQuotaExceeded("Highlightly Sport daily quota locked")
+    try:
+        with _SPORT_API_REQUEST_LOCK:
+            delay = SPORT_API_MIN_INTERVAL - (time.monotonic() - _SPORT_API_LAST_REQUEST_AT)
+            if delay > 0:
+                time.sleep(delay)
+            reserved, used, reason = _reserve_sport_request(scope)
+            if not reserved:
+                print(f"SPORT API REQUEST BLOCKED | Highlightly | used={used}/{SPORT_API_HARD_STOP} | endpoint={endpoint} | reason={reason}", flush=True)
+                raise APIQuotaExceeded("Highlightly Sport daily budget exhausted")
+            _SPORT_API_LAST_REQUEST_AT = time.monotonic()
+            _SPORT_API_CALLS += 1
+            response = requests.get(
+                f"{SPORT_API_BASE}/{endpoint.lstrip('/')}",
+                headers={"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": SPORT_API_HOST},
+                params=params,
+                timeout=10,
+            )
+        print(f"SPORT API REQUEST {_SPORT_API_CALLS} | provider=Highlightly | used={used}/{SPORT_API_HARD_STOP} | endpoint={endpoint} | params={params} | status={response.status_code}", flush=True)
+        if response.status_code == 429:
+            _set_quota_lock(scope, "HTTP 429 from Highlightly Sport")
+            print("SPORT QUOTA LOCKED | Highlightly HTTP 429 until Bulgaria day changes", flush=True)
+            raise APIQuotaExceeded("Highlightly Sport returned HTTP 429")
+        if response.status_code in (401, 403):
+            print(f"SPORT API AUTH/ACCESS ERROR | status={response.status_code} | body={response.text[:500]}", flush=True)
+            return []
+        if response.status_code != 200:
+            print(f"SPORT API HTTP ERROR | status={response.status_code} | endpoint={endpoint} | body={response.text[:500]}", flush=True)
+            return []
+        try:
+            payload = response.json()
+        except ValueError:
+            print(f"SPORT API INVALID JSON | endpoint={endpoint} | body={response.text[:300]}", flush=True)
+            return []
+        data = payload.get("data", []) if isinstance(payload, dict) else payload
+        return data if isinstance(data, list) else []
+    except APIQuotaExceeded:
+        raise
+    except requests.RequestException as exc:
+        print(f"SPORT API REQUEST ERROR | endpoint={endpoint} | {exc!r}", flush=True)
+        return []
+    except Exception as exc:
+        print(f"SPORT API UNEXPECTED ERROR | endpoint={endpoint} | {exc!r}", flush=True)
+        return []
+
+def send_telegram(message):
+    response = requests.post(
+        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+        json={"chat_id": CHAT_ID, "text": message},
+        timeout=20,
+    )
+    response.raise_for_status()
+    print(f"SPORT TELEGRAM SENT | status={response.status_code}", flush=True)
+
+# ============================================================
+# EMBEDDED SPORT ENGINE — Highlightly Sport Ultra
+# ============================================================
+
 def init_scanner_db():
-    conn=_db()
+    conn = _db()
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("CREATE TABLE IF NOT EXISTS daily_scanner_runs (run_key TEXT PRIMARY KEY, created_at TEXT NOT NULL)")
-    conn.commit(); conn.close()
+    conn.execute("""CREATE TABLE IF NOT EXISTS sport_sent_fixtures (
+        sport_key TEXT NOT NULL,
+        match_id TEXT NOT NULL,
+        sent_at TEXT NOT NULL,
+        PRIMARY KEY (sport_key, match_id)
+    )""")
+    conn.commit()
+    conn.close()
+
+def _sent_sport_fixture_keys():
+    init_scanner_db()
+    conn = _db()
+    try:
+        rows = conn.execute("SELECT sport_key, match_id FROM sport_sent_fixtures").fetchall()
+        return {(str(row[0]), str(row[1])) for row in rows}
+    finally:
+        conn.close()
+
+def _mark_sent_sport_fixtures(items):
+    if not items:
+        return
+    init_scanner_db()
+    conn = _db()
+    try:
+        sent_at = datetime.now(TZ).isoformat()
+        conn.executemany(
+            "INSERT OR IGNORE INTO sport_sent_fixtures(sport_key, match_id, sent_at) VALUES(?,?,?)",
+            [(str(item["sport_key"]), str(item["match_id"]), sent_at) for item in items],
+        )
+        conn.commit()
+    finally:
+        conn.close()
 
 def already_ran(run_key):
     init_scanner_db(); conn=_db()
@@ -172,12 +266,10 @@ SPORTS_CONFIG = {
         "metric": "goals"
     },
 }
-_SPORT_API_CALLS = 0
-_SPORT_STATS_CACHE = {}
 
 # Hard limits: prevent one sport with many fixtures from exhausting the daily
 # Sport API quota before the scanner reaches the other sports.
-MAX_FIXTURES_TO_EVALUATE = 20
+MAX_FIXTURES_TO_EVALUATE = 100
 MAX_CONTEXT_CANDIDATES = 12
 
 # HARD SIGNAL RULES — never publish weak statistical picks.
@@ -185,39 +277,9 @@ MIN_SIGNAL_PROBABILITY = 65.0
 MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
-MIN_ODDS = 1.40
+MIN_ODDS = 1.50
 BETANO_BOOKMAKER = "Betano"
 MAX_TOTAL_SIGNALS = 5
-
-
-def _sport_api_get(endpoint, params=None):
-    """Call Sport Ultra with a persistent daily quota guard."""
-    global _SPORT_API_CALLS
-    if _quota_locked("sport"):
-        raise APIQuotaExceeded("Highlightly Sport daily quota locked for today")
-    _SPORT_API_CALLS += 1
-    try:
-        response = requests.get(
-            f"{SPORT_API_BASE}/{endpoint}",
-            headers={"x-rapidapi-key": HIGHLIGHTLY_API_KEY, "x-rapidapi-host": SPORT_API_HOST},
-            params=params or {}, timeout=10,
-        )
-        print(f"SPORT API REQUEST {_SPORT_API_CALLS}: {endpoint} params={params or {}} status={response.status_code}")
-        if response.status_code == 429:
-            _set_quota_lock("sport")
-            print("SPORT QUOTA LOCKED: Highlightly Sport returned HTTP 429")
-            raise APIQuotaExceeded("Highlightly Sport daily quota exhausted")
-        if response.status_code != 200:
-            print("SPORT API ERROR:", response.text[:500])
-            return []
-        payload=response.json()
-        data=payload.get("data", []) if isinstance(payload,dict) else payload
-        return data if isinstance(data,list) else []
-    except APIQuotaExceeded:
-        raise
-    except Exception as exc:
-        print("SPORT API REQUEST ERROR:", endpoint, repr(exc))
-        return []
 
 
 def _sport_match_datetime(match):
@@ -502,7 +564,7 @@ def _betano_odd_for_market(sport_key, match, market_label):
         if isinstance(bookmaker_value, dict):
             bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
         bookmaker = str(bookmaker_value).strip().lower()
-        if bookmaker and "betano" not in bookmaker:
+        if "betano" not in bookmaker:
             continue
 
         market_list = row.get("odds") or row.get("markets") or []
@@ -610,7 +672,7 @@ def _betano_safe_options(sport_key, match):
         if isinstance(bookmaker_value, dict):
             bookmaker_value = bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or bookmaker_value.get("title") or ""
         bookmaker = str(bookmaker_value).strip().casefold()
-        if bookmaker and "betano" not in bookmaker:
+        if "betano" not in bookmaker:
             continue
 
         market_list = row.get("odds") or row.get("markets") or []
@@ -645,7 +707,7 @@ def _betano_safe_options(sport_key, match):
                     )
                 except (TypeError, ValueError):
                     continue
-                if odd < MIN_ODDS or odd > 1.80:
+                if not math.isfinite(odd) or odd < MIN_ODDS or odd > 1.80:
                     continue
 
                 norm_label = _normalize_label(label)
@@ -718,9 +780,10 @@ def run_sport_top3_daily_scanner(send_func=None):
     started = time.time()
 
     now_bg = datetime.now(TZ)
-    run_key = f"sport_prematch:{now_bg.date().isoformat()}"
+    hour_key = now_bg.strftime("%Y-%m-%d-%H")
+    run_key = f"sport_prematch:{hour_key}"
     if already_ran(run_key):
-        print(_signal_text(f"SPORT DAILY SCANNER ALREADY RAN: {now_bg.date().isoformat()}"), flush=True)
+        print(_signal_text(f"SPORT SCANNER ALREADY RAN THIS HOUR: {hour_key} BG"), flush=True)
         return ""
 
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
@@ -741,7 +804,11 @@ def run_sport_top3_daily_scanner(send_func=None):
                 league_name, country_name = _sport_league_country(match)
                 country_cf = str(country_name or "").strip().casefold()
                 league_cf = str(league_name or "").strip().casefold()
-                if country_cf in {"russia", "belarus", "русия", "беларус"}:
+                if country_cf in {
+                    "russia", "belarus", "русия", "беларус",
+                    "philippines", "the philippines", "филипини",
+                    "singapore", "сингапур",
+                }:
                     print(f"SPORT BLOCKED COUNTRY: {sport_key} {match.get('id')} {country_name}", flush=True)
                     continue
                 if "friendly" in league_cf or "приятел" in league_cf:
@@ -804,17 +871,22 @@ def run_sport_top3_daily_scanner(send_func=None):
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
     all_signals.sort(key=lambda x: (x["implied"], -x["odd"]), reverse=True)
-    final = all_signals[:MAX_TOTAL_SIGNALS]
+    already_sent = _sent_sport_fixture_keys()
+    unseen_signals = [
+        item for item in all_signals
+        if (str(item["sport_key"]), str(item["match_id"])) not in already_sent
+    ]
+    final = unseen_signals[:MAX_TOTAL_SIGNALS]
 
     lines = [
-        "📊 SPORT DAILY PREMATCH",
-        now_bg.strftime("%d.%m.%Y"),
+        "📊 SPORT PREMATCH — ЧАСОВА ПРОВЕРКА",
+        now_bg.strftime("%d.%m.%Y %H:%M BG"),
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "Метод: без историческа статистика; само реални PREMATCH пазари в Betano",
-        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} сигнала за целия ден",
-        "Русия, Беларус и приятелски мачове — блокирани. Няма Betano пазар — няма сигнал.",
+        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} нови сигнала за тази проверка",
+        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Само потвърдени Betano PREMATCH пазари; LIVE е изключен.",
         "",
     ]
 
@@ -825,7 +897,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             if i < len(final):
                 lines.extend(["", "────────────────────", ""])
     else:
-        lines.append("🎯 Няма подходящ силен PREMATCH пазар в Betano за този прозорец.")
+        lines.append("🎯 Няма нов подходящ Betano PREMATCH сигнал в този час.")
 
     lines.extend([
         "",
@@ -835,100 +907,56 @@ def run_sport_top3_daily_scanner(send_func=None):
     message = "\n".join(lines)
     print(message, flush=True)
 
-    if send_func:
+    if send_func and final:
         try:
             _send_sport_report_chunks(message, send_func, max_chars=3700)
+            _mark_sent_sport_fixtures(final)
             print("SPORT TELEGRAM REPORT SENT", flush=True)
         except Exception as exc:
             print(f"SPORT TELEGRAM ERROR: {exc!r}", flush=True)
             return message
+    elif not final:
+        print("SPORT HOURLY RESULT | no new qualifying Betano match; no signal sent", flush=True)
 
     mark_ran(run_key)
-    print(f"SPORT DAILY COMPLETE | day={now_bg.date().isoformat()} | api_calls={_SPORT_API_CALLS}", flush=True)
+    print(f"SPORT HOURLY COMPLETE | hour={hour_key} | signals={len(final)} | api_calls={_SPORT_API_CALLS}", flush=True)
     return message
 
-def _run_sport(day):
-    global SPORT_RUNNING, SPORT_DONE_DAY
-
+def _run_sport(hour_key):
+    global SPORT_RUNNING, SPORT_DONE_HOUR
     try:
-        print(f"SPORT THREAD START | day={day}", flush=True)
-
-        result = run_sport_top3_daily_scanner(send_telegram)
-
-        if result:
-            SPORT_DONE_DAY = day
-            print(f"SPORT THREAD SUCCESS | day={day}", flush=True)
-        else:
-            print(f"SPORT THREAD EMPTY | day={day}", flush=True)
-
+        print(f"SPORT HOURLY THREAD START | hour={hour_key}", flush=True)
+        report = run_sport_top3_daily_scanner(send_telegram)
+        print(f"SPORT HOURLY THREAD RESULT | hour={hour_key} | report={bool(report)}", flush=True)
     except APIQuotaExceeded as exc:
-        SPORT_DONE_DAY = day
-        print(f"SPORT THREAD QUOTA | day={day} | {exc}", flush=True)
-
+        print(f"SPORT HOURLY QUOTA STOP | hour={hour_key} | {exc}", flush=True)
     except Exception as exc:
-        print(f"SPORT THREAD ERROR | day={day} | {exc!r}", flush=True)
-        logging.exception("SPORT THREAD ERROR")
-
+        print(f"SPORT HOURLY ERROR | hour={hour_key} | {exc!r}", flush=True)
+        logging.exception("SPORT HOURLY ERROR")
     finally:
+        SPORT_DONE_HOUR = hour_key
         SPORT_RUNNING = False
-        print(
-            f"SPORT THREAD END | day={day} | "
-            f"running={SPORT_RUNNING} | done={SPORT_DONE_DAY}",
-            flush=True,
-        )
-
+        print(f"SPORT HOURLY THREAD END | hour={hour_key}", flush=True)
 
 def main_loop():
-    global SPORT_RUNNING, SPORT_DONE_DAY
-
-    print("SPORT-ONLY SYSTEM START", flush=True)
-    print(
-        "FOOTBALL DISABLED HERE — football runs in the separate system",
-        flush=True,
-    )
-    print(
-        "SPORT SCHEDULER READY | daily trigger 10:00-10:05 BG ONLY | "
-        "fixture window 12:00 -> next day 12:00",
-        flush=True,
-    )
-
+    global SPORT_RUNNING, SPORT_DONE_HOUR
+    print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
+    print("SPORT SCHEDULER READY | once per clock hour Europe/Sofia | fixture window 12:00 BG -> next day 12:00 BG | hard stop 24,500 Highlightly requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
-        day = now.date().isoformat()
-        minutes = now.hour * 60 + now.minute
-
-        print(
-            f"SPORT SCHEDULER TICK | {now:%Y-%m-%d %H:%M:%S} | "
-            f"minutes={minutes} | running={SPORT_RUNNING} | done={SPORT_DONE_DAY}",
-            flush=True,
-        )
-
-        # HARD DAILY WINDOW:
-        # Never launch before 10:00 and never catch up after 10:05.
-        in_launch_window = (
-            SPORT_START_MINUTES <= minutes <= SPORT_LAUNCH_END_MINUTES
-        )
-
-        if in_launch_window and SPORT_DONE_DAY != day and not SPORT_RUNNING:
-            if (
-                hasattr(globals().get("_quota_locked"), "__call__")
-                and _quota_locked("sport")
-            ):
-                print(f"SPORT QUOTA ALREADY LOCKED | day={day}", flush=True)
-                SPORT_DONE_DAY = day
+        hour_key = now.strftime("%Y-%m-%d-%H")
+        if not SPORT_RUNNING and SPORT_DONE_HOUR != hour_key:
+            hourly_key = f"sport_prematch:{hour_key}"
+            if already_ran(hourly_key):
+                SPORT_DONE_HOUR = hour_key
+                print(f"SPORT SCHEDULER SKIP | hour={hour_key} | already ran", flush=True)
+            elif _quota_locked("highlightly_sport"):
+                SPORT_DONE_HOUR = hour_key
+                print(f"SPORT SCHEDULER SKIP | hour={hour_key} | daily quota lock", flush=True)
             else:
                 SPORT_RUNNING = True
-                print(
-                    f"SPORT TRIGGER | day={day} | launch=10:00-10:05 BG",
-                    flush=True,
-                )
-
-                threading.Thread(
-                    target=_run_sport,
-                    args=(day,),
-                    daemon=True,
-                ).start()
-
+                print(f"SPORT HOURLY TRIGGER | hour={hour_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(hour_key,), daemon=True).start()
         time.sleep(30)
 
 
