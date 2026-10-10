@@ -919,7 +919,35 @@ def run_sport_top3_daily_scanner(send_func=None):
         item for item in all_signals
         if (str(item["sport_key"]), str(item["match_id"])) not in already_sent
     ]
-    final = unseen_signals[:MAX_TOTAL_SIGNALS]
+
+    # Highest odds always win. When odds are tied, rotate between sports so
+    # alphabetical sport names cannot monopolize all five slots.
+    ranked_unseen = []
+    odds_levels = sorted({round(float(item["odd"]), 3) for item in unseen_signals}, reverse=True)
+    for odds_level in odds_levels:
+        tier = [
+            item for item in unseen_signals
+            if round(float(item["odd"]), 3) == odds_level
+        ]
+        by_sport = {}
+        for item in tier:
+            by_sport.setdefault(item["sport_key"], []).append(item)
+        for sport_items in by_sport.values():
+            sport_items.sort(key=lambda x: (-x["implied"], str(x["match_id"])))
+        sport_order = sorted(by_sport)
+        while any(by_sport[sport] for sport in sport_order):
+            for sport in sport_order:
+                if by_sport[sport]:
+                    ranked_unseen.append(by_sport[sport].pop(0))
+
+    final = ranked_unseen[:MAX_TOTAL_SIGNALS]
+    print(
+        "SPORT GLOBAL TOP FIVE | "
+        f"selected={len(final)} | "
+        f"by_sport={ {key: sum(1 for item in final if item['sport_key'] == key) for key in sorted({item['sport_key'] for item in final})} } | "
+        f"odds={[item['odd'] for item in final]}",
+        flush=True,
+    )
 
     lines = [
         "📊 SPORT PREMATCH — ЧАСОВА ПРОВЕРКА",
