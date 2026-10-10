@@ -774,7 +774,7 @@ def _available_prematch_options(sport_key, match):
     # Emit compact raw-shape diagnostics only when a rugby fixture produces
     # zero options, so the next run shows whether the provider uses a different
     # selection/odds field or whether the available prices are outside 1.50–1.80.
-    if not options and sport_key == "rugby":
+    if not options and sport_key in {"rugby", "volleyball"}:
         samples = []
         for row in rows[:2]:
             if not isinstance(row, dict):
@@ -795,7 +795,7 @@ def _available_prematch_options(sport_key, match):
                     "selection_sample": str(first_value)[:180] if first_value is not None else None,
                 })
         print(
-            f"SPORT RUGBY ODDS PARSER DEBUG | match={mid} | "
+            f"SPORT ODDS PARSER DEBUG | sport={sport_key} | match={mid} | "
             f"allowed_range={MIN_ODDS:.2f}-1.80 | samples={samples[:6]}",
             flush=True,
         )
