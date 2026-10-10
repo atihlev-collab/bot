@@ -902,7 +902,18 @@ def run_sport_top3_daily_scanner(send_func=None):
         except Exception as exc:
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
-    all_signals.sort(key=lambda x: (x["implied"], -x["odd"]), reverse=True)
+    # GLOBAL ranking across every configured sport: the lowest odds imply
+    # the highest bookmaker-implied probability. Keep one candidate per fixture.
+    all_signals.sort(key=lambda x: (-x["implied"], x["odd"], x["sport_key"], str(x["match_id"])))
+    sport_candidate_counts = {}
+    for candidate in all_signals:
+        sport_candidate_counts[candidate["sport_key"]] = sport_candidate_counts.get(candidate["sport_key"], 0) + 1
+    print(
+        "SPORT GLOBAL RANKING | "
+        f"valid_candidates={len(all_signals)} | by_sport={sport_candidate_counts} | "
+        f"ranking=highest_implied_probability_first",
+        flush=True,
+    )
     already_sent = _sent_sport_fixture_keys()
     unseen_signals = [
         item for item in all_signals
@@ -916,8 +927,9 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Метод: без историческа статистика; използват се наличните PREMATCH пазари от odds API",
-        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} нови сигнала за тази проверка",
+        "Подбор: глобално от всички спортове; първо най-високата имплицитна вероятност според коефициента",
+        "Метод: без историческа статистика; това е вероятност, подразбирана от коефициента, не доказана реална вероятност за печалба",
+        f"Коефициент: {MIN_ODDS:.2f}–1.80 | максимум {MAX_TOTAL_SIGNALS} нови сигнала общо за всички спортове",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
