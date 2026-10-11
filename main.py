@@ -1038,17 +1038,47 @@ def _run_sport(day_key):
         SPORT_RUNNING = False
         print(f"SPORT DAILY THREAD END | day={day_key}", flush=True)
 
+def _send_filter_test_once(day_key):
+    """Send a one-off Telegram test at 13:00 BG without scanning or using odds API."""
+    test_key = f"sport_filter_test:{day_key}"
+    if already_ran(test_key):
+        return
+    # Mark before sending so restarts cannot duplicate the test message.
+    mark_ran(test_key)
+    message = "\n".join([
+        "🧪 SPORT PREMATCH — ТЕСТ НА НОВИТЕ ФИЛТРИ",
+        f"{datetime.now(TZ).strftime('%d.%m.%Y %H:%M')} BG",
+        "",
+        "✅ Минимален коефициент: 1.50",
+        "✅ Максимален коефициент: 2.50",
+        "✅ Изходите „Равенство“ са изключени",
+        "✅ Подреждане: по-нисък коефициент първо",
+        "✅ До 5 сигнала на спорт",
+        "✅ Прозорец на мачовете: 12:00 BG → 12:00 BG на следващия ден",
+        "",
+        "Това е тестово съобщение, не прогноза. Не е направено ново сканиране и не са използвани API заявки."
+    ])
+    try:
+        send_telegram(message)
+        print(f"SPORT FILTER TEST SENT | day={day_key}", flush=True)
+    except Exception as exc:
+        print(f"SPORT FILTER TEST ERROR | day={day_key} | {exc!r}", flush=True)
+
+
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | once daily at 10:00 Europe/Sofia | fixture window 12:00 BG -> next day 12:00 BG | no scheduled API requests after daily scan | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 Europe/Sofia | one-off filter test 13:00 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no scheduled API requests after daily scan | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
 
-        # Trigger only during the 10:00 minute. If deployment/restart happens
-        # later in the day, wait for the next day's 10:00 run instead of scanning late.
+        # One-time filter confirmation message today at 13:00 BG; no odds API calls.
+        if day_key == "2026-10-11" and now.hour == 13 and now.minute == 0:
+            _send_filter_test_once(day_key)
+
+        # Trigger the daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
         if in_daily_window and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
             if already_ran(daily_key):
