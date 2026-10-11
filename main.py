@@ -771,7 +771,7 @@ def _available_prematch_options(sport_key, match):
                 if not core_market and not recognizable_selection:
                     continue
 
-                key = (norm_market, _normalize_label(label), round(odd, 3))
+                key = (norm_market, _normalize_label(label), round(odd, 3), str(bookmaker_value).strip().casefold())
                 if key in seen:
                     continue
                 seen.add(key)
@@ -815,9 +815,25 @@ def _available_prematch_options(sport_key, match):
             flush=True,
         )
 
-    # Prefer lower odds first as a market-implied probability proxy; do not
-    # promote longshots merely because their prices are near the configured cap.
-    options.sort(key=lambda x: (x["odd"], -x["implied"]))
+    # TIPSTER-QUALITY LAYER: compare the same market/selection across bookmakers.
+    # This is market consensus, not a claimed statistical prediction model.
+    grouped = {}
+    for option in options:
+        group_key = (_normalize_label(option["market"]), _normalize_label(option["selection"]))
+        grouped.setdefault(group_key, []).append(option)
+
+    for group in grouped.values():
+        unique_books = {str(item["bookmaker"]).strip().casefold() for item in group if item.get("bookmaker")}
+        prices = sorted(float(item["odd"]) for item in group)
+        support = len(unique_books)
+        median_price = prices[len(prices) // 2] if prices else 0.0
+        for item in group:
+            item["bookmaker_count"] = support
+            item["consensus_odd"] = median_price
+            item["quality_score"] = round(min(support, 5) * 12.0 + (100.0 / item["odd"]) * 0.28, 1)
+
+    # Rank outcomes by bookmaker support first, then implied probability.
+    options.sort(key=lambda x: (-x.get("bookmaker_count", 0), -x.get("implied", 0), x["odd"]))
     return options
 
 
@@ -841,7 +857,9 @@ def _format_sport_simple_signal(index, item):
         f"   📊 Избор: {item['selection']}",
         f"   🏪 Букмейкър: {item.get('bookmaker') or 'Unknown bookmaker'}",
         f"   💰 Коефициент: {item['odd']:.2f}",
-        f"   📌 Имплицитна вероятност: {item['implied']:.1f}%",
+        f"   📌 Имплицитна вероятност: {item['implied']:.1f}% (само по коефициент)",
+        f"   🧮 Подкрепа от букмейкъри: {item.get('bookmaker_count', 1)} | Индекс качество: {item.get('quality_score', 0):.1f}/100",
+        f"   📊 Медианен коефициент за пазара: {item.get('consensus_odd', item['odd']):.2f}",
         f"   🏆 Лига: {item['league'] or '-'} | Държава: {item['country'] or '-'}",
         f"   📅 {dt.strftime('%d.%m.%Y')} | {dt.strftime('%H:%M')} BG",
     ])
@@ -937,6 +955,9 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                         "selection": best["selection"],
                         "odd": best["odd"],
                         "implied": best["implied"],
+                        "bookmaker_count": best.get("bookmaker_count", 1),
+                        "consensus_odd": best.get("consensus_odd", best["odd"]),
+                        "quality_score": best.get("quality_score", round(best["implied"] * 0.28, 1)),
                         "league": league,
                         "country": country,
                         "datetime": dt,
@@ -963,18 +984,18 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
             item for item in all_signals
             if item["sport_key"] == sport_key
             and (
-                run_suffix == "13:50"
+                run_suffix == "14:15"
                 or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
             )
         ]
-        sport_candidates.sort(key=lambda x: (x["odd"], -x["implied"], str(x["match_id"])))
+        sport_candidates.sort(key=lambda x: (-x.get("bookmaker_count", 1), -x.get("quality_score", 0), -x["implied"], str(x["match_id"])))
         eligible_by_sport[sport_key] = len(sport_candidates)
         final.extend(sport_candidates[:MAX_SIGNALS_PER_SPORT])
     print(
-        "SPORT PER-SPORT TOP THREE | "
+        "SPORT TIPSTER QUALITY TOP THREE | "
         f"eligible={sum(eligible_by_sport.values())} | selected={len(final)} | "
         f"by_sport={eligible_by_sport} | "
-        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=lowest_odds_first",
+        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=bookmaker_consensus_then_implied_probability",
         flush=True,
     )
 
@@ -984,8 +1005,8 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: до 3 срещи от всеки спорт; ако има само 1 или 2 подходящи — показва наличните. Подредени по по-нисък коефициент",
-        "Метод: без исторически модел; използва пазарната вероятност като ориентир, не гарантира печалба",
+        "Подбор: до 3 срещи от всеки спорт; първо подкрепа от повече букмейкъри, после пазарна вероятност",
+        "Метод: сравнява консенсуса между наличните букмейкъри; няма исторически статистически модел и не гарантира печалба",
         f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала за всеки спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
@@ -1053,25 +1074,24 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off real per-sport top-three test 13:50 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off tipster-quality test 14:15 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:13:50"
+        oneoff_key = f"sport_prematch:{day_key}:14:15"
 
-        # One-off REAL odds scan at 13:50 BG today, using per-sport top-three selection.
-        # Uses its own run key so the 10:00 daily lock does not suppress it.
-        if day_key == "2026-10-11" and now.hour == 13 and now.minute == 50 and not SPORT_RUNNING:
+        # One-off tipster-quality scan at 14:15 BG today; uses a separate run key.
+        if day_key == "2026-10-11" and now.hour == 14 and now.minute == 15 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
-                print(f"SPORT 13:50 RESCAN SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 14:15 TEST SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 13:50 RESCAN SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 14:15 TEST SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 13:50 RESCAN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "13:50"), daemon=True).start()
+                print(f"SPORT 14:15 TEST TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "14:15"), daemon=True).start()
 
         # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
