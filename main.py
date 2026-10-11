@@ -305,6 +305,7 @@ MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.50
+MAX_ODDS = 2.50  # Quality guardrail: exclude extreme longshots from daily signals.
 MAX_SIGNALS_PER_SPORT = 5
 
 
@@ -655,8 +656,8 @@ def _available_prematch_options(sport_key, match):
     SPORT intentionally has no historical/statistical model. The selection is
     based on markets returned by the odds provider for the exact fixture.
     Keep standard prematch market families and rank by highest available odds
-    at or above the configured minimum odds of 1.50. This is odds ranking, not a claim
-    that the highest odds have the highest chance of winning.
+    between the configured odds bounds. Exclude draw outcomes and extreme longshots;
+    rank by lower odds (higher market-implied probability), not by biggest payout.
     """
     mid = _match_id(match)
     if not mid:
@@ -742,10 +743,13 @@ def _available_prematch_options(sport_key, match):
                     )
                 except (TypeError, ValueError):
                     continue
-                if not math.isfinite(odd) or odd < MIN_ODDS:
+                if not math.isfinite(odd) or odd < MIN_ODDS or odd > MAX_ODDS:
                     continue
 
                 norm_label = _normalize_label(label)
+                # Do not publish draw outcomes: these were incorrectly ranked as top picks.
+                if norm_label in {"draw", "tie", "x", "равенство", "равен"}:
+                    continue
                 combined = f"{norm_market} {norm_label}"
                 if any(word in combined for word in blocked_words):
                     continue
@@ -811,13 +815,13 @@ def _available_prematch_options(sport_key, match):
                 })
         print(
             f"SPORT ODDS PARSER DEBUG | sport={sport_key} | match={mid} | "
-            f"minimum_odds={MIN_ODDS:.2f} | no_maximum | samples={samples[:6]}",
+            f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | draws_blocked | samples={samples[:6]}",
             flush=True,
         )
 
     # Keep the highest eligible odds per fixture; do not publish multiple
     # correlated markets from the same fixture.
-    options.sort(key=lambda x: (-x["odd"], x["implied"]))
+    options.sort(key=lambda x: (x["odd"], -x["implied"]))
     return options
 
 
@@ -968,7 +972,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             item for item in unseen_signals
             if item["sport_key"] == sport_key
         ]
-        sport_items.sort(key=lambda x: (-x["odd"], -x["implied"], str(x["match_id"])))
+        sport_items.sort(key=lambda x: (x["odd"], -x["implied"], str(x["match_id"])))
         selected = sport_items[:MAX_SIGNALS_PER_SPORT]
         final.extend(selected)
         if selected:
@@ -977,7 +981,7 @@ def run_sport_top3_daily_scanner(send_func=None):
     print(
         "SPORT TOP FIVE PER SPORT | "
         f"selected_total={len(final)} | by_sport={selected_by_sport} | "
-        f"max_per_sport={MAX_SIGNALS_PER_SPORT} | ranking=highest_odds_first",
+        f"max_per_sport={MAX_SIGNALS_PER_SPORT} | odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=lowest_odds_first | draws_blocked",
         flush=True,
     )
 
@@ -987,9 +991,9 @@ def run_sport_top3_daily_scanner(send_func=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: отделно за всеки спорт; до 5 срещи на спорт, подредени по най-висок коефициент",
-        "Метод: без историческа статистика; по-висок коефициент не означава по-голяма вероятност за печалба",
-        f"Коефициент: минимум {MIN_ODDS:.2f}, без максимален праг | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала на спорт",
+        "Подбор: отделно за всеки спорт; до 5 срещи на спорт, по-нисък коефициент първо (по-висока имплицитна вероятност)",
+        "Метод: без исторически модел; използва пазарната вероятност като ориентир, не гарантира печалба",
+        f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f}; равенства и крайни аутсайдери са изключени | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала на спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
@@ -1005,7 +1009,7 @@ def run_sport_top3_daily_scanner(send_func=None):
             lines.append(f"{cfg['name']} — ТОП {len(sport_items)}")
             lines.append("")
             if not sport_items:
-                lines.append("Няма нови срещи с коефициент поне 1.50.")
+                lines.append("Няма нови срещи в диапазона 1.50–2.50 след филтрите.")
                 continue
             for i, item in enumerate(sport_items, 1):
                 lines.append(_format_sport_simple_signal(i, item))
