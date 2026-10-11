@@ -957,7 +957,8 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     already_sent = _sent_sport_fixture_keys()
     unseen_signals = [
         item for item in all_signals
-        if (str(item["sport_key"]), str(item["match_id"])) not in already_sent
+        if run_suffix == "13:35"
+        or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
     ]
     unseen_signals.sort(key=lambda x: (x["odd"], -x["implied"], str(x["sport_key"]), str(x["match_id"])))
     final = unseen_signals[:MAX_TOTAL_SIGNALS]
@@ -1043,25 +1044,25 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off real filtered rescan 13:20 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off real filtered rescan 13:35 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:13:20"
+        oneoff_key = f"sport_prematch:{day_key}:13:35"
 
-        # One-off REAL odds scan at 13:20 BG today, using the updated filters.
+        # One-off REAL odds scan at 13:35 BG today, using the updated filters.
         # Uses its own run key so the 10:00 daily lock does not suppress it.
-        if day_key == "2026-10-11" and now.hour == 13 and now.minute == 20 and not SPORT_RUNNING:
+        if day_key == "2026-10-11" and now.hour == 13 and now.minute == 35 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
-                print(f"SPORT 13:20 RESCAN SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 13:35 RESCAN SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 13:20 RESCAN SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 13:35 RESCAN SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 13:20 RESCAN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "13:20"), daemon=True).start()
+                print(f"SPORT 13:35 RESCAN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "13:35"), daemon=True).start()
 
         # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
