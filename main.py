@@ -846,7 +846,7 @@ def _format_sport_simple_signal(index, item):
     ])
 
 
-def run_sport_top3_daily_scanner(send_func=None):
+def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     """SPORT PREMATCH only: no historical/team statistics; rank available bookmaker markets globally."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
@@ -855,7 +855,7 @@ def run_sport_top3_daily_scanner(send_func=None):
 
     now_bg = datetime.now(TZ)
     day_key = now_bg.strftime("%Y-%m-%d")
-    run_key = f"sport_prematch:{day_key}"
+    run_key = f"sport_prematch:{day_key}" if not run_suffix else f"sport_prematch:{day_key}:{run_suffix}"
     if already_ran(run_key):
         print(_signal_text(f"SPORT SCANNER ALREADY RAN TODAY: {day_key} BG"), flush=True)
         return ""
@@ -968,7 +968,7 @@ def run_sport_top3_daily_scanner(send_func=None):
     )
 
     lines = [
-        "📊 SPORT PREMATCH — ДНЕВЕН ОТЧЕТ (10:00 BG)",
+        f"📊 SPORT PREMATCH — ОТЧЕТ ({run_suffix or '10:00'} BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"),
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
@@ -1008,10 +1008,11 @@ def run_sport_top3_daily_scanner(send_func=None):
     message = "\n".join(lines)
     print(message, flush=True)
 
-    if send_func and final:
+    if send_func and (final or run_suffix):
         try:
             _send_sport_report_chunks(message, send_func, max_chars=3700)
-            _mark_sent_sport_fixtures(final)
+            if final:
+                _mark_sent_sport_fixtures(final)
             print("SPORT TELEGRAM REPORT SENT", flush=True)
         except Exception as exc:
             print(f"SPORT TELEGRAM ERROR: {exc!r}", flush=True)
@@ -1022,11 +1023,11 @@ def run_sport_top3_daily_scanner(send_func=None):
     print(f"SPORT DAILY COMPLETE | day={day_key} | signals={len(final)} | api_calls={_SPORT_API_CALLS}", flush=True)
     return message
 
-def _run_sport(day_key):
+def _run_sport(day_key, run_suffix=None):
     global SPORT_RUNNING, SPORT_DONE_HOUR
     try:
         print(f"SPORT DAILY THREAD START | day={day_key}", flush=True)
-        report = run_sport_top3_daily_scanner(send_telegram)
+        report = run_sport_top3_daily_scanner(send_telegram, run_suffix=run_suffix)
         print(f"SPORT DAILY THREAD RESULT | day={day_key} | report={bool(report)}", flush=True)
     except APIQuotaExceeded as exc:
         print(f"SPORT DAILY QUOTA STOP | day={day_key} | {exc}", flush=True)
@@ -1038,47 +1039,30 @@ def _run_sport(day_key):
         SPORT_RUNNING = False
         print(f"SPORT DAILY THREAD END | day={day_key}", flush=True)
 
-def _send_filter_test_once(day_key):
-    """Send a one-off Telegram test at 13:00 BG without scanning or using odds API."""
-    test_key = f"sport_filter_test:{day_key}"
-    if already_ran(test_key):
-        return
-    # Mark before sending so restarts cannot duplicate the test message.
-    mark_ran(test_key)
-    message = "\n".join([
-        "🧪 SPORT PREMATCH — ТЕСТ НА НОВИТЕ ФИЛТРИ",
-        f"{datetime.now(TZ).strftime('%d.%m.%Y %H:%M')} BG",
-        "",
-        "✅ Минимален коефициент: 1.50",
-        "✅ Максимален коефициент: 2.50",
-        "✅ Изходите „Равенство“ са изключени",
-        "✅ Подреждане: по-нисък коефициент първо",
-        "✅ До 5 сигнала на спорт",
-        "✅ Прозорец на мачовете: 12:00 BG → 12:00 BG на следващия ден",
-        "",
-        "Това е тестово съобщение, не прогноза. Не е направено ново сканиране и не са използвани API заявки."
-    ])
-    try:
-        send_telegram(message)
-        print(f"SPORT FILTER TEST SENT | day={day_key}", flush=True)
-    except Exception as exc:
-        print(f"SPORT FILTER TEST ERROR | day={day_key} | {exc!r}", flush=True)
-
-
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 Europe/Sofia | one-off filter test 13:00 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no scheduled API requests after daily scan | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off real filtered rescan 13:10 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
+        oneoff_key = f"sport_prematch:{day_key}:13:10"
 
-        # One-time filter confirmation message today at 13:00 BG; no odds API calls.
-        if day_key == "2026-10-11" and now.hour == 13 and now.minute == 0:
-            _send_filter_test_once(day_key)
+        # One-off REAL odds scan at 13:10 BG today, using the updated filters.
+        # Uses its own run key so the 10:00 daily lock does not suppress it.
+        if day_key == "2026-10-11" and now.hour == 13 and now.minute == 10 and not SPORT_RUNNING:
+            if already_ran(oneoff_key):
+                print(f"SPORT 13:10 RESCAN SKIP | day={day_key} | already ran", flush=True)
+            elif _quota_locked("highlightly_sport"):
+                print(f"SPORT 13:10 RESCAN SKIP | day={day_key} | daily quota lock", flush=True)
+                mark_ran(oneoff_key)
+            else:
+                SPORT_RUNNING = True
+                print(f"SPORT 13:10 RESCAN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "13:10"), daemon=True).start()
 
-        # Trigger the daily scan only during the 10:00 minute.
+        # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
         if in_daily_window and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
             if already_ran(daily_key):
