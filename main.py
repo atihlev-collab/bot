@@ -306,7 +306,7 @@ MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.40
 MAX_ODDS = 1.80  # Restore the configured prematch odds band.
-MAX_TOTAL_SIGNALS = 5
+MAX_SIGNALS_PER_SPORT = 3
 
 
 def _sport_match_datetime(match):
@@ -953,18 +953,27 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         except Exception as exc:
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
-    # One global daily shortlist, capped at five distinct fixtures total.
+    # Select up to three distinct fixtures independently for each sport.
+    # Sports with only one or two eligible fixtures keep those; there is no global cap.
     already_sent = _sent_sport_fixture_keys()
-    unseen_signals = [
-        item for item in all_signals
-        if run_suffix == "13:35"
-        or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
-    ]
-    unseen_signals.sort(key=lambda x: (x["odd"], -x["implied"], str(x["sport_key"]), str(x["match_id"])))
-    final = unseen_signals[:MAX_TOTAL_SIGNALS]
+    final = []
+    eligible_by_sport = {}
+    for sport_key in SPORTS_CONFIG:
+        sport_candidates = [
+            item for item in all_signals
+            if item["sport_key"] == sport_key
+            and (
+                run_suffix == "13:35"
+                or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
+            )
+        ]
+        sport_candidates.sort(key=lambda x: (x["odd"], -x["implied"], str(x["match_id"])))
+        eligible_by_sport[sport_key] = len(sport_candidates)
+        final.extend(sport_candidates[:MAX_SIGNALS_PER_SPORT])
     print(
-        "SPORT GLOBAL TOP FIVE | "
-        f"eligible={len(unseen_signals)} | selected={len(final)} | "
+        "SPORT PER-SPORT TOP THREE | "
+        f"eligible={sum(eligible_by_sport.values())} | selected={len(final)} | "
+        f"by_sport={eligible_by_sport} | "
         f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=lowest_odds_first",
         flush=True,
     )
@@ -975,9 +984,9 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: максимум 5 срещи общо; първо по-нисък коефициент (по-висока имплицитна вероятност), в зададения диапазон",
+        "Подбор: до 3 срещи от всеки спорт; ако има само 1 или 2 подходящи — показва наличните. Подредени по по-нисък коефициент",
         "Метод: без исторически модел; използва пазарната вероятност като ориентир, не гарантира печалба",
-        f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_TOTAL_SIGNALS} нови сигнала общо",
+        f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала за всеки спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
