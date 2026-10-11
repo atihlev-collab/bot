@@ -815,8 +815,9 @@ def _available_prematch_options(sport_key, match):
             flush=True,
         )
 
-    # Preserve the previous ranking: highest odds first, within the configured band.
-    options.sort(key=lambda x: (-x["odd"], -x["implied"]))
+    # Prefer lower odds first as a market-implied probability proxy; do not
+    # promote longshots merely because their prices are near the configured cap.
+    options.sort(key=lambda x: (x["odd"], -x["implied"]))
     return options
 
 
@@ -958,12 +959,12 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         item for item in all_signals
         if (str(item["sport_key"]), str(item["match_id"])) not in already_sent
     ]
-    unseen_signals.sort(key=lambda x: (-x["odd"], -x["implied"], str(x["sport_key"]), str(x["match_id"])))
+    unseen_signals.sort(key=lambda x: (x["odd"], -x["implied"], str(x["sport_key"]), str(x["match_id"])))
     final = unseen_signals[:MAX_TOTAL_SIGNALS]
     print(
         "SPORT GLOBAL TOP FIVE | "
         f"eligible={len(unseen_signals)} | selected={len(final)} | "
-        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=highest_odds_first",
+        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=lowest_odds_first",
         flush=True,
     )
 
@@ -973,7 +974,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: максимум 5 срещи общо; подредени по коефициент в зададения диапазон",
+        "Подбор: максимум 5 срещи общо; първо по-нисък коефициент (по-висока имплицитна вероятност), в зададения диапазон",
         "Метод: без исторически модел; използва пазарната вероятност като ориентир, не гарантира печалба",
         f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_TOTAL_SIGNALS} нови сигнала общо",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
