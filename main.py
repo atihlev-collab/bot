@@ -144,17 +144,28 @@ def _sport_api_get(endpoint, params=None):
                 flush=True,
             )
             return []
-        if endpoint.endswith("/odds") and data:
-            first = data[0] if isinstance(data[0], dict) else {}
-            markets = first.get("odds") or first.get("markets") or []
-            first_market = markets[0] if isinstance(markets, list) and markets and isinstance(markets[0], dict) else {}
-            print(
-                f"SPORT API ODDS SHAPE | endpoint={endpoint} | rows={len(data)} "
-                f"| row_keys={list(first.keys())[:15]} | market_count={len(markets) if isinstance(markets, list) else 'non-list'} "
-                f"| market_keys={list(first_market.keys())[:12]} "
-                f"| market={str(first_market.get('market') or first_market.get('name') or first_market.get('type') or '')[:80]}",
-                flush=True,
-            )
+        if endpoint.endswith("/odds"):
+            plan = payload.get("plan") or {} if isinstance(payload, dict) else {}
+            pagination = payload.get("pagination") or {} if isinstance(payload, dict) else {}
+            if data:
+                first = data[0] if isinstance(data[0], dict) else {}
+                markets = first.get("odds") or first.get("markets") or []
+                first_market = markets[0] if isinstance(markets, list) and markets and isinstance(markets[0], dict) else {}
+                print(
+                    f"SPORT API ODDS SHAPE | endpoint={endpoint} | rows={len(data)} "
+                    f"| row_keys={list(first.keys())[:15]} | market_count={len(markets) if isinstance(markets, list) else 'non-list'} "
+                    f"| market_keys={list(first_market.keys())[:12]} "
+                    f"| market={str(first_market.get('market') or first_market.get('name') or first_market.get('type') or '')[:80]}",
+                    flush=True,
+                )
+            else:
+                print(
+                    f"SPORT API ODDS EMPTY | endpoint={endpoint} | params={params} "
+                    f"| tier={plan.get('tier', 'unknown') if isinstance(plan, dict) else 'unknown'} "
+                    f"| plan_message={str(plan.get('message', '') if isinstance(plan, dict) else '')[:180]} "
+                    f"| pagination={pagination}",
+                    flush=True,
+                )
         return data
     except APIQuotaExceeded:
         raise
@@ -567,7 +578,7 @@ def _odd_for_market(sport_key, match, market_label):
         {
             "matchId": mid,
             "oddsType": "prematch",
-            "limit": 100,
+            "limit": 5,
             "offset": 0,
         },
     )
@@ -1151,24 +1162,24 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off positive-EV tipster test 13:10 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off positive-EV tipster test 13:30 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:13:10"
+        oneoff_key = f"sport_prematch:{day_key}:13:30"
 
-        # One-off positive-EV tipster test at 13:10 BG on 2026-10-12.
-        if day_key == "2026-10-12" and now.hour == 13 and now.minute == 10 and not SPORT_RUNNING:
+        # One-off positive-EV tipster test at 13:30 BG on 2026-10-12.
+        if day_key == "2026-10-12" and now.hour == 13 and now.minute == 30 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
-                print(f"SPORT 13:10 TEST SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 13:30 TEST SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
                 print(f"SPORT 13:10 TEST SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 13:10 TEST TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "13:10"), daemon=True).start()
+                print(f"SPORT 13:30 TEST TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "13:30"), daemon=True).start()
 
         # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
