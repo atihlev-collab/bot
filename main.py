@@ -215,6 +215,20 @@ def _mark_sent_sport_fixtures(items):
     finally:
         conn.close()
 
+
+def _sent_sport_count_today():
+    """Count unique fixtures already sent today in Bulgaria time."""
+    init_scanner_db()
+    now = datetime.now(TZ)
+    day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    next_day = day_start + timedelta(days=1)
+    with _db() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) FROM sport_sent_fixtures WHERE sent_at >= ? AND sent_at < ?",
+            (day_start.isoformat(), next_day.isoformat()),
+        ).fetchone()
+    return int(row[0] or 0) if row else 0
+
 def already_ran(run_key):
     init_scanner_db(); conn=_db()
     row=conn.execute("SELECT 1 FROM daily_scanner_runs WHERE run_key=?",(run_key,)).fetchone()
@@ -1000,16 +1014,15 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     # Rank all eligible picks together and publish no more than five per day.
     # Keep sport diversity (at most two picks per sport) instead of filling quotas.
     already_sent = _sent_sport_fixture_keys()
+    sent_today = _sent_sport_count_today()
+    daily_remaining = max(0, MAX_SIGNALS_PER_DAY - sent_today)
     eligible_by_sport = {}
     eligible = []
     for sport_key in SPORTS_CONFIG:
         sport_candidates = [
             item for item in all_signals
             if item["sport_key"] == sport_key
-            and (
-                run_suffix == "12:35"
-                or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
-            )
+            and (str(item["sport_key"]), str(item["match_id"])) not in already_sent
         ]
         sport_candidates.sort(key=lambda x: (
             -x.get("expected_value_pct", 0.0),
@@ -1029,17 +1042,18 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     final = []
     selected_per_sport = {}
     for item in eligible:
+        if len(final) >= daily_remaining:
+            break
         sport_key = item["sport_key"]
         if selected_per_sport.get(sport_key, 0) >= MAX_SIGNALS_PER_SPORT:
             continue
         final.append(item)
         selected_per_sport[sport_key] = selected_per_sport.get(sport_key, 0) + 1
-        if len(final) >= MAX_SIGNALS_PER_DAY:
-            break
 
     print(
         "SPORT TIPSTER QUALITY GLOBAL TOP PICKS | "
-        f"eligible={sum(eligible_by_sport.values())} | selected={len(final)} | "
+        f"eligible={sum(eligible_by_sport.values())} | sent_today_before_scan={sent_today} | "
+        f"remaining_daily_slots={daily_remaining} | selected={len(final)} | "
         f"daily_cap={MAX_SIGNALS_PER_DAY} | by_sport={selected_per_sport} | "
         f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=EV_then_bookmaker_support",
         flush=True,
@@ -1052,7 +1066,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "Подбор: до 3 срещи от всеки спорт, само ако има положителна стойност; бройката не се допълва насила",
-        f"Филтри: поне 3 букмейкъра с пълен пазар; премахва маржа и изисква EV поне +3%; максимум {MAX_SIGNALS_PER_DAY} сигнала общо",
+        f"Филтри: поне 3 букмейкъра с пълен пазар; EV поне +3%; максимум {MAX_SIGNALS_PER_DAY} сигнала за календарния ден общо",
         "Пазари: победител и тотали за целия мач; непълни пазари се изключват; хендикапи, спредове и отделни периоди са изключени",
         "Метод: оценка по пазарен консенсус, не исторически статистически модел; EV е оценка, не гаранция за печалба",
         f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно и {MAX_SIGNALS_PER_SPORT} на спорт",
