@@ -1140,7 +1140,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
     previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
     top_signals = previews[:MAX_SIGNALS_PER_DAY]
     lines = [
-        f"📊 SPORT PREMATCH — СТАТИСТИЧЕСКИ ОТЧЕТ ({run_suffix or '10:00'} BG)",
+        f"📊 SPORT PREMATCH — ТИПСТЪРСКИ ПОДБОР ({run_suffix or '17:30'} BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
@@ -1172,11 +1172,11 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                 lines.append("Няма бъдещи срещи след филтрите или API не върна достатъчно данни.")
         lines.extend(["", "────────────────────", ""])
 
-    lines.extend(["🎯 ТОП 5 СТАТИСТИЧЕСКИ ПРОГНОЗИ", ""])
+    lines.extend(["🎯 ТОП 5 ТИПСТЪРСКИ ИЗБОРА", ""])
     for idx, p in enumerate(top_signals, 1):
         lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | сила {p['signal_strength']:.1f}/100 | общо {p['total_expected']:.1f}")
     if not top_signals:
-        lines.append("Няма срещи с достатъчна история за надеждна статистическа прогноза.")
+        lines.append("Няма срещи, преминали минималните условия за публикуване.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
     message = "\n".join(lines)
     print(message, flush=True)
