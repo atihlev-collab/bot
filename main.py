@@ -1282,8 +1282,10 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                 f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}",
             ])
         else:
-            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: 0")
-            if reasons:
+            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}")
+            if sport_previews:
+                lines.append("Има кандидати, но не са сред 5-те публикувани избора за деня.")
+            elif reasons:
                 lines.append("Причина: " + ", ".join(f"{k} ({v})" for k, v in sorted(reasons.items())))
             else:
                 lines.append("Няма бъдещи срещи след филтрите или API не върна достатъчно данни.")
