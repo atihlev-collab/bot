@@ -815,26 +815,72 @@ def _available_prematch_options(sport_key, match):
             flush=True,
         )
 
-    # TIPSTER-QUALITY LAYER: compare the same market/selection across bookmakers.
-    # This is market consensus, not a claimed statistical prediction model.
+    # TIPSTER-QUALITY LAYER:
+    # Require independent bookmaker confirmation. Low prices near 1.40 need
+    # stronger confirmation because a short price alone is not evidence of value.
     grouped = {}
     for option in options:
         group_key = (_normalize_label(option["market"]), _normalize_label(option["selection"]))
         grouped.setdefault(group_key, []).append(option)
 
+    confirmed_options = []
     for group in grouped.values():
-        unique_books = {str(item["bookmaker"]).strip().casefold() for item in group if item.get("bookmaker")}
-        prices = sorted(float(item["odd"]) for item in group)
-        support = len(unique_books)
-        median_price = prices[len(prices) // 2] if prices else 0.0
+        by_book = {}
         for item in group:
-            item["bookmaker_count"] = support
-            item["consensus_odd"] = median_price
-            item["quality_score"] = round(min(support, 5) * 12.0 + (100.0 / item["odd"]) * 0.28, 1)
+            book = str(item.get("bookmaker") or "").strip().casefold()
+            if not book:
+                continue
+            # Keep one quote per bookmaker for the same exact market/selection.
+            if book not in by_book or float(item["odd"]) > float(by_book[book]["odd"]):
+                by_book[book] = item
 
-    # Rank outcomes by bookmaker support first, then implied probability.
-    options.sort(key=lambda x: (-x.get("bookmaker_count", 0), -x.get("implied", 0), x["odd"]))
-    return options
+        quotes = list(by_book.values())
+        prices = sorted(float(item["odd"]) for item in quotes)
+        support = len(quotes)
+        if not prices:
+            continue
+        median_price = prices[len(prices) // 2]
+        spread = round(prices[-1] - prices[0], 2)
+
+        # 1.40–1.44 requires at least 3 independent bookmakers.
+        # From 1.45 upwards, require at least 2. Never pad a sport to reach 3 picks.
+        min_support = 3 if median_price < 1.45 else 2
+        if support < min_support:
+            print(
+                f"SPORT QUALITY REJECT | market={group[0]['market']} | selection={group[0]['selection']} "
+                f"| median={median_price:.2f} | bookmakers={support} | required={min_support}",
+                flush=True,
+            )
+            continue
+
+        # Reject material disagreement between books; likely line mismatch, stale
+        # prices, or a market that needs manual review.
+        if spread > 0.15:
+            print(
+                f"SPORT QUALITY REJECT | market={group[0]['market']} | selection={group[0]['selection']} "
+                f"| price_spread={spread:.2f} | max_allowed=0.15",
+                flush=True,
+            )
+            continue
+
+        # Show the best currently available price, but rank using the median consensus.
+        best_quote = max(quotes, key=lambda item: float(item["odd"]))
+        candidate = dict(best_quote)
+        candidate["bookmaker_count"] = support
+        candidate["consensus_odd"] = median_price
+        candidate["consensus_implied"] = round(100.0 / median_price, 1)
+        candidate["price_spread"] = spread
+        confirmed_options.append(candidate)
+
+    # Rank by bookmaker consensus first, then median market probability, then tighter prices.
+    confirmed_options.sort(
+        key=lambda x: (
+            -x.get("bookmaker_count", 0),
+            -x.get("consensus_implied", 0),
+            x.get("price_spread", 999),
+        )
+    )
+    return confirmed_options
 
 
 
@@ -857,9 +903,9 @@ def _format_sport_simple_signal(index, item):
         f"   📊 Избор: {item['selection']}",
         f"   🏪 Букмейкър: {item.get('bookmaker') or 'Unknown bookmaker'}",
         f"   💰 Коефициент: {item['odd']:.2f}",
-        f"   📌 Имплицитна вероятност: {item['implied']:.1f}% (само по коефициент)",
-        f"   🧮 Подкрепа от букмейкъри: {item.get('bookmaker_count', 1)} | Индекс качество: {item.get('quality_score', 0):.1f}/100",
-        f"   📊 Медианен коефициент за пазара: {item.get('consensus_odd', item['odd']):.2f}",
+        f"   📌 Пазарна вероятност по медиана: {item['implied']:.1f}% (не е независима прогноза)",
+        f"   🧮 Независими букмейкъри: {item.get('bookmaker_count', 1)}",
+        f"   📊 Медианен коефициент: {item.get('consensus_odd', item['odd']):.2f} | Разлика между цените: {item.get('price_spread', 0.0):.2f}",
         f"   🏆 Лига: {item['league'] or '-'} | Държава: {item['country'] or '-'}",
         f"   📅 {dt.strftime('%d.%m.%Y')} | {dt.strftime('%H:%M')} BG",
     ])
@@ -954,10 +1000,10 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                         "market": best["market"],
                         "selection": best["selection"],
                         "odd": best["odd"],
-                        "implied": best["implied"],
+                        "implied": best.get("consensus_implied", best["implied"]),
                         "bookmaker_count": best.get("bookmaker_count", 1),
                         "consensus_odd": best.get("consensus_odd", best["odd"]),
-                        "quality_score": best.get("quality_score", round(best["implied"] * 0.28, 1)),
+                        "price_spread": best.get("price_spread", 0.0),
                         "league": league,
                         "country": country,
                         "datetime": dt,
@@ -988,14 +1034,14 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                 or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
             )
         ]
-        sport_candidates.sort(key=lambda x: (-x.get("bookmaker_count", 1), -x.get("quality_score", 0), -x["implied"], str(x["match_id"])))
+        sport_candidates.sort(key=lambda x: (-x.get("bookmaker_count", 1), -x["implied"], x.get("price_spread", 999), str(x["match_id"])))
         eligible_by_sport[sport_key] = len(sport_candidates)
         final.extend(sport_candidates[:MAX_SIGNALS_PER_SPORT])
     print(
         "SPORT TIPSTER QUALITY TOP THREE | "
         f"eligible={sum(eligible_by_sport.values())} | selected={len(final)} | "
         f"by_sport={eligible_by_sport} | "
-        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=bookmaker_consensus_then_implied_probability",
+        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=bookmaker_consensus | min_books=3_below_1.45_else_2 | max_spread=0.15",
         flush=True,
     )
 
@@ -1005,8 +1051,9 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: до 3 срещи от всеки спорт; първо подкрепа от повече букмейкъри, после пазарна вероятност",
-        "Метод: сравнява консенсуса между наличните букмейкъри; няма исторически статистически модел и не гарантира печалба",
+        "Подбор: до 3 срещи от всеки спорт; 1.40–1.44 изисква поне 3 букмейкъра, останалите — поне 2",
+        "Допълнителен филтър: отхвърля пазар с разлика над 0.15 между коефициентите. Това е филтър за съгласие, не доказателство за стойност.",
+        "Метод: няма исторически статистически модел; пазарната вероятност не е независимо изчислена и не гарантира печалба",
         f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала за всеки спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
