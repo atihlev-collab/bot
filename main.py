@@ -250,6 +250,94 @@ def mark_ran(run_key):
     conn.execute("INSERT OR REPLACE INTO daily_scanner_runs(run_key, created_at) VALUES (?, ?)",(run_key,datetime.now(timezone.utc).isoformat()))
     conn.commit(); conn.close()
 
+
+def _init_tipster_tracking():
+    with _db() as conn:
+        conn.execute("PRAGMA busy_timeout=30000")
+        conn.execute("""CREATE TABLE IF NOT EXISTS sport_tipster_predictions (
+            sport_key TEXT NOT NULL, match_id TEXT NOT NULL, start_at TEXT,
+            home_team_id INTEGER, away_team_id INTEGER,
+            home_name TEXT NOT NULL, away_name TEXT NOT NULL,
+            selection TEXT NOT NULL, signal_strength REAL NOT NULL,
+            expected_home REAL, expected_away REAL, created_at TEXT NOT NULL,
+            outcome TEXT, actual_home REAL, actual_away REAL, settled_at TEXT,
+            PRIMARY KEY (sport_key, match_id)
+        )""")
+
+
+def _record_tipster_predictions(items):
+    _init_tipster_tracking()
+    now_iso = datetime.now(TZ).isoformat()
+    with _db() as conn:
+        for item in items:
+            dt = item.get("datetime")
+            conn.execute(
+                """INSERT OR IGNORE INTO sport_tipster_predictions
+                (sport_key, match_id, start_at, home_team_id, away_team_id,
+                 home_name, away_name, selection, signal_strength,
+                 expected_home, expected_away, created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (item["sport_key"], str(item["match_id"]), dt.isoformat() if dt else None,
+                 item.get("home_team_id"), item.get("away_team_id"), item["home"], item["away"],
+                 item["selection"], float(item["signal_strength"]), float(item["home_expected"]),
+                 float(item["away_expected"]), now_iso),
+            )
+
+
+def _settle_tipster_predictions():
+    """Settle picks only when the same completed fixture appears in a team's recent history."""
+    _init_tipster_tracking()
+    with _db() as conn:
+        pending = conn.execute(
+            """SELECT sport_key, match_id, home_team_id, selection
+               FROM sport_tipster_predictions
+               WHERE outcome IS NULL AND start_at IS NOT NULL AND start_at < ?""",
+            (datetime.now(TZ).isoformat(),),
+        ).fetchall()
+    settled = 0
+    for sport_key, match_id, home_team_id, selection in pending:
+        if not home_team_id:
+            continue
+        try:
+            rows = _sport_api_get(f"{sport_key}/last-five-games", {"teamId": int(home_team_id)})
+        except APIQuotaExceeded:
+            raise
+        if not isinstance(rows, list):
+            continue
+        for match in rows:
+            if not isinstance(match, dict) or str(_match_id(match)) != str(match_id):
+                continue
+            pair = _score_pair_for_history(match, sport_key)
+            winner_pair = _winner_pair_for_history(match, sport_key, pair)
+            if pair is None or winner_pair is None:
+                continue
+            if winner_pair[0] == winner_pair[1]:
+                outcome = "V"
+            elif (selection == "Победа дома" and winner_pair[0] > winner_pair[1]) or (selection == "Победа гостите" and winner_pair[1] > winner_pair[0]):
+                outcome = "W"
+            else:
+                outcome = "L"
+            with _db() as conn:
+                conn.execute(
+                    """UPDATE sport_tipster_predictions SET outcome=?, actual_home=?, actual_away=?, settled_at=?
+                       WHERE sport_key=? AND match_id=? AND outcome IS NULL""",
+                    (outcome, pair[0], pair[1], datetime.now(TZ).isoformat(), sport_key, str(match_id)),
+                )
+            settled += 1
+            print(f"TIPSTER RESULT SETTLED | sport={sport_key} | match={match_id} | outcome={outcome} | score={pair[0]}-{pair[1]}", flush=True)
+            break
+    with _db() as conn:
+        row = conn.execute(
+            """SELECT SUM(CASE WHEN outcome='W' THEN 1 ELSE 0 END),
+                      SUM(CASE WHEN outcome='L' THEN 1 ELSE 0 END),
+                      SUM(CASE WHEN outcome='V' THEN 1 ELSE 0 END),
+                      SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END)
+               FROM sport_tipster_predictions"""
+        ).fetchone()
+    summary = tuple(int(x or 0) for x in row) if row else (0, 0, 0, 0)
+    print(f"TIPSTER TRACK RECORD | wins={summary[0]} losses={summary[1]} void={summary[2]} pending={summary[3]} newly_settled={settled}", flush=True)
+    return {"wins": summary[0], "losses": summary[1], "void": summary[2], "pending": summary[3], "newly_settled": settled}
+
 def _signal_text(text):
     return f"\033[1m\033[4m{text}\033[0m"
 
@@ -988,6 +1076,26 @@ def _score_pair_for_history(match, sport_key):
     return None
 
 
+def _winner_pair_for_history(match, sport_key, score_pair=None):
+    # Volleyball winners are decided by sets, not total points.
+    if sport_key == "volleyball":
+        state = match.get("state") or {}
+        score = state.get("score") or match.get("score") or {}
+        if not isinstance(score, dict):
+            return None
+        home_sets = away_sets = set_count = 0
+        for key in ("firstSet", "secondSet", "thirdSet", "fourthSet", "fifthSet"):
+            pair = _score_pair_from_text(score.get(key))
+            if pair:
+                set_count += 1
+                if pair[0] > pair[1]:
+                    home_sets += 1
+                elif pair[1] > pair[0]:
+                    away_sets += 1
+        return (float(home_sets), float(away_sets)) if set_count else None
+    return score_pair
+
+
 def _team_recent_form(sport_key, team_id):
     cache_key = (sport_key, int(team_id))
     if cache_key in _SPORT_LAST_FIVE_CACHE:
@@ -1002,7 +1110,8 @@ def _team_recent_form(sport_key, team_id):
         if not isinstance(match, dict):
             continue
         pair = _score_pair_for_history(match, sport_key)
-        if not pair:
+        winner_pair = _winner_pair_for_history(match, sport_key, pair)
+        if pair is None or winner_pair is None:
             continue
         home = match.get("homeTeam") or match.get("home") or {}
         away = match.get("awayTeam") or match.get("away") or {}
@@ -1010,16 +1119,18 @@ def _team_recent_form(sport_key, team_id):
         away_id = _sport_team_id(away)
         if int(team_id) == home_id:
             for_score, against = pair
+            winner_for, winner_against = winner_pair
         elif int(team_id) == away_id:
             against, for_score = pair
+            winner_against, winner_for = winner_pair
         else:
             continue
         scored += for_score
         conceded += against
         games += 1
-        if for_score > against:
+        if winner_for > winner_against:
             wins += 1
-        elif for_score < against:
+        elif winner_for < winner_against:
             losses += 1
         else:
             draws += 1
@@ -1073,12 +1184,15 @@ def _statistical_preview(sport_key, match):
         "league": _sport_league_country(match)[0],
         "country": _sport_league_country(match)[1],
         "match_id": _match_id(match),
+        "home_team_id": home_id,
+        "away_team_id": away_id,
     }
     return preview, None
 
 
 def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
     _SPORT_LAST_FIVE_CACHE.clear()
+    tracking = _settle_tipster_predictions()
     sections = []
     previews = []
     counts = {}
@@ -1136,9 +1250,10 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             counts[sport_key] = {"fixtures": 0, "future": 0, "usable": 0}
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
-    # Statistical previews are informational; only the five strongest are marked as top signals.
+    # Publish only the five strongest candidates that pass the minimum signal threshold.
     previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
     top_signals = previews[:MAX_SIGNALS_PER_DAY]
+    selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
     lines = [
         f"📊 SPORT PREMATCH — ТИПСТЪРСКИ ПОДБОР ({run_suffix or '17:30'} BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
@@ -1147,13 +1262,15 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
         "Публикуват се само кандидати със сила поне 60/100. Това е евристичен рейтинг, НЕ вероятност за успех; не е доказан като печеливш.",
         "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Слабите срещи се пропускат.",
-        f"Показват се всички {len(SPORTS_CONFIG)} спорта; максимум {MAX_SIGNALS_PER_DAY} най-силни прогнози общо.",
+        f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се максимум {MAX_SIGNALS_PER_DAY} прогнози общо, без допълване насила.",
+        f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
     ]
     for sport_key, cfg, sport_previews, reasons in sections:
-        lines.extend([f"{cfg['name']} — {'ПРОГНОЗА' if sport_previews else 'НЯМА ДОСТАТЪЧНА СТАТИСТИКА'}", ""])
-        if sport_previews:
-            p = sport_previews[0]
+        published_for_sport = [p for p in sport_previews if (sport_key, str(p["match_id"])) in selected_keys]
+        lines.extend([f"{cfg['name']} — {'ПРОГНОЗА' if published_for_sport else 'НЯМА ПУБЛИКУВАН ИЗБОР'}", ""])
+        if published_for_sport:
+            p = published_for_sport[0]
             dt = p["datetime"]
             lines.extend([
                 f"Среща: {p['home']} - {p['away']}",
@@ -1183,11 +1300,13 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
     if send_func and run_suffix:
         try:
             _send_sport_report_chunks(message, send_func, max_chars=3700)
-            print("SPORT STATS TELEGRAM REPORT SENT", flush=True)
+            _record_tipster_predictions(top_signals)
+            print("SPORT STATS TELEGRAM REPORT SENT | published_predictions_recorded", flush=True)
         except Exception as exc:
             print(f"SPORT STATS TELEGRAM ERROR: {exc!r}", flush=True)
     elif send_func and top_signals:
         _send_sport_report_chunks(message, send_func, max_chars=3700)
+        _record_tipster_predictions(top_signals)
     return message
 
 
