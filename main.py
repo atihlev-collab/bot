@@ -1151,24 +1151,24 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off positive-EV tipster test 12:45 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off positive-EV tipster test 13:10 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:12:45"
+        oneoff_key = f"sport_prematch:{day_key}:13:10"
 
-        # One-off positive-EV tipster test at 12:45 BG on 2026-10-12.
-        if day_key == "2026-10-12" and now.hour == 12 and now.minute == 45 and not SPORT_RUNNING:
+        # One-off positive-EV tipster test at 13:10 BG on 2026-10-12.
+        if day_key == "2026-10-12" and now.hour == 13 and now.minute == 10 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
-                print(f"SPORT 12:45 TEST SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 13:10 TEST SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 12:45 TEST SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 13:10 TEST SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 12:45 TEST TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "12:45"), daemon=True).start()
+                print(f"SPORT 13:10 TEST TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "13:10"), daemon=True).start()
 
         # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
