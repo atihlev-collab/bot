@@ -1140,7 +1140,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "МЕТОД: последни до 5 завършени срещи на двата отбора; прогноза от форма и средни отбелязани/допуснати точки.",
+        "МЕТОД: последни до 5 завършени срещи на двата отбора; форма и средни отбелязани/допуснати точки. Силата на сигнала е евристична, не калибрирана вероятност.",
         "Коефициенти и пазарни линии НЕ се използват. Прогнозите са статистически оценки, не гаранция за печалба.",
         f"Показват се всички {len(SPORTS_CONFIG)} спорта; до {MAX_SIGNALS_PER_DAY} най-силни прогнози общо.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
@@ -1153,7 +1153,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             lines.extend([
                 f"Среща: {p['home']} - {p['away']}",
                 f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
-                f"Статистически избор: {p['selection']} | ориентировъчна вероятност: {p['probability']:.1f}%",
+                f"Статистически избор: {p['selection']} | евристична сила на сигнала: {p['probability']:.1f}/100 (не е калибрирана вероятност)",
                 f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
                 f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
                 f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
@@ -1169,7 +1169,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
     lines.extend(["🎯 ТОП 5 СТАТИСТИЧЕСКИ ПРОГНОЗИ", ""])
     for idx, p in enumerate(top_signals, 1):
-        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | оценка {p['probability']:.1f}% | общо {p['total_expected']:.1f}")
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | сила {p['probability']:.1f}/100 | общо {p['total_expected']:.1f}")
     if not top_signals:
         lines.append("Няма срещи с достатъчна история за надеждна статистическа прогноза.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
