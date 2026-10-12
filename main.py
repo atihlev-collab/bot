@@ -1041,24 +1041,23 @@ def _statistical_preview(sport_key, match):
         return None, "липсват ID на отбор"
     home_form = _team_recent_form(sport_key, home_id)
     away_form = _team_recent_form(sport_key, away_id)
-    if home_form["games"] < 3 or away_form["games"] < 3:
-        return None, f"недостатъчна история (домакин {home_form['games']}/5, гост {away_form['games']}/5)"
+    if home_form["games"] < 4 or away_form["games"] < 4:
+        return None, f"недостатъчна история (нужни са поне 4 мача; домакин {home_form['games']}/5, гост {away_form['games']}/5)"
 
     # Score forecast combines each team's recent scoring with its opponent's recent allowance.
     home_expected = (home_form["avg_scored"] + away_form["avg_conceded"]) / 2.0
     away_expected = (away_form["avg_scored"] + home_form["avg_conceded"]) / 2.0
     total_expected = home_expected + away_expected
-    home_strength = (home_form["win_rate"] - away_form["win_rate"]) * 0.55
+    win_gap = home_form["win_rate"] - away_form["win_rate"]
     scoring_gap = home_expected - away_expected
     scale = max(1.0, (home_expected + away_expected) * 0.22)
-    score_strength = max(-0.20, min(0.20, scoring_gap / scale * 0.12))
-    raw_home_probability = 0.50 + home_strength + score_strength
-    home_probability = max(0.15, min(0.85, raw_home_probability))
-    away_probability = 1.0 - home_probability
-    if home_probability >= away_probability:
-        selection, probability = "Победа дома", home_probability
+    normalized_score_gap = max(-1.0, min(1.0, scoring_gap / scale))
+    combined_edge = 0.72 * win_gap + 0.28 * normalized_score_gap
+    signal_strength = 50.0 + min(32.0, abs(combined_edge) * 32.0)
+    if combined_edge >= 0:
+        selection = "Победа дома"
     else:
-        selection, probability = "Победа гостите", away_probability
+        selection = "Победа гостите"
     preview = {
         "sport_key": sport_key,
         "home": _sport_team_name(home_obj),
@@ -1067,7 +1066,7 @@ def _statistical_preview(sport_key, match):
         "away_expected": away_expected,
         "total_expected": total_expected,
         "selection": selection,
-        "probability": probability * 100.0,
+        "signal_strength": signal_strength,
         "home_form": home_form,
         "away_form": away_form,
         "datetime": _sport_match_datetime(match),
@@ -1113,7 +1112,12 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                     raise
                 except Exception as exc:
                     print(f"SPORT STATS ERROR | sport={sport_key} match={_match_id(match)} | {exc!r}", flush=True)
-            sport_previews.sort(key=lambda p: (-p["probability"], p["datetime"] or end))
+            # Publish only clear candidates; never fill the report with weak picks.
+            weak_count = sum(1 for p in sport_previews if p["signal_strength"] < 60.0)
+            sport_previews = [p for p in sport_previews if p["signal_strength"] >= 60.0]
+            sport_previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
+            if weak_count:
+                reasons["слабък сигнал под 60/100"] = weak_count
             counts[sport_key] = {"fixtures": len(fixtures), "future": len(future), "usable": len(sport_previews)}
             sections.append((sport_key, cfg, sport_previews, reasons))
             previews.extend(sport_previews)
@@ -1133,16 +1137,17 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
     # Statistical previews are informational; only the five strongest are marked as top signals.
-    previews.sort(key=lambda p: (-p["probability"], p["datetime"] or end))
+    previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
     top_signals = previews[:MAX_SIGNALS_PER_DAY]
     lines = [
         f"📊 SPORT PREMATCH — СТАТИСТИЧЕСКИ ОТЧЕТ ({run_suffix or '10:00'} BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "МЕТОД: последни до 5 завършени срещи на двата отбора; форма и средни отбелязани/допуснати точки. Силата на сигнала е евристична, не калибрирана вероятност.",
-        "Коефициенти и пазарни линии НЕ се използват. Прогнозите са статистически оценки, не гаранция за печалба.",
-        f"Показват се всички {len(SPORTS_CONFIG)} спорта; до {MAX_SIGNALS_PER_DAY} най-силни прогнози общо.",
+        "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
+        "Публикуват се само кандидати със сила поне 60/100. Това е евристичен рейтинг, НЕ вероятност за успех; не е доказан като печеливш.",
+        "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Слабите срещи се пропускат.",
+        f"Показват се всички {len(SPORTS_CONFIG)} спорта; максимум {MAX_SIGNALS_PER_DAY} най-силни прогнози общо.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
     ]
     for sport_key, cfg, sport_previews, reasons in sections:
@@ -1153,7 +1158,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             lines.extend([
                 f"Среща: {p['home']} - {p['away']}",
                 f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
-                f"Статистически избор: {p['selection']} | евристична сила на сигнала: {p['probability']:.1f}/100 (не е калибрирана вероятност)",
+                f"ТИПСТЪРСКИ ИЗБОР: {p['selection']} | сила на сигнала: {p['signal_strength']:.1f}/100 (не е вероятност)",
                 f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
                 f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
                 f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
@@ -1169,7 +1174,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
     lines.extend(["🎯 ТОП 5 СТАТИСТИЧЕСКИ ПРОГНОЗИ", ""])
     for idx, p in enumerate(top_signals, 1):
-        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | сила {p['probability']:.1f}/100 | общо {p['total_expected']:.1f}")
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | сила {p['signal_strength']:.1f}/100 | общо {p['total_expected']:.1f}")
     if not top_signals:
         lines.append("Няма срещи с достатъчна история за надеждна статистическа прогноза.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
@@ -1203,7 +1208,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     # Consume today's run before making any API calls. Even if Telegram fails
     # or the process restarts mid-scan, the scheduler will not spend requests again today.
     mark_ran(run_key)
-    print(f"SPORT DAILY RUN LOCKED | day={day_key} | next scheduled run=10:00 Europe/Sofia", flush=True)
+    print(f"SPORT DAILY RUN LOCKED | day={day_key} | scheduled run=17:30 Europe/Sofia", flush=True)
 
     # Fixed 24-hour fixture window in Bulgaria time: today at 12:00 -> tomorrow at 12:00.
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
@@ -1435,39 +1440,27 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | all-sports odds-free statistical PREMATCH run 16:40 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily tipster-style all-sports PREMATCH run 17:30 BG | fixture window 12:00 BG -> next day 12:00 BG | no 10:00 duplicate scan | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
-        daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:16:40"
+        daily_key = f"sport_prematch:{day_key}:17:30"
 
-        # All-sports odds-free statistical PREMATCH run at 16:40 BG on 2026-10-12.
-        if day_key == "2026-10-12" and now.hour == 16 and now.minute == 40 and not SPORT_RUNNING:
-            if already_ran(oneoff_key):
-                print(f"SPORT 16:40 RUN SKIP | day={day_key} | already ran", flush=True)
-            elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 16:40 RUN SKIP | day={day_key} | daily quota lock", flush=True)
-                mark_ran(oneoff_key)
-            else:
-                SPORT_RUNNING = True
-                print(f"SPORT 16:40 RUN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "16:40"), daemon=True).start()
-
-        # Trigger the regular daily scan only during the 10:00 minute.
-        in_daily_window = now.hour == 10 and now.minute == 0
+        # One daily tipster-style scan, triggered only during the 17:30 minute.
+        in_daily_window = now.hour == 17 and now.minute == 30
         if in_daily_window and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
             if already_ran(daily_key):
                 SPORT_DONE_HOUR = day_key
-                print(f"SPORT SCHEDULER SKIP | day={day_key} | already ran today", flush=True)
+                print(f"SPORT 17:30 SCHEDULER SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
                 SPORT_DONE_HOUR = day_key
-                print(f"SPORT SCHEDULER SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 17:30 SCHEDULER SKIP | day={day_key} | daily quota lock", flush=True)
+                mark_ran(daily_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT DAILY TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key,), daemon=True).start()
-        time.sleep(30)
+                print(f"SPORT 17:30 SCHEDULER TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "17:30"), daemon=True).start()
+        time.sleep(20)
 
 
 if __name__ == "__main__":
