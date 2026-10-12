@@ -1255,7 +1255,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
     top_signals = previews[:MAX_SIGNALS_PER_DAY]
     selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
     lines = [
-        f"📊 SPORT PREMATCH — ТИПСТЪРСКИ ПОДБОР ({run_suffix or '17:30'} BG)",
+        f"📊 SPORT PREMATCH — ТИПСТЪРСКИ ПОДБОР ({run_suffix or '10:00'} BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
@@ -1329,7 +1329,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     # Consume today's run before making any API calls. Even if Telegram fails
     # or the process restarts mid-scan, the scheduler will not spend requests again today.
     mark_ran(run_key)
-    print(f"SPORT DAILY RUN LOCKED | day={day_key} | scheduled run=17:30 Europe/Sofia", flush=True)
+    print(f"SPORT DAILY RUN LOCKED | day={day_key} | scheduled run=10:00 Europe/Sofia", flush=True)
 
     # Fixed 24-hour fixture window in Bulgaria time: today at 12:00 -> tomorrow at 12:00.
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
@@ -1561,26 +1561,26 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily tipster-style all-sports PREMATCH run 17:30 BG | fixture window 12:00 BG -> next day 12:00 BG | no 10:00 duplicate scan | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily tipster-style all-sports PREMATCH run 10:00 BG | fixture window 12:00 BG -> next day 12:00 BG | one daily scan only | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
-        daily_key = f"sport_prematch:{day_key}:17:30"
+        daily_key = f"sport_prematch:{day_key}:10:00"
 
-        # One daily tipster-style scan, triggered only during the 17:30 minute.
+        # One daily tipster-style scan, triggered only during the 10:00 minute.
         in_daily_window = now.hour == 17 and now.minute == 30
         if in_daily_window and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
             if already_ran(daily_key):
                 SPORT_DONE_HOUR = day_key
-                print(f"SPORT 17:30 SCHEDULER SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 10:00 SCHEDULER SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
                 SPORT_DONE_HOUR = day_key
-                print(f"SPORT 17:30 SCHEDULER SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 10:00 SCHEDULER SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(daily_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 17:30 SCHEDULER TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "17:30"), daemon=True).start()
+                print(f"SPORT 10:00 SCHEDULER TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "10:00"), daemon=True).start()
         time.sleep(20)
 
 
