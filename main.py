@@ -951,6 +951,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     now_scan = datetime.now(TZ)
 
     all_signals = []
+    sport_scan_stats = {}
     seen_matches = set()
 
     for sport_key, cfg in SPORTS_CONFIG.items():
@@ -977,13 +978,14 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                 future.append(match)
 
             future.sort(key=lambda m: _sport_match_datetime(m) or end)
+            raw_future_count = len(future)
             # Wider fixture pool like the football scanner, with a hard cap
             # to keep daily API usage controlled and leave room for every sport.
             future = future[:MAX_FIXTURES_TO_EVALUATE]
+            sport_scan_stats[sport_key] = {"fetched": len(fixtures), "future_candidates": raw_future_count, "odds_checks": len(future), "market_candidates": 0}
             print(
                 f"SPORT FIXTURE SUMMARY | sport={sport_key} fetched={len(fixtures)} "
-                f"future_candidates={sum(1 for m in fixtures if (_sport_match_datetime(m) is not None and _sport_match_datetime(m) > now_scan))} "
-                f"odds_checks={len(future)}",
+                f"future_candidates={raw_future_count} odds_checks={len(future)}",
                 flush=True,
             )
 
@@ -1001,6 +1003,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                     )
                     if not options:
                         continue
+                    sport_scan_stats[sport_key]["market_candidates"] += 1
                     best = options[0]
                     home, away = _sport_match_names(match, sport_key)
                     league, country = _sport_league_country(match)
@@ -1111,7 +1114,15 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
             lines.append(f"{cfg['name']} — ТОП {len(sport_items)}")
             lines.append("")
             if not sport_items:
-                lines.append("Няма нови срещи в зададения диапазон след филтрите.")
+                stats = sport_scan_stats.get(sport_key, {})
+                candidate_count = sum(1 for item in all_signals if item["sport_key"] == sport_key)
+                lines.append(
+                    f"Срещи в прозореца: {stats.get('fetched', 0)} | бъдещи след филтрите: {stats.get('future_candidates', 0)} | проверени за коефициенти: {stats.get('odds_checks', 0)}."
+                )
+                lines.append(
+                    f"Пазари, преминали условията: {stats.get('market_candidates', 0)} | сигнали преди общия дневен подбор: {candidate_count}."
+                )
+                lines.append("Няма сигнал за този спорт, който да е преминал всички условия.")
                 continue
             for i, item in enumerate(sport_items, 1):
                 lines.append(_format_sport_simple_signal(i, item))
@@ -1162,24 +1173,24 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off positive-EV tipster test 13:30 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | all-sports PREMATCH diagnostic run 16:05 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:13:30"
+        oneoff_key = f"sport_prematch:{day_key}:16:05"
 
-        # One-off positive-EV tipster test at 13:30 BG on 2026-10-12.
-        if day_key == "2026-10-12" and now.hour == 13 and now.minute == 30 and not SPORT_RUNNING:
+        # All-sports PREMATCH diagnostic run at 16:05 BG on 2026-10-12.
+        if day_key == "2026-10-12" and now.hour == 16 and now.minute == 5 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
-                print(f"SPORT 13:30 TEST SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 16:05 RUN SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
                 print(f"SPORT 13:30 TEST SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 13:30 TEST TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "13:30"), daemon=True).start()
+                print(f"SPORT 16:05 RUN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "16:05"), daemon=True).start()
 
         # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
