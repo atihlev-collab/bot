@@ -305,8 +305,9 @@ MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.40
-MAX_ODDS = 1.80  # Restore the configured prematch odds band.
-MAX_SIGNALS_PER_SPORT = 3
+MAX_ODDS = 1.80
+MAX_SIGNALS_PER_DAY = 5
+MAX_SIGNALS_PER_SPORT = 2
 
 
 def _sport_match_datetime(match):
@@ -658,7 +659,7 @@ def _available_prematch_options(sport_key, match):
 
     rows = _sport_api_get(
         f"{sport_key}/odds",
-        {"matchId": mid, "oddsType": "prematch", "limit": 5, "offset": 0},
+        {"matchId": mid, "oddsType": "prematch", "limit": 100, "offset": 0},
     )
     if not isinstance(rows, list):
         return []
@@ -740,7 +741,7 @@ def _available_prematch_options(sport_key, match):
                         line = round(float(nums[-1]), 3)
                     except ValueError:
                         continue
-                    market_key = (family, line)
+                    market_key = (family, line, norm_market)
                 else:
                     if norm_label in {"home", "1"} or norm_label == home_norm or norm_label.startswith(home_norm + " "):
                         side = "home"
@@ -750,7 +751,9 @@ def _available_prematch_options(sport_key, match):
                         side = "draw"
                     else:
                         continue
-                    market_key = (family, None)
+                    # Keep differently named winner markets separate. Mixing "moneyline"
+                    # with "full-time result" can silently mix two-way and three-way books.
+                    market_key = (family, None, norm_market)
 
                 dedup_key = (bookmaker.casefold(), market_key, side, round(odd, 4))
                 if dedup_key in seen:
@@ -762,7 +765,8 @@ def _available_prematch_options(sport_key, match):
                     "market_key": market_key, "side": side,
                 })
 
-    # De-vig each bookmaker's complete outcome set before taking a robust median.
+    # De-vig only complete outcome sets. Partial 1X2 markets must never be
+    # treated as two-way moneylines because that inflates the estimated probability.
     market_books = {}
     for quote in raw_quotes:
         market_key = quote["market_key"]
@@ -775,16 +779,28 @@ def _available_prematch_options(sport_key, match):
 
     candidates = []
     for market_key, books in market_books.items():
+        family = market_key[0]
+        market_name_norm = market_key[2] if len(market_key) > 2 else ""
+        has_draw_anywhere = any("draw" in book_data["sides"] for book_data in books.values())
+        result_market_name = any(token in market_name_norm for token in (
+            "1x2", "match result", "full time result", "full-time result",
+            "three way", "3 way", "90 minutes",
+        ))
+        requires_draw = family == "winner" and (has_draw_anywhere or result_market_name)
+        required_sides = {"over", "under"} if family == "total" else (
+            {"home", "away", "draw"} if requires_draw else {"home", "away"}
+        )
+
         fair_by_side = {}
         for book_data in books.values():
             sides = book_data["sides"]
-            if len(sides) < 2:
+            if not required_sides.issubset(sides):
                 continue
-            inverse_sum = sum(1.0 / quote["odd"] for quote in sides.values() if quote["odd"] > 1.0)
+            inverse_sum = sum(1.0 / sides[s]["odd"] for s in required_sides)
             if inverse_sum <= 0:
                 continue
-            for side, quote in sides.items():
-                fair_by_side.setdefault(side, []).append(1.0 / quote["odd"] / inverse_sum)
+            for side in required_sides:
+                fair_by_side.setdefault(side, []).append(1.0 / sides[side]["odd"] / inverse_sum)
 
         for side in ("over", "under", "home", "away"):
             fair_values = fair_by_side.get(side, [])
@@ -981,11 +997,11 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         except Exception as exc:
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
-    # Select up to three distinct fixtures independently for each sport.
-    # Sports with only one or two eligible fixtures keep those; there is no global cap.
+    # Rank all eligible picks together and publish no more than five per day.
+    # Keep sport diversity (at most two picks per sport) instead of filling quotas.
     already_sent = _sent_sport_fixture_keys()
-    final = []
     eligible_by_sport = {}
+    eligible = []
     for sport_key in SPORTS_CONFIG:
         sport_candidates = [
             item for item in all_signals
@@ -995,14 +1011,37 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                 or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
             )
         ]
-        sport_candidates.sort(key=lambda x: (-x.get("expected_value_pct", 0.0), -x.get("bookmaker_count", 0), -x.get("fair_probability", 0.0), str(x["match_id"])))
+        sport_candidates.sort(key=lambda x: (
+            -x.get("expected_value_pct", 0.0),
+            -x.get("bookmaker_count", 0),
+            -x.get("fair_probability", 0.0),
+            str(x["match_id"]),
+        ))
         eligible_by_sport[sport_key] = len(sport_candidates)
-        final.extend(sport_candidates[:MAX_SIGNALS_PER_SPORT])
+        eligible.extend(sport_candidates)
+
+    eligible.sort(key=lambda x: (
+        -x.get("expected_value_pct", 0.0),
+        -x.get("bookmaker_count", 0),
+        -x.get("fair_probability", 0.0),
+        str(x["match_id"]),
+    ))
+    final = []
+    selected_per_sport = {}
+    for item in eligible:
+        sport_key = item["sport_key"]
+        if selected_per_sport.get(sport_key, 0) >= MAX_SIGNALS_PER_SPORT:
+            continue
+        final.append(item)
+        selected_per_sport[sport_key] = selected_per_sport.get(sport_key, 0) + 1
+        if len(final) >= MAX_SIGNALS_PER_DAY:
+            break
+
     print(
-        "SPORT TIPSTER QUALITY TOP THREE | "
+        "SPORT TIPSTER QUALITY GLOBAL TOP PICKS | "
         f"eligible={sum(eligible_by_sport.values())} | selected={len(final)} | "
-        f"by_sport={eligible_by_sport} | "
-        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=bookmaker_consensus | min_books=3_below_1.45_else_2 | max_spread=0.15",
+        f"daily_cap={MAX_SIGNALS_PER_DAY} | by_sport={selected_per_sport} | "
+        f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | ranking=EV_then_bookmaker_support",
         flush=True,
     )
 
@@ -1013,10 +1052,10 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "Подбор: до 3 срещи от всеки спорт, само ако има положителна стойност; бройката не се допълва насила",
-        "Филтри: поне 3 букмейкъра с пълен пазар; премахва маржа и изисква очаквана стойност (EV) поне +3%",
-        "Пазари: победител и тотали за целия мач; хендикапи, спредове и пазари за отделни периоди са изключени",
+        f"Филтри: поне 3 букмейкъра с пълен пазар; премахва маржа и изисква EV поне +3%; максимум {MAX_SIGNALS_PER_DAY} сигнала общо",
+        "Пазари: победител и тотали за целия мач; непълни пазари се изключват; хендикапи, спредове и отделни периоди са изключени",
         "Метод: оценка по пазарен консенсус, не исторически статистически модел; EV е оценка, не гаранция за печалба",
-        f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала за всеки спорт",
+        f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно и {MAX_SIGNALS_PER_SPORT} на спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
