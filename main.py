@@ -872,9 +872,10 @@ def _available_prematch_options(sport_key, match):
     candidates.sort(key=lambda item: (-item.get("expected_value_pct", 0.0), -item.get("bookmaker_count", 0), -item.get("fair_probability", 0.0)))
     if not candidates:
         full_books = 0
-        for books in market_books.values():
-            family = books and next(iter(books.values())).get("sides", {})
-            required = {"over", "under"} if market_key and market_key[0] == "total" else {"home", "away"}
+        for grouped_key, books in market_books.items():
+            required = {"over", "under"} if grouped_key[0] == "total" else {"home", "away"}
+            if grouped_key[0] == "winner" and grouped_key[2] == "three_way":
+                required = {"home", "away", "draw"}
             full_books += sum(1 for book_data in books.values() if required.issubset(book_data.get("sides", {})))
         print(
             f"SPORT QUALITY NO PICK | sport={sport_key} | fixture={mid} | raw_quotes={len(raw_quotes)} "
