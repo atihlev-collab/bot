@@ -926,6 +926,265 @@ def _format_sport_simple_signal(index, item):
     ])
 
 
+
+# Odds-free PREMATCH model: use completed recent results, never bookmaker prices.
+SPORT_STATS_ONLY = True
+_SPORT_LAST_FIVE_CACHE = {}
+
+
+def _score_pair_from_text(value):
+    if value is None:
+        return None
+    match = re.search(r"(-?\d+(?:\.\d+)?)\s*[-–:]\s*(-?\d+(?:\.\d+)?)", str(value))
+    if not match:
+        return None
+    try:
+        return float(match.group(1)), float(match.group(2))
+    except (TypeError, ValueError):
+        return None
+
+
+def _score_pair_for_history(match, sport_key):
+    state = match.get("state") or {}
+    score = state.get("score") or match.get("score") or {}
+    if not isinstance(score, dict):
+        return _score_pair_from_text(score)
+
+    # Baseball stores run totals as innings nested under home/away.
+    if sport_key == "baseball":
+        home_box, away_box = score.get("home") or {}, score.get("away") or {}
+        if isinstance(home_box, dict) and isinstance(away_box, dict):
+            home_innings = home_box.get("innings") or []
+            away_innings = away_box.get("innings") or []
+            if home_innings and away_innings:
+                try:
+                    return sum(float(x or 0) for x in home_innings), sum(float(x or 0) for x in away_innings)
+                except (TypeError, ValueError):
+                    pass
+
+    # Volleyball's total points must be derived from set scores, not the match's set count.
+    if sport_key == "volleyball":
+        set_pairs = []
+        for key in ("firstSet", "secondSet", "thirdSet", "fourthSet", "fifthSet"):
+            pair = _score_pair_from_text(score.get(key))
+            if pair:
+                set_pairs.append(pair)
+        if set_pairs:
+            return sum(p[0] for p in set_pairs), sum(p[1] for p in set_pairs)
+
+    current = _score_pair_from_text(score.get("current"))
+    if current:
+        return current
+
+    # Some APIs expose only period / quarter score fields.
+    pairs = []
+    for key, value in score.items():
+        if any(token in str(key).lower() for token in ("period", "quarter", "inning", "set")):
+            pair = _score_pair_from_text(value)
+            if pair:
+                pairs.append(pair)
+    if pairs:
+        return sum(p[0] for p in pairs), sum(p[1] for p in pairs)
+    return None
+
+
+def _team_recent_form(sport_key, team_id):
+    cache_key = (sport_key, int(team_id))
+    if cache_key in _SPORT_LAST_FIVE_CACHE:
+        return _SPORT_LAST_FIVE_CACHE[cache_key]
+    rows = _sport_api_get(f"{sport_key}/last-five-games", {"teamId": int(team_id)})
+    if not isinstance(rows, list):
+        rows = []
+    wins = losses = draws = 0
+    scored = conceded = 0.0
+    games = 0
+    for match in rows:
+        if not isinstance(match, dict):
+            continue
+        pair = _score_pair_for_history(match, sport_key)
+        if not pair:
+            continue
+        home = match.get("homeTeam") or match.get("home") or {}
+        away = match.get("awayTeam") or match.get("away") or {}
+        home_id = _sport_team_id(home)
+        away_id = _sport_team_id(away)
+        if int(team_id) == home_id:
+            for_score, against = pair
+        elif int(team_id) == away_id:
+            against, for_score = pair
+        else:
+            continue
+        scored += for_score
+        conceded += against
+        games += 1
+        if for_score > against:
+            wins += 1
+        elif for_score < against:
+            losses += 1
+        else:
+            draws += 1
+    result = {
+        "games": games, "wins": wins, "losses": losses, "draws": draws,
+        "avg_scored": scored / games if games else None,
+        "avg_conceded": conceded / games if games else None,
+        "win_rate": (wins + 0.5 * draws) / games if games else None,
+    }
+    _SPORT_LAST_FIVE_CACHE[cache_key] = result
+    return result
+
+
+def _statistical_preview(sport_key, match):
+    home_obj = match.get("homeTeam") or match.get("home") or {}
+    away_obj = match.get("awayTeam") or match.get("away") or {}
+    home_id, away_id = _sport_team_id(home_obj), _sport_team_id(away_obj)
+    if not home_id or not away_id:
+        return None, "липсват ID на отбор"
+    home_form = _team_recent_form(sport_key, home_id)
+    away_form = _team_recent_form(sport_key, away_id)
+    if home_form["games"] < 3 or away_form["games"] < 3:
+        return None, f"недостатъчна история (домакин {home_form['games']}/5, гост {away_form['games']}/5)"
+
+    # Score forecast combines each team's recent scoring with its opponent's recent allowance.
+    home_expected = (home_form["avg_scored"] + away_form["avg_conceded"]) / 2.0
+    away_expected = (away_form["avg_scored"] + home_form["avg_conceded"]) / 2.0
+    total_expected = home_expected + away_expected
+    home_strength = (home_form["win_rate"] - away_form["win_rate"]) * 0.55
+    scoring_gap = home_expected - away_expected
+    scale = max(1.0, (home_expected + away_expected) * 0.22)
+    score_strength = max(-0.20, min(0.20, scoring_gap / scale * 0.12))
+    home_probability = max(0.50, min(0.85, 0.50 + home_strength + score_strength))
+    away_probability = 1.0 - home_probability
+    if home_probability >= away_probability:
+        selection, probability = "Победа дома", home_probability
+    else:
+        selection, probability = "Победа гостите", away_probability
+    preview = {
+        "sport_key": sport_key,
+        "home": _sport_team_name(home_obj),
+        "away": _sport_team_name(away_obj),
+        "home_expected": home_expected,
+        "away_expected": away_expected,
+        "total_expected": total_expected,
+        "selection": selection,
+        "probability": probability * 100.0,
+        "home_form": home_form,
+        "away_form": away_form,
+        "datetime": _sport_match_datetime(match),
+        "league": _sport_league_country(match)[0],
+        "country": _sport_league_country(match)[1],
+        "match_id": _match_id(match),
+    }
+    return preview, None
+
+
+def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
+    _SPORT_LAST_FIVE_CACHE.clear()
+    sections = []
+    previews = []
+    counts = {}
+    for sport_key, cfg in SPORTS_CONFIG.items():
+        try:
+            fixtures = _get_sport_fixtures(cfg, start, end)
+            future = []
+            for match in fixtures:
+                dt = _sport_match_datetime(match)
+                if dt is None or dt <= datetime.now(TZ):
+                    continue
+                league_name, country_name = _sport_league_country(match)
+                country_cf = str(country_name or "").strip().casefold()
+                league_cf = str(league_name or "").strip().casefold()
+                if country_cf in {"russia", "belarus", "русия", "беларус", "philippines", "the philippines", "филипини", "singapore", "сингапур"}:
+                    continue
+                if "friendly" in league_cf or "приятел" in league_cf:
+                    continue
+                future.append(match)
+            future.sort(key=lambda m: _sport_match_datetime(m) or end)
+            future = future[:MAX_FIXTURES_TO_EVALUATE]
+            sport_previews, reasons = [], {}
+            for match in future:
+                try:
+                    preview, reason = _statistical_preview(sport_key, match)
+                    if preview:
+                        sport_previews.append(preview)
+                    elif reason:
+                        reasons[reason] = reasons.get(reason, 0) + 1
+                except APIQuotaExceeded:
+                    raise
+                except Exception as exc:
+                    print(f"SPORT STATS ERROR | sport={sport_key} match={_match_id(match)} | {exc!r}", flush=True)
+            sport_previews.sort(key=lambda p: (-p["probability"], p["datetime"] or end))
+            counts[sport_key] = {"fixtures": len(fixtures), "future": len(future), "usable": len(sport_previews)}
+            sections.append((sport_key, cfg, sport_previews, reasons))
+            previews.extend(sport_previews)
+            print(f"SPORT STATS SUMMARY | sport={sport_key} fixtures={len(fixtures)} future={len(future)} usable={len(sport_previews)}", flush=True)
+        except APIQuotaExceeded:
+            print(f"SPORT STATS QUOTA STOP | sport={sport_key}", flush=True)
+            counts[sport_key] = {"fixtures": 0, "future": 0, "usable": 0}
+            sections.append((sport_key, cfg, [], {"достигнат API лимит": 1}))
+            # Still render every sport section; do not hide sports after a quota stop.
+            for remaining_key, remaining_cfg in list(SPORTS_CONFIG.items())[list(SPORTS_CONFIG).index(sport_key) + 1:]:
+                sections.append((remaining_key, remaining_cfg, [], {"не е проверен заради API лимит": 1}))
+                counts[remaining_key] = {"fixtures": 0, "future": 0, "usable": 0}
+            break
+        except Exception as exc:
+            print(f"SPORT STATS SECTION ERROR | sport={sport_key} | {exc!r}", flush=True)
+            counts[sport_key] = {"fixtures": 0, "future": 0, "usable": 0}
+            sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
+
+    # Statistical previews are informational; only the five strongest are marked as top signals.
+    previews.sort(key=lambda p: (-p["probability"], p["datetime"] or end))
+    top_signals = previews[:MAX_SIGNALS_PER_DAY]
+    lines = [
+        f"📊 SPORT PREMATCH — СТАТИСТИЧЕСКИ ОТЧЕТ ({run_suffix or '10:00'} BG)",
+        now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
+        "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
+        f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
+        "МЕТОД: последни до 5 завършени срещи на двата отбора; прогноза от форма и средни отбелязани/допуснати точки.",
+        "Коефициенти и пазарни линии НЕ се използват. Прогнозите са статистически оценки, не гаранция за печалба.",
+        f"Показват се всички {len(SPORTS_CONFIG)} спорта; до {MAX_SIGNALS_PER_DAY} най-силни прогнози общо.",
+        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
+    ]
+    for sport_key, cfg, sport_previews, reasons in sections:
+        lines.extend([f"{cfg['name']} — {'ПРОГНОЗА' if sport_previews else 'НЯМА ДОСТАТЪЧНА СТАТИСТИКА'}", ""])
+        if sport_previews:
+            p = sport_previews[0]
+            dt = p["datetime"]
+            lines.extend([
+                f"Среща: {p['home']} - {p['away']}",
+                f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
+                f"Статистически избор: {p['selection']} | ориентировъчна вероятност: {p['probability']:.1f}%",
+                f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
+                f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
+                f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
+                f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}",
+            ])
+        else:
+            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: 0")
+            if reasons:
+                lines.append("Причина: " + ", ".join(f"{k} ({v})" for k, v in sorted(reasons.items())))
+            else:
+                lines.append("Няма бъдещи срещи след филтрите или API не върна достатъчно данни.")
+        lines.extend(["", "────────────────────", ""])
+
+    lines.extend(["🎯 ТОП 5 СТАТИСТИЧЕСКИ ПРОГНОЗИ", ""])
+    for idx, p in enumerate(top_signals, 1):
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | оценка {p['probability']:.1f}% | общо {p['total_expected']:.1f}")
+    if not top_signals:
+        lines.append("Няма срещи с достатъчна история за надеждна статистическа прогноза.")
+    lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
+    message = "\n".join(lines)
+    print(message, flush=True)
+    if send_func and run_suffix:
+        try:
+            _send_sport_report_chunks(message, send_func, max_chars=3700)
+            print("SPORT STATS TELEGRAM REPORT SENT", flush=True)
+        except Exception as exc:
+            print(f"SPORT STATS TELEGRAM ERROR: {exc!r}", flush=True)
+    elif send_func and top_signals:
+        _send_sport_report_chunks(message, send_func, max_chars=3700)
+    return message
+
+
 def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     """SPORT PREMATCH only: no historical/team statistics; rank available bookmaker markets globally."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
@@ -948,6 +1207,8 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
     # Fixed 24-hour fixture window in Bulgaria time: today at 12:00 -> tomorrow at 12:00.
     start = now_bg.replace(hour=12, minute=0, second=0, microsecond=0)
     end = start + timedelta(hours=24)
+    if SPORT_STATS_ONLY:
+        return _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started)
     now_scan = datetime.now(TZ)
 
     all_signals = []
@@ -1173,24 +1434,24 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | all-sports PREMATCH diagnostic run 16:15 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | all-sports odds-free statistical PREMATCH run 16:40 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
-        oneoff_key = f"sport_prematch:{day_key}:16:15"
+        oneoff_key = f"sport_prematch:{day_key}:16:40"
 
-        # All-sports PREMATCH diagnostic run at 16:15 BG on 2026-10-12.
-        if day_key == "2026-10-12" and now.hour == 16 and now.minute == 15 and not SPORT_RUNNING:
+        # All-sports odds-free statistical PREMATCH run at 16:40 BG on 2026-10-12.
+        if day_key == "2026-10-12" and now.hour == 16 and now.minute == 40 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
-                print(f"SPORT 16:15 RUN SKIP | day={day_key} | already ran", flush=True)
+                print(f"SPORT 16:40 RUN SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 16:15 RUN SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 16:40 RUN SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 16:15 RUN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
-                threading.Thread(target=_run_sport, args=(day_key, "16:15"), daemon=True).start()
+                print(f"SPORT 16:40 RUN TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                threading.Thread(target=_run_sport, args=(day_key, "16:40"), daemon=True).start()
 
         # Trigger the regular daily scan only during the 10:00 minute.
         in_daily_window = now.hour == 10 and now.minute == 0
