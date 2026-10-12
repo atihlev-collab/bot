@@ -651,77 +651,61 @@ def _odd_for_market(sport_key, match, market_label):
 
 
 def _available_prematch_options(sport_key, match):
-    """Read available prematch markets and return only conservative options.
-
-    SPORT intentionally has no historical/statistical model. The selection is
-    based on markets returned by the odds provider for the exact fixture.
-    Keep standard prematch market families in the configured odds band.
-    This provider-only scanner has no historical/statistical prediction model.
-    """
+    """Select only full-match outcomes with positive estimated value versus no-vig market consensus."""
     mid = _match_id(match)
     if not mid:
         return []
 
     rows = _sport_api_get(
         f"{sport_key}/odds",
-        {
-            "matchId": mid,
-            "oddsType": "prematch",
-            "limit": 5,
-            "offset": 0,
-        },
+        {"matchId": mid, "oddsType": "prematch", "limit": 5, "offset": 0},
     )
     if not isinstance(rows, list):
         return []
 
     home, away = _sport_match_names(match)
-    allowed_market_words = (
-        "winner", "moneyline", "match winner", "1x2", "total",
-        "over", "under", "handicap", "spread", "победител",
-        "общо", "над", "под", "хендикап",
-    )
+    home_norm, away_norm = _normalize_label(home), _normalize_label(away)
     blocked_words = (
-        "player", "first scorer", "next", "period", "quarter",
-        "half", "set", "inning", "map", "special", "boost",
+        "player", "first scorer", "next", "period", "quarter", "half",
+        "set", "inning", "map", "special", "boost", "handicap", "spread",
+        "asian handicap", "team total", "first half", "second half",
     )
-
-    options = []
+    raw_quotes = []
     seen = set()
+
     for row in rows:
         if not isinstance(row, dict):
             continue
-        row_bookmaker = row.get("bookmakerName") or row.get("bookmaker") or row.get("bookmaker_name") or ""
-        if isinstance(row_bookmaker, dict):
-            row_bookmaker = row_bookmaker.get("name") or row_bookmaker.get("bookmakerName") or row_bookmaker.get("title") or ""
-
-        market_list = row.get("odds") or row.get("markets") or []
-        if not isinstance(market_list, list):
+        row_book = row.get("bookmakerName") or row.get("bookmaker") or row.get("bookmaker_name") or ""
+        if isinstance(row_book, dict):
+            row_book = row_book.get("name") or row_book.get("bookmakerName") or row_book.get("title") or ""
+        markets = row.get("odds") or row.get("markets") or []
+        if not isinstance(markets, list):
             continue
 
-        for market in market_list:
+        for market in markets:
             if not isinstance(market, dict):
                 continue
-            market_name = str(
-                market.get("market") or market.get("name") or market.get("type") or ""
-            ).strip()
-            bookmaker_value = (
-                market.get("bookmakerName") or market.get("bookmaker") or
-                market.get("bookmaker_name") or row_bookmaker
-            )
-            if isinstance(bookmaker_value, dict):
-                bookmaker_value = (
-                    bookmaker_value.get("name") or bookmaker_value.get("bookmakerName") or
-                    bookmaker_value.get("title") or ""
-                )
+            market_name = str(market.get("market") or market.get("name") or market.get("type") or "").strip()
             norm_market = _normalize_label(market_name)
-            if any(word in norm_market for word in blocked_words):
+            if not norm_market or any(word in norm_market for word in blocked_words):
                 continue
 
-            # Volleyball: only full-match winner markets. Do not use totals,
-            # over/under points, handicaps, or set-specific winner markets.
-            if sport_key == "volleyball" and not any(
-                word in norm_market for word in ("match winner", "winner", "moneyline")
-            ):
+            if any(word in norm_market for word in ("winner", "moneyline", "1x2", "full time result", "match result", "победител")):
+                family = "winner"
+            elif any(word in norm_market for word in ("total", "over under", "totals", "общо", "над под")):
+                family = "total"
+            else:
+                continue
+
+            if sport_key == "volleyball" and family != "winner":
+                continue
+
+            book_value = market.get("bookmakerName") or market.get("bookmaker") or market.get("bookmaker_name") or row_book
+            if isinstance(book_value, dict):
+                book_value = book_value.get("name") or book_value.get("bookmakerName") or book_value.get("title") or ""
+            bookmaker = str(book_value).strip()
+            if not bookmaker:
                 continue
 
             values = market.get("values") or market.get("odds") or market.get("selections") or []
@@ -731,157 +715,130 @@ def _available_prematch_options(sport_key, match):
             for selection in values:
                 if not isinstance(selection, dict):
                     continue
-                label = str(
-                    selection.get("value") or selection.get("label") or selection.get("name") or ""
-                ).strip()
+                label = str(selection.get("value") or selection.get("label") or selection.get("name") or "").strip()
+                norm_label = _normalize_label(label)
+                if not norm_label or any(word in norm_label for word in blocked_words):
+                    continue
                 try:
-                    odd = float(
-                        selection.get("odd")
-                        if selection.get("odd") is not None
-                        else selection.get("odds")
-                    )
+                    odd = float(selection.get("odd") if selection.get("odd") is not None else selection.get("odds"))
                 except (TypeError, ValueError):
                     continue
-                if not math.isfinite(odd) or odd < MIN_ODDS or odd > MAX_ODDS:
+                if not math.isfinite(odd) or odd < 1.01 or odd > 25.0:
                     continue
 
-                norm_label = _normalize_label(label)
-                combined = f"{norm_market} {norm_label}"
-                if any(word in combined for word in blocked_words):
-                    continue
-
-                # Volleyball picks are strictly match winner: home or away.
-                # Accept provider labels Home/Away, 1/2, or the actual team names.
-                if sport_key == "volleyball":
-                    home_label = _normalize_label(home)
-                    away_label = _normalize_label(away)
-                    if norm_label not in {"home", "away", "1", "2", home_label, away_label}:
+                if family == "total":
+                    if "over" in norm_label or norm_label.startswith("o "):
+                        side = "over"
+                    elif "under" in norm_label or norm_label.startswith("u "):
+                        side = "under"
+                    else:
                         continue
+                    nums = re.findall(r"[0-9]+(?:[.][0-9]+)?", market_name + " " + label)
+                    if not nums:
+                        continue
+                    try:
+                        line = round(float(nums[-1]), 3)
+                    except ValueError:
+                        continue
+                    market_key = (family, line)
+                else:
+                    if norm_label in {"home", "1"} or norm_label == home_norm or norm_label.startswith(home_norm + " "):
+                        side = "home"
+                    elif norm_label in {"away", "2"} or norm_label == away_norm or norm_label.startswith(away_norm + " "):
+                        side = "away"
+                    elif norm_label in {"draw", "x", "tie"}:
+                        side = "draw"
+                    else:
+                        continue
+                    market_key = (family, None)
 
-                core_market = any(word in combined for word in allowed_market_words)
-                recognizable_selection = (
-                    norm_label in {"1", "2", "x", "home", "away", "draw", "over", "under"}
-                    or norm_label == _normalize_label(home)
-                    or norm_label == _normalize_label(away)
-                    or "over" in norm_label
-                    or "under" in norm_label
-                    or "home" in norm_label
-                    or "away" in norm_label
+                dedup_key = (bookmaker.casefold(), market_key, side, round(odd, 4))
+                if dedup_key in seen:
+                    continue
+                seen.add(dedup_key)
+                raw_quotes.append({
+                    "bookmaker": bookmaker, "market": market_name, "selection": label,
+                    "odd": odd, "family": family, "line": market_key[1],
+                    "market_key": market_key, "side": side,
+                })
+
+    # De-vig each bookmaker's complete outcome set before taking a robust median.
+    market_books = {}
+    for quote in raw_quotes:
+        market_key = quote["market_key"]
+        book_key = quote["bookmaker"].strip().casefold()
+        market_books.setdefault(market_key, {}).setdefault(book_key, {"name": quote["bookmaker"], "sides": {}})
+        sides = market_books[market_key][book_key]["sides"]
+        side = quote["side"]
+        if side not in sides or quote["odd"] > sides[side]["odd"]:
+            sides[side] = quote
+
+    candidates = []
+    for market_key, books in market_books.items():
+        fair_by_side = {}
+        for book_data in books.values():
+            sides = book_data["sides"]
+            if len(sides) < 2:
+                continue
+            inverse_sum = sum(1.0 / quote["odd"] for quote in sides.values() if quote["odd"] > 1.0)
+            if inverse_sum <= 0:
+                continue
+            for side, quote in sides.items():
+                fair_by_side.setdefault(side, []).append(1.0 / quote["odd"] / inverse_sum)
+
+        for side in ("over", "under", "home", "away"):
+            fair_values = fair_by_side.get(side, [])
+            if len(fair_values) < 3:
+                continue
+            fair_values.sort()
+            mid_idx = len(fair_values) // 2
+            fair_prob = fair_values[mid_idx] if len(fair_values) % 2 else (fair_values[mid_idx - 1] + fair_values[mid_idx]) / 2.0
+            support = len(fair_values)
+
+            side_quotes = [
+                book_data["sides"][side]
+                for book_data in books.values()
+                if side in book_data["sides"]
+                and MIN_ODDS <= book_data["sides"][side]["odd"] <= MAX_ODDS
+            ]
+            if not side_quotes:
+                continue
+
+            best_quote = max(side_quotes, key=lambda quote: quote["odd"])
+            offered_implied = 1.0 / best_quote["odd"]
+            ev_pct = (fair_prob * best_quote["odd"] - 1.0) * 100.0
+            edge_pp = (fair_prob - offered_implied) * 100.0
+            if ev_pct < 3.0:
+                print(
+                    f"SPORT VALUE REJECT | market={best_quote['market']} | selection={best_quote['selection']} "
+                    f"| odds={best_quote['odd']:.2f} | fair_prob={fair_prob*100:.1f}% | EV={ev_pct:+.2f}% "
+                    f"| support={support} | min_EV=3.00%",
+                    flush=True,
                 )
-                if not core_market and not recognizable_selection:
-                    continue
-
-                key = (norm_market, _normalize_label(label), round(odd, 3), str(bookmaker_value).strip().casefold())
-                if key in seen:
-                    continue
-                seen.add(key)
-
-                implied = round((1.0 / odd) * 100.0, 1)
-                options.append({
-                    "bookmaker": str(bookmaker_value).strip() or "Unknown bookmaker",
-                    "market": market_name or "PREMATCH",
-                    "selection": label or "-",
-                    "odd": odd,
-                    "implied": implied,
-                })
-
-    # Rugby has returned odds rows but no eligible options in recent logs.
-    # Emit compact raw-shape diagnostics only when a rugby fixture produces
-    # zero options, so the next run shows whether the provider uses a different
-    # selection/odds field or whether the available prices are below 1.50.
-    if not options and sport_key in {"rugby", "volleyball"}:
-        samples = []
-        for row in rows[:2]:
-            if not isinstance(row, dict):
                 continue
-            markets = row.get("odds") or row.get("markets") or []
-            if not isinstance(markets, list):
-                continue
-            for market in markets[:3]:
-                if not isinstance(market, dict):
-                    continue
-                values = market.get("values") or market.get("odds") or market.get("selections") or []
-                first_value = values[0] if isinstance(values, list) and values else None
-                samples.append({
-                    "market": str(market.get("market") or market.get("name") or market.get("type") or "")[:60],
-                    "values_type": type(values).__name__,
-                    "values_count": len(values) if isinstance(values, list) else None,
-                    "selection_keys": list(first_value.keys())[:10] if isinstance(first_value, dict) else [],
-                    "selection_sample": str(first_value)[:180] if first_value is not None else None,
-                })
+
+            all_prices = [book_data["sides"][side]["odd"] for book_data in books.values() if side in book_data["sides"]]
+            all_prices.sort()
+            median_odd = all_prices[len(all_prices) // 2] if all_prices else best_quote["odd"]
+            candidate = dict(best_quote)
+            candidate.update({
+                "bookmaker_count": support,
+                "consensus_odd": median_odd,
+                "fair_probability": round(fair_prob * 100.0, 2),
+                "implied": round(offered_implied * 100.0, 1),
+                "expected_value_pct": round(ev_pct, 2),
+                "edge_pp": round(edge_pp, 2),
+            })
+            candidates.append(candidate)
+
+    candidates.sort(key=lambda item: (-item.get("expected_value_pct", 0.0), -item.get("bookmaker_count", 0), -item.get("fair_probability", 0.0)))
+    if not candidates and sport_key in {"rugby", "volleyball"}:
         print(
-            f"SPORT ODDS PARSER DEBUG | sport={sport_key} | match={mid} | "
-            f"odds_range={MIN_ODDS:.2f}-{MAX_ODDS:.2f} | draws_blocked | samples={samples[:6]}",
+            f"SPORT QUALITY NO PICK | sport={sport_key} | fixture={mid} | raw_quotes={len(raw_quotes)} "
+            f"| reason=no 3-bookmaker consensus with >=3% EV",
             flush=True,
         )
-
-    # TIPSTER-QUALITY LAYER:
-    # Require independent bookmaker confirmation. Low prices near 1.40 need
-    # stronger confirmation because a short price alone is not evidence of value.
-    grouped = {}
-    for option in options:
-        group_key = (_normalize_label(option["market"]), _normalize_label(option["selection"]))
-        grouped.setdefault(group_key, []).append(option)
-
-    confirmed_options = []
-    for group in grouped.values():
-        by_book = {}
-        for item in group:
-            book = str(item.get("bookmaker") or "").strip().casefold()
-            if not book:
-                continue
-            # Keep one quote per bookmaker for the same exact market/selection.
-            if book not in by_book or float(item["odd"]) > float(by_book[book]["odd"]):
-                by_book[book] = item
-
-        quotes = list(by_book.values())
-        prices = sorted(float(item["odd"]) for item in quotes)
-        support = len(quotes)
-        if not prices:
-            continue
-        median_price = prices[len(prices) // 2]
-        spread = round(prices[-1] - prices[0], 2)
-
-        # 1.40–1.44 requires at least 3 independent bookmakers.
-        # From 1.45 upwards, require at least 2. Never pad a sport to reach 3 picks.
-        min_support = 3 if median_price < 1.45 else 2
-        if support < min_support:
-            print(
-                f"SPORT QUALITY REJECT | market={group[0]['market']} | selection={group[0]['selection']} "
-                f"| median={median_price:.2f} | bookmakers={support} | required={min_support}",
-                flush=True,
-            )
-            continue
-
-        # Reject material disagreement between books; likely line mismatch, stale
-        # prices, or a market that needs manual review.
-        if spread > 0.15:
-            print(
-                f"SPORT QUALITY REJECT | market={group[0]['market']} | selection={group[0]['selection']} "
-                f"| price_spread={spread:.2f} | max_allowed=0.15",
-                flush=True,
-            )
-            continue
-
-        # Show the best currently available price, but rank using the median consensus.
-        best_quote = max(quotes, key=lambda item: float(item["odd"]))
-        candidate = dict(best_quote)
-        candidate["bookmaker_count"] = support
-        candidate["consensus_odd"] = median_price
-        candidate["consensus_implied"] = round(100.0 / median_price, 1)
-        candidate["price_spread"] = spread
-        confirmed_options.append(candidate)
-
-    # Rank by bookmaker consensus first, then median market probability, then tighter prices.
-    confirmed_options.sort(
-        key=lambda x: (
-            -x.get("bookmaker_count", 0),
-            -x.get("consensus_implied", 0),
-            x.get("price_spread", 999),
-        )
-    )
-    return confirmed_options
-
+    return candidates
 
 
 def _format_sport_simple_signal(index, item):
@@ -903,9 +860,11 @@ def _format_sport_simple_signal(index, item):
         f"   📊 Избор: {item['selection']}",
         f"   🏪 Букмейкър: {item.get('bookmaker') or 'Unknown bookmaker'}",
         f"   💰 Коефициент: {item['odd']:.2f}",
-        f"   📌 Пазарна вероятност по медиана: {item['implied']:.1f}% (не е независима прогноза)",
-        f"   🧮 Независими букмейкъри: {item.get('bookmaker_count', 1)}",
-        f"   📊 Медианен коефициент: {item.get('consensus_odd', item['odd']):.2f} | Разлика между цените: {item.get('price_spread', 0.0):.2f}",
+        f"   📌 Имплицитна вероятност на коефициента: {item['implied']:.1f}%",
+        f"   🧠 Пазарна fair вероятност (без маржа): {item.get('fair_probability', 0.0):.1f}%",
+        f"   📈 Очаквана стойност (EV): {item.get('expected_value_pct', 0.0):+.2f}% | Edge: {item.get('edge_pp', 0.0):+.2f} п.п.",
+        f"   🧮 Пълни пазари от независими букмейкъри: {item.get('bookmaker_count', 0)}",
+        f"   📊 Медианен коефициент за избора: {item.get('consensus_odd', item['odd']):.2f}",
         f"   🏆 Лига: {item['league'] or '-'} | Държава: {item['country'] or '-'}",
         f"   📅 {dt.strftime('%d.%m.%Y')} | {dt.strftime('%H:%M')} BG",
     ])
@@ -1000,10 +959,12 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                         "market": best["market"],
                         "selection": best["selection"],
                         "odd": best["odd"],
-                        "implied": best.get("consensus_implied", best["implied"]),
-                        "bookmaker_count": best.get("bookmaker_count", 1),
+                        "implied": best.get("implied", round(100.0 / best["odd"], 1)),
+                        "fair_probability": best.get("fair_probability", 0.0),
+                        "expected_value_pct": best.get("expected_value_pct", 0.0),
+                        "edge_pp": best.get("edge_pp", 0.0),
+                        "bookmaker_count": best.get("bookmaker_count", 0),
                         "consensus_odd": best.get("consensus_odd", best["odd"]),
-                        "price_spread": best.get("price_spread", 0.0),
                         "league": league,
                         "country": country,
                         "datetime": dt,
@@ -1034,7 +995,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                 or (str(item["sport_key"]), str(item["match_id"])) not in already_sent
             )
         ]
-        sport_candidates.sort(key=lambda x: (-x.get("bookmaker_count", 1), -x["implied"], x.get("price_spread", 999), str(x["match_id"])))
+        sport_candidates.sort(key=lambda x: (-x.get("expected_value_pct", 0.0), -x.get("bookmaker_count", 0), -x.get("fair_probability", 0.0), str(x["match_id"])))
         eligible_by_sport[sport_key] = len(sport_candidates)
         final.extend(sport_candidates[:MAX_SIGNALS_PER_SPORT])
     print(
@@ -1051,9 +1012,10 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "Подбор: до 3 срещи от всеки спорт; 1.40–1.44 изисква поне 3 букмейкъра, останалите — поне 2",
-        "Допълнителен филтър: отхвърля пазар с разлика над 0.15 между коефициентите. Това е филтър за съгласие, не доказателство за стойност.",
-        "Метод: няма исторически статистически модел; пазарната вероятност не е независимо изчислена и не гарантира печалба",
+        "Подбор: до 3 срещи от всеки спорт, само ако има положителна стойност; бройката не се допълва насила",
+        "Филтри: поне 3 букмейкъра с пълен пазар; премахва маржа и изисква очаквана стойност (EV) поне +3%",
+        "Пазари: победител и тотали за целия мач; хендикапи, спредове и пазари за отделни периоди са изключени",
+        "Метод: оценка по пазарен консенсус, не исторически статистически модел; EV е оценка, не гаранция за печалба",
         f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_SPORT} нови сигнала за всеки спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
@@ -1121,15 +1083,15 @@ def _run_sport(day_key, run_suffix=None):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off tipster-quality test 14:15 BG on 2026-10-11 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | daily scan 10:00 BG | one-off positive-EV tipster test 14:15 BG on 2026-10-12 | fixture window 12:00 BG -> next day 12:00 BG | no other scheduled scans | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}"
         oneoff_key = f"sport_prematch:{day_key}:14:15"
 
-        # One-off tipster-quality scan at 14:15 BG today; uses a separate run key.
-        if day_key == "2026-10-11" and now.hour == 14 and now.minute == 15 and not SPORT_RUNNING:
+        # One-off positive-EV tipster test at 14:15 BG on 2026-10-12.
+        if day_key == "2026-10-12" and now.hour == 14 and now.minute == 15 and not SPORT_RUNNING:
             if already_ran(oneoff_key):
                 print(f"SPORT 14:15 TEST SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
