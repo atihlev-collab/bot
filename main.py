@@ -684,7 +684,7 @@ def _available_prematch_options(sport_key, match):
 
     rows = _sport_api_get(
         f"{sport_key}/odds",
-        {"matchId": mid, "oddsType": "prematch", "limit": 100, "offset": 0},
+        {"matchId": mid, "oddsType": "prematch", "limit": 5, "offset": 0},
     )
     if not isinstance(rows, list):
         return []
@@ -1174,7 +1174,7 @@ def main_loop():
             if already_ran(oneoff_key):
                 print(f"SPORT 13:30 TEST SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 13:10 TEST SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 13:30 TEST SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
