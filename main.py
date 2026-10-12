@@ -1052,7 +1052,8 @@ def _statistical_preview(sport_key, match):
     scoring_gap = home_expected - away_expected
     scale = max(1.0, (home_expected + away_expected) * 0.22)
     score_strength = max(-0.20, min(0.20, scoring_gap / scale * 0.12))
-    home_probability = max(0.50, min(0.85, 0.50 + home_strength + score_strength))
+    raw_home_probability = 0.50 + home_strength + score_strength
+    home_probability = max(0.15, min(0.85, raw_home_probability))
     away_probability = 1.0 - home_probability
     if home_probability >= away_probability:
         selection, probability = "Победа дома", home_probability
