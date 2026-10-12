@@ -1120,7 +1120,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                     f"Срещи в прозореца: {stats.get('fetched', 0)} | бъдещи след филтрите: {stats.get('future_candidates', 0)} | проверени за коефициенти: {stats.get('odds_checks', 0)}."
                 )
                 lines.append(
-                    f"Пазари, преминали условията: {stats.get('market_candidates', 0)} | сигнали преди общия дневен подбор: {candidate_count}."
+                    f"Срещи с поне един подходящ пазар: {stats.get('market_candidates', 0)} | сигнали преди общия дневен подбор: {candidate_count}."
                 )
                 lines.append("Няма сигнал за този спорт, който да е преминал всички условия.")
                 continue
@@ -1185,7 +1185,7 @@ def main_loop():
             if already_ran(oneoff_key):
                 print(f"SPORT 16:05 RUN SKIP | day={day_key} | already ran", flush=True)
             elif _quota_locked("highlightly_sport"):
-                print(f"SPORT 13:30 TEST SKIP | day={day_key} | daily quota lock", flush=True)
+                print(f"SPORT 16:05 RUN SKIP | day={day_key} | daily quota lock", flush=True)
                 mark_ran(oneoff_key)
             else:
                 SPORT_RUNNING = True
