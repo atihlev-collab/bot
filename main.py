@@ -755,7 +755,9 @@ def _available_prematch_options(sport_key, match):
                         line = round(float(nums[-1]), 3)
                     except ValueError:
                         continue
-                    market_key = (family, line, norm_market)
+                    # Equivalent full-game totals are often named differently by books.
+                    # Canonicalize by exact line so naming differences do not split consensus.
+                    market_key = (family, line)
                 else:
                     if norm_label in {"home", "1"} or norm_label == home_norm or norm_label.startswith(home_norm + " "):
                         side = "home"
@@ -765,9 +767,15 @@ def _available_prematch_options(sport_key, match):
                         side = "draw"
                     else:
                         continue
-                    # Keep differently named winner markets separate. Mixing "moneyline"
-                    # with "full-time result" can silently mix two-way and three-way books.
-                    market_key = (family, None, norm_market)
+                    # Normalize winner markets into two-way vs three-way result families.
+                    # This lets equivalent book labels agree without mixing regulation 1X2
+                    # with a two-way winner market.
+                    three_way_tokens = (
+                        "1x2", "match result", "full time result", "full-time result",
+                        "three way", "3 way", "90 minutes", "regulation",
+                    )
+                    winner_type = "three_way" if any(token in norm_market for token in three_way_tokens) else "two_way"
+                    market_key = (family, None, winner_type)
 
                 dedup_key = (bookmaker.casefold(), market_key, side, round(odd, 4))
                 if dedup_key in seen:
@@ -862,9 +870,15 @@ def _available_prematch_options(sport_key, match):
             candidates.append(candidate)
 
     candidates.sort(key=lambda item: (-item.get("expected_value_pct", 0.0), -item.get("bookmaker_count", 0), -item.get("fair_probability", 0.0)))
-    if not candidates and sport_key in {"rugby", "volleyball"}:
+    if not candidates:
+        full_books = 0
+        for books in market_books.values():
+            family = books and next(iter(books.values())).get("sides", {})
+            required = {"over", "under"} if market_key and market_key[0] == "total" else {"home", "away"}
+            full_books += sum(1 for book_data in books.values() if required.issubset(book_data.get("sides", {})))
         print(
             f"SPORT QUALITY NO PICK | sport={sport_key} | fixture={mid} | raw_quotes={len(raw_quotes)} "
+            f"| grouped_markets={len(market_books)} | full_book_sets={full_books} "
             f"| reason=no 3-bookmaker consensus with >=3% EV",
             flush=True,
         )
