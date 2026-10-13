@@ -1079,7 +1079,7 @@ def _format_sport_simple_signal(index, item):
     return "\n".join([
         f"{index}. {sport_name} — {item['home']} - {item['away']}",
         f"   🎯 Пазар: {item['market']}",
-        f"   📊 Избор: {item['selection']}",
+        f"   🎯 Избор: {_selection_label(item)}",
         f"   🏪 Букмейкър: {item.get('bookmaker') or 'Unknown bookmaker'}",
         f"   💰 Коефициент: {item['odd']:.2f}",
         f"   📌 Имплицитна вероятност на коефициента: {item['implied']:.1f}%",
@@ -1224,11 +1224,12 @@ def _team_recent_form(sport_key, team_id):
 
 
 def _selection_label(preview):
-    """Human-readable pick that names the team, avoiding home/away order ambiguity."""
-    if preview.get("selection") == "Победа дома":
-        return f"Победа: {preview.get('home', 'домакин')}"
-    if preview.get("selection") == "Победа гостите":
-        return f"Победа: {preview.get('away', 'гост')}"
+    """Display the actual team name followed by WIN; never rely on home/away wording."""
+    selection = preview.get("tracking_selection") or preview.get("selection")
+    if selection == "Победа дома" or preview.get("side") == "home":
+        return f"{preview.get('home', 'Home')} WIN"
+    if selection == "Победа гостите" or preview.get("side") == "away":
+        return f"{preview.get('away', 'Away')} WIN"
     return str(preview.get("selection") or "неопределен избор")
 
 
