@@ -9435,7 +9435,7 @@ if __name__ == "__main__":
             -                                     
             last_prematch_scan                     
             >=                                    
-            900                                   
+            3600                                   
         ):                                         
 
             check_prematch_results()               
@@ -9450,4 +9450,4 @@ if __name__ == "__main__":
 
         live_loop()                               
 
-        time.sleep(300) 
+        time.sleep(60) 
