@@ -821,7 +821,7 @@ def _odd_for_market(sport_key, match, market_label):
 
 
 def _available_prematch_options(sport_key, match):
-    """Select home/away winners using non-Betano prices, but require the winner market to exist at Betano."""
+    """Compare full-match winner prices across non-Betano books; Betano coverage is diagnostic only."""
     mid = _match_id(match)
     if not mid:
         return []
@@ -1025,6 +1025,19 @@ def _available_prematch_options(sport_key, match):
             ]
             all_prices.sort()
             median_odd = all_prices[len(all_prices) // 2] if all_prices else best_quote["odd"]
+
+            # A very large single-book price outlier is more likely to be a stale,
+            # mismatched, or differently defined market than a dependable edge.
+            # Reject it rather than advertising an inflated EV estimate.
+            if median_odd > 0 and best_quote["odd"] > median_odd * 1.35:
+                print(
+                    f"SPORT PRICE OUTLIER REJECTED | sport={sport_key} | fixture={mid} "
+                    f"| side={side} | best={best_quote['odd']:.2f} | median={median_odd:.2f} "
+                    f"| ratio={best_quote['odd'] / median_odd:.2f} | limit=1.35",
+                    flush=True,
+                )
+                continue
+
             candidate = dict(best_quote)
             candidate.update({
                 "bookmaker_count": support,
