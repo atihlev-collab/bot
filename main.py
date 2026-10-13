@@ -466,7 +466,7 @@ MAX_FIXTURES_TO_EVALUATE = 100
 MAX_CONTEXT_CANDIDATES = 12
 
 # HARD SIGNAL RULES — never publish weak statistical picks.
-MIN_SIGNAL_PROBABILITY = 65.0
+MIN_SIGNAL_PROBABILITY = 60.0
 MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
@@ -1335,7 +1335,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                         reasons[reason] = reasons.get(reason, 0) + 1
                         # A weak-edge rejection means both teams had enough
                         # valid historical games; it is not a history failure.
-                        if "слабо статистическо предимство" in reason:
+                        if "слабо статистическо предимство" in reason or "вероятността е под прага" in reason:
                             history_sufficient += 1
                 except APIQuotaExceeded:
                     raise
@@ -1410,7 +1410,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         else:
             lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('history', 0)} | преминали прага за избор: {counts.get(sport_key, {}).get('qualified', 0)}")
             if sport_previews:
-                lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те избора след ранжиране и лимит {MAX_SIGNALS_PER_SPORT} прогнози на спорт.")
+                lines.append(f"Има кандидати, но не са сред глобалните {MAX_SIGNALS_PER_DAY} избора по вероятност.")
             elif reasons:
                 lines.append("Причина: " + ", ".join(f"{k} ({v})" for k, v in sorted(reasons.items())))
             else:
