@@ -741,13 +741,6 @@ def _odd_for_market(sport_key, match, market_label):
             if not isinstance(values, list):
                 continue
 
-            # Classify two-way vs three-way by actual outcomes, not inconsistent
-            # market titles across providers (e.g. "Winner" vs "Match Result").
-            market_has_draw = any(
-                isinstance(v, dict)
-                and _normalize_label(str(v.get("value") or v.get("label") or v.get("name") or "")) in {"draw", "x", "tie"}
-                for v in values
-            )
 
             for selection in values:
                 if not isinstance(selection, dict):
@@ -852,6 +845,13 @@ def _available_prematch_options(sport_key, match):
             values = market.get("values") or market.get("odds") or market.get("selections") or []
             if not isinstance(values, list):
                 continue
+
+            # Classify by actual outcomes, not inconsistent market titles across providers.
+            market_has_draw = any(
+                isinstance(v, dict)
+                and _normalize_label(str(v.get("value") or v.get("label") or v.get("name") or "")) in {"draw", "x", "tie"}
+                for v in values
+            )
 
             for selection in values:
                 if not isinstance(selection, dict):
