@@ -419,7 +419,7 @@ MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.40
 MAX_ODDS = 1.80
-MAX_SIGNALS_PER_DAY = 5
+MAX_SIGNALS_PER_DAY = 3
 MAX_SIGNALS_PER_SPORT = 2
 
 
@@ -1259,7 +1259,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             counts[sport_key] = {"fixtures": 0, "future": 0, "usable": 0}
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
-    # Publish only the five strongest candidates that pass the minimum signal threshold.
+    # Publish up to three strongest candidates; if only one or two qualify, publish those.
     previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
     top_signals = previews[:MAX_SIGNALS_PER_DAY]
     selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
@@ -1271,7 +1271,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
         "Публикуват се само кандидати със сила поне 60/100. Това е евристичен рейтинг, НЕ вероятност за успех; не е доказан като печеливш.",
         "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Слабите срещи се пропускат.",
-        f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се максимум {MAX_SIGNALS_PER_DAY} прогнози общо, без допълване насила.",
+        f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се до {MAX_SIGNALS_PER_DAY} най-силни прогнози общо. Ако преминат условията само 1 или 2 срещи, се публикуват само те.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
     ]
@@ -1279,28 +1279,30 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         published_for_sport = [p for p in sport_previews if (sport_key, str(p["match_id"])) in selected_keys]
         lines.extend([f"{cfg['name']} — {'ПРОГНОЗА' if published_for_sport else 'НЯМА ПУБЛИКУВАН ИЗБОР'}", ""])
         if published_for_sport:
-            p = published_for_sport[0]
-            dt = p["datetime"]
-            lines.extend([
-                f"Среща: {p['home']} - {p['away']}",
-                f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
-                f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | сила на сигнала: {p['signal_strength']:.1f}/100 (не е вероятност)",
-                f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
-                f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
-                f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
-                f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}",
-            ])
+            for pick_index, p in enumerate(published_for_sport, 1):
+                dt = p["datetime"]
+                lines.extend([
+                    f"Среща {pick_index}: {p['home']} - {p['away']}",
+                    f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
+                    f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | сила на сигнала: {p['signal_strength']:.1f}/100 (не е вероятност)",
+                    f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
+                    f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
+                    f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
+                ])
+                if pick_index < len(published_for_sport):
+                    lines.append("")
+            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}")
         else:
             lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}")
             if sport_previews:
-                lines.append("Има кандидати, но не са сред 5-те публикувани избора за деня.")
+                lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те публикувани избора за деня.")
             elif reasons:
                 lines.append("Причина: " + ", ".join(f"{k} ({v})" for k, v in sorted(reasons.items())))
             else:
                 lines.append("Няма бъдещи срещи след филтрите или API не върна достатъчно данни.")
         lines.extend(["", "────────────────────", ""])
 
-    lines.extend(["🎯 ТОП 5 ТИПСТЪРСКИ ИЗБОРА", ""])
+    lines.extend([f"🎯 ТОП ДО {MAX_SIGNALS_PER_DAY} ТИПСТЪРСКИ ИЗБОРА", ""])
     for idx, p in enumerate(top_signals, 1):
         lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | сила {p['signal_strength']:.1f}/100 | общо {p['total_expected']:.1f}")
     if not top_signals:
