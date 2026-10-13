@@ -1367,11 +1367,25 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             counts[sport_key] = {"fixtures": 0, "future": 0, "history": 0, "qualified": 0}
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
-    # One global leaderboard: choose the five highest estimated win probabilities,
-    # without sport quotas and without forcing the system to fill all five places.
+    # Global leaderboard by estimated win probability, while limiting concentration
+    # in one sport. This allows strong basketball/volleyball/handball candidates
+    # to appear instead of letting hockey occupy nearly every daily slot.
     previews.sort(key=lambda p: (-p["model_probability"], p["model_risk"], p["datetime"] or end))
-    top_signals = previews[:MAX_SIGNALS_PER_DAY]
-    selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
+    top_signals = []
+    selected_keys = set()
+    selected_per_sport = {}
+    for preview in previews:
+        sport_key = preview["sport_key"]
+        if selected_per_sport.get(sport_key, 0) >= MAX_SIGNALS_PER_SPORT:
+            continue
+        fixture_key = (sport_key, str(preview["match_id"]))
+        if fixture_key in selected_keys:
+            continue
+        top_signals.append(preview)
+        selected_keys.add(fixture_key)
+        selected_per_sport[sport_key] = selected_per_sport.get(sport_key, 0) + 1
+        if len(top_signals) >= MAX_SIGNALS_PER_DAY:
+            break
     # Persist picks before composing the report so the tracking line includes them.
     if top_signals:
         _record_tipster_predictions(top_signals)
@@ -1382,7 +1396,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "МЕТОД: мултиспорт рейтинг по последни до 5 резултата, изгладена успеваемост и очаквана разлика в резултата; минимум 4 валидни мача на всеки отбор.",
-        f"Глобален подбор по най-висока изчислена вероятност за победа: праг минимум {MIN_SIGNAL_PROBABILITY:.1f}%; до {MAX_SIGNALS_PER_DAY} срещи общо. Публикуват се само преминалите прага — може да са 1, 2, 3, 4 или 5; без квоти по спорт и без допълване насила.",
+        f"Глобален подбор по най-висока изчислена вероятност за победа: праг минимум {MIN_SIGNAL_PROBABILITY:.1f}%; до {MAX_SIGNALS_PER_DAY} срещи общо и максимум {MAX_SIGNALS_PER_SPORT} от един спорт. Публикуват се само преминалите прага — без допълване насила.",
         f"Минимална оценена вероятност за публикуване: {MIN_SIGNAL_PROBABILITY:.1f}%. Вероятността е предварителна оценка от малка извадка, НЕ е калибрирана историческа успеваемост. Коефициенти и EV се показват само когато има надежден коефициент за точния пазар; при липса на такъв не се измисля цена или положителна стойност.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
