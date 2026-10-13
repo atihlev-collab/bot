@@ -466,7 +466,7 @@ MAX_FIXTURES_TO_EVALUATE = 100
 MAX_CONTEXT_CANDIDATES = 12
 
 # HARD SIGNAL RULES — never publish weak statistical picks.
-MIN_SIGNAL_PROBABILITY = 65.0
+MIN_SIGNAL_PROBABILITY = 64.0
 MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
@@ -1383,7 +1383,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "МЕТОД: мултиспорт рейтинг по последни до 5 резултата, изгладена успеваемост и очаквана разлика в резултата; минимум 4 валидни мача на всеки отбор.",
         f"Глобален подбор по най-висока изчислена вероятност за победа: праг минимум 65%; до {MAX_SIGNALS_PER_DAY} срещи общо. Публикуват се само преминалите прага — може да са 1, 2, 3, 4 или 5; без квоти по спорт и без допълване насила.",
-        "Вероятността е предварителна оценка от малка извадка, НЕ е калибрирана историческа успеваемост. Коефициенти и EV се показват само когато има надежден коефициент за точния пазар; при липса на такъв не се измисля цена или положителна стойност.",
+        f"Минимална оценена вероятност за публикуване: {MIN_SIGNAL_PROBABILITY:.1f}%. Вероятността е предварителна оценка от малка извадка, НЕ е калибрирана историческа успеваемост. Коефициенти и EV се показват само когато има надежден коефициент за точния пазар; при липса на такъв не се измисля цена или положителна стойност.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
     ]
@@ -1398,7 +1398,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                     f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
                     f"🎯 PICK: {_selection_label(p)}",
                     f"📈 Model probability: {p['model_probability']:.1f}% | оценка, не валидиран процент успеваемост",
-                    f"🤖 Model confidence: {p['model_confidence']:.1f}% | 🛡 Model risk: {p['model_risk']:.1f}/100 (евристични показатели)",
+                    f"🤖 Подкрепа от данните: {p['model_confidence']:.1f}/100 | 🛡 Индикатор риск: {p['model_risk']:.1f}/100 (евристики, не реален процент успеваемост)",
                     f"📊 Очакван резултат по последна форма: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
                     "💰 Коефициент / EV: не е потвърден от източника за този пазар; не се изчислява без реална цена.",
                     f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
