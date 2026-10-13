@@ -741,6 +741,14 @@ def _odd_for_market(sport_key, match, market_label):
             if not isinstance(values, list):
                 continue
 
+            # Classify two-way vs three-way by actual outcomes, not inconsistent
+            # market titles across providers (e.g. "Winner" vs "Match Result").
+            market_has_draw = any(
+                isinstance(v, dict)
+                and _normalize_label(str(v.get("value") or v.get("label") or v.get("name") or "")) in {"draw", "x", "tie"}
+                for v in values
+            )
+
             for selection in values:
                 if not isinstance(selection, dict):
                     continue
@@ -868,11 +876,7 @@ def _available_prematch_options(sport_key, match):
                 else:
                     continue
 
-                three_way_tokens = (
-                    "1x2", "match result", "full time result", "full-time result",
-                    "three way", "3 way", "90 minutes", "regulation",
-                )
-                winner_type = "three_way" if any(token in norm_market for token in three_way_tokens) else "two_way"
+                winner_type = "three_way" if market_has_draw else "two_way"
                 market_key = ("winner", None, winner_type)
                 dedup_key = (bookmaker.casefold(), market_key, side, round(odd, 4))
                 if dedup_key in seen:
