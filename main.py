@@ -891,10 +891,9 @@ def _available_prematch_options(sport_key, match):
             # full-match label; otherwise fail closed instead of guessing.
             if sport_key == "hockey":
                 explicit_full_match = any(term in norm_market for term in (
-                    "match winner", "match result", "including overtime",
-                    "incl overtime", "incl. overtime", "including ot", "incl ot",
-                    "incl. ot", "including shootout", "incl shootout", "incl. shootout",
-                    "full game winner",
+                    "including overtime", "incl overtime", "including ot", "incl ot",
+                    "overtime included", "including shootout", "incl shootout",
+                    "shootout included", "including extra time", "incl extra time",
                 ))
                 if not explicit_full_match:
                     print(
