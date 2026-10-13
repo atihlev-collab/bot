@@ -788,7 +788,7 @@ def _odd_for_market(sport_key, match, market_label):
 
 
 def _available_prematch_options(sport_key, match):
-    """Select only full-match outcomes with positive estimated value versus no-vig market consensus."""
+    """Select home/away winners using non-Betano prices, but require the winner market to exist at Betano."""
     mid = _match_id(match)
     if not mid:
         return []
@@ -828,14 +828,10 @@ def _available_prematch_options(sport_key, match):
             if not norm_market or any(word in norm_market for word in blocked_words):
                 continue
 
-            if any(word in norm_market for word in ("winner", "moneyline", "1x2", "full time result", "match result", "победител")):
-                family = "winner"
-            elif any(word in norm_market for word in ("total", "over under", "totals", "общо", "над под")):
-                family = "total"
-            else:
-                continue
-
-            if sport_key == "volleyball" and family != "winner":
+            # This scanner now publishes only full-match winner picks (home or away).
+            if not any(word in norm_market for word in (
+                "winner", "moneyline", "1x2", "full time result", "match result", "победител",
+            )):
                 continue
 
             book_value = market.get("bookmakerName") or market.get("bookmaker") or market.get("bookmaker_name") or row_book
@@ -863,54 +859,31 @@ def _available_prematch_options(sport_key, match):
                 if not math.isfinite(odd) or odd < 1.01 or odd > 25.0:
                     continue
 
-                if family == "total":
-                    if "over" in norm_label or norm_label.startswith("o "):
-                        side = "over"
-                    elif "under" in norm_label or norm_label.startswith("u "):
-                        side = "under"
-                    else:
-                        continue
-                    nums = re.findall(r"[0-9]+(?:[.][0-9]+)?", market_name + " " + label)
-                    if not nums:
-                        continue
-                    try:
-                        line = round(float(nums[-1]), 3)
-                    except ValueError:
-                        continue
-                    # Equivalent full-game totals are often named differently by books.
-                    # Canonicalize by exact line so naming differences do not split consensus.
-                    market_key = (family, line)
+                if norm_label in {"home", "1"} or norm_label == home_norm or norm_label.startswith(home_norm + " "):
+                    side = "home"
+                elif norm_label in {"away", "2"} or norm_label == away_norm or norm_label.startswith(away_norm + " "):
+                    side = "away"
+                elif norm_label in {"draw", "x", "tie"}:
+                    side = "draw"
                 else:
-                    if norm_label in {"home", "1"} or norm_label == home_norm or norm_label.startswith(home_norm + " "):
-                        side = "home"
-                    elif norm_label in {"away", "2"} or norm_label == away_norm or norm_label.startswith(away_norm + " "):
-                        side = "away"
-                    elif norm_label in {"draw", "x", "tie"}:
-                        side = "draw"
-                    else:
-                        continue
-                    # Normalize winner markets into two-way vs three-way result families.
-                    # This lets equivalent book labels agree without mixing regulation 1X2
-                    # with a two-way winner market.
-                    three_way_tokens = (
-                        "1x2", "match result", "full time result", "full-time result",
-                        "three way", "3 way", "90 minutes", "regulation",
-                    )
-                    winner_type = "three_way" if any(token in norm_market for token in three_way_tokens) else "two_way"
-                    market_key = (family, None, winner_type)
+                    continue
 
+                three_way_tokens = (
+                    "1x2", "match result", "full time result", "full-time result",
+                    "three way", "3 way", "90 minutes", "regulation",
+                )
+                winner_type = "three_way" if any(token in norm_market for token in three_way_tokens) else "two_way"
+                market_key = ("winner", None, winner_type)
                 dedup_key = (bookmaker.casefold(), market_key, side, round(odd, 4))
                 if dedup_key in seen:
                     continue
                 seen.add(dedup_key)
                 raw_quotes.append({
                     "bookmaker": bookmaker, "market": market_name, "selection": label,
-                    "odd": odd, "family": family, "line": market_key[1],
+                    "odd": odd, "family": "winner", "line": None,
                     "market_key": market_key, "side": side,
                 })
 
-    # De-vig only complete outcome sets. Partial 1X2 markets must never be
-    # treated as two-way moneylines because that inflates the estimated probability.
     market_books = {}
     for quote in raw_quotes:
         market_key = quote["market_key"]
@@ -923,20 +896,26 @@ def _available_prematch_options(sport_key, match):
 
     candidates = []
     for market_key, books in market_books.items():
-        family = market_key[0]
-        market_name_norm = market_key[2] if len(market_key) > 2 else ""
         has_draw_anywhere = any("draw" in book_data["sides"] for book_data in books.values())
-        result_market_name = any(token in market_name_norm for token in (
-            "1x2", "match result", "full time result", "full-time result",
-            "three way", "3 way", "90 minutes",
-        ))
-        requires_draw = family == "winner" and (has_draw_anywhere or result_market_name)
-        required_sides = {"over", "under"} if family == "total" else (
-            {"home", "away", "draw"} if requires_draw else {"home", "away"}
-        )
+        requires_draw = market_key[2] == "three_way" or has_draw_anywhere
+        required_sides = {"home", "away", "draw"} if requires_draw else {"home", "away"}
 
+        # Betano is a fixture/market-availability check only. Its price is not used.
+        betano_has_market = any(
+            "betano" in str(book_data.get("name") or "").casefold()
+            and required_sides.issubset(book_data.get("sides", {}))
+            for book_data in books.values()
+        )
+        if not betano_has_market:
+            continue
+
+        # Build consensus and candidate prices from other bookmakers only.
+        non_betano_books = {
+            key: data for key, data in books.items()
+            if "betano" not in str(data.get("name") or "").casefold()
+        }
         fair_by_side = {}
-        for book_data in books.values():
+        for book_data in non_betano_books.values():
             sides = book_data["sides"]
             if not required_sides.issubset(sides):
                 continue
@@ -946,7 +925,7 @@ def _available_prematch_options(sport_key, match):
             for side in required_sides:
                 fair_by_side.setdefault(side, []).append(1.0 / sides[side]["odd"] / inverse_sum)
 
-        for side in ("over", "under", "home", "away"):
+        for side in ("home", "away"):
             fair_values = fair_by_side.get(side, [])
             if len(fair_values) < 3:
                 continue
@@ -955,21 +934,17 @@ def _available_prematch_options(sport_key, match):
             fair_prob = fair_values[mid_idx] if len(fair_values) % 2 else (fair_values[mid_idx - 1] + fair_values[mid_idx]) / 2.0
             support = len(fair_values)
 
-            # The actual bet must be available at Betano in the requested odds range.
-            # Other bookmakers are used only to estimate the no-vig market consensus.
-            betano_quotes = [
+            available_quotes = [
                 book_data["sides"][side]
-                for book_data in books.values()
-                if "betano" in str(book_data.get("name") or "").casefold()
-                and side in book_data["sides"]
+                for book_data in non_betano_books.values()
+                if side in book_data["sides"]
                 and MIN_ODDS <= book_data["sides"][side]["odd"] <= MAX_ODDS
             ]
-            if not betano_quotes:
+            if not available_quotes:
                 continue
 
-            # Report and evaluate the price actually available at Betano, not
-            # a better price at a different bookmaker the user may not have.
-            best_quote = max(betano_quotes, key=lambda quote: quote["odd"])
+            # Use the best available price from another bookmaker, not Betano.
+            best_quote = max(available_quotes, key=lambda quote: quote["odd"])
             offered_implied = 1.0 / best_quote["odd"]
             ev_pct = (fair_prob * best_quote["odd"] - 1.0) * 100.0
             edge_pp = (fair_prob - offered_implied) * 100.0
@@ -982,7 +957,10 @@ def _available_prematch_options(sport_key, match):
                 )
                 continue
 
-            all_prices = [book_data["sides"][side]["odd"] for book_data in books.values() if side in book_data["sides"]]
+            all_prices = [
+                data["sides"][side]["odd"] for data in non_betano_books.values()
+                if side in data["sides"]
+            ]
             all_prices.sort()
             median_odd = all_prices[len(all_prices) // 2] if all_prices else best_quote["odd"]
             candidate = dict(best_quote)
@@ -999,19 +977,23 @@ def _available_prematch_options(sport_key, match):
     candidates.sort(key=lambda item: (-item.get("expected_value_pct", 0.0), -item.get("bookmaker_count", 0), -item.get("fair_probability", 0.0)))
     if not candidates:
         full_books = 0
-        for grouped_key, books in market_books.items():
-            required = {"over", "under"} if grouped_key[0] == "total" else {"home", "away"}
-            if grouped_key[0] == "winner" and grouped_key[2] == "three_way":
-                required = {"home", "away", "draw"}
-            full_books += sum(1 for book_data in books.values() if required.issubset(book_data.get("sides", {})))
+        for market_key, books in market_books.items():
+            required = {"home", "away", "draw"} if market_key[2] == "three_way" or any(
+                "draw" in data.get("sides", {}) for data in books.values()
+            ) else {"home", "away"}
+            full_books += sum(
+                1 for name, data in books.items()
+                if "betano" not in str(data.get("name") or "").casefold()
+                and required.issubset(data.get("sides", {}))
+            )
         print(
             f"SPORT QUALITY NO PICK | sport={sport_key} | fixture={mid} | raw_quotes={len(raw_quotes)} "
-            f"| grouped_markets={len(market_books)} | full_book_sets={full_books} "
-            f"| reason=no Betano quote in {MIN_ODDS:.2f}-{MAX_ODDS:.2f} + 3-bookmaker consensus with >=3% EV",
+            f"| grouped_winner_markets={len(market_books)} | non_betano_full_book_sets={full_books} "
+            f"| reason=Betano winner-market availability + 3 non-Betano bookmakers + odds {MIN_ODDS:.2f}-{MAX_ODDS:.2f} "
+            f"+ EV >=3%; home/away winners only",
             flush=True,
         )
     return candidates
-
 
 def _format_sport_simple_signal(index, item):
     dt = item["datetime"]
@@ -1035,7 +1017,7 @@ def _format_sport_simple_signal(index, item):
         f"   📌 Имплицитна вероятност на коефициента: {item['implied']:.1f}%",
         f"   🧠 Пазарна fair вероятност (без маржа): {item.get('fair_probability', 0.0):.1f}%",
         f"   📈 Очаквана стойност (EV): {item.get('expected_value_pct', 0.0):+.2f}% | Edge: {item.get('edge_pp', 0.0):+.2f} п.п.",
-        f"   🧮 Пълни пазари от независими букмейкъри: {item.get('bookmaker_count', 0)}",
+        f"   🧮 Букмейкъри с пълен пазар за консенсус: {item.get('bookmaker_count', 0)}",
         f"   📊 Медианен коефициент за избора: {item.get('consensus_odd', item['odd']):.2f}",
         f"   🏆 Лига: {item['league'] or '-'} | Държава: {item['country'] or '-'}",
         f"   📅 {dt.strftime('%d.%m.%Y')} | {dt.strftime('%H:%M')} BG",
@@ -1549,11 +1531,11 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         f"Подбор: максимум {MAX_SIGNALS_PER_DAY} сигнала общо и {MAX_SIGNALS_PER_SPORT} на спорт; няма допълване насила",
         f"Филтри: поне 3 букмейкъра с пълен пазар; EV поне +3%; максимум {MAX_SIGNALS_PER_DAY} сигнала за календарния ден общо",
-        "Пазари: само пълни пазари за целия мач; непълни пазари, хендикапи, спредове и отделни периоди се изключват",
-        "Задължително: реален коефициент от Betano в диапазона; без съвпадащ Betano пазар — без сигнал. Другите букмейкъри служат за пазарен консенсус.",
-        "Метод: сравнение на Betano с no-vig консенсус от поне 3 букмейкъра; EV е оценка, не гаранция за печалба и не е независим модел.",
+        "Пазари: само победа на домакина или госта за целия мач; равенства, тотали, непълни пазари, хендикапи, спредове и отделни периоди се изключват",
+        "Задължително: срещата и пазарът за победител трябва да присъстват в Betano; коефициентът за избора се взема от друг букмейкър в зададения диапазон. Betano не се използва за цената.",
+        "Метод: no-vig консенсус от поне 3 други букмейкъра; EV е оценка спрямо пазарните цени, не гаранция за печалба и не е независим модел.",
         f"Коефициент Betano: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно и {MAX_SIGNALS_PER_SPORT} на спорт",
-        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
+        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Betano служи само за проверка на наличието на срещата/пазара; LIVE е изключен.",
         "",
     ]
 
