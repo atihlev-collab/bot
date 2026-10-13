@@ -469,11 +469,13 @@ MAX_CONTEXT_CANDIDATES = 12
 MIN_SIGNAL_PROBABILITY = 56.0
 MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
-MIN_VALUE_EDGE = -2.0
+MIN_VALUE_EDGE = 2.0  # Minimum edge versus offered implied probability, in percentage points.
+MIN_EXPECTED_VALUE_PCT = 2.5  # Estimated EV versus no-vig consensus; not a calibrated model edge.
+MIN_CONSENSUS_BOOKMAKERS = 3  # Require a broader consensus; two-book estimates are fragile.
 MIN_ODDS = 1.40
 MAX_ODDS = None  # No upper odds ceiling; retain only the minimum price.
 MAX_SIGNALS_PER_DAY = 5
-MAX_SIGNALS_PER_SPORT = 2
+MAX_SIGNALS_PER_SPORT = None  # No quota by sport; value decides the global ranking.
 
 
 def _sport_match_datetime(match):
@@ -992,9 +994,9 @@ def _available_prematch_options(sport_key, match):
 
         for side in ("home", "away"):
             fair_values = fair_by_side.get(side, [])
-            # Need at least two independent books for a no-vig market estimate.
-            # Three or more books are preferred by ranking, not a hard blocker.
-            if len(fair_values) < 2:
+            # Require at least three independent non-Betano full markets before
+            # trusting the no-vig consensus for a value estimate.
+            if len(fair_values) < MIN_CONSENSUS_BOOKMAKERS:
                 continue
             fair_values.sort()
             mid_idx = len(fair_values) // 2
@@ -1032,6 +1034,12 @@ def _available_prematch_options(sport_key, match):
                 "expected_value_pct": round(ev_pct, 2),
                 "edge_pp": round(edge_pp, 2),
             })
+            # Do not select only because a side is likely to win: require a
+            # materially better offered price than the multi-book no-vig consensus.
+            if candidate["edge_pp"] < MIN_VALUE_EDGE:
+                continue
+            if candidate["expected_value_pct"] < MIN_EXPECTED_VALUE_PCT:
+                continue
             candidates.append(candidate)
 
     candidates.sort(key=lambda item: (-item.get("expected_value_pct", 0.0), -item.get("bookmaker_count", 0), -item.get("fair_probability", 0.0)))
@@ -1085,8 +1093,9 @@ def _format_sport_simple_signal(index, item):
 
 
 
-# Odds-free PREMATCH model: use completed recent results, never bookmaker prices.
-SPORT_STATS_ONLY = True
+# PREMATCH market-value mode: compare the best price with a multi-book no-vig consensus.
+# This estimates price value; it is not a separately trained or calibrated outcome model.
+SPORT_STATS_ONLY = False
 _SPORT_LAST_FIVE_CACHE = {}
 
 
@@ -1534,12 +1543,20 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
                     home, away = _sport_match_names(match, sport_key)
                     league, country = _sport_league_country(match)
                     dt = _sport_match_datetime(match)
+                    home_obj = match.get("homeTeam") or match.get("home") or {}
+                    away_obj = match.get("awayTeam") or match.get("away") or {}
                     all_signals.append({
                         "sport_key": sport_key,
                         "sport_name": cfg["name"],
                         "match_id": mid,
                         "home": home,
                         "away": away,
+                        "home_team_id": _sport_team_id(home_obj),
+                        "away_team_id": _sport_team_id(away_obj),
+                        "tracking_selection": "Победа дома" if best.get("side") == "home" else "Победа гостите",
+                        "signal_strength": best.get("fair_probability", 0.0),
+                        "home_expected": 0.0,
+                        "away_expected": 0.0,
                         "bookmaker": best.get("bookmaker") or "Unknown bookmaker",
                         "market": best["market"],
                         "selection": best["selection"],
@@ -1567,7 +1584,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
             print(f"SPORT SECTION ERROR: {sport_key}: {exc!r}", flush=True)
 
     # Rank all eligible picks together and publish no more than five per day.
-    # Keep sport diversity (at most two picks per sport) instead of filling quotas.
+    # There is no quota per sport; a sport appears only when a candidate clears value filters.
     already_sent = _sent_sport_fixture_keys()
     sent_today = _sent_sport_count_today()
     daily_remaining = max(0, MAX_SIGNALS_PER_DAY - sent_today)
@@ -1588,18 +1605,19 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         eligible_by_sport[sport_key] = len(sport_candidates)
         eligible.extend(sport_candidates)
 
-    # Select the three highest estimated probabilities globally, not EV-first.
+    # Value first, then independent bookmaker support and edge. Do not fill slots with weak picks.
     eligible.sort(key=lambda x: (
-        -x.get("fair_probability", 0.0),
-        -x.get("bookmaker_count", 0),
         -x.get("expected_value_pct", 0.0),
+        -x.get("bookmaker_count", 0),
+        -x.get("edge_pp", 0.0),
+        -x.get("fair_probability", 0.0),
         str(x["match_id"]),
     ))
     final = []
     selected_per_sport = {}
     selected_fixtures = set()
     for item in eligible:
-        if len(final) >= min(3, daily_remaining):
+        if len(final) >= min(MAX_SIGNALS_PER_DAY, daily_remaining):
             break
         fixture_key = (str(item["sport_key"]), str(item["match_id"]))
         if fixture_key in selected_fixtures:
@@ -1613,8 +1631,10 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "SPORT TIPSTER QUALITY GLOBAL TOP PICKS | "
         f"eligible={sum(eligible_by_sport.values())} | sent_today_before_scan={sent_today} | "
         f"remaining_daily_slots={daily_remaining} | selected={len(final)} | "
-        f"daily_cap={MAX_SIGNALS_PER_DAY} | by_sport={selected_per_sport} | "
-        f"odds_min={MIN_ODDS:.2f} | odds_max=none | ranking=probability_then_bookmaker_support",
+        f"daily_cap={MAX_SIGNALS_PER_DAY} | no per-sport quota | by_sport={selected_per_sport} | "
+        f"min_books={MIN_CONSENSUS_BOOKMAKERS} | odds_min={MIN_ODDS:.2f} | odds_max=none | "
+        f"min_edge_pp={MIN_VALUE_EDGE:.1f} | min_ev_pct={MIN_EXPECTED_VALUE_PCT:.1f} | "
+        f"ranking=EV_then_support_then_edge",
         flush=True,
     )
 
@@ -1624,18 +1644,18 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        f"Подбор: максимум {MAX_SIGNALS_PER_DAY} сигнала общо и {MAX_SIGNALS_PER_SPORT} на спорт; няма допълване насила",
-        f"Филтри: поне 2 други букмейкъра с пълен пазар; 3+ са за предпочитане; минимален коефициент {MIN_ODDS:.2f}, без горна граница; подбор по най-висока пазарна вероятност; максимум {MAX_SIGNALS_PER_DAY} сигнала дневно",
+        f"Подбор: максимум {MAX_SIGNALS_PER_DAY} сигнала общо за всички спортове; няма квота по спорт и няма допълване насила",
+        f"Филтри: минимум {MIN_CONSENSUS_BOOKMAKERS} независими небетано букмейкъра с пълен пазар; коефициент минимум {MIN_ODDS:.2f}; edge минимум {MIN_VALUE_EDGE:.1f} п.п.; оценена EV минимум {MIN_EXPECTED_VALUE_PCT:.1f}%; без горна граница на коефициента",
         "Пазари: само победа на домакина или госта за целия мач; равенства, тотали, непълни пазари, хендикапи, спредове и отделни периоди се изключват",
-        "Коефициентът за избора се взема от друг букмейкър и трябва да е поне зададения минимум. Няма горна граница за коефициента. Betano е допълнителна проверка, но липсата му не блокира сигнал, подкрепен от други букмейкъри.",
-        "Метод: no-vig пазарен консенсус от поне 2 други букмейкъра; показаният процент е оценка от пазарните коефициенти, не независима/калибрирана прогноза и не гаранция за печалба.",
-        f"Коефициент от друг букмейкър: минимум {MIN_ODDS:.2f}, без горна граница | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно",
-        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Betano е допълнителен ориентир за наличност; LIVE е изключен.",
+        "Коефициентът за избора се взема от друг букмейкър. Betano е само допълнителна проверка; липсата му не блокира сигнал.",
+        "Метод: no-vig консенсус от няколко букмейкъра. Edge и EV са оценки спрямо този консенсус, не гарантирана доходност и не доказана успеваемост на независим модел.",
+        f"Коефициент минимум {MIN_ODDS:.2f} | EV минимум {MIN_EXPECTED_VALUE_PCT:.1f}% | edge минимум {MIN_VALUE_EDGE:.1f} п.п. | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно",
+        "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.",
         "",
     ]
 
     if final:
-        lines.extend(["🎯 PREMATCH — ТОП СРЕЩИ ПО СПОРТОВЕ", ""])
+        lines.extend(["🎯 PREMATCH — ГЛОБАЛЕН ТОП ПО СТОЙНОСТ", ""])
         first_section = True
         for sport_key, cfg in SPORTS_CONFIG.items():
             sport_items = [item for item in final if item["sport_key"] == sport_key]
@@ -1674,6 +1694,15 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         try:
             _send_sport_report_chunks(message, send_func, max_chars=3700)
             if final:
+                tracked_items = []
+                for item in final:
+                    tracked = dict(item)
+                    tracked["selection"] = item.get("tracking_selection", "Победа дома")
+                    tracked["home_expected"] = 0.0
+                    tracked["away_expected"] = 0.0
+                    tracked["signal_strength"] = float(item.get("fair_probability", 0.0))
+                    tracked_items.append(tracked)
+                _record_tipster_predictions(tracked_items)
                 _mark_sent_sport_fixtures(final)
             print("SPORT TELEGRAM REPORT SENT", flush=True)
         except Exception as exc:
@@ -1726,7 +1755,7 @@ def _run_sport_result_check(hour_key):
 def main_loop():
     global SPORT_RUNNING, SPORT_DONE_HOUR, SPORT_RESULT_CHECK_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
-    print("SPORT SCHEDULER READY | daily tipster-style all-sports PREMATCH run 10:00 BG | fixture window 12:00 BG -> next day 12:00 BG | one daily scan only | hard stop 24,500 requests/day", flush=True)
+    print("SPORT SCHEDULER READY | multi-book market-value PREMATCH | run 10:00 BG | fixture window 12:00 BG -> next day 12:00 BG | max 5 picks, no sport quota | min 3 books, edge>=2pp, EV>=2.5% | hard stop 24,500 requests/day", flush=True)
     while True:
         now = datetime.now(TZ)
         day_key = now.strftime("%Y-%m-%d")
