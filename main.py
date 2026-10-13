@@ -1174,6 +1174,9 @@ def _statistical_preview(sport_key, match):
     normalized_score_gap = max(-1.0, min(1.0, scoring_gap / scale))
     combined_edge = 0.72 * win_gap + 0.28 * normalized_score_gap
     signal_strength = 50.0 + min(32.0, abs(combined_edge) * 32.0)
+    # Heuristic probability estimate from recent-form and expected-score edge.
+    # This is NOT statistically calibrated until we have a large settled-results dataset.
+    win_probability_pct = 100.0 / (1.0 + math.exp(-2.4 * abs(combined_edge)))
     if combined_edge >= 0:
         selection = "Победа дома"
     else:
@@ -1187,6 +1190,7 @@ def _statistical_preview(sport_key, match):
         "total_expected": total_expected,
         "selection": selection,
         "signal_strength": signal_strength,
+        "win_probability_pct": win_probability_pct,
         "home_form": home_form,
         "away_form": away_form,
         "datetime": _sport_match_datetime(match),
@@ -1235,12 +1239,9 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                     raise
                 except Exception as exc:
                     print(f"SPORT STATS ERROR | sport={sport_key} match={_match_id(match)} | {exc!r}", flush=True)
-            # Publish only clear candidates; never fill the report with weak picks.
-            weak_count = sum(1 for p in sport_previews if p["signal_strength"] < 60.0)
-            sport_previews = [p for p in sport_previews if p["signal_strength"] >= 60.0]
-            sport_previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
-            if weak_count:
-                reasons["слабък сигнал под 60/100"] = weak_count
+            # Keep every fixture with enough history; rank globally by estimated win probability.
+            # There is no arbitrary 60/100 cut-off: only the highest-ranked three are published.
+            sport_previews.sort(key=lambda p: (-p["win_probability_pct"], p["datetime"] or end))
             counts[sport_key] = {"fixtures": len(fixtures), "future": len(future), "usable": len(sport_previews)}
             sections.append((sport_key, cfg, sport_previews, reasons))
             previews.extend(sport_previews)
@@ -1260,7 +1261,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
     # Publish up to three strongest candidates; if only one or two qualify, publish those.
-    previews.sort(key=lambda p: (-p["signal_strength"], p["datetime"] or end))
+    previews.sort(key=lambda p: (-p["win_probability_pct"], p["datetime"] or end))
     top_signals = previews[:MAX_SIGNALS_PER_DAY]
     selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
     lines = [
@@ -1269,7 +1270,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
-        "Публикуват се само кандидати със сила поне 60/100. Това е евристичен рейтинг, НЕ вероятност за успех; не е доказан като печеливш.",
+        "ТОП 3 се подбират по най-високата изчислена ориентировъчна вероятност (%), без праг 60/100. Процентът е евристична оценка от последната форма и очаквания резултат, НЕ е калибрирана вероятност и не е доказан като печеливш.",
         "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Слабите срещи се пропускат.",
         f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се до {MAX_SIGNALS_PER_DAY} най-силни прогнози общо. Ако преминат условията само 1 или 2 срещи, се публикуват само те.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
@@ -1284,7 +1285,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                 lines.extend([
                     f"Среща {pick_index}: {p['home']} - {p['away']}",
                     f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
-                    f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | сила на сигнала: {p['signal_strength']:.1f}/100 (не е вероятност)",
+                    f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | ориентировъчна вероятност: {p['win_probability_pct']:.1f}% (не е калибрирана)",
                     f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
                     f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
                     f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
@@ -1295,7 +1296,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         else:
             lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}")
             if sport_previews:
-                lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те публикувани избора за деня.")
+                lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те срещи с най-висока изчислена вероятност.")
             elif reasons:
                 lines.append("Причина: " + ", ".join(f"{k} ({v})" for k, v in sorted(reasons.items())))
             else:
@@ -1304,7 +1305,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
     lines.extend([f"🎯 ТОП ДО {MAX_SIGNALS_PER_DAY} ТИПСТЪРСКИ ИЗБОРА", ""])
     for idx, p in enumerate(top_signals, 1):
-        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | сила {p['signal_strength']:.1f}/100 | общо {p['total_expected']:.1f}")
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | вероятност {p['win_probability_pct']:.1f}% | общо {p['total_expected']:.1f}")
     if not top_signals:
         lines.append("Няма срещи, преминали минималните условия за публикуване.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
