@@ -469,9 +469,9 @@ MAX_CONTEXT_CANDIDATES = 12
 MIN_SIGNAL_PROBABILITY = 56.0
 MIN_SIGNAL_CONFIDENCE = 75.0
 MAX_SIGNAL_RISK = 35.0
-MIN_VALUE_EDGE = 2.0  # Minimum edge versus offered implied probability, in percentage points.
-MIN_EXPECTED_VALUE_PCT = 2.5  # Estimated EV versus no-vig consensus; not a calibrated model edge.
-MIN_CONSENSUS_BOOKMAKERS = 3  # Require a broader consensus; two-book estimates are fragile.
+MIN_VALUE_EDGE = 3.0  # Stricter minimum edge; market-derived, not a proven model edge.
+MIN_EXPECTED_VALUE_PCT = 4.0  # Higher estimated EV threshold; still requires outcome tracking.
+MIN_CONSENSUS_BOOKMAKERS = 5  # Require five independent non-Betano books with complete outcomes.
 MIN_ODDS = 1.40
 MAX_ODDS = None  # No upper odds ceiling; retain only the minimum price.
 MAX_SIGNALS_PER_DAY = 5
@@ -861,13 +861,48 @@ def _available_prematch_options(sport_key, match):
             if not norm_market or any(word in norm_market for word in blocked_words):
                 continue
 
-            # This scanner now publishes only full-match winner picks (home or away).
+            # Accept only recognisable match-winner markets. Keep market families
+            # separate: "Moneyline" and "Match Winner" are not assumed interchangeable.
             if not any(word in norm_market for word in (
                 "winner", "moneyline", "money line", "1x2", "full time result",
                 "match result", "match winner", "home/away", "home away",
                 "победител", "to win",
             )):
                 continue
+
+            # Regulation-only result markets are never match-winner picks.
+            market_name_lower = market_name.casefold()
+            regulation_only = bool(re.search(
+                r"(regulation|regular time|60 minutes|60 min|after 60|"
+                r"90 minutes|90 min|excluding overtime|without overtime|"
+                r"regulation time|3\\s*[- ]?\\s*way|three\\s*[- ]?\\s*way|three[- ]?way)",
+                market_name_lower,
+            ))
+            if regulation_only:
+                print(
+                    f"SPORT MARKET SCOPE REJECTED | sport={sport_key} | fixture={mid} "
+                    f"| bookmaker={row_book} | market={market_name} | reason=regulation_or_three_way",
+                    flush=True,
+                )
+                continue
+
+            # Hockey's generic "Moneyline"/"Winner" label does not itself prove
+            # whether overtime and shootout are included. Require an explicit
+            # full-match label; otherwise fail closed instead of guessing.
+            if sport_key == "hockey":
+                explicit_full_match = any(term in norm_market for term in (
+                    "match winner", "match result", "including overtime",
+                    "incl overtime", "incl. overtime", "including ot", "incl ot",
+                    "incl. ot", "including shootout", "incl shootout", "incl. shootout",
+                    "full game winner",
+                ))
+                if not explicit_full_match:
+                    print(
+                        f"SPORT MARKET SCOPE REJECTED | sport={sport_key} | fixture={mid} "
+                        f"| bookmaker={row_book} | market={market_name} | reason=hockey_scope_ambiguous",
+                        flush=True,
+                    )
+                    continue
 
             book_value = market.get("bookmakerName") or market.get("bookmaker") or market.get("bookmaker_name") or row_book
             if isinstance(book_value, dict):
@@ -887,10 +922,7 @@ def _available_prematch_options(sport_key, match):
                 for v in values
             )
 
-            # Only publish full-match winner markets. Some feeds use a generic or
-            # incomplete outcome list for a regulation-time 3-way market, so reject
-            # explicit 3-way market names even when Draw/Tie is absent from values.
-            market_name_lower = str(market_name or "").lower()
+            # Reject all draw outcomes and explicit three-way market titles.
             market_name_is_three_way = bool(
                 re.search(r"(?:3\s*[- ]?\s*way|three\s*[- ]?\s*way|three[- ]?way)", market_name_lower)
             )
@@ -926,8 +958,19 @@ def _available_prematch_options(sport_key, match):
                 else:
                     continue
 
-                winner_type = "three_way" if market_has_draw else "two_way"
-                market_key = ("winner", None, winner_type)
+                # Canonicalise market family but never merge unlike market types.
+                # This prevents a book's "Moneyline" from silently supporting a
+                # different book's "Match Winner" market.
+                if "moneyline" in norm_market or "money line" in norm_market:
+                    market_scope = "moneyline"
+                elif any(term in norm_market for term in ("match winner", "match result", "full game winner")):
+                    market_scope = "match_winner"
+                elif "full time result" in norm_market or "1x2" in norm_market:
+                    market_scope = "full_time_result"
+                else:
+                    market_scope = "generic_winner"
+                winner_type = "two_way"
+                market_key = ("winner", market_scope, winner_type)
                 dedup_key = (bookmaker.casefold(), market_key, side, round(odd, 4))
                 if dedup_key in seen:
                     continue
