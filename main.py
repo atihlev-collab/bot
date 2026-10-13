@@ -796,7 +796,7 @@ def _available_prematch_options(sport_key, match):
 
     rows = _sport_api_get(
         f"{sport_key}/odds",
-        {"matchId": mid, "oddsType": "prematch", "limit": 100, "offset": 0},
+        {"matchId": mid, "oddsType": "prematch", "limit": 5, "offset": 0},
     )
     if not isinstance(rows, list):
         return []
