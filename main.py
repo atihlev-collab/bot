@@ -23,6 +23,7 @@ SPORT_API_LIMIT = 100
 
 SPORT_DONE_HOUR = None
 SPORT_RUNNING = False
+SPORT_RESULT_CHECK_DONE_HOUR = None
 SPORT_API_DAILY_LIMIT = 25000
 SPORT_API_SAFETY_RESERVE = 500
 SPORT_API_HARD_STOP = SPORT_API_DAILY_LIMIT - SPORT_API_SAFETY_RESERVE
@@ -282,6 +283,19 @@ def _record_tipster_predictions(items):
                  item["selection"], float(item["signal_strength"]), float(item["home_expected"]),
                  float(item["away_expected"]), now_iso),
             )
+
+
+def _has_due_tipster_predictions():
+    """Return whether any recorded pick has passed its scheduled start and still needs a result."""
+    _init_tipster_tracking()
+    with _db() as conn:
+        row = conn.execute(
+            """SELECT 1 FROM sport_tipster_predictions
+               WHERE outcome IS NULL AND start_at IS NOT NULL AND start_at < ?
+               LIMIT 1""",
+            (datetime.now(TZ).isoformat(),),
+        ).fetchone()
+    return row is not None
 
 
 def _settle_tipster_predictions():
@@ -1641,8 +1655,30 @@ def _run_sport(day_key, run_suffix=None):
         SPORT_RUNNING = False
         print(f"SPORT DAILY THREAD END | day={day_key}", flush=True)
 
+def _run_sport_result_check(hour_key):
+    """Retry settling finished picks hourly without running odds or a full fixture scan."""
+    global SPORT_RUNNING, SPORT_RESULT_CHECK_DONE_HOUR
+    try:
+        _SPORT_API_CALLS_BEFORE_RESULT_CHECK = _SPORT_API_CALLS
+        print(f"SPORT RESULT CHECK START | hour={hour_key}", flush=True)
+        summary = _settle_tipster_predictions()
+        print(
+            f"SPORT RESULT CHECK COMPLETE | hour={hour_key} | "
+            f"newly_settled={summary.get('newly_settled', 0)} | "
+            f"api_calls_used={_SPORT_API_CALLS - _SPORT_API_CALLS_BEFORE_RESULT_CHECK}",
+            flush=True,
+        )
+    except APIQuotaExceeded as exc:
+        print(f"SPORT RESULT CHECK QUOTA STOP | hour={hour_key} | {exc}", flush=True)
+    except Exception as exc:
+        print(f"SPORT RESULT CHECK ERROR | hour={hour_key} | {exc!r}", flush=True)
+        logging.exception("SPORT RESULT CHECK ERROR")
+    finally:
+        SPORT_RUNNING = False
+
+
 def main_loop():
-    global SPORT_RUNNING, SPORT_DONE_HOUR
+    global SPORT_RUNNING, SPORT_DONE_HOUR, SPORT_RESULT_CHECK_DONE_HOUR
     print("SPORT-ONLY SYSTEM START | Highlightly Sport | PREMATCH ONLY | LIVE OFF", flush=True)
     print("SPORT SCHEDULER READY | daily tipster-style all-sports PREMATCH run 10:00 BG | fixture window 12:00 BG -> next day 12:00 BG | one daily scan only | hard stop 24,500 requests/day", flush=True)
     while True:
@@ -1666,6 +1702,24 @@ def main_loop():
                 trigger_kind = "on-time" if (now.hour, now.minute) == (10, 0) else "catch-up-after-10:00"
                 print(f"SPORT 10:00 SCHEDULER TRIGGER | mode={trigger_kind} | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
                 threading.Thread(target=_run_sport, args=(day_key, "10:00"), daemon=True).start()
+
+        # Retry result settlement once per hour, but only if at least one saved
+        # prediction has passed kickoff and is still pending. Never overlap a
+        # settlement pass with the main daily scan.
+        result_hour_key = now.strftime("%Y-%m-%d-%H")
+        if (
+            not SPORT_RUNNING
+            and SPORT_RESULT_CHECK_DONE_HOUR != result_hour_key
+            and _has_due_tipster_predictions()
+        ):
+            SPORT_RESULT_CHECK_DONE_HOUR = result_hour_key
+            SPORT_RUNNING = True
+            threading.Thread(
+                target=_run_sport_result_check,
+                args=(result_hour_key,),
+                daemon=True,
+            ).start()
+
         time.sleep(20)
 
 
