@@ -831,7 +831,9 @@ def _available_prematch_options(sport_key, match):
 
             # This scanner now publishes only full-match winner picks (home or away).
             if not any(word in norm_market for word in (
-                "winner", "moneyline", "1x2", "full time result", "match result", "победител",
+                "winner", "moneyline", "money line", "1x2", "full time result",
+                "match result", "match winner", "home/away", "home away",
+                "победител", "to win",
             )):
                 continue
 
@@ -887,6 +889,31 @@ def _available_prematch_options(sport_key, match):
                     "odd": odd, "family": "winner", "line": None,
                     "market_key": market_key, "side": side,
                 })
+
+    if not raw_quotes:
+        # Safe diagnostics: log API response structure, not credentials or full payloads.
+        sample_rows = []
+        for sample_row in rows[:3]:
+            if not isinstance(sample_row, dict):
+                sample_rows.append({"type": type(sample_row).__name__})
+                continue
+            sample_markets = sample_row.get("odds") or sample_row.get("markets") or []
+            sample_rows.append({
+                "row_keys": list(sample_row.keys())[:12],
+                "bookmaker": str(sample_row.get("bookmakerName") or sample_row.get("bookmaker") or "")[:60],
+                "market_names": [str(m.get("market") or m.get("name") or m.get("type") or "")[:70]
+                                 for m in sample_markets[:8] if isinstance(m, dict)],
+                "sample_values": [
+                    [str(v.get("value") or v.get("label") or v.get("name") or "")[:35]
+                     for v in (m.get("values") or m.get("selections") or [])[:4] if isinstance(v, dict)]
+                    for m in sample_markets[:3] if isinstance(m, dict)
+                ],
+            })
+        print(
+            f"SPORT ODDS PARSE EMPTY | sport={sport_key} | fixture={mid} | rows={len(rows)} "
+            f"| home={home!r} | away={away!r} | sample={sample_rows!r}",
+            flush=True,
+        )
 
     market_books = {}
     for quote in raw_quotes:
