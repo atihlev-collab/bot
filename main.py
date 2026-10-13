@@ -892,7 +892,7 @@ def _available_prematch_options(sport_key, match):
             # explicit 3-way market names even when Draw/Tie is absent from values.
             market_name_lower = str(market_name or "").lower()
             market_name_is_three_way = bool(
-                re.search(r"(?:3\\s*[- ]?\\s*way|three\\s*[- ]?\\s*way|three[- ]?way)", market_name_lower)
+                re.search(r"(?:3\s*[- ]?\s*way|three\s*[- ]?\s*way|three[- ]?way)", market_name_lower)
             )
             if market_has_draw or market_name_is_three_way:
                 reason = "three_way_market_name" if market_name_is_three_way else "draw_outcome_present"
