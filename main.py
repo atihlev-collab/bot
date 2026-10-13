@@ -795,7 +795,7 @@ def _available_prematch_options(sport_key, match):
 
     rows = _sport_api_get(
         f"{sport_key}/odds",
-        {"matchId": mid, "oddsType": "prematch", "limit": 5, "offset": 0},
+        {"matchId": mid, "oddsType": "prematch", "limit": 100, "offset": 0},
     )
     if not isinstance(rows, list):
         return []
@@ -900,13 +900,13 @@ def _available_prematch_options(sport_key, match):
         requires_draw = market_key[2] == "three_way" or has_draw_anywhere
         required_sides = {"home", "away", "draw"} if requires_draw else {"home", "away"}
 
-        # Betano is a fixture/market-availability check only. Its price is not used.
-        betano_has_market = any(
+        # Betano only confirms the match has a winner market; its odds are never used.
+        betano_has_match_market = any(
             "betano" in str(book_data.get("name") or "").casefold()
-            and required_sides.issubset(book_data.get("sides", {}))
+            and bool(set(book_data.get("sides", {})) & {"home", "away", "draw"})
             for book_data in books.values()
         )
-        if not betano_has_market:
+        if not betano_has_match_market:
             continue
 
         # Build consensus and candidate prices from other bookmakers only.
@@ -948,14 +948,6 @@ def _available_prematch_options(sport_key, match):
             offered_implied = 1.0 / best_quote["odd"]
             ev_pct = (fair_prob * best_quote["odd"] - 1.0) * 100.0
             edge_pp = (fair_prob - offered_implied) * 100.0
-            if ev_pct < 3.0:
-                print(
-                    f"SPORT VALUE REJECT | market={best_quote['market']} | selection={best_quote['selection']} "
-                    f"| odds={best_quote['odd']:.2f} | fair_prob={fair_prob*100:.1f}% | EV={ev_pct:+.2f}% "
-                    f"| support={support} | min_EV=3.00%",
-                    flush=True,
-                )
-                continue
 
             all_prices = [
                 data["sides"][side]["odd"] for data in non_betano_books.values()
@@ -1530,7 +1522,7 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         f"Подбор: максимум {MAX_SIGNALS_PER_DAY} сигнала общо и {MAX_SIGNALS_PER_SPORT} на спорт; няма допълване насила",
-        f"Филтри: поне 3 букмейкъра с пълен пазар; EV поне +3%; максимум {MAX_SIGNALS_PER_DAY} сигнала за календарния ден общо",
+        f"Филтри: поне 3 други букмейкъра с пълен пазар; EV е ориентир и не блокира самостоятелно сигнала; максимум {MAX_SIGNALS_PER_DAY} сигнала за календарния ден общо",
         "Пазари: само победа на домакина или госта за целия мач; равенства, тотали, непълни пазари, хендикапи, спредове и отделни периоди се изключват",
         "Задължително: срещата и пазарът за победител трябва да присъстват в Betano; коефициентът за избора се взема от друг букмейкър в зададения диапазон. Betano не се използва за цената.",
         "Метод: no-vig консенсус от поне 3 други букмейкъра; EV е оценка спрямо пазарните цени, не гаранция за печалба и не е независим модел.",
