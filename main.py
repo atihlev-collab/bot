@@ -442,8 +442,8 @@ MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.40
 MAX_ODDS = None  # No upper odds ceiling; retain only the minimum price.
-MAX_SIGNALS_PER_DAY = 3
-MAX_SIGNALS_PER_SPORT = 3
+MAX_SIGNALS_PER_DAY = 5
+MAX_SIGNALS_PER_SPORT = 2
 
 
 def _sport_match_datetime(match):
@@ -1317,15 +1317,16 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             counts[sport_key] = {"fixtures": 0, "future": 0, "history": 0, "qualified": 0}
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
-    # Rank by statistical edge, but do not let one sport occupy every daily slot.
+    # Rank by statistical edge; allow up to two picks per sport, with a global cap of five.
     previews.sort(key=lambda p: (-p["quality_score"], p["datetime"] or end))
     top_signals = []
-    selected_sports = set()
+    selected_per_sport = {}
     for candidate in previews:
-        if candidate["sport_key"] in selected_sports:
+        sport_key = candidate["sport_key"]
+        if selected_per_sport.get(sport_key, 0) >= MAX_SIGNALS_PER_SPORT:
             continue
         top_signals.append(candidate)
-        selected_sports.add(candidate["sport_key"])
+        selected_per_sport[sport_key] = selected_per_sport.get(sport_key, 0) + 1
         if len(top_signals) >= MAX_SIGNALS_PER_DAY:
             break
     selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
@@ -1337,7 +1338,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
         "Подборът използва индекс на статистическото предимство с отстъпка за малка извадка; минимум 30/100. Индексът е евристичен, не е вероятност и не е доказан като печеливш.",
         "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Кандидати със слабо статистическо предимство се пропускат.",
-        f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се до {MAX_SIGNALS_PER_DAY} прогнози общо, максимум една от всеки спорт. Ако преминат условията по-малко срещи, се публикуват само те.",
+        f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се до {MAX_SIGNALS_PER_DAY} прогнози общо, максимум {MAX_SIGNALS_PER_SPORT} от един спорт. Ако преминат условията по-малко срещи, се публикуват само те.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
     ]
@@ -1361,7 +1362,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         else:
             lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('history', 0)} | преминали прага за избор: {counts.get(sport_key, {}).get('qualified', 0)}")
             if sport_previews:
-                lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те избора след ранжиране и лимит една прогноза на спорт.")
+                lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те избора след ранжиране и лимит {MAX_SIGNALS_PER_SPORT} прогнози на спорт.")
             elif reasons:
                 lines.append("Причина: " + ", ".join(f"{k} ({v})" for k, v in sorted(reasons.items())))
             else:
