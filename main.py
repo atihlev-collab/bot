@@ -887,6 +887,19 @@ def _available_prematch_options(sport_key, match):
                 for v in values
             )
 
+            # This tipster only publishes the winner of the full match, not a
+            # regulation-time 3-way result. In hockey, for example, "3-Way
+            # Moneyline" settles after regulation and is not the same as the
+            # match winner including overtime/shootout. Skip any market that
+            # explicitly offers Draw/Tie rather than silently relabeling it WIN.
+            if market_has_draw:
+                print(
+                    f"SPORT DRAW-MARKET REJECTED | sport={sport_key} | fixture={mid} "
+                    f"| bookmaker={bookmaker} | market={market_name} | reason=three_way_result_not_full_match_winner",
+                    flush=True,
+                )
+                continue
+
             for selection in values:
                 if not isinstance(selection, dict):
                     continue
