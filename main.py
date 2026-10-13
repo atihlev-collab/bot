@@ -1003,10 +1003,14 @@ def _available_prematch_options(sport_key, match):
             fair_prob = fair_values[mid_idx] if len(fair_values) % 2 else (fair_values[mid_idx - 1] + fair_values[mid_idx]) / 2.0
             support = len(fair_values)
 
+            # The offered price must come from a bookmaker with the same complete
+            # outcome set used to calculate consensus. Never compare a partial market
+            # against a full market, especially in sports where overtime/draw rules differ.
             available_quotes = [
                 book_data["sides"][side]
                 for book_data in non_betano_books.values()
-                if side in book_data["sides"]
+                if required_sides.issubset(book_data["sides"])
+                and side in book_data["sides"]
                 and book_data["sides"][side]["odd"] >= MIN_ODDS
                 and (MAX_ODDS is None or book_data["sides"][side]["odd"] <= MAX_ODDS)
             ]
@@ -1021,7 +1025,7 @@ def _available_prematch_options(sport_key, match):
 
             all_prices = [
                 data["sides"][side]["odd"] for data in non_betano_books.values()
-                if side in data["sides"]
+                if required_sides.issubset(data["sides"]) and side in data["sides"]
             ]
             all_prices.sort()
             median_odd = all_prices[len(all_prices) // 2] if all_prices else best_quote["odd"]
