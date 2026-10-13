@@ -1144,6 +1144,15 @@ def _team_recent_form(sport_key, team_id):
     return result
 
 
+def _selection_label(preview):
+    """Human-readable pick that names the team, avoiding home/away order ambiguity."""
+    if preview.get("selection") == "Победа дома":
+        return f"Победа: {preview.get('home', 'домакин')}"
+    if preview.get("selection") == "Победа гостите":
+        return f"Победа: {preview.get('away', 'гост')}"
+    return str(preview.get("selection") or "неопределен избор")
+
+
 def _statistical_preview(sport_key, match):
     home_obj = match.get("homeTeam") or match.get("home") or {}
     away_obj = match.get("awayTeam") or match.get("away") or {}
@@ -1275,7 +1284,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             lines.extend([
                 f"Среща: {p['home']} - {p['away']}",
                 f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
-                f"ТИПСТЪРСКИ ИЗБОР: {p['selection']} | сила на сигнала: {p['signal_strength']:.1f}/100 (не е вероятност)",
+                f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | сила на сигнала: {p['signal_strength']:.1f}/100 (не е вероятност)",
                 f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
                 f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
                 f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
@@ -1293,7 +1302,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
     lines.extend(["🎯 ТОП 5 ТИПСТЪРСКИ ИЗБОРА", ""])
     for idx, p in enumerate(top_signals, 1):
-        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {p['selection']} | сила {p['signal_strength']:.1f}/100 | общо {p['total_expected']:.1f}")
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | сила {p['signal_strength']:.1f}/100 | общо {p['total_expected']:.1f}")
     if not top_signals:
         lines.append("Няма срещи, преминали минималните условия за публикуване.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
