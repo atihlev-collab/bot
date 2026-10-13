@@ -375,6 +375,22 @@ def _settle_tipster_predictions():
     print(f"TIPSTER TRACK RECORD | wins={summary[0]} losses={summary[1]} void={summary[2]} pending={summary[3]} newly_settled={settled}", flush=True)
     return {"wins": summary[0], "losses": summary[1], "void": summary[2], "pending": summary[3], "newly_settled": settled}
 
+
+def _tipster_summary_counts():
+    """Read the stored W/L/V/pending totals without making extra API requests."""
+    _init_tipster_tracking()
+    with _db() as conn:
+        row = conn.execute(
+            """SELECT SUM(CASE WHEN outcome='W' THEN 1 ELSE 0 END),
+                      SUM(CASE WHEN outcome='L' THEN 1 ELSE 0 END),
+                      SUM(CASE WHEN outcome='V' THEN 1 ELSE 0 END),
+                      SUM(CASE WHEN outcome IS NULL THEN 1 ELSE 0 END)
+               FROM sport_tipster_predictions"""
+        ).fetchone()
+    summary = tuple(int(x or 0) for x in row) if row else (0, 0, 0, 0)
+    return {"wins": summary[0], "losses": summary[1], "void": summary[2], "pending": summary[3]}
+
+
 def _signal_text(text):
     return f"\033[1m\033[4m{text}\033[0m"
 
@@ -1208,39 +1224,54 @@ def _selection_label(preview):
 
 
 def _statistical_preview(sport_key, match):
+    """Estimate a conservative winner probability from recent results; not a calibrated model."""
     home_obj = match.get("homeTeam") or match.get("home") or {}
     away_obj = match.get("awayTeam") or match.get("away") or {}
     home_id, away_id = _sport_team_id(home_obj), _sport_team_id(away_obj)
     if not home_id or not away_id:
         return None, "липсват ID на отбор"
+
     home_form = _team_recent_form(sport_key, home_id)
     away_form = _team_recent_form(sport_key, away_id)
     if home_form["games"] < 4 or away_form["games"] < 4:
         return None, f"недостатъчна история (нужни са поне 4 мача; домакин {home_form['games']}/5, гост {away_form['games']}/5)"
 
-    # Recent-score estimate: useful as context, not as a calibrated exact-score forecast.
+    # Matchup scoring estimate. Volleyball points are kept for context only;
+    # match winners are evaluated by sets in _team_recent_form.
     home_expected = (home_form["avg_scored"] + away_form["avg_conceded"]) / 2.0
     away_expected = (away_form["avg_scored"] + home_form["avg_conceded"]) / 2.0
     total_expected = home_expected + away_expected
-    win_gap = home_form["win_rate"] - away_form["win_rate"]
-    scoring_gap = home_expected - away_expected
-    scale = max(1.0, (home_expected + away_expected) * 0.22)
-    normalized_score_gap = max(-1.0, min(1.0, scoring_gap / scale))
-    combined_edge = 0.72 * win_gap + 0.28 * normalized_score_gap
 
-    # Shrink the edge for tiny samples: 4–5 recent games must not yield 100/100.
-    # Five pseudo-games centered at neutral form act as a conservative reliability factor.
+    # Beta-style smoothing avoids treating 5-0 and 0-5 short streaks as certainties.
+    home_rate = (home_form["wins"] + 0.5 * home_form["draws"] + 1.5) / (home_form["games"] + 3.0)
+    away_rate = (away_form["wins"] + 0.5 * away_form["draws"] + 1.5) / (away_form["games"] + 3.0)
+    form_probability = max(0.05, min(0.95, 0.5 + 0.45 * (home_rate - away_rate)))
+
+    # Turn the matchup score differential into a probability-like component.
+    # Shrink toward 50% because the recent sample is small and league strength varies.
+    scoring_gap = home_expected - away_expected
+    scale = max(1.0, total_expected * 0.18)
+    score_probability = 1.0 / (1.0 + math.exp(-max(-6.0, min(6.0, scoring_gap / scale))))
+    blended_home_probability = 0.60 * form_probability + 0.40 * score_probability
     sample_games = min(home_form["games"], away_form["games"])
     reliability = sample_games / (sample_games + 5.0)
-    quality_score = abs(combined_edge) * reliability * 100.0
-    signal_strength = quality_score
-    # Ranking index only; the sample is too small to claim a real probability.
-    if quality_score < 30.0:
-        return None, f"слабо статистическо предимство ({quality_score:.1f}/100; минимум 30/100)"
-    if combined_edge >= 0:
+    home_probability = 0.5 + reliability * (blended_home_probability - 0.5)
+    home_probability = max(0.50, min(0.85, home_probability))
+    away_probability = 1.0 - home_probability
+
+    if home_probability >= away_probability:
         selection = "Победа дома"
+        model_probability = home_probability * 100.0
     else:
         selection = "Победа гостите"
+        model_probability = away_probability * 100.0
+
+    # Confidence/risk describe data support, not a proven hit rate.
+    model_confidence = min(85.0, 55.0 + sample_games * 4.0 + min(10.0, abs(home_rate - away_rate) * 10.0))
+    model_risk = 100.0 - model_confidence
+    if model_probability < MIN_SIGNAL_PROBABILITY:
+        return None, f"вероятността е под прага ({model_probability:.1f}% < {MIN_SIGNAL_PROBABILITY:.1f}%)"
+
     preview = {
         "sport_key": sport_key,
         "home": _sport_team_name(home_obj),
@@ -1249,8 +1280,13 @@ def _statistical_preview(sport_key, match):
         "away_expected": away_expected,
         "total_expected": total_expected,
         "selection": selection,
-        "signal_strength": signal_strength,
-        "quality_score": quality_score,
+        "signal_strength": model_probability,
+        "quality_score": model_probability,
+        "model_probability": model_probability,
+        "model_confidence": model_confidence,
+        "model_risk": model_risk,
+        "home_probability": home_probability * 100.0,
+        "away_probability": away_probability * 100.0,
         "home_form": home_form,
         "away_form": away_form,
         "datetime": _sport_match_datetime(match),
@@ -1331,28 +1367,23 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             counts[sport_key] = {"fixtures": 0, "future": 0, "history": 0, "qualified": 0}
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
-    # Rank by statistical edge; allow up to two picks per sport, with a global cap of five.
-    previews.sort(key=lambda p: (-p["quality_score"], p["datetime"] or end))
-    top_signals = []
-    selected_per_sport = {}
-    for candidate in previews:
-        sport_key = candidate["sport_key"]
-        if selected_per_sport.get(sport_key, 0) >= MAX_SIGNALS_PER_SPORT:
-            continue
-        top_signals.append(candidate)
-        selected_per_sport[sport_key] = selected_per_sport.get(sport_key, 0) + 1
-        if len(top_signals) >= MAX_SIGNALS_PER_DAY:
-            break
+    # One global leaderboard: choose the five highest estimated win probabilities,
+    # without sport quotas and without forcing the system to fill all five places.
+    previews.sort(key=lambda p: (-p["model_probability"], p["model_risk"], p["datetime"] or end))
+    top_signals = previews[:MAX_SIGNALS_PER_DAY]
     selected_keys = {(p["sport_key"], str(p["match_id"])) for p in top_signals}
+    # Persist picks before composing the report so the tracking line includes them.
+    if top_signals:
+        _record_tipster_predictions(top_signals)
+        tracking = _tipster_summary_counts()
     lines = [
         f"📊 SPORT PREMATCH — ТИПСТЪРСКИ ПОДБОР ({run_suffix or '10:00'} BG)",
         now_bg.strftime("%d.%m.%Y %H:%M BG"), "",
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
-        "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
-        "Подборът използва индекс на статистическото предимство с отстъпка за малка извадка; минимум 30/100. Индексът е евристичен, не е вероятност и не е доказан като печеливш.",
-        "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Кандидати със слабо статистическо предимство се пропускат.",
-        f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се до {MAX_SIGNALS_PER_DAY} прогнози общо, максимум {MAX_SIGNALS_PER_SPORT} от един спорт. Ако преминат условията по-малко срещи, се публикуват само те.",
+        "МЕТОД: мултиспорт рейтинг по последни до 5 резултата, изгладена успеваемост и очаквана разлика в резултата; минимум 4 валидни мача на всеки отбор.",
+        f"Глобален подбор по най-висока изчислена вероятност за победа: до {MAX_SIGNALS_PER_DAY} срещи общо, без квоти по спорт и без допълване насила.",
+        "Вероятността е предварителна оценка от малка извадка, НЕ е калибрирана историческа успеваемост. Коефициенти и EV се показват само когато има надежден коефициент за точния пазар; при липса на такъв не се измисля цена или положителна стойност.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. LIVE е изключен.", ""
     ]
@@ -1365,8 +1396,11 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                 lines.extend([
                     f"Среща {pick_index}: {p['home']} - {p['away']}",
                     f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
-                    f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | индекс на статистическото предимство: {p['quality_score']:.1f}/100 (не е вероятност)",
-                    f"Ориентировъчна оценка по форма (не точен резултат): {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
+                    f"🎯 PICK: {_selection_label(p)}",
+                    f"📈 Model probability: {p['model_probability']:.1f}% | оценка, не валидиран процент успеваемост",
+                    f"🤖 Model confidence: {p['model_confidence']:.1f}% | 🛡 Model risk: {p['model_risk']:.1f}/100 (евристични показатели)",
+                    f"📊 Очакван резултат по последна форма: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
+                    "💰 Коефициент / EV: не е потвърден от източника за този пазар; не се изчислява без реална цена.",
                     f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
                     f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
                 ])
@@ -1385,7 +1419,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
     lines.extend([f"🎯 ТОП ДО {MAX_SIGNALS_PER_DAY} ТИПСТЪРСКИ ИЗБОРА", ""])
     for idx, p in enumerate(top_signals, 1):
-        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | индекс {p['quality_score']:.1f}/100 | ориентировъчно общо {p['total_expected']:.1f}")
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | Model probability {p['model_probability']:.1f}% | risk {p['model_risk']:.1f}/100")
     if not top_signals:
         lines.append("Няма срещи, преминали минималните условия за публикуване.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
@@ -1394,13 +1428,11 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
     if send_func and run_suffix:
         try:
             _send_sport_report_chunks(message, send_func, max_chars=3700)
-            _record_tipster_predictions(top_signals)
-            print("SPORT STATS TELEGRAM REPORT SENT | published_predictions_recorded", flush=True)
+            print("SPORT STATS TELEGRAM REPORT SENT | picks_saved_before_publish", flush=True)
         except Exception as exc:
             print(f"SPORT STATS TELEGRAM ERROR: {exc!r}", flush=True)
     elif send_func and top_signals:
         _send_sport_report_chunks(message, send_func, max_chars=3700)
-        _record_tipster_predictions(top_signals)
     return message
 
 
