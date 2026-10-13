@@ -1029,11 +1029,11 @@ def _available_prematch_options(sport_key, match):
             # A very large single-book price outlier is more likely to be a stale,
             # mismatched, or differently defined market than a dependable edge.
             # Reject it rather than advertising an inflated EV estimate.
-            if median_odd > 0 and best_quote["odd"] > median_odd * 1.35:
+            if median_odd > 0 and best_quote["odd"] > median_odd * 1.20:
                 print(
                     f"SPORT PRICE OUTLIER REJECTED | sport={sport_key} | fixture={mid} "
                     f"| side={side} | best={best_quote['odd']:.2f} | median={median_odd:.2f} "
-                    f"| ratio={best_quote['odd'] / median_odd:.2f} | limit=1.35",
+                    f"| ratio={best_quote['odd'] / median_odd:.2f} | limit=1.20",
                     flush=True,
                 )
                 continue
