@@ -1039,7 +1039,7 @@ def _format_sport_simple_signal(index, item):
 
 
 # Odds-free PREMATCH model: use completed recent results, never bookmaker prices.
-SPORT_STATS_ONLY = True
+SPORT_STATS_ONLY = False
 _SPORT_LAST_FIVE_CACHE = {}
 
 
