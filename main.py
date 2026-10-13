@@ -875,7 +875,7 @@ def _available_prematch_options(sport_key, match):
             regulation_only = bool(re.search(
                 r"(regulation|regular time|60 minutes|60 min|after 60|"
                 r"90 minutes|90 min|excluding overtime|without overtime|"
-                r"regulation time|3\\s*[- ]?\\s*way|three\\s*[- ]?\\s*way|three[- ]?way)",
+                r"regulation time|3\s*[- ]?\s*way|three\s*[- ]?\s*way|three[- ]?way)",
                 market_name_lower,
             ))
             if regulation_only:
