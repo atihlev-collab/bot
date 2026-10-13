@@ -1257,35 +1257,47 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
             future.sort(key=lambda m: _sport_match_datetime(m) or end)
             future = future[:MAX_FIXTURES_TO_EVALUATE]
             sport_previews, reasons = [], {}
+            history_sufficient = 0
             for match in future:
                 try:
                     preview, reason = _statistical_preview(sport_key, match)
                     if preview:
                         sport_previews.append(preview)
+                        history_sufficient += 1
                     elif reason:
                         reasons[reason] = reasons.get(reason, 0) + 1
+                        # A weak-edge rejection means both teams had enough
+                        # valid historical games; it is not a history failure.
+                        if "слабо статистическо предимство" in reason:
+                            history_sufficient += 1
                 except APIQuotaExceeded:
                     raise
                 except Exception as exc:
                     print(f"SPORT STATS ERROR | sport={sport_key} match={_match_id(match)} | {exc!r}", flush=True)
-            # Rank only candidates that clear the minimum edge in _statistical_preview.
+            # Ranking includes only candidates clearing the edge threshold; separately
+            # report fixtures where both teams had enough valid history.
             sport_previews.sort(key=lambda p: (-p["quality_score"], p["datetime"] or end))
-            counts[sport_key] = {"fixtures": len(fixtures), "future": len(future), "usable": len(sport_previews)}
+            counts[sport_key] = {
+                "fixtures": len(fixtures),
+                "future": len(future),
+                "history": history_sufficient,
+                "qualified": len(sport_previews),
+            }
             sections.append((sport_key, cfg, sport_previews, reasons))
             previews.extend(sport_previews)
             print(f"SPORT STATS SUMMARY | sport={sport_key} fixtures={len(fixtures)} future={len(future)} usable={len(sport_previews)}", flush=True)
         except APIQuotaExceeded:
             print(f"SPORT STATS QUOTA STOP | sport={sport_key}", flush=True)
-            counts[sport_key] = {"fixtures": 0, "future": 0, "usable": 0}
+            counts[sport_key] = {"fixtures": 0, "future": 0, "history": 0, "qualified": 0}
             sections.append((sport_key, cfg, [], {"достигнат API лимит": 1}))
             # Still render every sport section; do not hide sports after a quota stop.
             for remaining_key, remaining_cfg in list(SPORTS_CONFIG.items())[list(SPORTS_CONFIG).index(sport_key) + 1:]:
                 sections.append((remaining_key, remaining_cfg, [], {"не е проверен заради API лимит": 1}))
-                counts[remaining_key] = {"fixtures": 0, "future": 0, "usable": 0}
+                counts[remaining_key] = {"fixtures": 0, "future": 0, "history": 0, "qualified": 0}
             break
         except Exception as exc:
             print(f"SPORT STATS SECTION ERROR | sport={sport_key} | {exc!r}", flush=True)
-            counts[sport_key] = {"fixtures": 0, "future": 0, "usable": 0}
+            counts[sport_key] = {"fixtures": 0, "future": 0, "history": 0, "qualified": 0}
             sections.append((sport_key, cfg, [], {"грешка при зареждане": 1}))
 
     # Rank by statistical edge, but do not let one sport occupy every daily slot.
@@ -1328,9 +1340,9 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                 ])
                 if pick_index < len(published_for_sport):
                     lines.append("")
-            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}")
+            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('history', 0)} | преминали прага за избор: {counts.get(sport_key, {}).get('qualified', 0)}")
         else:
-            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('usable', 0)}")
+            lines.append(f"Срещи в прозореца: {counts.get(sport_key, {}).get('fixtures', 0)} | бъдещи проверени: {counts.get(sport_key, {}).get('future', 0)} | с достатъчна история: {counts.get(sport_key, {}).get('history', 0)} | преминали прага за избор: {counts.get(sport_key, {}).get('qualified', 0)}")
             if sport_previews:
                 lines.append(f"Има кандидати, но не са сред {MAX_SIGNALS_PER_DAY}-те избора след ранжиране и лимит една прогноза на спорт.")
             elif reasons:
