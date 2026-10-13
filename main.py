@@ -296,36 +296,59 @@ def _settle_tipster_predictions():
         ).fetchall()
     settled = 0
     for sport_key, match_id, home_team_id, selection in pending:
-        if not home_team_id:
-            continue
-        try:
-            rows = _sport_api_get(f"{sport_key}/last-five-games", {"teamId": int(home_team_id)})
-        except APIQuotaExceeded:
-            raise
-        if not isinstance(rows, list):
-            continue
-        for match in rows:
-            if not isinstance(match, dict) or str(_match_id(match)) != str(match_id):
+        # A fixture can disappear from the home team's last-five list (or be
+        # returned inconsistently by the API). Search both teams before leaving
+        # a completed pick pending.
+        with _db() as conn:
+            ids_row = conn.execute(
+                "SELECT home_team_id, away_team_id FROM sport_tipster_predictions WHERE sport_key=? AND match_id=?",
+                (sport_key, str(match_id)),
+            ).fetchone()
+        team_ids = []
+        if ids_row:
+            for value in ids_row:
+                try:
+                    team_id = int(value) if value else None
+                except (TypeError, ValueError):
+                    team_id = None
+                if team_id and team_id not in team_ids:
+                    team_ids.append(team_id)
+        if not team_ids and home_team_id:
+            team_ids = [int(home_team_id)]
+        found_match = None
+        for team_id in team_ids:
+            try:
+                rows = _sport_api_get(f"{sport_key}/last-five-games", {"teamId": team_id})
+            except APIQuotaExceeded:
+                raise
+            if not isinstance(rows, list):
                 continue
-            pair = _score_pair_for_history(match, sport_key)
-            winner_pair = _winner_pair_for_history(match, sport_key, pair)
-            if pair is None or winner_pair is None:
-                continue
-            if winner_pair[0] == winner_pair[1]:
-                outcome = "V"
-            elif (selection == "Победа дома" and winner_pair[0] > winner_pair[1]) or (selection == "Победа гостите" and winner_pair[1] > winner_pair[0]):
-                outcome = "W"
-            else:
-                outcome = "L"
-            with _db() as conn:
-                conn.execute(
-                    """UPDATE sport_tipster_predictions SET outcome=?, actual_home=?, actual_away=?, settled_at=?
-                       WHERE sport_key=? AND match_id=? AND outcome IS NULL""",
-                    (outcome, pair[0], pair[1], datetime.now(TZ).isoformat(), sport_key, str(match_id)),
-                )
-            settled += 1
-            print(f"TIPSTER RESULT SETTLED | sport={sport_key} | match={match_id} | outcome={outcome} | score={pair[0]}-{pair[1]}", flush=True)
-            break
+            found_match = next(
+                (row for row in rows if isinstance(row, dict) and str(_match_id(row)) == str(match_id)),
+                None,
+            )
+            if found_match:
+                break
+        if not found_match:
+            continue
+        pair = _score_pair_for_history(found_match, sport_key)
+        winner_pair = _winner_pair_for_history(found_match, sport_key, pair)
+        if pair is None or winner_pair is None:
+            continue
+        if winner_pair[0] == winner_pair[1]:
+            outcome = "V"
+        elif (selection == "Победа дома" and winner_pair[0] > winner_pair[1]) or (selection == "Победа гостите" and winner_pair[1] > winner_pair[0]):
+            outcome = "W"
+        else:
+            outcome = "L"
+        with _db() as conn:
+            conn.execute(
+                """UPDATE sport_tipster_predictions SET outcome=?, actual_home=?, actual_away=?, settled_at=?
+                   WHERE sport_key=? AND match_id=? AND outcome IS NULL""",
+                (outcome, pair[0], pair[1], datetime.now(TZ).isoformat(), sport_key, str(match_id)),
+            )
+        settled += 1
+        print(f"TIPSTER RESULT SETTLED | sport={sport_key} | match={match_id} | outcome={outcome} | score={pair[0]}-{pair[1]}", flush=True)
     with _db() as conn:
         row = conn.execute(
             """SELECT SUM(CASE WHEN outcome='W' THEN 1 ELSE 0 END),
@@ -1164,7 +1187,7 @@ def _statistical_preview(sport_key, match):
     if home_form["games"] < 4 or away_form["games"] < 4:
         return None, f"недостатъчна история (нужни са поне 4 мача; домакин {home_form['games']}/5, гост {away_form['games']}/5)"
 
-    # Score forecast combines each team's recent scoring with its opponent's recent allowance.
+    # Recent-score estimate: useful as context, not as a calibrated exact-score forecast.
     home_expected = (home_form["avg_scored"] + away_form["avg_conceded"]) / 2.0
     away_expected = (away_form["avg_scored"] + home_form["avg_conceded"]) / 2.0
     total_expected = home_expected + away_expected
@@ -1173,10 +1196,15 @@ def _statistical_preview(sport_key, match):
     scale = max(1.0, (home_expected + away_expected) * 0.22)
     normalized_score_gap = max(-1.0, min(1.0, scoring_gap / scale))
     combined_edge = 0.72 * win_gap + 0.28 * normalized_score_gap
-    signal_strength = 50.0 + min(32.0, abs(combined_edge) * 32.0)
-    # This is a ranking score, NOT a probability. Do not publish weak edges.
-    quality_score = abs(combined_edge) * 100.0
-    if abs(combined_edge) < 0.30:
+
+    # Shrink the edge for tiny samples: 4–5 recent games must not yield 100/100.
+    # Five pseudo-games centered at neutral form act as a conservative reliability factor.
+    sample_games = min(home_form["games"], away_form["games"])
+    reliability = sample_games / (sample_games + 5.0)
+    quality_score = abs(combined_edge) * reliability * 100.0
+    signal_strength = quality_score
+    # Ranking index only; the sample is too small to claim a real probability.
+    if quality_score < 30.0:
         return None, f"слабо статистическо предимство ({quality_score:.1f}/100; минимум 30/100)"
     if combined_edge >= 0:
         selection = "Победа дома"
@@ -1278,7 +1306,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
         "🏁 РЕЖИМ: PREMATCH — само срещи, които още не са започнали",
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         "МЕТОД: типстърски подбор по форма и баланс на отбелязани/допуснати резултати в последните до 5 срещи; нужни са поне 4 валидни мача на отбор.",
-        "ТОП 3 се подбират по индекс на статистическото предимство, а не по измислена вероятност. Минимум 30/100; индексът е евристичен и не е доказан като печеливш.",
+        "Подборът използва индекс на статистическото предимство с отстъпка за малка извадка; минимум 30/100. Индексът е евристичен, не е вероятност и не е доказан като печеливш.",
         "Коефициенти не се използват, затова не се твърди, че прогнозата има положителна финансова стойност. Кандидати със слабо статистическо предимство се пропускат.",
         f"Показват се всички {len(SPORTS_CONFIG)} спорта; публикуват се до {MAX_SIGNALS_PER_DAY} прогнози общо, максимум една от всеки спорт. Ако преминат условията по-малко срещи, се публикуват само те.",
         f"РЕЗУЛТАТИ ДО МОМЕНТА: {tracking['wins']} печалби / {tracking['losses']} загуби / {tracking['void']} анулирани / {tracking['pending']} неприключили.",
@@ -1294,7 +1322,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
                     f"Среща {pick_index}: {p['home']} - {p['away']}",
                     f"Форма (последни до 5): домакин {p['home_form']['wins']}-{p['home_form']['draws']}-{p['home_form']['losses']} ({p['home_form']['games']} мача), гост {p['away_form']['wins']}-{p['away_form']['draws']}-{p['away_form']['losses']} ({p['away_form']['games']} мача)",
                     f"ТИПСТЪРСКИ ИЗБОР: {_selection_label(p)} | индекс на статистическото предимство: {p['quality_score']:.1f}/100 (не е вероятност)",
-                    f"Очакван резултат: {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
+                    f"Ориентировъчна оценка по форма (не точен резултат): {p['home_expected']:.1f} - {p['away_expected']:.1f} | общо: {p['total_expected']:.1f}",
                     f"Лига: {p['league'] or '-'} | Държава: {p['country'] or '-'}",
                     f"Начало: {dt.strftime('%d.%m.%Y %H:%M')} BG" if dt else "Начало: неизвестно",
                 ])
@@ -1313,7 +1341,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
     lines.extend([f"🎯 ТОП ДО {MAX_SIGNALS_PER_DAY} ТИПСТЪРСКИ ИЗБОРА", ""])
     for idx, p in enumerate(top_signals, 1):
-        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | предимство {p['quality_score']:.1f}/100 | общо {p['total_expected']:.1f}")
+        lines.append(f"{idx}. {p['sport_key'].upper()} — {p['home']} - {p['away']} | {_selection_label(p)} | индекс {p['quality_score']:.1f}/100 | ориентировъчно общо {p['total_expected']:.1f}")
     if not top_signals:
         lines.append("Няма срещи, преминали минималните условия за публикуване.")
     lines.extend(["", f"📡 API заявки: {_SPORT_API_CALLS}", f"⏱ Scan time: {time.time() - started:.1f}s"])
