@@ -1567,9 +1567,10 @@ def main_loop():
         day_key = now.strftime("%Y-%m-%d")
         daily_key = f"sport_prematch:{day_key}:10:00"
 
-        # One daily tipster-style scan, triggered only during the 10:00 minute.
-        in_daily_window = now.hour == 17 and now.minute == 30
-        if in_daily_window and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
+        # Run at 10:00 BG. If Railway starts/restarts after 10:00, catch up
+        # immediately once for today instead of silently missing the daily report.
+        past_scheduled_time = (now.hour, now.minute) >= (10, 0)
+        if past_scheduled_time and not SPORT_RUNNING and SPORT_DONE_HOUR != day_key:
             if already_ran(daily_key):
                 SPORT_DONE_HOUR = day_key
                 print(f"SPORT 10:00 SCHEDULER SKIP | day={day_key} | already ran", flush=True)
@@ -1579,7 +1580,8 @@ def main_loop():
                 mark_ran(daily_key)
             else:
                 SPORT_RUNNING = True
-                print(f"SPORT 10:00 SCHEDULER TRIGGER | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
+                trigger_kind = "on-time" if (now.hour, now.minute) == (10, 0) else "catch-up-after-10:00"
+                print(f"SPORT 10:00 SCHEDULER TRIGGER | mode={trigger_kind} | day={day_key} | time={now:%Y-%m-%d %H:%M:%S} BG", flush=True)
                 threading.Thread(target=_run_sport, args=(day_key, "10:00"), daemon=True).start()
         time.sleep(20)
 
