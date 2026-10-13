@@ -442,7 +442,7 @@ MAX_SIGNAL_RISK = 35.0
 MIN_VALUE_EDGE = -2.0
 MIN_ODDS = 1.40
 MAX_ODDS = 1.80
-MAX_SIGNALS_PER_DAY = 3
+MAX_SIGNALS_PER_DAY = 5
 MAX_SIGNALS_PER_SPORT = 2
 
 
@@ -955,16 +955,21 @@ def _available_prematch_options(sport_key, match):
             fair_prob = fair_values[mid_idx] if len(fair_values) % 2 else (fair_values[mid_idx - 1] + fair_values[mid_idx]) / 2.0
             support = len(fair_values)
 
-            side_quotes = [
+            # The actual bet must be available at Betano in the requested odds range.
+            # Other bookmakers are used only to estimate the no-vig market consensus.
+            betano_quotes = [
                 book_data["sides"][side]
                 for book_data in books.values()
-                if side in book_data["sides"]
+                if "betano" in str(book_data.get("name") or "").casefold()
+                and side in book_data["sides"]
                 and MIN_ODDS <= book_data["sides"][side]["odd"] <= MAX_ODDS
             ]
-            if not side_quotes:
+            if not betano_quotes:
                 continue
 
-            best_quote = max(side_quotes, key=lambda quote: quote["odd"])
+            # Report and evaluate the price actually available at Betano, not
+            # a better price at a different bookmaker the user may not have.
+            best_quote = max(betano_quotes, key=lambda quote: quote["odd"])
             offered_implied = 1.0 / best_quote["odd"]
             ev_pct = (fair_prob * best_quote["odd"] - 1.0) * 100.0
             edge_pp = (fair_prob - offered_implied) * 100.0
@@ -1002,7 +1007,7 @@ def _available_prematch_options(sport_key, match):
         print(
             f"SPORT QUALITY NO PICK | sport={sport_key} | fixture={mid} | raw_quotes={len(raw_quotes)} "
             f"| grouped_markets={len(market_books)} | full_book_sets={full_books} "
-            f"| reason=no 3-bookmaker consensus with >=3% EV",
+            f"| reason=no Betano quote in {MIN_ODDS:.2f}-{MAX_ODDS:.2f} + 3-bookmaker consensus with >=3% EV",
             flush=True,
         )
     return candidates
@@ -1544,9 +1549,10 @@ def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
         f"Период: {start.strftime('%d.%m.%Y %H:%M')} BG → {end.strftime('%d.%m.%Y %H:%M')} BG",
         f"Подбор: максимум {MAX_SIGNALS_PER_DAY} сигнала общо и {MAX_SIGNALS_PER_SPORT} на спорт; няма допълване насила",
         f"Филтри: поне 3 букмейкъра с пълен пазар; EV поне +3%; максимум {MAX_SIGNALS_PER_DAY} сигнала за календарния ден общо",
-        "Пазари: победител и тотали за целия мач; непълни пазари се изключват; хендикапи, спредове и отделни периоди са изключени",
-        "Метод: оценка по пазарен консенсус, не исторически статистически модел; EV е оценка, не гаранция за печалба",
-        f"Коефициент: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно и {MAX_SIGNALS_PER_SPORT} на спорт",
+        "Пазари: само пълни пазари за целия мач; непълни пазари, хендикапи, спредове и отделни периоди се изключват",
+        "Задължително: реален коефициент от Betano в диапазона; без съвпадащ Betano пазар — без сигнал. Другите букмейкъри служат за пазарен консенсус.",
+        "Метод: сравнение на Betano с no-vig консенсус от поне 3 букмейкъра; EV е оценка, не гаранция за печалба и не е независим модел.",
+        f"Коефициент Betano: {MIN_ODDS:.2f}–{MAX_ODDS:.2f} | максимум {MAX_SIGNALS_PER_DAY} сигнала дневно и {MAX_SIGNALS_PER_SPORT} на спорт",
         "Русия, Беларус, Филипини, Сингапур и приятелски мачове — блокирани. Няма филтър само за Betano; LIVE е изключен.",
         "",
     ]
