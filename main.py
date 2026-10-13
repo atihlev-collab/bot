@@ -1056,7 +1056,7 @@ def _format_sport_simple_signal(index, item):
 
 
 # Odds-free PREMATCH model: use completed recent results, never bookmaker prices.
-SPORT_STATS_ONLY = False
+SPORT_STATS_ONLY = True
 _SPORT_LAST_FIVE_CACHE = {}
 
 
@@ -1390,7 +1390,7 @@ def _run_sport_stats_only(start, end, now_bg, run_suffix, send_func, started):
 
 
 def run_sport_top3_daily_scanner(send_func=None, run_suffix=None):
-    """SPORT PREMATCH only: no historical/team statistics; rank available bookmaker markets globally."""
+    """SPORT PREMATCH only: odds-free statistical picks based on recent completed results."""
     global _SPORT_API_CALLS, _SPORT_STATS_CACHE
     _SPORT_API_CALLS = 0
     _SPORT_STATS_CACHE = {}
