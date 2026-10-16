@@ -1110,10 +1110,10 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 78
-                and total_shots >= 7
+                best_pressure >= 76
+                and total_shots >= 6
                 and total_corners >= 4
-                and fh_corner_probability >= 66
+                and fh_corner_probability >= 64
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1157,9 +1157,9 @@ def analyze_live_match(fixture):
 
         if (
             73 <= minute <= 80
-            and card_probability >= 76
-            and total_cards >= 4
-            and total_fouls >= 18
+            and card_probability >= 78
+            and total_cards >= 5
+            and total_fouls >= 20
             and goal_diff <= 2
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1297,7 +1297,7 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            75 <= minute <= 82
+            73 <= minute <= 80
             and total_corners >= 10
             and total_shots >= 16
             and best_pressure >= 74
