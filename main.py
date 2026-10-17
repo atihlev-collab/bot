@@ -480,7 +480,11 @@ def get_match_odds(fixture_id):
         return None
 
 
-# =================================def get_prematch_match_odds(fixture_id):
+# =========================================================
+# PREMATCH MATCH ODDS (independent of LIVE)
+# =========================================================
+
+def get_prematch_match_odds(fixture_id):
 
     if fixture_id in prematch_odds_cache:
         cache_time, data = prematch_odds_cache[fixture_id]
@@ -679,7 +683,6 @@ def get_match_odds(fixture_id):
 
 
 # =========================================================
-========================
 # EXTRACT STAT
 # =========================================================
 
