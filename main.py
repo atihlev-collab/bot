@@ -1388,10 +1388,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 56
+                best_pressure >= 60
                 and total_shots_on >= 3
                 and pressure_diff >= 4
-                and fast_goal_probability >= 56
+                and fast_goal_probability >= 58
             ):
                 if (
                     home_pressure >= away_pressure + 6
@@ -1430,9 +1430,9 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 82
+                best_pressure >= 84
                 and total_shots_on >= 13
-                and pressure_diff >= 26
+                and pressure_diff >= 30
                 and normal_goal_probability >= 84
             ):
                 if (
