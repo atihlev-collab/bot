@@ -90,6 +90,7 @@ sent_live = {}
 sent_prematch = {}
 team_form_cache = {}
 odds_cache = {}
+prematch_odds_cache = {}
 live_market_cache = {}
 betano_market_cache = {}
 
@@ -285,6 +286,195 @@ def get_odds(fixture_id):
     except:
 
         return []
+
+
+def get_prematch_match_odds(fixture_id):
+
+    if fixture_id in prematch_odds_cache:
+        cache_time, data = prematch_odds_cache[fixture_id]
+        if time.time() - cache_time < 900:
+            return data
+
+    try:
+        print("GET ODDS FOR:", fixture_id)
+
+        odds = get_odds(fixture_id)
+        if not odds:
+            return None
+
+        bookmakers = odds[0].get("bookmakers", [])
+
+        print(
+            "BOOKMAKERS:",
+            [(b.get("id"), b.get("name")) for b in bookmakers]
+        )
+
+        # PREMATCH uses any API-Football bookmaker with a valid 1X2 market.
+        # Do not require Betano or a minimum bookmaker count.
+        selected_bookmaker = None
+        for bookmaker in bookmakers:
+            bookmaker_bets = bookmaker.get("bets", [])
+            has_1x2 = any(
+                " ".join(str(bet.get("name", "")).strip().lower().replace("_", " ").split())
+                in ("match winner", "1x2", "winner")
+                for bet in bookmaker_bets
+            )
+            if has_1x2:
+                selected_bookmaker = bookmaker
+                break
+
+        if selected_bookmaker is None:
+            print("PREMATCH NO BOOKMAKER WITH 1X2:", fixture_id)
+            return None
+
+        bets = selected_bookmaker.get("bets", [])
+        print("PREMATCH USING API-FOOTBALL BOOKMAKER:", selected_bookmaker.get("id"), selected_bookmaker.get("name"))
+
+        home_odd = None
+        draw_odd = None
+        away_odd = None
+        over25_odd = None
+        under25_odd = None
+        btts_odd = None
+        home_over15_odd = None
+        away_over15_odd = None
+        over35_odd = None
+
+        def clean_text(value):
+            return " ".join(str(value or "").strip().lower().replace("_", " ").split())
+
+        def safe_float(value):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        for bet in bets:
+            bet_name_raw = bet.get("name", "")
+            bet_name = clean_text(bet_name_raw)
+            values = bet.get("values", [])
+
+            print("BET NAME:", bet_name_raw)
+
+            # 1X2
+            if bet_name in ("match winner", "1x2", "winner"):
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    odd = safe_float(value.get("odd"))
+                    if value_name == "home":
+                        home_odd = odd
+                    elif value_name == "draw":
+                        draw_odd = odd
+                    elif value_name == "away":
+                        away_odd = odd
+
+            # BTTS
+            if (
+                "both teams to score" in bet_name
+                or bet_name == "btts"
+            ):
+                for value in values:
+                    if clean_text(value.get("value")) in ("yes", "btts yes"):
+                        btts_odd = safe_float(value.get("odd"))
+
+            # Full-match goal totals: Over 2.5 / Under 2.5 / Over 3.5
+            is_full_goal_total = (
+                bet_name in ("goals over/under", "over/under", "total goals")
+                or (
+                    "goal" in bet_name
+                    and "over/under" in bet_name
+                    and "home" not in bet_name
+                    and "away" not in bet_name
+                    and "team" not in bet_name
+                    and "first half" not in bet_name
+                    and "second half" not in bet_name
+                )
+            )
+
+            if is_full_goal_total:
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    odd = safe_float(value.get("odd"))
+                    if value_name in ("over 2.5", "over 2.5 goals"):
+                        over25_odd = odd
+                    elif value_name in ("under 2.5", "under 2.5 goals"):
+                        under25_odd = odd
+                    elif value_name in ("over 3.5", "over 3.5 goals"):
+                        over35_odd = odd
+
+            # Betano/API naming differs by competition. Support the common
+            # Home/Away Team Total variants without confusing them with 1X2.
+            is_home_total = (
+                ("home" in bet_name and "total" in bet_name and "goal" in bet_name)
+                or bet_name in (
+                    "home team over/under",
+                    "home team total",
+                    "home goals over/under"
+                )
+            )
+
+            is_away_total = (
+                ("away" in bet_name and "total" in bet_name and "goal" in bet_name)
+                or bet_name in (
+                    "away team over/under",
+                    "away team total",
+                    "away goals over/under"
+                )
+            )
+
+            if is_home_total:
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    if value_name in ("over 1.5", "over 1.5 goals"):
+                        home_over15_odd = safe_float(value.get("odd"))
+
+            if is_away_total:
+                for value in values:
+                    value_name = clean_text(value.get("value"))
+                    if value_name in ("over 1.5", "over 1.5 goals"):
+                        away_over15_odd = safe_float(value.get("odd"))
+
+        print(
+            "ODDS FOUND:",
+            home_odd,
+            draw_odd,
+            away_odd,
+            over25_odd,
+            under25_odd,
+            btts_odd,
+            home_over15_odd,
+            away_over15_odd,
+            over35_odd
+        )
+
+        # Keep 1X2 as the basic bookmaker market-integrity check, but goal-market
+        # odds are allowed to be None when the selected bookmaker does not offer that market.
+        if (
+            home_odd is None
+            or draw_odd is None
+            or away_odd is None
+        ):
+            print("PREMATCH INCOMPLETE 1X2 ODDS:", home_odd, draw_odd, away_odd)
+            return None
+
+        result = (
+            home_odd,
+            draw_odd,
+            away_odd,
+            over25_odd,
+            under25_odd,
+            btts_odd,
+            home_over15_odd,
+            away_over15_odd,
+            over35_odd
+        )
+
+        prematch_odds_cache[fixture_id] = (time.time(), result)
+        return result
+
+    except Exception as e:
+        print("GET PREMATCH MATCH ODDS ERROR:", repr(e))
+        return None
 
 
 # =========================================================
@@ -8995,7 +9185,7 @@ def prematch_loop():
 
         fixture_id = match["fixture"]["id"]
 
-        match_odds = get_match_odds(
+        match_odds = get_prematch_match_odds(
             fixture_id
         )
 
@@ -9115,10 +9305,10 @@ def prematch_loop():
             ):
                 odds_text = str(over35_odd)
 
-            # Never send a prematch recommendation without the actual
-            # Betano price for that exact market.
+            # Never send a PREMATCH recommendation without an actual
+            # API-Football bookmaker price for that exact market.
             if odds_text == "-":
-                print("SKIP NO BETANO ODDS:", home, away, market)
+                print("SKIP NO PREMATCH ODDS:", home, away, market)
                 continue
 
             all_signals.append(                               
