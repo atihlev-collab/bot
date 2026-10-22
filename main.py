@@ -9174,10 +9174,10 @@ def tipster_final_gate(market, probability, confidence, odd):
     )
     edge, ev = tipster_price_metrics(p, o)
 
-    # PREMATCH integrity guard: until historical calibration proves otherwise,
-    # reject unusually large model-vs-market gaps instead of treating them as value.
-    # A gap above 7 percentage points is flagged for review.
-    if edge > 7.0:
+    # PREMATCH integrity guard: only reject extreme model-vs-market gaps.
+    # Smaller gaps are not enough by themselves to prove the model is wrong;
+    # probability calibration must be assessed against historical results.
+    if edge > 12.0:
         return False, edge, ev, "MODEL_MARKET_GAP"
 
     if p < min_p:
