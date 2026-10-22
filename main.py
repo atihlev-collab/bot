@@ -1447,7 +1447,7 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 86
-                and total_shots_on >= 12, 
+                and total_shots_on >= 12
                 and pressure_diff >= 28
                 and normal_goal_probability >= 87 
             ):
