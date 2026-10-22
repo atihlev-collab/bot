@@ -312,19 +312,48 @@ def get_prematch_match_odds(fixture_id):
         # PREMATCH uses any API-Football bookmaker with a valid 1X2 market.
         # Do not require Betano or a minimum bookmaker count.
         selected_bookmaker = None
+
+        # A listed Match Winner market can still have incomplete Home/Draw/Away prices.
+        # Select only a bookmaker that provides all three valid odds.
+        def _norm_prematch(value):
+            return " ".join(
+                str(value or "").strip().lower().replace("_", " ").split()
+            )
+
         for bookmaker in bookmakers:
             bookmaker_bets = bookmaker.get("bets", [])
-            has_1x2 = any(
-                " ".join(str(bet.get("name", "")).strip().lower().replace("_", " ").split())
-                in ("match winner", "1x2", "winner")
-                for bet in bookmaker_bets
-            )
-            if has_1x2:
+            complete_1x2 = False
+
+            for bet in bookmaker_bets:
+                bet_name = _norm_prematch(bet.get("name"))
+                if bet_name not in ("match winner", "1x2", "winner"):
+                    continue
+
+                outcomes = {
+                    _norm_prematch(v.get("value")): v.get("odd")
+                    for v in bet.get("values", [])
+                }
+
+                try:
+                    home_price = float(outcomes.get("home"))
+                    draw_price = float(outcomes.get("draw"))
+                    away_price = float(outcomes.get("away"))
+                    complete_1x2 = all(
+                        price > 1.0
+                        for price in (home_price, draw_price, away_price)
+                    )
+                except (TypeError, ValueError):
+                    complete_1x2 = False
+
+                if complete_1x2:
+                    break
+
+            if complete_1x2:
                 selected_bookmaker = bookmaker
                 break
 
         if selected_bookmaker is None:
-            print("PREMATCH NO BOOKMAKER WITH 1X2:", fixture_id)
+            print("PREMATCH NO BOOKMAKER WITH COMPLETE 1X2:", fixture_id)
             return None
 
         bets = selected_bookmaker.get("bets", [])
