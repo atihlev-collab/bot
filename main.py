@@ -292,7 +292,7 @@ def get_prematch_match_odds(fixture_id):
 
     if fixture_id in prematch_odds_cache:
         cache_time, data = prematch_odds_cache[fixture_id]
-        if time.time() - cache_time < 900:
+        if time.time() - cache_time < 120:
             return data
 
     try:
