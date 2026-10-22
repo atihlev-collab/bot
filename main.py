@@ -9174,6 +9174,12 @@ def tipster_final_gate(market, probability, confidence, odd):
     )
     edge, ev = tipster_price_metrics(p, o)
 
+    # PREMATCH integrity guard: extreme model-vs-price gaps are more likely
+    # to indicate overconfident probabilities or a mismatched/stale price.
+    # Reject rather than present these as strong value signals.
+    if edge > 12.0:
+        return False, edge, ev, "MODEL_MARKET_GAP"
+
     if p < min_p:
         return False, edge, ev, "LOW_PROB"
     if c < min_c:
