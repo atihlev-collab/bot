@@ -4065,7 +4065,7 @@ def analyze_prematch_match(match):
     try:
 
         fixture_id = match["fixture"]["id"]
-        match_odds = get_match_odds(
+        match_odds = get_prematch_match_odds(
             fixture_id
         )
 
