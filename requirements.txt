@@ -3,7 +3,4 @@ python-telegram-bot>=20.0
 scikit-learn
 joblib
 numpy
-
- 
-
-
+scipy
