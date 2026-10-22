@@ -6356,7 +6356,7 @@ def analyze_prematch_match(match):
             and                         
             home_edge >= 4.0                 
             and
-            form_gap >= 2p3
+            form_gap >= 2.3
             and
             recent_gap >= 18
             and
