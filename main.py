@@ -463,6 +463,62 @@ def get_prematch_match_odds(fixture_id):
                     if value_name in ("over 1.5", "over 1.5 goals"):
                         away_over15_odd = safe_float(value.get("odd"))
 
+        # PREMATCH safety: use the lowest valid price for each goal/BTTS
+        # market across bookmakers returned by API-Football, not just the first
+        # bookmaker selected for 1X2. This avoids overstating the displayed price.
+        conservative = {
+            "over25": [], "under25": [], "btts": [],
+            "home_over15": [], "away_over15": [], "over35": []
+        }
+        for book in bookmakers:
+            for bet in book.get("bets", []):
+                name = clean_text(bet.get("name", ""))
+                vals = bet.get("values", [])
+                if "both teams to score" in name or name == "btts":
+                    for val in vals:
+                        if clean_text(val.get("value")) in ("yes", "btts yes"):
+                            price = safe_float(val.get("odd"))
+                            if price and price > 1:
+                                conservative["btts"].append(price)
+                full_total = (
+                    name in ("goals over/under", "over/under", "total goals")
+                    or ("goal" in name and "over/under" in name
+                        and not any(k in name for k in ("home", "away", "team", "first half", "second half")))
+                )
+                if full_total:
+                    for val in vals:
+                        outcome = clean_text(val.get("value"))
+                        price = safe_float(val.get("odd"))
+                        if not price or price <= 1:
+                            continue
+                        if outcome in ("over 2.5", "over 2.5 goals"):
+                            conservative["over25"].append(price)
+                        elif outcome in ("under 2.5", "under 2.5 goals"):
+                            conservative["under25"].append(price)
+                        elif outcome in ("over 3.5", "over 3.5 goals"):
+                            conservative["over35"].append(price)
+                is_home_total = ("home" in name and "total" in name and "goal" in name) or name in ("home team over/under", "home team total", "home goals over/under")
+                is_away_total = ("away" in name and "total" in name and "goal" in name) or name in ("away team over/under", "away team total", "away goals over/under")
+                if is_home_total or is_away_total:
+                    for val in vals:
+                        if clean_text(val.get("value")) in ("over 1.5", "over 1.5 goals"):
+                            price = safe_float(val.get("odd"))
+                            if price and price > 1:
+                                conservative["home_over15" if is_home_total else "away_over15"].append(price)
+
+        if conservative["over25"]:
+            over25_odd = min(conservative["over25"])
+        if conservative["under25"]:
+            under25_odd = min(conservative["under25"])
+        if conservative["btts"]:
+            btts_odd = min(conservative["btts"])
+        if conservative["home_over15"]:
+            home_over15_odd = min(conservative["home_over15"])
+        if conservative["away_over15"]:
+            away_over15_odd = min(conservative["away_over15"])
+        if conservative["over35"]:
+            over35_odd = min(conservative["over35"])
+
         print(
             "ODDS FOUND:",
             home_odd,
