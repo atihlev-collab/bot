@@ -1378,17 +1378,17 @@ def analyze_live_match(fixture):
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 29 <= minute <= 38:
-            fh_corner_probability = 56
+            fh_corner_probability = 60
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 76
+                best_pressure >= 78
                 and total_shots >= 7
                 and total_corners >= 4
-                and fh_corner_probability >= 66
+                and fh_corner_probability >= 68
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1432,9 +1432,9 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
-            and card_probability >= 76
+            and card_probability >= 78
             and total_cards >= 4
-            and total_fouls >= 18
+            and total_fouls >= 20
             and goal_diff <= 2
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1451,7 +1451,7 @@ def analyze_live_match(fixture):
         # FAST NEXT GOAL - 25 TO 40
         # =========================================================
         if 25 <= minute <= 40 and total >= 1:
-            fast_goal_probability = 64
+            fast_goal_probability = 66
             fast_goal_probability += max(0, best_pressure - 65) * 0.65
             fast_goal_probability += min(12, total_shots_on * 1.5)
             fast_goal_probability += min(6, total_corners)
@@ -1460,10 +1460,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 66
+                best_pressure >= 68
                 and total_shots_on >= 4
                 and pressure_diff >= 4
-                and fast_goal_probability >= 60
+                and fast_goal_probability >= 62
             ):
                 if (
                     home_pressure >= away_pressure + 7
@@ -1504,7 +1504,7 @@ def analyze_live_match(fixture):
             if (
                 best_pressure >= 86
                 and total_shots_on >= 12
-                and pressure_diff >= 28
+                and pressure_diff >= 30
                 and normal_goal_probability >= 87 
             ):
                 if (
@@ -1545,11 +1545,11 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 62
+            and best_pressure >= 64
             and total_shots_on >= 5
             and total_shots >= 7
             and (home_xg + away_xg) >= 1.4
-            and remaining_probability >= 60
+            and remaining_probability >= 62
             and total <= 1
         ):
             return (
@@ -1562,7 +1562,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 78
+        corner_probability = 80
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1574,7 +1574,7 @@ def analyze_live_match(fixture):
         if (
             72 <= minute <= 82
             and total_corners >= 10
-            and total_shots >= 19
+            and total_shots >= 20
             and best_pressure >= 76
             and corner_probability >= 78
             and total_corners <= 11
