@@ -1448,9 +1448,9 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # FAST NEXT GOAL - 25 TO 40
+        # FAST NEXT GOAL - 20 TO 40
         # =========================================================
-        if 25 <= minute <= 40 and total >= 1:
+        if 20 <= minute <= 40 and total >= 1:
             fast_goal_probability = 66
             fast_goal_probability += max(0, best_pressure - 65) * 0.65
             fast_goal_probability += min(12, total_shots_on * 1.5)
@@ -1488,7 +1488,7 @@ def analyze_live_match(fixture):
                     )
 
         # =========================================================
-        # NORMAL NEXT GOAL - 41 TO 74
+        # NORMAL NEXT GOAL - 41 TO 78
         # =========================================================
         if 41 <= minute <= 78:
             normal_goal_probability = 82
