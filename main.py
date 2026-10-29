@@ -1671,6 +1671,19 @@ def _live_market_context(fixture):
         away_shots = max(0, extract(aws, "Total Shots"))
         home_pressure = calculate_pressure(hs)
         away_pressure = calculate_pressure(aws)
+        home_shots = max(0, extract(hs, "Total Shots"))
+        away_shots = max(0, extract(aws, "Total Shots"))
+        home_corners = max(0, extract(hs, "Corner Kicks"))
+        away_corners = max(0, extract(aws, "Corner Kicks"))
+
+        # Live activity is kept separately from the Poisson estimate. A high
+        # volume of shots / shots on target must be able to veto an implausible
+        # 0-0 exact-score call instead of being hidden by the scoreline.
+        total_shots = home_shots + away_shots
+        total_sot = home_sot + away_sot
+        total_xg = home_xg + away_xg
+        total_corners = home_corners + away_corners
+        total_pressure = home_pressure + away_pressure
 
         # Expected goals remaining are conservative live estimates, not calibrated guarantees.
         remaining = max(0, 90 - minute)
@@ -1688,7 +1701,12 @@ def _live_market_context(fixture):
             "fixture_id": fixture_id, "minute": minute,
             "home": home_team, "away": away_team,
             "home_score": home_score, "away_score": away_score,
-            "home_lam": home_lam, "away_lam": away_lam
+            "home_lam": home_lam, "away_lam": away_lam,
+            "home_shots": home_shots, "away_shots": away_shots,
+            "total_shots": total_shots, "total_sot": total_sot,
+            "total_xg": total_xg, "total_corners": total_corners,
+            "home_pressure": home_pressure, "away_pressure": away_pressure,
+            "total_pressure": total_pressure
         }
     except Exception as e:
         print("LIVE NEW MARKET CONTEXT ERROR:", repr(e))
@@ -1712,7 +1730,36 @@ def analyze_live_correct_score(fixture):
                     best_prob = prob
                     best_score = (hs + add_h, aws + add_a)
         # Exact-score estimates are inherently uncertain; use a stricter gate.
-        if best_score is None or best_prob < 0.18:
+        if best_score is None:
+            return None
+
+        # Do not call 0-0 when live match activity contradicts a goalless game.
+        # Reject 0-0 if shots on target / total shots / xG / pressure show a
+        # genuinely active match. Other exact-score markets remain independent.
+        if best_score == (0, 0):
+            high_activity = (
+                (c["total_shots"] >= 12 and c["total_sot"] >= 4)
+                or (c["total_xg"] >= 1.20 and c["total_shots"] >= 8)
+                or (
+                    c["total_pressure"] >= 110
+                    and c["total_shots"] >= 10
+                    and c["total_sot"] >= 3
+                )
+                or (c["total_corners"] >= 8 and c["total_shots"] >= 10)
+            )
+            if high_activity:
+                print(
+                    "LIVE CORRECT SCORE REJECT - 0-0 CONFLICTS WITH ATTACKING ACTIVITY:",
+                    c["fixture_id"],
+                    "SHOTS=", c["total_shots"],
+                    "SOT=", c["total_sot"],
+                    "XG=", round(c["total_xg"], 2),
+                    "CORNERS=", c["total_corners"],
+                    "PRESSURE=", c["total_pressure"]
+                )
+                return None
+
+        if best_prob < 0.18:
             print("LIVE CORRECT SCORE REJECT - LOW PROBABILITY:", c["fixture_id"], best_prob)
             return None
         probability = round(best_prob * 100, 1)
