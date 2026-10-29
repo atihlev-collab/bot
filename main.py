@@ -1703,14 +1703,17 @@ def analyze_live_correct_score(fixture):
             return None
         hs, aws = c["home_score"], c["away_score"]
         best_score, best_prob = None, 0.0
-        for add_h in range(0, 6):
-            for add_a in range(0, 6):
+        # Include a wider Poisson range so probability mass in the tail is
+        # not silently discarded. This is still a model estimate, not a calibrated guarantee.
+        for add_h in range(0, 13):
+            for add_a in range(0, 13):
                 prob = float(poisson.pmf(add_h, c["home_lam"]) * poisson.pmf(add_a, c["away_lam"]))
                 if prob > best_prob:
                     best_prob = prob
                     best_score = (hs + add_h, aws + add_a)
-        # Avoid sending very low-information exact-score guesses.
-        if best_score is None or best_prob < 0.16:
+        # Exact-score estimates are inherently uncertain; use a stricter gate.
+        if best_score is None or best_prob < 0.18:
+            print("LIVE CORRECT SCORE REJECT - LOW PROBABILITY:", c["fixture_id"], best_prob)
             return None
         probability = round(best_prob * 100, 1)
         return (
@@ -1729,11 +1732,14 @@ def analyze_live_result_1x2(fixture):
         if not c:
             return None
         home_win = draw = away_win = 0.0
-        for add_h in range(0, 7):
+        total_mass = 0.0
+        # Sum a wide score range, then normalize to remove truncation bias.
+        for add_h in range(0, 13):
             ph = float(poisson.pmf(add_h, c["home_lam"]))
-            for add_a in range(0, 7):
+            for add_a in range(0, 13):
                 pa = float(poisson.pmf(add_a, c["away_lam"]))
                 p = ph * pa
+                total_mass += p
                 final_h = c["home_score"] + add_h
                 final_a = c["away_score"] + add_a
                 if final_h > final_a:
@@ -1742,6 +1748,11 @@ def analyze_live_result_1x2(fixture):
                     draw += p
                 else:
                     away_win += p
+        if total_mass <= 0:
+            return None
+        home_win /= total_mass
+        draw /= total_mass
+        away_win /= total_mass
         probs = {"1": home_win, "X": draw, "2": away_win}
         ordered = sorted(probs.items(), key=lambda item: item[1], reverse=True)
         best, pbest = ordered[0]
@@ -9686,7 +9697,16 @@ def live_loop():
 
         # A signal for one market does not prevent another market for this fixture.
         for signal in signals:
-            key = f"live_{fixture_id}_{home_goals}_{away_goals}_{signal[0]}"
+            # Send at most one alert per market per fixture for this process.
+            # The previous score-dependent key resent the same market after every goal.
+            market_label = str(signal[0])
+            if "EXPECTED CORRECT SCORE" in market_label:
+                market_key = "correct_score"
+            elif "EXPECTED RESULT" in market_label:
+                market_key = "result_1x2"
+            else:
+                market_key = market_label
+            key = f"live_{fixture_id}_{market_key}"
             if key in sent_live:
                 continue
             sent_live[key] = time.time()
@@ -9717,13 +9737,15 @@ def live_loop():
             odds_text = "-"
             match_odds = get_match_odds(fixture_id)
             home_odd = match_odds[0] if match_odds else None
+            draw_odd = match_odds[1] if match_odds else None
             away_odd = match_odds[2] if match_odds else None
 
-            if home_odd is not None or away_odd is not None:
-                if "HOME" in signal[0] or "RESULT 1" in signal[0]:
-                    odds_text = str(home_odd) if home_odd is not None else "-"
-                elif "AWAY" in signal[0] or "RESULT 2" in signal[0]:
-                    odds_text = str(away_odd) if away_odd is not None else "-"
+            if "EXPECTED RESULT X" in signal[0]:
+                odds_text = str(draw_odd) if draw_odd is not None else "-"
+            elif "HOME" in signal[0] or "RESULT 1" in signal[0]:
+                odds_text = str(home_odd) if home_odd is not None else "-"
+            elif "AWAY" in signal[0] or "RESULT 2" in signal[0]:
+                odds_text = str(away_odd) if away_odd is not None else "-"
 
             send_telegram(
                 f"""🔥 LIVE SIGNAL
