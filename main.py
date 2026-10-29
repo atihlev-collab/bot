@@ -1582,8 +1582,8 @@ def analyze_live_match(fixture):
             and (home_pressure + away_pressure) >= 112
             and total_shots >= 10
             and total_shots_on >= 3
-            and total_remaining_lambda >= 1.45
-            and remaining_probability >= 42
+            and total_remaining_lambda >= 1.55
+            and remaining_probability >= 46
         ):
             return (
                 "🚀 EXPECTED OVER 1.5 MORE GOALS",
@@ -1710,7 +1710,7 @@ def analyze_live_correct_score(fixture):
                     best_prob = prob
                     best_score = (hs + add_h, aws + add_a)
         # Avoid sending very low-information exact-score guesses.
-        if best_score is None or best_prob < 0.12:
+        if best_score is None or best_prob < 0.16:
             return None
         probability = round(best_prob * 100, 1)
         return (
@@ -1746,7 +1746,7 @@ def analyze_live_result_1x2(fixture):
         ordered = sorted(probs.items(), key=lambda item: item[1], reverse=True)
         best, pbest = ordered[0]
         second = ordered[1][1]
-        if pbest < 0.52 or (pbest - second) < 0.08:
+        if pbest < 0.56 or (pbest - second) < 0.10:
             return None
         probability = round(pbest * 100, 1)
         return (
