@@ -1703,6 +1703,8 @@ def _live_market_context(fixture):
             "home_score": home_score, "away_score": away_score,
             "home_lam": home_lam, "away_lam": away_lam,
             "home_shots": home_shots, "away_shots": away_shots,
+            "home_sot": home_sot, "away_sot": away_sot,
+            "home_xg": home_xg, "away_xg": away_xg,
             "total_shots": total_shots, "total_sot": total_sot,
             "total_xg": total_xg, "total_corners": total_corners,
             "home_pressure": home_pressure, "away_pressure": away_pressure,
@@ -1733,31 +1735,39 @@ def analyze_live_correct_score(fixture):
         if best_score is None:
             return None
 
-        # Do not call 0-0 when live match activity contradicts a goalless game.
-        # Reject 0-0 if shots on target / total shots / xG / pressure show a
-        # genuinely active match. Other exact-score markets remain independent.
-        if best_score == (0, 0):
-            high_activity = (
-                (c["total_shots"] >= 12 and c["total_sot"] >= 4)
-                or (c["total_xg"] >= 1.20 and c["total_shots"] >= 8)
-                or (
-                    c["total_pressure"] >= 110
-                    and c["total_shots"] >= 10
-                    and c["total_sot"] >= 3
-                )
-                or (c["total_corners"] >= 8 and c["total_shots"] >= 10)
+        # If the most likely exact score is simply the current score, only
+        # keep it when the match is genuinely quiet. Strong attacking activity
+        # means "no more goals" is not a sound default; suppress the exact-score
+        # call instead of pretending the current score is a high-confidence pick.
+        current_score = (hs, aws)
+        home_shots = c["home_shots"]
+        away_shots = c["away_shots"]
+        home_sot = c["home_sot"]
+        away_sot = c["away_sot"]
+        home_xg = c["home_xg"]
+        away_xg = c["away_xg"]
+        high_activity = (
+            (c["total_shots"] >= 15 and c["total_sot"] >= 5)
+            or (c["total_xg"] >= 1.35 and c["total_shots"] >= 10)
+            or (
+                max(home_shots, away_shots) >= 10
+                and max(home_sot, away_sot) >= 4
+                and abs(home_xg - away_xg) >= 0.35
             )
-            if high_activity:
-                print(
-                    "LIVE CORRECT SCORE REJECT - 0-0 CONFLICTS WITH ATTACKING ACTIVITY:",
-                    c["fixture_id"],
-                    "SHOTS=", c["total_shots"],
-                    "SOT=", c["total_sot"],
-                    "XG=", round(c["total_xg"], 2),
-                    "CORNERS=", c["total_corners"],
-                    "PRESSURE=", c["total_pressure"]
-                )
-                return None
+            or (c["total_corners"] >= 9 and c["total_shots"] >= 12)
+        )
+        if best_score == current_score and high_activity:
+            print(
+                "LIVE CORRECT SCORE REJECT - CURRENT SCORE CONFLICTS WITH ATTACKING ACTIVITY:",
+                c["fixture_id"],
+                "SCORE=", f"{hs}-{aws}",
+                "SHOTS=", c["total_shots"],
+                "SOT=", c["total_sot"],
+                "XG=", round(c["total_xg"], 2),
+                "CORNERS=", c["total_corners"],
+                "PRESSURE=", c["total_pressure"]
+            )
+            return None
 
         if best_prob < 0.18:
             print("LIVE CORRECT SCORE REJECT - LOW PROBABILITY:", c["fixture_id"], best_prob)
