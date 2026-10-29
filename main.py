@@ -1778,6 +1778,20 @@ def analyze_live_result_1x2(fixture):
         c = _live_market_context(fixture)
         if not c:
             return None
+
+        # Avoid low-value 1X2 alerts when the match is already effectively
+        # decided by a large live score gap. The model can otherwise report
+        # near-100% simply because the current score is already lopsided.
+        score_gap = abs(c["home_score"] - c["away_score"])
+        if score_gap >= 3:
+            print(
+                "LIVE 1X2 REJECT - LARGE CURRENT SCORE GAP:",
+                c["fixture_id"],
+                "SCORE=", f'{c["home_score"]}-{c["away_score"]}',
+                "GAP=", score_gap
+            )
+            return None
+
         home_win = draw = away_win = 0.0
         total_mass = 0.0
         # Sum a wide score range, then normalize to remove truncation bias.
