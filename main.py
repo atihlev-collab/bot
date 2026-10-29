@@ -1530,63 +1530,30 @@ def analyze_live_match(fixture):
                     )
 
         # =========================================================
-        # OVER 1.5 REMAINING GOALS (20-70)
-        # Both teams must show active attacking intent.
-        # Means at least two additional goals, regardless of current score.
+        # OVER 1.5 REMAINING GOALS
         # =========================================================
-        remaining_minutes = max(0, 90 - minute)
-        home_remaining_lambda = max(
-            0.05,
-            home_xg * (remaining_minutes / max(20, minute)) * 0.70
-            + home_shots_on * 0.035
-            + home_pressure / 100 * remaining_minutes / 90 * 0.35
-        )
-        away_remaining_lambda = max(
-            0.05,
-            away_xg * (remaining_minutes / max(20, minute)) * 0.70
-            + away_shots_on * 0.035
-            + away_pressure / 100 * remaining_minutes / 90 * 0.35
-        )
-        home_remaining_lambda = min(2.2, home_remaining_lambda)
-        away_remaining_lambda = min(2.2, away_remaining_lambda)
-        total_remaining_lambda = home_remaining_lambda + away_remaining_lambda
-        remaining_probability = round(
-            (1 - poisson.pmf(0, total_remaining_lambda)
-             - poisson.pmf(1, total_remaining_lambda)) * 100,
-            1
-        )
+        remaining_probability = 45
+        remaining_probability += max(0, best_pressure - 55) * 0.55
+        remaining_probability += min(15, total_shots_on * 1.4)
+        remaining_probability += min(8, total_corners * 0.7)
+        remaining_probability += min(10, (home_xg + away_xg) * 2.2)
+        if total >= 2:
+            remaining_probability += 4
+        remaining_probability = round(min(95, remaining_probability), 1)
 
-        home_attacking = (
-            home_pressure >= 48
-            and home_total_shots >= 4
-            and home_shots_on >= 1
-        )
-        away_attacking = (
-            away_pressure >= 48
-            and away_total_shots >= 4
-            and away_shots_on >= 1
-        )
-
-        print(
-            "OVER15 REMAINING CHECK:", minute,
-            "PROB=", remaining_probability,
-            "HOME_ATTACK=", home_attacking,
-            "AWAY_ATTACK=", away_attacking,
-            "LAMBDA=", round(total_remaining_lambda, 2)
-        )
+        print("OVER15 REMAINING CHECK:", minute, remaining_probability)
 
         if (
-            20 <= minute <= 70
-            and home_attacking
-            and away_attacking
-            and (home_pressure + away_pressure) >= 112
-            and total_shots >= 10
-            and total_shots_on >= 3
-            and total_remaining_lambda >= 1.55
-            and remaining_probability >= 46
+            25 <= minute <= 65
+            and best_pressure >= 64
+            and total_shots_on >= 5
+            and total_shots >= 8
+            and (home_xg + away_xg) >= 1.4
+            and remaining_probability >= 60
+            and total <= 1
         ):
             return (
-                "🚀 EXPECTED OVER 1.5 MORE GOALS",
+                "🚀 OVER 1.5 REMAINING GOALS",
                 remaining_probability,
                 minute,
                 remaining_probability
@@ -1622,254 +1589,42 @@ def analyze_live_match(fixture):
                 corner_probability
             )
 
-        # LATE GOAL market removed: it was producing unreliable signals.
+        # =========================================================
+        # LATE GOAL
+        # =========================================================
+        if 75 <= minute <= 88:
+            late_goal_probability = 41
+            late_goal_probability += max(0, best_pressure - 60) * 0.65
+            late_goal_probability += min(15, total_shots_on * 1.3)
+            late_goal_probability += min(8, total_corners * 0.6)
+            late_goal_probability += min(10, (home_xg + away_xg) * 2)
+
+            if goal_diff <= 1:
+                late_goal_probability += 4
+
+            late_goal_probability = round(min(95, late_goal_probability), 1)
+
+            print("LATE GOAL CHECK:", minute, late_goal_probability)
+
+            if (
+                best_pressure >= 54
+                and total_shots_on >= 3
+                and total_shots >= 7
+                and total_corners >= 4
+                and (home_xg + away_xg) >= 1.2
+                and late_goal_probability >= 60
+            ):
+                return (
+                    "🔥 LATE GOAL",
+                    late_goal_probability,
+                    minute,
+                    late_goal_probability
+                )
 
         return None
 
     except Exception as e:
         print("LIVE ANALYSIS ERROR:", repr(e))
-        return None
-
-
-# =========================================================
-# INDEPENDENT LIVE MARKETS: EXACT SCORE + 1X2
-# Each function makes its own decision; one market never gates another.
-# =========================================================
-def _live_market_context(fixture):
-    try:
-        fixture_id = fixture["fixture"]["id"]
-        minute = fixture["fixture"]["status"].get("elapsed") or 0
-        # Avoid emitting a new LIVE market signal immediately at minute 50.
-        # Continue scanning after this point so match statistics and attacking
-        # balance can justify a call before a signal is produced.
-        if minute < 55 or minute > 90:
-            return None
-
-        home_team = fixture["teams"]["home"]["name"]
-        away_team = fixture["teams"]["away"]["name"]
-        country = fixture["league"].get("country", "")
-        league_name = fixture["league"].get("name", "")
-        check_text = f"{country} {league_name} {home_team} {away_team}".lower()
-        blocked_live = [
-            "reserve", "reserves", "women", "woman", "female", "ladies",
-            "femenina", "feminine", "feminin", "femminile", "frauen",
-            "damen", "feminino", "u17", "u18", "u19", "u20", "u21",
-            "u22", "u23", "russia", "belarus"
-        ]
-        if country in ["Russia", "Belarus"] or any(w in check_text for w in blocked_live):
-            return None
-
-        stats = get_statistics(fixture_id)
-        if len(stats) < 2:
-            return None
-
-        hs, aws = stats[0], stats[1]
-        home_score = fixture["goals"].get("home", 0) or 0
-        away_score = fixture["goals"].get("away", 0) or 0
-        home_xg = max(0.0, extract(hs, "Expected Goals"))
-        away_xg = max(0.0, extract(aws, "Expected Goals"))
-        home_sot = max(0, extract(hs, "Shots on Goal"))
-        away_sot = max(0, extract(aws, "Shots on Goal"))
-        home_shots = max(0, extract(hs, "Total Shots"))
-        away_shots = max(0, extract(aws, "Total Shots"))
-        home_pressure = calculate_pressure(hs)
-        away_pressure = calculate_pressure(aws)
-        home_shots = max(0, extract(hs, "Total Shots"))
-        away_shots = max(0, extract(aws, "Total Shots"))
-        home_corners = max(0, extract(hs, "Corner Kicks"))
-        away_corners = max(0, extract(aws, "Corner Kicks"))
-
-        # Live activity is kept separately from the Poisson estimate. A high
-        # volume of shots / shots on target must be able to veto an implausible
-        # 0-0 exact-score call instead of being hidden by the scoreline.
-        total_shots = home_shots + away_shots
-        total_sot = home_sot + away_sot
-        total_xg = home_xg + away_xg
-        total_corners = home_corners + away_corners
-        total_pressure = home_pressure + away_pressure
-
-        # Expected goals remaining are conservative live estimates, not calibrated guarantees.
-        remaining = max(0, 90 - minute)
-        home_lam = min(2.8, max(0.03,
-            home_xg * remaining / max(25, minute) * 0.78
-            + home_sot * 0.045
-            + home_pressure / 100 * remaining / 90 * 0.42
-        ))
-        away_lam = min(2.8, max(0.03,
-            away_xg * remaining / max(25, minute) * 0.78
-            + away_sot * 0.045
-            + away_pressure / 100 * remaining / 90 * 0.42
-        ))
-        return {
-            "fixture_id": fixture_id, "minute": minute,
-            "home": home_team, "away": away_team,
-            "home_score": home_score, "away_score": away_score,
-            "home_lam": home_lam, "away_lam": away_lam,
-            "home_shots": home_shots, "away_shots": away_shots,
-            "home_sot": home_sot, "away_sot": away_sot,
-            "home_xg": home_xg, "away_xg": away_xg,
-            "total_shots": total_shots, "total_sot": total_sot,
-            "total_xg": total_xg, "total_corners": total_corners,
-            "home_pressure": home_pressure, "away_pressure": away_pressure,
-            "total_pressure": total_pressure
-        }
-    except Exception as e:
-        print("LIVE NEW MARKET CONTEXT ERROR:", repr(e))
-        return None
-
-
-def analyze_live_correct_score(fixture):
-    """Independent exact final score market; active from minute 50."""
-    try:
-        c = _live_market_context(fixture)
-        if not c:
-            return None
-        hs, aws = c["home_score"], c["away_score"]
-        best_score, best_prob = None, 0.0
-        # Include a wider Poisson range so probability mass in the tail is
-        # not silently discarded. This is still a model estimate, not a calibrated guarantee.
-        for add_h in range(0, 13):
-            for add_a in range(0, 13):
-                prob = float(poisson.pmf(add_h, c["home_lam"]) * poisson.pmf(add_a, c["away_lam"]))
-                if prob > best_prob:
-                    best_prob = prob
-                    best_score = (hs + add_h, aws + add_a)
-        # Exact-score estimates are inherently uncertain; use a stricter gate.
-        if best_score is None:
-            return None
-
-        # If the most likely exact score is simply the current score, only
-        # keep it when the match is genuinely quiet. Strong attacking activity
-        # means "no more goals" is not a sound default; suppress the exact-score
-        # call instead of pretending the current score is a high-confidence pick.
-        current_score = (hs, aws)
-        home_shots = c["home_shots"]
-        away_shots = c["away_shots"]
-        home_sot = c["home_sot"]
-        away_sot = c["away_sot"]
-        home_xg = c["home_xg"]
-        away_xg = c["away_xg"]
-        high_activity = (
-            (c["total_shots"] >= 15 and c["total_sot"] >= 5)
-            or (c["total_xg"] >= 1.35 and c["total_shots"] >= 10)
-            or (
-                max(home_shots, away_shots) >= 10
-                and max(home_sot, away_sot) >= 4
-                and abs(home_xg - away_xg) >= 0.35
-            )
-            or (c["total_corners"] >= 9 and c["total_shots"] >= 12)
-        )
-        if best_score == current_score and high_activity:
-            print(
-                "LIVE CORRECT SCORE REJECT - CURRENT SCORE CONFLICTS WITH ATTACKING ACTIVITY:",
-                c["fixture_id"],
-                "SCORE=", f"{hs}-{aws}",
-                "SHOTS=", c["total_shots"],
-                "SOT=", c["total_sot"],
-                "XG=", round(c["total_xg"], 2),
-                "CORNERS=", c["total_corners"],
-                "PRESSURE=", c["total_pressure"]
-            )
-            return None
-
-        if best_prob < 0.18:
-            print("LIVE CORRECT SCORE REJECT - LOW PROBABILITY:", c["fixture_id"], best_prob)
-            return None
-        probability = round(best_prob * 100, 1)
-        return (
-            f"🎯 EXPECTED CORRECT SCORE {best_score[0]}-{best_score[1]}",
-            probability, c["minute"], probability
-        )
-    except Exception as e:
-        print("LIVE CORRECT SCORE ERROR:", repr(e))
-        return None
-
-
-def analyze_live_result_1x2(fixture):
-    """Independent full-time 1/X/2 market; active from minute 50."""
-    try:
-        c = _live_market_context(fixture)
-        if not c:
-            return None
-
-        # Avoid low-value 1X2 alerts when the match is already effectively
-        # decided by a large live score gap. The model can otherwise report
-        # near-100% simply because the current score is already lopsided.
-        score_gap = abs(c["home_score"] - c["away_score"])
-        if score_gap >= 3:
-            print(
-                "LIVE 1X2 REJECT - LARGE CURRENT SCORE GAP:",
-                c["fixture_id"],
-                "SCORE=", f'{c["home_score"]}-{c["away_score"]}',
-                "GAP=", score_gap
-            )
-            return None
-
-        home_win = draw = away_win = 0.0
-        total_mass = 0.0
-        # Sum a wide score range, then normalize to remove truncation bias.
-        for add_h in range(0, 13):
-            ph = float(poisson.pmf(add_h, c["home_lam"]))
-            for add_a in range(0, 13):
-                pa = float(poisson.pmf(add_a, c["away_lam"]))
-                p = ph * pa
-                total_mass += p
-                final_h = c["home_score"] + add_h
-                final_a = c["away_score"] + add_a
-                if final_h > final_a:
-                    home_win += p
-                elif final_h == final_a:
-                    draw += p
-                else:
-                    away_win += p
-        if total_mass <= 0:
-            return None
-        home_win /= total_mass
-        draw /= total_mass
-        away_win /= total_mass
-        probs = {"1": home_win, "X": draw, "2": away_win}
-        ordered = sorted(probs.items(), key=lambda item: item[1], reverse=True)
-        best, pbest = ordered[0]
-        second = ordered[1][1]
-
-        # Quality gates: do not treat a low-event Poisson estimate as a
-        # strong signal, and do not back a draw when live attacking activity
-        # suggests the current score may change. Model probability alone is
-        # not evidence of betting value.
-        total_shots = c["total_shots"]
-        total_sot = c["total_sot"]
-        total_xg = c["total_xg"]
-        total_corners = c["total_corners"]
-        active_match = (
-            (total_shots >= 15 and total_sot >= 5)
-            or (total_xg >= 1.35 and total_shots >= 10)
-            or (total_corners >= 9 and total_shots >= 12)
-        )
-        if best == "X" and active_match:
-            print(
-                "LIVE 1X2 REJECT - DRAW CONFLICTS WITH ATTACKING ACTIVITY:",
-                c["fixture_id"],
-                "SCORE=", f'{c["home_score"]}-{c["away_score"]}',
-                "SHOTS=", total_shots, "SOT=", total_sot,
-                "XG=", round(total_xg, 2), "CORNERS=", total_corners
-            )
-            return None
-
-        # If both teams have almost no recorded attacking activity, the
-        # model has too little evidence to issue a confident in-play pick.
-        if total_shots < 4 and total_sot == 0 and total_xg < 0.15:
-            print("LIVE 1X2 REJECT - INSUFFICIENT MATCH DATA:", c["fixture_id"])
-            return None
-
-        if pbest < 0.60 or (pbest - second) < 0.12:
-            return None
-        probability = round(pbest * 100, 1)
-        return (
-            f"📊 EXPECTED RESULT {best} (1/X/2)",
-            probability, c["minute"], probability
-        )
-    except Exception as e:
-        print("LIVE 1X2 ERROR:", repr(e))
         return None
 
 
@@ -9777,82 +9532,153 @@ def prematch_loop():
 def live_loop():
 
     matches = get_live_matches()
+
     print(f"Live matches: {len(matches)}")
+
     print("LIVE SCAN START")
 
     for match in matches:
+
+        signal = analyze_live_match(
+            match
+        )
+
+        if not signal:
+            continue
+
         fixture_id = match["fixture"]["id"]
+
         home_goals = match["goals"]["home"] or 0
         away_goals = match["goals"]["away"] or 0
 
-        # Legacy market and new markets are collected independently.
-        signals = []
-        legacy_signal = analyze_live_match(match)
-        if legacy_signal:
-            signals.append(legacy_signal)
+        key = (
+            f"live_{fixture_id}_"
+            f"{home_goals}_{away_goals}_"
+            f"{signal[0]}"
+        )
 
-        correct_score_signal = analyze_live_correct_score(match)
-        if correct_score_signal:
-            signals.append(correct_score_signal)
+        if key in sent_live:
+            continue
 
-        result_signal = analyze_live_result_1x2(match)
-        if result_signal:
-            signals.append(result_signal)
+        sent_live[key] = time.time()
 
-        # A signal for one market does not prevent another market for this fixture.
-        for signal in signals:
-            # Send at most one alert per market per fixture for this process.
-            # The previous score-dependent key resent the same market after every goal.
-            market_label = str(signal[0])
-            if "EXPECTED CORRECT SCORE" in market_label:
-                market_key = "correct_score"
-            elif "EXPECTED RESULT" in market_label:
-                market_key = "result_1x2"
-            else:
-                market_key = market_label
-            key = f"live_{fixture_id}_{market_key}"
-            if key in sent_live:
-                continue
-            sent_live[key] = time.time()
+        home = match["teams"]["home"]["name"]
+        away = match["teams"]["away"]["name"]
 
-            home = match["teams"]["home"]["name"]
-            away = match["teams"]["away"]["name"]
-            minute = signal[2]
-            goal_probability = signal[3]
+        home_goals = (
+            match["goals"]["home"] or 0
+        )
 
-            stats = get_statistics(fixture_id)
-            home_pressure = 0
-            away_pressure = 0
-            home_shots = 0
-            away_shots = 0
-            home_corners = 0
-            away_corners = 0
+        away_goals = (
+            match["goals"]["away"] or 0
+        )
 
-            if len(stats) >= 2:
-                home_pressure = calculate_pressure(stats[0])
-                away_pressure = calculate_pressure(stats[1])
-                home_shots = extract(stats[0], "Shots on Goal")
-                away_shots = extract(stats[1], "Shots on Goal")
-                home_corners = extract(stats[0], "Corner Kicks")
-                away_corners = extract(stats[1], "Corner Kicks")
+        minute = signal[2]
 
-            country = match["league"]["country"]
-            league = match["league"]["name"]
-            odds_text = "-"
-            match_odds = get_match_odds(fixture_id)
-            home_odd = match_odds[0] if match_odds else None
-            draw_odd = match_odds[1] if match_odds else None
-            away_odd = match_odds[2] if match_odds else None
+        goal_probability = signal[3]
+        
+        stats = get_statistics(
+            fixture_id
+        )
 
-            if "EXPECTED RESULT X" in signal[0]:
-                odds_text = str(draw_odd) if draw_odd is not None else "-"
-            elif "HOME" in signal[0] or "RESULT 1" in signal[0]:
-                odds_text = str(home_odd) if home_odd is not None else "-"
-            elif "AWAY" in signal[0] or "RESULT 2" in signal[0]:
-                odds_text = str(away_odd) if away_odd is not None else "-"
+        home_pressure = 0
+        away_pressure = 0
 
-            send_telegram(
-                f"""🔥 LIVE SIGNAL
+        home_shots = 0
+        away_shots = 0 
+
+        home_corners = 0
+        away_corners = 0
+        
+        home_xg = 0            
+        away_xg = 0            
+
+        if len(stats) >= 2:
+
+            home_pressure = calculate_pressure(
+                stats[0]
+            )
+
+            away_pressure = calculate_pressure(
+                stats[1]
+            )
+
+
+            home_form = get_team_form(     
+                match["teams"]["home"]["id"],
+                venue="home"              
+            )                            
+
+            away_form = get_team_form(     
+                match["teams"]["away"]["id"],
+                venue="away"              
+            )                             
+
+            home_shots = extract(
+                stats[0],
+                "Shots on Goal"
+            )
+
+            away_shots = extract(
+                stats[1],
+                "Shots on Goal"
+            )
+
+            home_corners = extract(
+                stats[0],
+                "Corner Kicks"
+            )
+
+            away_corners = extract(
+                stats[1],
+                "Corner Kicks"
+            )           
+        
+        country = match["league"]["country"]      
+        league = match["league"]["name"]         
+
+        odds_text = "-"                          
+
+        match_odds = get_match_odds(              
+
+            fixture_id                           
+        )                                         
+
+        home_odd = None                           
+        away_odd = None                           
+
+        if match_odds:                            
+            home_odd = match_odds[0]              
+            away_odd = match_odds[2]              
+     
+        if (                                   
+            home_odd is not None               
+            or                                 
+            away_odd is not None               
+        ):                                      
+        
+            if "HOME" in signal[0]:            
+        
+                odds_text = str(               
+        
+                    home_odd                   
+        
+                )                              
+        
+            elif "AWAY" in signal[0]:           
+        
+                odds_text = str(               
+        
+                    away_odd                    
+        
+                )                              
+
+                                               
+
+        send_telegram(                            
+
+            f"""                                
+🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
 
@@ -9860,7 +9686,7 @@ def live_loop():
 🏟 {league}
 
 📊 Score:
-{home_goals} - {away_goals}
+{match["goals"]["home"] or 0} - {match["goals"]["away"] or 0}
 
 ⏱ Minute: {minute}
 
@@ -9869,13 +9695,13 @@ def live_loop():
 💰 Odds:
 {odds_text}
 
-💎 Model Probability: {signal[1]}%
+💎 Confidence: {signal[1]}%
 
-🎯 Estimated Probability:
+🎯 Goal Probability:
 {goal_probability}%
 """
-            )
-
+)          
+         
 if __name__ == "__main__":                         
 
     print("MAIN V3 STARTED")                      
