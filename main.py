@@ -1531,8 +1531,8 @@ def analyze_live_match(fixture):
                     )
 
         # =========================================================
-        # UNDER 0.5 REMAINING GOALS - QUIET MATCH
-        # Score does not matter. Require no new shots/corners for 4 minutes.
+        # UNDER 0.5 REMAINING GOALS - STRICT QUIET-MATCH FILTER
+        # Score-independent; require a sustained lull and very low attacking stats.
         # =========================================================
         quiet_snapshot = (
             total_shots_on,
@@ -1552,11 +1552,11 @@ def analyze_live_match(fixture):
             quiet_minutes = (now - quiet_state.get("quiet_since", now)) / 60
 
         under05_probability = 88
-        under05_probability -= max(0, best_pressure - 35) * 0.45
-        under05_probability -= total_shots_on * 1.8
-        under05_probability -= max(0, total_shots - 5) * 0.65
-        under05_probability -= total_corners * 0.9
-        under05_probability -= (home_xg + away_xg) * 4
+        under05_probability -= max(0, best_pressure - 30) * 0.55
+        under05_probability -= total_shots_on * 2.5
+        under05_probability -= max(0, total_shots - 3) * 0.9
+        under05_probability -= total_corners * 1.2
+        under05_probability -= (home_xg + away_xg) * 6
         under05_probability = round(max(5, min(95, under05_probability)), 1)
 
         print(
@@ -1571,14 +1571,14 @@ def analyze_live_match(fixture):
         )
 
         if (
-            35 <= minute <= 88
-            and quiet_minutes >= 4
-            and best_pressure <= 50
-            and total_shots_on <= 4
-            and total_shots <= 12
-            and total_corners <= 5
-            and (home_xg + away_xg) <= 1.5
-            and under05_probability >= 65
+            60 <= minute <= 85
+            and quiet_minutes >= 8
+            and best_pressure <= 35
+            and total_shots_on <= 2
+            and total_shots <= 8
+            and total_corners <= 3
+            and (home_xg + away_xg) <= 0.8
+            and under05_probability >= 80
         ):
             return (
                 "🧊 UNDER 0.5 REMAINING GOALS",
