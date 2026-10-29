@@ -1831,7 +1831,37 @@ def analyze_live_result_1x2(fixture):
         ordered = sorted(probs.items(), key=lambda item: item[1], reverse=True)
         best, pbest = ordered[0]
         second = ordered[1][1]
-        if pbest < 0.56 or (pbest - second) < 0.10:
+
+        # Quality gates: do not treat a low-event Poisson estimate as a
+        # strong signal, and do not back a draw when live attacking activity
+        # suggests the current score may change. Model probability alone is
+        # not evidence of betting value.
+        total_shots = c["total_shots"]
+        total_sot = c["total_sot"]
+        total_xg = c["total_xg"]
+        total_corners = c["total_corners"]
+        active_match = (
+            (total_shots >= 15 and total_sot >= 5)
+            or (total_xg >= 1.35 and total_shots >= 10)
+            or (total_corners >= 9 and total_shots >= 12)
+        )
+        if best == "X" and active_match:
+            print(
+                "LIVE 1X2 REJECT - DRAW CONFLICTS WITH ATTACKING ACTIVITY:",
+                c["fixture_id"],
+                "SCORE=", f'{c["home_score"]}-{c["away_score"]}',
+                "SHOTS=", total_shots, "SOT=", total_sot,
+                "XG=", round(total_xg, 2), "CORNERS=", total_corners
+            )
+            return None
+
+        # If both teams have almost no recorded attacking activity, the
+        # model has too little evidence to issue a confident in-play pick.
+        if total_shots < 4 and total_sot == 0 and total_xg < 0.15:
+            print("LIVE 1X2 REJECT - INSUFFICIENT MATCH DATA:", c["fixture_id"])
+            return None
+
+        if pbest < 0.60 or (pbest - second) < 0.12:
             return None
         probability = round(pbest * 100, 1)
         return (
