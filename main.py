@@ -1738,11 +1738,19 @@ def analyze_live_correct_score(fixture):
         if best_score is None:
             return None
 
-        # If the most likely exact score is simply the current score, only
-        # keep it when the match is genuinely quiet. Strong attacking activity
-        # means "no more goals" is not a sound default; suppress the exact-score
-        # call instead of pretending the current score is a high-confidence pick.
+        # Exact-score markets should not label a high-scoring match as a
+        # quiet/current-score opportunity. At 3+ total goals, especially at
+        # 55'-75', suppress the signal rather than extrapolating the scoreline.
         current_score = (hs, aws)
+        current_total_goals = hs + aws
+        if current_total_goals >= 3 and c["minute"] <= 75:
+            print(
+                "LIVE CORRECT SCORE REJECT - HIGH-SCORING MATCH:",
+                c["fixture_id"], "SCORE=", f"{hs}-{aws}",
+                "MINUTE=", c["minute"]
+            )
+            return None
+
         home_shots = c["home_shots"]
         away_shots = c["away_shots"]
         home_sot = c["home_sot"]
@@ -1845,6 +1853,18 @@ def analyze_live_result_1x2(fixture):
             or (total_xg >= 1.35 and total_shots >= 10)
             or (total_corners >= 9 and total_shots >= 12)
         )
+        # A draw at 3+ total goals is not a suitable "quiet match" signal
+        # with meaningful time remaining. This scoreline-only guard also
+        # protects against incomplete or delayed shot/xG statistics.
+        if best == "X" and (c["home_score"] + c["away_score"] >= 3) and c["minute"] <= 80:
+            print(
+                "LIVE 1X2 REJECT - DRAW IN HIGH-SCORING MATCH:",
+                c["fixture_id"],
+                "SCORE=", f'{c["home_score"]}-{c["away_score"]}',
+                "MINUTE=", c["minute"]
+            )
+            return None
+
         if best == "X" and active_match:
             print(
                 "LIVE 1X2 REJECT - DRAW CONFLICTS WITH ATTACKING ACTIVITY:",
