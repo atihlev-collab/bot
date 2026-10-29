@@ -1813,6 +1813,20 @@ def analyze_live_result_1x2(fixture):
             )
             return None
 
+        # Late-game 1X2 signals with a two-goal lead often have little
+        # actionable value, and can expose probability/odds feed mismatches.
+        # Suppress rather than emit near-certain confidence without calibrated
+        # live odds and a verified probability model.
+        if c["minute"] >= 75 and score_gap >= 2:
+            print(
+                "LIVE 1X2 REJECT - LATE MATCH WITH TWO-GOAL LEAD:",
+                c["fixture_id"],
+                "SCORE=", f'{c["home_score"]}-{c["away_score"]}',
+                "MINUTE=", c["minute"],
+                "GAP=", score_gap
+            )
+            return None
+
         home_win = draw = away_win = 0.0
         total_mass = 0.0
         # Sum a wide score range, then normalize to remove truncation bias.
