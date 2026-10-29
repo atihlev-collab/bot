@@ -1544,13 +1544,13 @@ def analyze_live_match(fixture):
         print("OVER15 REMAINING CHECK:", minute, remaining_probability)
 
         if (
-            25 <= minute <= 65
-            and best_pressure >= 64
-            and total_shots_on >= 5
-            and total_shots >= 8
-            and (home_xg + away_xg) >= 1.4
-            and remaining_probability >= 60
-            and total <= 1
+            25 <= minute <= 70
+            and best_pressure >= 58
+            and total_shots_on >= 3
+            and total_shots >= 6
+            and (home_xg + away_xg) >= 0.9
+            and remaining_probability >= 58
+            and total <= 2
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1607,12 +1607,12 @@ def analyze_live_match(fixture):
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 54
-                and total_shots_on >= 3
-                and total_shots >= 7
-                and total_corners >= 4
-                and (home_xg + away_xg) >= 1.2
-                and late_goal_probability >= 60
+                best_pressure >= 50
+                and total_shots_on >= 2
+                and total_shots >= 5
+                and total_corners >= 2
+                and (home_xg + away_xg) >= 0.8
+                and late_goal_probability >= 55
             ):
                 return (
                     "🔥 LATE GOAL",
