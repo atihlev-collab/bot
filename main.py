@@ -1639,7 +1639,10 @@ def _live_market_context(fixture):
     try:
         fixture_id = fixture["fixture"]["id"]
         minute = fixture["fixture"]["status"].get("elapsed") or 0
-        if minute < 50 or minute > 90:
+        # Avoid emitting a new LIVE market signal immediately at minute 50.
+        # Continue scanning after this point so match statistics and attacking
+        # balance can justify a call before a signal is produced.
+        if minute < 55 or minute > 90:
             return None
 
         home_team = fixture["teams"]["home"]["name"]
