@@ -1532,7 +1532,7 @@ def analyze_live_match(fixture):
 
         # =========================================================
         # UNDER 0.5 REMAINING GOALS - STRICT QUIET-MATCH FILTER
-        # Score-independent; require a sustained lull and very low attacking stats.
+        # Avoid early-half signals and reject incomplete/zeroed statistics.
         # =========================================================
         quiet_snapshot = (
             total_shots_on,
@@ -1551,7 +1551,7 @@ def analyze_live_match(fixture):
         else:
             quiet_minutes = (now - quiet_state.get("quiet_since", now)) / 60
 
-        under05_probability = 88
+        under05_probability = 82
         under05_probability -= max(0, best_pressure - 30) * 0.55
         under05_probability -= total_shots_on * 2.5
         under05_probability -= max(0, total_shots - 3) * 0.9
@@ -1571,14 +1571,14 @@ def analyze_live_match(fixture):
         )
 
         if (
-            60 <= minute <= 85
-            and quiet_minutes >= 8
-            and best_pressure <= 35
+            70 <= minute <= 85
+            and quiet_minutes >= 12
+            and best_pressure <= 30
             and total_shots_on <= 2
-            and total_shots <= 8
+            and 1 <= total_shots <= 8
             and total_corners <= 3
-            and (home_xg + away_xg) <= 0.8
-            and under05_probability >= 80
+            and (home_xg + away_xg) <= 0.6
+            and under05_probability >= 65
         ):
             return (
                 "🧊 UNDER 0.5 REMAINING GOALS",
