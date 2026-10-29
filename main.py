@@ -86,6 +86,7 @@ BAD_COUNTRIES = [
 # =========================================================
 
 sent_live = {}
+live_quiet_stats_cache = {}
 
 sent_prematch = {}
 team_form_cache = {}
@@ -1531,9 +1532,25 @@ def analyze_live_match(fixture):
 
         # =========================================================
         # UNDER 0.5 REMAINING GOALS - QUIET MATCH
-        # Score does not matter: this estimates whether another goal is unlikely.
-        # Uses match-wide stats; it does not claim to measure recent attack changes.
+        # Score does not matter. Require no new shots/corners for 4 minutes.
         # =========================================================
+        quiet_snapshot = (
+            total_shots_on,
+            total_shots,
+            total_corners
+        )
+        quiet_state = live_quiet_stats_cache.get(fixture_id)
+        now = time.time()
+
+        if not quiet_state or quiet_state.get("snapshot") != quiet_snapshot:
+            live_quiet_stats_cache[fixture_id] = {
+                "snapshot": quiet_snapshot,
+                "quiet_since": now
+            }
+            quiet_minutes = 0
+        else:
+            quiet_minutes = (now - quiet_state.get("quiet_since", now)) / 60
+
         under05_probability = 88
         under05_probability -= max(0, best_pressure - 35) * 0.45
         under05_probability -= total_shots_on * 1.8
@@ -1545,6 +1562,7 @@ def analyze_live_match(fixture):
         print(
             "UNDER05 REMAINING CHECK:",
             minute, under05_probability,
+            "QUIET_MIN=", round(quiet_minutes, 1),
             "PRESS=", best_pressure,
             "SOT=", total_shots_on,
             "SHOTS=", total_shots,
@@ -1554,6 +1572,7 @@ def analyze_live_match(fixture):
 
         if (
             35 <= minute <= 88
+            and quiet_minutes >= 4
             and best_pressure <= 50
             and total_shots_on <= 4
             and total_shots <= 12
