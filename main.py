@@ -1531,13 +1531,17 @@ def analyze_live_match(fixture):
                     )
 
         # =========================================================
-        # UNDER 0.5 REMAINING GOALS - STRICT QUIET-MATCH FILTER
-        # Avoid early-half signals and reject incomplete/zeroed statistics.
+        # UNDER 0.5 REMAINING GOALS - INDIVIDUAL TEAM QUIET FILTER
+        # Reject one-sided pressure even when combined totals look low.
         # =========================================================
+        home_dangerous_attacks = extract(home_stats, "Dangerous Attacks")
+        away_dangerous_attacks = extract(away_stats, "Dangerous Attacks")
+
         quiet_snapshot = (
-            total_shots_on,
-            total_shots,
-            total_corners
+            home_shots_on, away_shots_on,
+            home_total_shots, away_total_shots,
+            home_corners, away_corners,
+            home_dangerous_attacks, away_dangerous_attacks
         )
         quiet_state = live_quiet_stats_cache.get(fixture_id)
         now = time.time()
@@ -1552,7 +1556,8 @@ def analyze_live_match(fixture):
             quiet_minutes = (now - quiet_state.get("quiet_since", now)) / 60
 
         under05_probability = 82
-        under05_probability -= max(0, best_pressure - 30) * 0.55
+        under05_probability -= max(0, home_pressure - 25) * 0.8
+        under05_probability -= max(0, away_pressure - 25) * 0.8
         under05_probability -= total_shots_on * 2.5
         under05_probability -= max(0, total_shots - 3) * 0.9
         under05_probability -= total_corners * 1.2
@@ -1563,20 +1568,27 @@ def analyze_live_match(fixture):
             "UNDER05 REMAINING CHECK:",
             minute, under05_probability,
             "QUIET_MIN=", round(quiet_minutes, 1),
-            "PRESS=", best_pressure,
-            "SOT=", total_shots_on,
-            "SHOTS=", total_shots,
-            "CORNERS=", total_corners,
+            "PRESS=", home_pressure, away_pressure,
+            "SOT=", home_shots_on, away_shots_on,
+            "SHOTS=", home_total_shots, away_total_shots,
+            "CORNERS=", home_corners, away_corners,
+            "DANGEROUS=", home_dangerous_attacks, away_dangerous_attacks,
             "XG=", round(home_xg + away_xg, 2)
         )
 
         if (
             70 <= minute <= 85
             and quiet_minutes >= 12
-            and best_pressure <= 30
-            and total_shots_on <= 2
-            and 1 <= total_shots <= 8
-            and total_corners <= 3
+            and home_pressure <= 25
+            and away_pressure <= 25
+            and home_shots_on <= 2
+            and away_shots_on <= 2
+            and home_total_shots <= 6
+            and away_total_shots <= 6
+            and home_corners <= 3
+            and away_corners <= 3
+            and home_dangerous_attacks <= 45
+            and away_dangerous_attacks <= 45
             and (home_xg + away_xg) <= 0.6
             and under05_probability >= 65
         ):
