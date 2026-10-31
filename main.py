@@ -1531,72 +1531,134 @@ def analyze_live_match(fixture):
                     )
 
         # =========================================================
-        # UNDER 0.5 REMAINING GOALS - INDIVIDUAL TEAM QUIET FILTER
-        # Reject one-sided pressure even when combined totals look low.
+        # UNDER 0.5 REMAINING GOALS - STRICT DATA + QUIET-PERIOD FILTER
+        # Missing statistics are NOT treated as zero for this market.
+        # A score change or any statistical change restarts the quiet timer.
         # =========================================================
-        home_dangerous_attacks = extract(home_stats, "Dangerous Attacks")
-        away_dangerous_attacks = extract(away_stats, "Dangerous Attacks")
+        def under05_read_stat(team_stats, stat_name):
+            try:
+                for item in team_stats:
+                    if item.get("type") == stat_name:
+                        value = item.get("value")
+                        if value is None:
+                            return None
+                        if isinstance(value, str):
+                            value = value.replace("%", "").strip()
+                            if not value:
+                                return None
+                        return float(value)
+            except (TypeError, ValueError, AttributeError):
+                return None
+            return None
 
-        quiet_snapshot = (
-            home_shots_on, away_shots_on,
-            home_total_shots, away_total_shots,
-            home_corners, away_corners,
-            home_dangerous_attacks, away_dangerous_attacks
+        under05_home_stats = {
+            "sot": under05_read_stat(home_stats, "Shots on Goal"),
+            "shots": under05_read_stat(home_stats, "Total Shots"),
+            "corners": under05_read_stat(home_stats, "Corner Kicks"),
+            "dangerous": under05_read_stat(home_stats, "Dangerous Attacks"),
+            "xg": under05_read_stat(home_stats, "Expected Goals"),
+        }
+        under05_away_stats = {
+            "sot": under05_read_stat(away_stats, "Shots on Goal"),
+            "shots": under05_read_stat(away_stats, "Total Shots"),
+            "corners": under05_read_stat(away_stats, "Corner Kicks"),
+            "dangerous": under05_read_stat(away_stats, "Dangerous Attacks"),
+            "xg": under05_read_stat(away_stats, "Expected Goals"),
+        }
+
+        under05_data_valid = all(
+            value is not None
+            for team_stats in (under05_home_stats, under05_away_stats)
+            for value in team_stats.values()
         )
-        quiet_state = live_quiet_stats_cache.get(fixture_id)
-        now = time.time()
 
-        if not quiet_state or quiet_state.get("snapshot") != quiet_snapshot:
-            live_quiet_stats_cache[fixture_id] = {
-                "snapshot": quiet_snapshot,
-                "quiet_since": now
-            }
-            quiet_minutes = 0
+        if under05_data_valid:
+            home_dangerous_attacks = under05_home_stats["dangerous"]
+            away_dangerous_attacks = under05_away_stats["dangerous"]
+            under05_home_sot = under05_home_stats["sot"]
+            under05_away_sot = under05_away_stats["sot"]
+            under05_home_shots = under05_home_stats["shots"]
+            under05_away_shots = under05_away_stats["shots"]
+            under05_home_corners = under05_home_stats["corners"]
+            under05_away_corners = under05_away_stats["corners"]
+            under05_total_sot = under05_home_sot + under05_away_sot
+            under05_total_shots = under05_home_shots + under05_away_shots
+            under05_total_corners = under05_home_corners + under05_away_corners
+            under05_total_xg = under05_home_stats["xg"] + under05_away_stats["xg"]
+
+            quiet_snapshot = (
+                home, away,
+                under05_home_sot, under05_away_sot,
+                under05_home_shots, under05_away_shots,
+                under05_home_corners, under05_away_corners,
+                home_dangerous_attacks, away_dangerous_attacks,
+                under05_home_stats["xg"], under05_away_stats["xg"]
+            )
+            quiet_state = live_quiet_stats_cache.get(fixture_id)
+            now = time.time()
+
+            if not quiet_state or quiet_state.get("snapshot") != quiet_snapshot:
+                live_quiet_stats_cache[fixture_id] = {
+                    "snapshot": quiet_snapshot,
+                    "quiet_since": now
+                }
+                quiet_minutes = 0
+            else:
+                quiet_minutes = (now - quiet_state.get("quiet_since", now)) / 60
+
+            # Probability starts from a conservative evidence-based baseline.
+            under05_probability = 70
+            under05_probability -= max(0, home_pressure - 20) * 0.9
+            under05_probability -= max(0, away_pressure - 20) * 0.9
+            under05_probability -= under05_total_sot * 3.0
+            under05_probability -= max(0, under05_total_shots - 4) * 1.0
+            under05_probability -= under05_total_corners * 1.5
+            under05_probability -= under05_total_xg * 10
+            under05_probability = round(max(5, min(90, under05_probability)), 1)
+
+            print(
+                "UNDER05 REMAINING CHECK:",
+                minute, under05_probability,
+                "QUIET_MIN=", round(quiet_minutes, 1),
+                "SCORE=", home, away,
+                "PRESS=", home_pressure, away_pressure,
+                "SOT=", under05_home_sot, under05_away_sot,
+                "SHOTS=", under05_home_shots, under05_away_shots,
+                "CORNERS=", under05_home_corners, under05_away_corners,
+                "DANGEROUS=", home_dangerous_attacks, away_dangerous_attacks,
+                "XG=", round(under05_total_xg, 2)
+            )
+
+            if (
+                70 <= minute <= 85
+                and quiet_minutes >= 12
+                and home_pressure <= 20
+                and away_pressure <= 20
+                and under05_home_sot <= 1
+                and under05_away_sot <= 1
+                and under05_home_shots <= 4
+                and under05_away_shots <= 4
+                and under05_home_corners <= 2
+                and under05_away_corners <= 2
+                and home_dangerous_attacks <= 35
+                and away_dangerous_attacks <= 35
+                and under05_total_xg <= 0.4
+                and under05_probability >= 65
+            ):
+                return (
+                    "🧊 UNDER 0.5 REMAINING GOALS",
+                    under05_probability,
+                    minute,
+                    under05_probability
+                )
         else:
-            quiet_minutes = (now - quiet_state.get("quiet_since", now)) / 60
-
-        under05_probability = 82
-        under05_probability -= max(0, home_pressure - 25) * 0.8
-        under05_probability -= max(0, away_pressure - 25) * 0.8
-        under05_probability -= total_shots_on * 2.5
-        under05_probability -= max(0, total_shots - 3) * 0.9
-        under05_probability -= total_corners * 1.2
-        under05_probability -= (home_xg + away_xg) * 6
-        under05_probability = round(max(5, min(95, under05_probability)), 1)
-
-        print(
-            "UNDER05 REMAINING CHECK:",
-            minute, under05_probability,
-            "QUIET_MIN=", round(quiet_minutes, 1),
-            "PRESS=", home_pressure, away_pressure,
-            "SOT=", home_shots_on, away_shots_on,
-            "SHOTS=", home_total_shots, away_total_shots,
-            "CORNERS=", home_corners, away_corners,
-            "DANGEROUS=", home_dangerous_attacks, away_dangerous_attacks,
-            "XG=", round(home_xg + away_xg, 2)
-        )
-
-        if (
-            70 <= minute <= 85
-            and quiet_minutes >= 12
-            and home_pressure <= 25
-            and away_pressure <= 25
-            and home_shots_on <= 2
-            and away_shots_on <= 2
-            and home_total_shots <= 6
-            and away_total_shots <= 6
-            and home_corners <= 3
-            and away_corners <= 3
-            and home_dangerous_attacks <= 45
-            and away_dangerous_attacks <= 45
-            and (home_xg + away_xg) <= 0.6
-            and under05_probability >= 65
-        ):
-            return (
-                "🧊 UNDER 0.5 REMAINING GOALS",
-                under05_probability,
-                minute,
-                under05_probability
+            # Do not issue this market when the feed lacks required statistics.
+            live_quiet_stats_cache.pop(fixture_id, None)
+            print(
+                "UNDER05 SKIP - REQUIRED STATS MISSING:",
+                fixture_id,
+                "HOME=", under05_home_stats,
+                "AWAY=", under05_away_stats
             )
 
         # =========================================================
