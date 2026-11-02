@@ -1851,17 +1851,17 @@ def analyze_live_match(fixture):
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
-            # Score difference is not a hard exclusion: evaluate live attacking evidence.
-            late_goal_probability = 38
-            late_goal_probability += max(0, best_pressure - 55) * 0.55
-            late_goal_probability += min(18, total_shots_on * 2.2)
-            late_goal_probability += min(10, total_shots * 0.45)
-            late_goal_probability += min(10, total_corners * 0.65)
-            late_goal_probability += min(14, (home_xg + away_xg) * 5)
+            # Late goal requires sustained, measurable attacking activity.
+            # Score difference affects the score but is never a hard exclusion.
+            late_goal_probability = 35
+            late_goal_probability += max(0, best_pressure - 58) * 0.50
+            late_goal_probability += min(18, total_shots_on * 2.0)
+            late_goal_probability += min(10, total_shots * 0.40)
+            late_goal_probability += min(8, total_corners * 0.50)
+            late_goal_probability += min(16, (home_xg + away_xg) * 5)
 
-            # A large score gap slightly reduces the score, but does not block a signal.
             if goal_diff >= 2:
-                late_goal_probability -= 5
+                late_goal_probability -= 8
 
             late_goal_probability = round(max(0, min(95, late_goal_probability)), 1)
 
@@ -1878,11 +1878,11 @@ def analyze_live_match(fixture):
             )
 
             if (
-                best_pressure >= 52
-                and total_shots_on >= 2
-                and total_shots >= 5
-                and (home_xg + away_xg) >= 0.5
-                and late_goal_probability >= 65
+                best_pressure >= 58
+                and total_shots_on >= 3
+                and total_shots >= 7
+                and (home_xg + away_xg) >= 0.8
+                and late_goal_probability >= 72
             ):
                 return (
                     "🔥 LATE GOAL",
