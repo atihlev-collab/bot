@@ -159,39 +159,52 @@ def init_database():
     conn.commit()
     conn.close()
 
-def live_signal_was_sent(signal_key):
-    """Check durable LIVE deduplication state (survives process restarts)."""
+def claim_live_signal(signal_key, fixture_id, country, league, home, away,
+                      home_goals, away_goals, minute, market, confidence, probability):
+    """Atomically reserve one LIVE market per fixture, preventing duplicate sends."""
     try:
         with sqlite3.connect("v3_ai.db", timeout=10) as conn:
-            row = conn.execute(
-                "SELECT 1 FROM live_signals WHERE signal_key = ? AND telegram_sent = 1 LIMIT 1",
-                (signal_key,)
-            ).fetchone()
-        return row is not None
-    except Exception as e:
-        print("LIVE DEDUPE READ ERROR:", repr(e))
-        # Fail closed: avoid duplicate sends if persistent state cannot be read.
-        return True
-
-
-def save_live_signal(signal_key, fixture_id, country, league, home, away,
-                     home_goals, away_goals, minute, market, confidence, probability):
-    """Persist a successfully delivered LIVE signal for later result auditing."""
-    try:
-        with sqlite3.connect("v3_ai.db", timeout=10) as conn:
-            conn.execute(
+            cursor = conn.execute(
                 """INSERT OR IGNORE INTO live_signals
                 (signal_key, fixture_id, country, league, home_team, away_team,
                  home_goals, away_goals, minute, market, confidence, probability,
                  created_at, telegram_sent, result)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'PENDING')""",
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'PENDING')""",
                 (signal_key, fixture_id, country, league, home, away,
                  home_goals, away_goals, minute, market, confidence, probability,
                  datetime.now(TZ).isoformat())
             )
+            return cursor.rowcount == 1
+    except Exception as e:
+        print("LIVE DEDUPE CLAIM ERROR:", repr(e))
+        # Fail closed: do not send if deduplication state cannot be secured.
+        return False
+
+
+def mark_live_signal_sent(signal_key):
+    try:
+        with sqlite3.connect("v3_ai.db", timeout=10) as conn:
+            conn.execute(
+                "UPDATE live_signals SET telegram_sent = 1 WHERE signal_key = ?",
+                (signal_key,)
+            )
         return True
     except Exception as e:
-        print("LIVE SIGNAL SAVE ERROR:", repr(e))
+        print("LIVE SIGNAL MARK ERROR:", repr(e))
+        return False
+
+
+def release_live_signal_claim(signal_key):
+    """Release a reservation only when Telegram explicitly reports send failure."""
+    try:
+        with sqlite3.connect("v3_ai.db", timeout=10) as conn:
+            conn.execute(
+                "DELETE FROM live_signals WHERE signal_key = ? AND telegram_sent = 0",
+                (signal_key,)
+            )
+        return True
+    except Exception as e:
+        print("LIVE SIGNAL RELEASE ERROR:", repr(e))
         return False
 
 
@@ -9820,13 +9833,11 @@ def live_loop():
         home_goals = match["goals"]["home"] or 0
         away_goals = match["goals"]["away"] or 0
 
-        key = (
-            f"live_{fixture_id}_"
-            f"{home_goals}_{away_goals}_"
-            f"{signal[0]}"
-        )
+        # One signal per fixture and market for the entire match.
+        # Score is intentionally excluded so a score change cannot resend it.
+        key = f"live_{fixture_id}_{signal[0]}"
 
-        if key in sent_live or live_signal_was_sent(key):
+        if key in sent_live:
             continue
 
         home = match["teams"]["home"]["name"]
@@ -9910,6 +9921,12 @@ def live_loop():
 
                                                
 
+        if not claim_live_signal(
+            key, fixture_id, country, league, home, away,
+            home_goals, away_goals, minute, signal[0], signal[1], goal_probability
+        ):
+            continue
+
         sent_ok = send_telegram(                            
 
             f"""                                
@@ -9939,11 +9956,9 @@ def live_loop():
 
         if sent_ok:
             sent_live[key] = time.time()
-            save_live_signal(
-                key, fixture_id, country, league, home, away,
-                home_goals, away_goals, minute, signal[0], signal[1], goal_probability
-            )
+            mark_live_signal_sent(key)
         else:
+            release_live_signal_claim(key)
             print("LIVE SIGNAL NOT MARKED AS SENT; WILL RETRY:", key)
          
 if __name__ == "__main__":                         
