@@ -1461,10 +1461,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 68
-                and total_shots_on >= 4
-                and pressure_diff >= 5
-                and fast_goal_probability >= 64
+                best_pressure >= 64
+                and total_shots_on >= 3
+                and pressure_diff >= 4
+                and fast_goal_probability >= 68
             ):
                 if (
                     home_pressure >= away_pressure + 6
@@ -1503,10 +1503,10 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 84
-                and total_shots_on >= 13
-                and pressure_diff >= 36
-                and normal_goal_probability >= 84
+                best_pressure >= 76
+                and total_shots_on >= 8
+                and pressure_diff >= 20
+                and normal_goal_probability >= 82
             ):
                 if (
                     home_pressure >= away_pressure + 13
@@ -1676,13 +1676,13 @@ def analyze_live_match(fixture):
         print("OVER15 REMAINING CHECK:", minute, remaining_probability)
 
         if (
-            25 <= minute <= 70
-            and best_pressure >= 58
-            and total_shots_on >= 3
-            and total_shots >= 6
-            and (home_xg + away_xg) >= 0.9
-            and remaining_probability >= 58
-            and total <= 2
+            25 <= minute <= 72
+            and best_pressure >= 55
+            and total_shots_on >= 2
+            and total_shots >= 5
+            and (home_xg + away_xg) >= 0.7
+            and remaining_probability >= 57
+            and total <= 3
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1739,12 +1739,11 @@ def analyze_live_match(fixture):
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 50
+                best_pressure >= 48
                 and total_shots_on >= 2
-                and total_shots >= 5
-                and total_corners >= 2
-                and (home_xg + away_xg) >= 0.8
-                and late_goal_probability >= 55
+                and total_shots >= 4
+                and (home_xg + away_xg) >= 0.6
+                and late_goal_probability >= 58
             ):
                 return (
                     "🔥 LATE GOAL",
@@ -8945,9 +8944,9 @@ def analyze_prematch_match(match):
         )
 
         home_over15_quality = 0
-        if home_over15_probability >= 62:
+        if home_over15_probability >= 65:
             home_over15_quality += 2
-        elif home_over15_probability >= 62:
+        elif home_over15_probability >= 58:
             home_over15_quality += 1
         if home_form["avg_scored"] >= 1.80:
             home_over15_quality += 1
@@ -8987,9 +8986,9 @@ def analyze_prematch_match(match):
             home_over15_signal = True
 
         away_over15_quality = 0
-        if away_over15_probability >= 62:
+        if away_over15_probability >= 65:
             away_over15_quality += 2
-        elif away_over15_probability >= 62:
+        elif away_over15_probability >= 58:
             away_over15_quality += 1
         if away_form["avg_scored"] >= 1.80:
             away_over15_quality += 1
@@ -9259,15 +9258,15 @@ def send_prematch_signal(
 # =========================================================
 
 TIPSTER_RULES = {
-    # PREMATCH-only quality gate: stricter probability/confidence and price edge.
-    "HOME WIN":      (76.0, 82.0, 1.35, 2.80, 4.0),
-    "AWAY WIN":      (76.0, 82.0, 1.40, 3.20, 4.0),
-    "OVER 2.5":      (75.0, 80.0, 1.40, 2.50, 4.0),
-    "BTTS":          (75.0, 80.0, 1.40, 2.50, 4.0),
-    "UNDER 2.5":     (75.0, 80.0, 1.40, 2.60, 4.0),
-    "HOME OVER 1.5": (75.0, 80.0, 1.35, 2.70, 4.0),
-    "AWAY OVER 1.5": (75.0, 80.0, 1.40, 3.00, 4.0),
-    "OVER 3.5":      (76.0, 82.0, 1.55, 3.20, 4.0),
+    # Selective PREMATCH gate: moderate thresholds, real odds and positive edge.
+    "HOME WIN":      (72.0, 74.0, 1.40, 2.80, 2.0),
+    "AWAY WIN":      (73.0, 75.0, 1.45, 3.20, 2.0),
+    "OVER 2.5":      (73.0, 74.0, 1.40, 2.50, 2.0),
+    "BTTS":          (72.0, 73.0, 1.40, 2.60, 2.0),
+    "UNDER 2.5":     (73.0, 74.0, 1.40, 2.60, 2.0),
+    "HOME OVER 1.5": (70.0, 72.0, 1.40, 2.70, 1.5),
+    "AWAY OVER 1.5": (71.0, 73.0, 1.45, 3.00, 1.5),
+    "OVER 3.5":      (72.0, 74.0, 1.55, 3.20, 2.0),
 }
 
 def tipster_market_key(market):
@@ -9306,10 +9305,9 @@ def tipster_final_gate(market, probability, confidence, odd):
     )
     edge, ev = tipster_price_metrics(p, o)
 
-    # PREMATCH integrity guard: only reject extreme model-vs-market gaps.
-    # Smaller gaps are not enough by themselves to prove the model is wrong;
-    # probability calibration must be assessed against historical results.
-    if edge > 12.0:
+    # Reject implausibly large model/market disagreements, but do not
+    # demand an unusually large edge that would suppress nearly all markets.
+    if edge > 15.0:
         return False, edge, ev, "MODEL_MARKET_GAP"
 
     if p < min_p:
