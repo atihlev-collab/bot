@@ -1506,86 +1506,98 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # FAST NEXT GOAL - 20 TO 40
+        # NEXT GOAL - ONLY WHEN ONE TEAM CLEARLY DOMINATES
+        # If both teams are dangerous, do not pick an individual team.
         # =========================================================
         if 20 <= minute <= 40 and total >= 1:
-            fast_goal_probability = 68
-            fast_goal_probability += max(0, best_pressure - 65) * 0.65
-            fast_goal_probability += min(12, total_shots_on * 1.5)
-            fast_goal_probability += min(6, total_corners)
-            fast_goal_probability += min(8, total * 2)
-            fast_goal_probability += min(8, pressure_diff * 0.25)
-            fast_goal_probability = round(min(95, fast_goal_probability), 1)
+            fast_goal_probability = 66
+            fast_goal_probability += max(0, best_pressure - 65) * 0.45
+            fast_goal_probability += min(10, total_shots_on * 1.0)
+            fast_goal_probability += min(6, total_corners * 0.5)
+            fast_goal_probability = round(min(93, fast_goal_probability), 1)
 
-            if (
-                best_pressure >= 64
-                and total_shots_on >= 3
-                and pressure_diff >= 4
-                and fast_goal_probability >= 68
-            ):
-                if (
-                    home_pressure >= away_pressure + 6
-                    and home_shots_on >= away_shots_on
-                ):
+            home_dominates = (
+                home_pressure >= 72
+                and away_pressure <= 55
+                and home_pressure - away_pressure >= 18
+                and home_shots_on >= away_shots_on + 2
+                and away_shots_on <= 1
+                and home_total_shots >= away_total_shots + 3
+            )
+            away_dominates = (
+                away_pressure >= 72
+                and home_pressure <= 55
+                and away_pressure - home_pressure >= 18
+                and away_shots_on >= home_shots_on + 2
+                and home_shots_on <= 1
+                and away_total_shots >= home_total_shots + 3
+            )
+
+            if fast_goal_probability >= 72 and (home_dominates or away_dominates):
+                if home_dominates:
                     return (
                         "🎯 NEXT GOAL HOME",
                         fast_goal_probability,
                         minute,
                         fast_goal_probability
                     )
-
-                if (
-                    away_pressure >= home_pressure + 6
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
+                return (
+                    "🎯 NEXT GOAL AWAY",
+                    fast_goal_probability,
+                    minute,
+                    fast_goal_probability
+                )
 
         # =========================================================
         # NORMAL NEXT GOAL - 41 TO 78
+        # Require a clear one-sided attacking advantage.
         # =========================================================
         if 41 <= minute <= 78:
-            normal_goal_probability = 80
-            normal_goal_probability += max(0, best_pressure - 67) * 0.70
-            normal_goal_probability += min(14, total_shots_on * 1.4)
-            normal_goal_probability += min(7, total_corners * 0.7)
-            normal_goal_probability += min(8, pressure_diff * 0.25)
-            normal_goal_probability += min(6, (home_xg + away_xg) * 2)
-            normal_goal_probability = round(min(95, normal_goal_probability), 1)
+            normal_goal_probability = 70
+            normal_goal_probability += max(0, best_pressure - 70) * 0.45
+            normal_goal_probability += min(12, total_shots_on * 1.0)
+            normal_goal_probability += min(5, total_corners * 0.4)
+            normal_goal_probability += min(5, (home_xg + away_xg) * 1.5)
+            normal_goal_probability = round(min(94, normal_goal_probability), 1)
 
-            print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
+            home_dominates = (
+                home_pressure >= 78
+                and away_pressure <= 58
+                and home_pressure - away_pressure >= 22
+                and home_shots_on >= away_shots_on + 3
+                and away_shots_on <= 2
+                and home_total_shots >= away_total_shots + 4
+            )
+            away_dominates = (
+                away_pressure >= 78
+                and home_pressure <= 58
+                and away_pressure - home_pressure >= 22
+                and away_shots_on >= home_shots_on + 3
+                and home_shots_on <= 2
+                and away_total_shots >= home_total_shots + 4
+            )
 
-            if (
-                best_pressure >= 76
-                and total_shots_on >= 8
-                and pressure_diff >= 20
-                and normal_goal_probability >= 82
-            ):
-                if (
-                    home_pressure >= away_pressure + 13
-                    and home_shots_on >= away_shots_on
-                ):
+            print(
+                "NEXT GOAL DOMINANCE:",
+                "HOME=", home_dominates,
+                "AWAY=", away_dominates,
+                "PROB=", normal_goal_probability
+            )
+
+            if normal_goal_probability >= 80 and (home_dominates or away_dominates):
+                if home_dominates:
                     return (
                         "🎯 NEXT GOAL HOME",
                         normal_goal_probability,
                         minute,
                         normal_goal_probability
                     )
-
-                if (
-                    away_pressure >= home_pressure + 13
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
+                return (
+                    "🎯 NEXT GOAL AWAY",
+                    normal_goal_probability,
+                    minute,
+                    normal_goal_probability
+                )
 
         # =========================================================
         # UNDER 0.5 REMAINING GOALS - STRICT DATA + QUIET-PERIOD FILTER
@@ -1719,7 +1731,60 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # OVER 1.5 REMAINING GOALS
+        # OVER 1.5 REMAINING GOALS - BOTH TEAMS MUST BE DANGEROUS
+        # One-sided pressure alone is not enough for this market.
+        # =========================================================
+        home_attacking = (
+            home_pressure >= 42
+            and home_shots_on >= 1
+            and home_total_shots >= 4
+            and (home_xg >= 0.25 or home_shots_on >= 2)
+        )
+        away_attacking = (
+            away_pressure >= 42
+            and away_shots_on >= 1
+            and away_total_shots >= 4
+            and (away_xg >= 0.25 or away_shots_on >= 2)
+        )
+
+        both_teams_active = (
+            home_attacking
+            and away_attacking
+            and total_shots_on >= 4
+            and total_shots >= 10
+            and (home_xg + away_xg) >= 0.8
+        )
+
+        remaining_probability = 48
+        remaining_probability += min(12, (home_pressure + away_pressure) * 0.07)
+        remaining_probability += min(12, total_shots_on * 1.2)
+        remaining_probability += min(8, (home_xg + away_xg) * 3)
+        remaining_probability += min(5, total_corners * 0.35)
+        remaining_probability = round(min(92, remaining_probability), 1)
+
+        print(
+            "OVER15 BOTH TEAMS CHECK:",
+            minute, remaining_probability,
+            "HOME_ACTIVE=", home_attacking,
+            "AWAY_ACTIVE=", away_attacking,
+            "PRESS=", home_pressure, away_pressure,
+            "SOT=", home_shots_on, away_shots_on,
+            "XG=", home_xg, away_xg
+        )
+
+        if (
+            25 <= minute <= 72
+            and total <= 3
+            and both_teams_active
+            and remaining_probability >= 68
+        ):
+            return (
+                "🚀 OVER 1.5 REMAINING GOALS",
+                remaining_probability,
+                minute,
+                remaining_probability
+            )
+
         # =========================================================
         remaining_probability = 45
         remaining_probability += max(0, best_pressure - 55) * 0.55
