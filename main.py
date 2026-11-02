@@ -108,6 +108,27 @@ def init_database():
     cursor = conn.cursor()
 
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS live_signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        signal_key TEXT NOT NULL UNIQUE,
+        fixture_id INTEGER NOT NULL,
+        country TEXT,
+        league TEXT,
+        home_team TEXT,
+        away_team TEXT,
+        home_goals INTEGER,
+        away_goals INTEGER,
+        minute INTEGER,
+        market TEXT NOT NULL,
+        confidence REAL,
+        probability REAL,
+        created_at TEXT NOT NULL,
+        telegram_sent INTEGER NOT NULL DEFAULT 0,
+        result TEXT DEFAULT 'PENDING'
+    )
+    """)
+
+    cursor.execute("""
 
     CREATE TABLE IF NOT EXISTS signals (
 
@@ -137,6 +158,42 @@ def init_database():
 
     conn.commit()
     conn.close()
+
+def live_signal_was_sent(signal_key):
+    """Check durable LIVE deduplication state (survives process restarts)."""
+    try:
+        with sqlite3.connect("v3_ai.db", timeout=10) as conn:
+            row = conn.execute(
+                "SELECT 1 FROM live_signals WHERE signal_key = ? AND telegram_sent = 1 LIMIT 1",
+                (signal_key,)
+            ).fetchone()
+        return row is not None
+    except Exception as e:
+        print("LIVE DEDUPE READ ERROR:", repr(e))
+        # Fail closed: avoid duplicate sends if persistent state cannot be read.
+        return True
+
+
+def save_live_signal(signal_key, fixture_id, country, league, home, away,
+                     home_goals, away_goals, minute, market, confidence, probability):
+    """Persist a successfully delivered LIVE signal for later result auditing."""
+    try:
+        with sqlite3.connect("v3_ai.db", timeout=10) as conn:
+            conn.execute(
+                """INSERT OR IGNORE INTO live_signals
+                (signal_key, fixture_id, country, league, home_team, away_team,
+                 home_goals, away_goals, minute, market, confidence, probability,
+                 created_at, telegram_sent, result)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'PENDING')""",
+                (signal_key, fixture_id, country, league, home, away,
+                 home_goals, away_goals, minute, market, confidence, probability,
+                 datetime.now(TZ).isoformat())
+            )
+        return True
+    except Exception as e:
+        print("LIVE SIGNAL SAVE ERROR:", repr(e))
+        return False
+
 
 # =========================================================
 # TELEGRAM
@@ -9687,10 +9744,8 @@ def live_loop():
             f"{signal[0]}"
         )
 
-        if key in sent_live:
+        if key in sent_live or live_signal_was_sent(key):
             continue
-
-        sent_live[key] = time.time()
 
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
@@ -9767,45 +9822,13 @@ def live_loop():
         country = match["league"]["country"]      
         league = match["league"]["name"]         
 
-        odds_text = "-"                          
-
-        match_odds = get_match_odds(              
-
-            fixture_id                           
-        )                                         
-
-        home_odd = None                           
-        away_odd = None                           
-
-        if match_odds:                            
-            home_odd = match_odds[0]              
-            away_odd = match_odds[2]              
-     
-        if (                                   
-            home_odd is not None               
-            or                                 
-            away_odd is not None               
-        ):                                      
-        
-            if "HOME" in signal[0]:            
-        
-                odds_text = str(               
-        
-                    home_odd                   
-        
-                )                              
-        
-            elif "AWAY" in signal[0]:           
-        
-                odds_text = str(               
-        
-                    away_odd                    
-        
-                )                              
+        # LIVE signals are model/statistics based. Do not request Betano
+        # pre-match odds here: that endpoint is slow and not an in-play price.
+        odds_text = "N/A (LIVE odds feed not used)"
 
                                                
 
-        send_telegram(                            
+        sent_ok = send_telegram(                            
 
             f"""                                
 🔥 LIVE SIGNAL
@@ -9830,7 +9853,16 @@ def live_loop():
 🎯 Goal Probability:
 {goal_probability}%
 """
-)          
+        )
+
+        if sent_ok:
+            sent_live[key] = time.time()
+            save_live_signal(
+                key, fixture_id, country, league, home, away,
+                home_goals, away_goals, minute, signal[0], signal[1], goal_probability
+            )
+        else:
+            print("LIVE SIGNAL NOT MARKED AS SENT; WILL RETRY:", key)
          
 if __name__ == "__main__":                         
 
