@@ -817,33 +817,34 @@ def get_match_odds(fixture_id):
 # =========================================================
 
 def extract(team, stat_name):
+    """Read API-Football statistics safely, including decimal xG values."""
+    aliases = {
+        "expected goals": {"expected goals", "expected_goals", "expected goals (xg)", "xg"},
+        "shots on goal": {"shots on goal", "shots on target"},
+        "total shots": {"total shots"},
+        "dangerous attacks": {"dangerous attacks"},
+        "ball possession": {"ball possession"},
+        "corner kicks": {"corner kicks", "corners"},
+    }
+    wanted = " ".join(str(stat_name or "").strip().lower().replace("_", " ").split())
+    accepted = aliases.get(wanted, {wanted})
 
     try:
+        for stat in team.get("statistics", []):
+            actual = " ".join(str(stat.get("type") or "").strip().lower().replace("_", " ").split())
+            if actual not in accepted:
+                continue
 
-        for stat in team["statistics"]:
+            value = stat.get("value")
+            if value is None or value == "":
+                return 0
 
-            if stat["type"] == stat_name:
+            if isinstance(value, str):
+                value = value.replace("%", "").strip()
 
-                value = stat["value"]
-
-                if value is None:
-                    return 0
-
-                if isinstance(value, str):
-
-                    value = value.replace("%", "")
-
-                    try:
-                        value = int(value)
-
-                    except:
-
-                        return 0
-
-                return value
-
-    except:
-
+            number = float(value)
+            return int(number) if number.is_integer() else number
+    except (TypeError, ValueError, AttributeError):
         pass
 
     return 0
@@ -1615,17 +1616,22 @@ def analyze_live_match(fixture):
         # Missing statistics are NOT treated as zero for this market.
         # A score change or any statistical change restarts the quiet timer.
         # =========================================================
-        def under05_read_stat(team_stats, stat_name):
+        def under05_read_stat(team_stats, stat_names):
+            if isinstance(stat_names, str):
+                stat_names = (stat_names,)
+            wanted = {
+                " ".join(str(name).strip().lower().replace("_", " ").split())
+                for name in stat_names
+            }
             try:
-                for item in team_stats:
-                    if item.get("type") == stat_name:
+                for item in team_stats.get("statistics", []):
+                    actual = " ".join(str(item.get("type") or "").strip().lower().replace("_", " ").split())
+                    if actual in wanted:
                         value = item.get("value")
-                        if value is None:
+                        if value is None or value == "":
                             return None
                         if isinstance(value, str):
                             value = value.replace("%", "").strip()
-                            if not value:
-                                return None
                         return float(value)
             except (TypeError, ValueError, AttributeError):
                 return None
@@ -1635,26 +1641,35 @@ def analyze_live_match(fixture):
             "sot": under05_read_stat(home_stats, "Shots on Goal"),
             "shots": under05_read_stat(home_stats, "Total Shots"),
             "corners": under05_read_stat(home_stats, "Corner Kicks"),
+            # API-Football often omits Dangerous Attacks entirely. It is optional,
+            # not a reason to disable the whole Under 0.5 market.
             "dangerous": under05_read_stat(home_stats, "Dangerous Attacks"),
-            "xg": under05_read_stat(home_stats, "Expected Goals"),
+            "xg": under05_read_stat(home_stats, ("Expected Goals", "expected_goals")),
         }
         under05_away_stats = {
             "sot": under05_read_stat(away_stats, "Shots on Goal"),
             "shots": under05_read_stat(away_stats, "Total Shots"),
             "corners": under05_read_stat(away_stats, "Corner Kicks"),
             "dangerous": under05_read_stat(away_stats, "Dangerous Attacks"),
-            "xg": under05_read_stat(away_stats, "Expected Goals"),
+            "xg": under05_read_stat(away_stats, ("Expected Goals", "expected_goals")),
         }
 
+        under05_required_keys = ("sot", "shots", "corners", "xg")
         under05_data_valid = all(
-            value is not None
-            for team_stats in (under05_home_stats, under05_away_stats)
-            for value in team_stats.values()
+            under05_home_stats[key] is not None
+            and under05_away_stats[key] is not None
+            for key in under05_required_keys
         )
 
         if under05_data_valid:
             home_dangerous_attacks = under05_home_stats["dangerous"]
             away_dangerous_attacks = under05_away_stats["dangerous"]
+            dangerous_data_available = (
+                home_dangerous_attacks is not None
+                and away_dangerous_attacks is not None
+            )
+            # If Dangerous Attacks are not supplied by the provider, use the
+            # available shots/SOT/corners/xG and pressure checks instead.
             under05_home_sot = under05_home_stats["sot"]
             under05_away_sot = under05_away_stats["sot"]
             under05_home_shots = under05_home_stats["shots"]
@@ -1720,8 +1735,13 @@ def analyze_live_match(fixture):
                 and under05_away_shots <= 4
                 and under05_home_corners <= 2
                 and under05_away_corners <= 2
-                and home_dangerous_attacks <= 35
-                and away_dangerous_attacks <= 35
+                and (
+                    not dangerous_data_available
+                    or (
+                        home_dangerous_attacks <= 35
+                        and away_dangerous_attacks <= 35
+                    )
+                )
                 and under05_total_xg <= 0.4
                 and under05_probability >= 65
             ):
@@ -1738,7 +1758,8 @@ def analyze_live_match(fixture):
                 "UNDER05 SKIP - REQUIRED STATS MISSING:",
                 fixture_id,
                 "HOME=", under05_home_stats,
-                "AWAY=", under05_away_stats
+                "AWAY=", under05_away_stats,
+                "REQUIRED=", under05_required_keys
             )
 
         # =========================================================
