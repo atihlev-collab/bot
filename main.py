@@ -1507,9 +1507,12 @@ def analyze_live_match(fixture):
 
         # =========================================================
         # NEXT GOAL - ONLY WHEN ONE TEAM CLEARLY DOMINATES
-        # If both teams are dangerous, do not pick an individual team.
+        # Reject two-goal deficits late and matches where both teams attack.
         # =========================================================
-        if 20 <= minute <= 40 and total >= 1:
+        home_dangerous_now = extract(home_stats, "Dangerous Attacks")
+        away_dangerous_now = extract(away_stats, "Dangerous Attacks")
+
+        if 20 <= minute <= 40 and total >= 1 and goal_diff <= 1:
             fast_goal_probability = 66
             fast_goal_probability += max(0, best_pressure - 65) * 0.45
             fast_goal_probability += min(10, total_shots_on * 1.0)
@@ -1523,6 +1526,8 @@ def analyze_live_match(fixture):
                 and home_shots_on >= away_shots_on + 2
                 and away_shots_on <= 1
                 and home_total_shots >= away_total_shots + 3
+                and away_total_shots <= 7
+                and away_dangerous_now <= 30
             )
             away_dominates = (
                 away_pressure >= 72
@@ -1531,6 +1536,8 @@ def analyze_live_match(fixture):
                 and away_shots_on >= home_shots_on + 2
                 and home_shots_on <= 1
                 and away_total_shots >= home_total_shots + 3
+                and home_total_shots <= 7
+                and home_dangerous_now <= 30
             )
 
             if fast_goal_probability >= 72 and (home_dominates or away_dominates):
@@ -1552,7 +1559,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 78
         # Require a clear one-sided attacking advantage.
         # =========================================================
-        if 41 <= minute <= 78:
+        if 41 <= minute <= 78 and goal_diff <= 1:
             normal_goal_probability = 70
             normal_goal_probability += max(0, best_pressure - 70) * 0.45
             normal_goal_probability += min(12, total_shots_on * 1.0)
@@ -1567,6 +1574,8 @@ def analyze_live_match(fixture):
                 and home_shots_on >= away_shots_on + 3
                 and away_shots_on <= 2
                 and home_total_shots >= away_total_shots + 4
+                and away_total_shots <= 8
+                and away_dangerous_now <= 35
             )
             away_dominates = (
                 away_pressure >= 78
@@ -1575,6 +1584,8 @@ def analyze_live_match(fixture):
                 and away_shots_on >= home_shots_on + 3
                 and home_shots_on <= 2
                 and away_total_shots >= home_total_shots + 4
+                and home_total_shots <= 8
+                and home_dangerous_now <= 35
             )
 
             print(
@@ -1777,34 +1788,6 @@ def analyze_live_match(fixture):
             and total <= 3
             and both_teams_active
             and remaining_probability >= 68
-        ):
-            return (
-                "🚀 OVER 1.5 REMAINING GOALS",
-                remaining_probability,
-                minute,
-                remaining_probability
-            )
-
-        # =========================================================
-        remaining_probability = 45
-        remaining_probability += max(0, best_pressure - 55) * 0.55
-        remaining_probability += min(15, total_shots_on * 1.4)
-        remaining_probability += min(8, total_corners * 0.7)
-        remaining_probability += min(10, (home_xg + away_xg) * 2.2)
-        if total >= 2:
-            remaining_probability += 4
-        remaining_probability = round(min(95, remaining_probability), 1)
-
-        print("OVER15 REMAINING CHECK:", minute, remaining_probability)
-
-        if (
-            25 <= minute <= 72
-            and best_pressure >= 55
-            and total_shots_on >= 2
-            and total_shots >= 5
-            and (home_xg + away_xg) >= 0.7
-            and remaining_probability >= 57
-            and total <= 3
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
