@@ -1857,19 +1857,28 @@ def analyze_live_match(fixture):
             late_goal_probability += min(8, total_corners * 0.6)
             late_goal_probability += min(10, (home_xg + away_xg) * 2)
 
-            if goal_diff <= 1:
-                late_goal_probability += 4
-
+            # Late-goal signals are limited to close matches.
+            # A two-goal (or larger) lead is too risky for this market.
             late_goal_probability = round(min(95, late_goal_probability), 1)
 
-            print("LATE GOAL CHECK:", minute, late_goal_probability)
+            print(
+                "LATE GOAL CHECK:",
+                minute,
+                "score_diff=", goal_diff,
+                "pressure=", best_pressure,
+                "SOT=", total_shots_on,
+                "shots=", total_shots,
+                "xG=", round(home_xg + away_xg, 2),
+                "probability=", late_goal_probability
+            )
 
             if (
-                best_pressure >= 48
-                and total_shots_on >= 2
-                and total_shots >= 4
-                and (home_xg + away_xg) >= 0.6
-                and late_goal_probability >= 58
+                goal_diff <= 1
+                and best_pressure >= 52
+                and total_shots_on >= 3
+                and total_shots >= 6
+                and (home_xg + away_xg) >= 0.7
+                and late_goal_probability >= 62
             ):
                 return (
                     "🔥 LATE GOAL",
