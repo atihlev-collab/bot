@@ -1780,15 +1780,15 @@ def analyze_live_match(fixture):
         # One-sided pressure alone is not enough for this market.
         # =========================================================
         home_attacking = (
-            home_pressure >= 42
-            and home_shots_on >= 1
-            and home_total_shots >= 4
+            home_pressure >= 44
+            and home_shots_on >= 2
+            and home_total_shots >= 5
             and (home_xg >= 0.25 or home_shots_on >= 2)
         )
         away_attacking = (
-            away_pressure >= 42
-            and away_shots_on >= 1
-            and away_total_shots >= 4
+            away_pressure >= 44
+            and away_shots_on >= 2
+            and away_total_shots >= 5
             and (away_xg >= 0.25 or away_shots_on >= 2)
         )
 
@@ -1796,11 +1796,11 @@ def analyze_live_match(fixture):
             home_attacking
             and away_attacking
             and total_shots_on >= 4
-            and total_shots >= 10
+            and total_shots >= 12
             and (home_xg + away_xg) >= 0.8
         )
 
-        remaining_probability = 48
+        remaining_probability = 52
         remaining_probability += min(12, (home_pressure + away_pressure) * 0.07)
         remaining_probability += min(12, total_shots_on * 1.2)
         remaining_probability += min(8, (home_xg + away_xg) * 3)
@@ -1821,7 +1821,7 @@ def analyze_live_match(fixture):
             25 <= minute <= 72
             and total <= 3
             and both_teams_active
-            and remaining_probability >= 68
+            and remaining_probability >= 70
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1866,7 +1866,7 @@ def analyze_live_match(fixture):
         if 75 <= minute <= 88:
             # Late goal requires sustained, measurable attacking activity.
             # Score difference affects the score but is never a hard exclusion.
-            late_goal_probability = 35
+            late_goal_probability = 42
             late_goal_probability += max(0, best_pressure - 58) * 0.50
             late_goal_probability += min(18, total_shots_on * 2.0)
             late_goal_probability += min(10, total_shots * 0.40)
@@ -1874,7 +1874,7 @@ def analyze_live_match(fixture):
             late_goal_probability += min(16, (home_xg + away_xg) * 5)
 
             if goal_diff >= 2:
-                late_goal_probability -= 8
+                late_goal_probability -= 10
 
             late_goal_probability = round(max(0, min(95, late_goal_probability)), 1)
 
@@ -1891,11 +1891,11 @@ def analyze_live_match(fixture):
             )
 
             if (
-                best_pressure >= 58
-                and total_shots_on >= 3
-                and total_shots >= 7
+                best_pressure >= 62
+                and total_shots_on >= 5
+                and total_shots >= 10
                 and (home_xg + away_xg) >= 0.8
-                and late_goal_probability >= 72
+                and late_goal_probability >= 74
             ):
                 return (
                     "🔥 LATE GOAL",
