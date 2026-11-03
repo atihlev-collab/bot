@@ -6679,27 +6679,27 @@ def analyze_prematch_match(match):
         if (
             not goal_match                       
             and                                
-            home_score >= 74
+            home_score >= 72
             and
-            away_form["clean_sheet_pct"] <= 26    
+            away_form["clean_sheet_pct"] <= 24  
             and
             home_odds_ok
             and
-            home_form["unbeaten_pct"] >= 60
+            home_form["unbeaten_pct"] >= 58
             and
-            home_form["wins"] >= 4 
+            home_form["wins"] >= 3
             and                         
             home_form["losses"] <= 1     
             and                        
             home_form["draws"] <= 2   
             and                         
-            home_edge >= 4.0                 
+            home_edge >= 3.5               
             and
             form_gap >= 2.3
             and
-            recent_gap >= 12
+            recent_gap >= 11
             and
-            home_form["recent_form_pct"] >= 56                                                     
+            home_form["recent_form_pct"] >= 54                                                   
             and                                   
             home_form["avg_scored"] >= 1.60
             and
@@ -6737,7 +6737,7 @@ def analyze_prematch_match(match):
             and
             away_form["recent_avg_conceded"] >= 0.80      
             and
-            home_probability >= 72
+            home_probability >= 70
             and
             home_balance_ok 
             and
@@ -8813,11 +8813,11 @@ def analyze_prematch_match(match):
         if (
             not goal_match                        
             and                                
-            away_score >= 66
+            away_score >= 64
             and
             away_odds_ok
             and
-            away_form["unbeaten_pct"] >=60
+            away_form["unbeaten_pct"] >=58
             and
             away_form["wins"] >= 3
             and                          
@@ -8825,13 +8825,13 @@ def analyze_prematch_match(match):
             and                         
             away_form["draws"] <= 2     
             and                        
-            away_edge >= 4              
+            away_edge >= 3           
             and
-            away_score_gap >= 7
+            away_score_gap >= 6
             and
-            away_gap >= 9
+            away_gap >= 8
             and
-            recent_away_gap >= 8
+            recent_away_gap >= 7
             and                         
             away_form["recent_form_pct"] >= 56 
             and
@@ -8980,9 +8980,9 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 82
-            and over_conf >= 72
-            and expected_goals >= 3.90
+            over_prob >= 80
+            and over_conf >= 70
+            and expected_goals >= 3.70
             and over_quality >= 4   
             and home_form["avg_scored"] >= 1.40         
             and away_form["avg_scored"] >= 1.20
@@ -9062,11 +9062,11 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 72
-            and btts_conf >= 68
+            btts_prob >= 70
+            and btts_conf >= 66
             and expected_goals >= 3.20
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 58
-            and btts_quality >= 3.4
+            and btts_quality >= 3.2
         ):
             signals.append((
                 "💎 BTTS",
@@ -9125,8 +9125,8 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 64
-            and home_over15_probability >= 62
+            home_score >= 62
+            and home_over15_probability >= 60
             and expected_goals >= 2.50
             and home_over15_quality >= 3
         ):
@@ -9167,7 +9167,7 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 64
+            away_score >= 62
             and away_over15_probability >= 60
             and expected_goals >= 2.50
             and away_over15_quality >= 3
