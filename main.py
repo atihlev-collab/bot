@@ -1459,7 +1459,7 @@ def analyze_live_match(fixture):
             if (
                 best_pressure >= 76
                 and total_shots >= 10
-                and total_corners >= 6
+                and total_corners >= 4
                 and fh_corner_probability >= 68
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
