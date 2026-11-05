@@ -1512,9 +1512,9 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
-            and card_probability >= 86
-            and total_cards >= 5
-            and total_fouls >= 18
+            and card_probability >= 88
+            and total_cards >= 6
+            and total_fouls >= 22
             and goal_diff <= 2
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1899,11 +1899,12 @@ def analyze_live_match(fixture):
             )
 
             if (
-                best_pressure >= 78
-                and total_shots_on >= 9
-                and total_shots >= 20
-                and (home_xg + away_xg) >= 2.2
-                and late_goal_probability >= 86
+                goal_diff <= 1
+                and best_pressure >= 82
+                and total_shots_on >= 10
+                and total_shots >= 22
+                and (home_xg + away_xg) >= 2.4
+                and late_goal_probability >= 88
             ):
                 return (
                     "🔥 LATE GOAL",
