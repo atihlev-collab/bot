@@ -9836,6 +9836,27 @@ def live_loop():
         if not signal:
             continue
 
+        # Final LIVE quality gate: no fixed daily quota.
+        # Send only candidates with a strong model score; PREMATCH is untouched.
+        try:
+            live_quality_score = float(signal[1])
+        except (TypeError, ValueError, IndexError):
+            print("LIVE QUALITY REJECT - INVALID SCORE:", match.get("fixture", {}).get("id"))
+            continue
+
+        if not 0 <= live_quality_score <= 100 or live_quality_score < 82:
+            print(
+                "LIVE QUALITY REJECT:",
+                match.get("teams", {}).get("home", {}).get("name"),
+                "vs",
+                match.get("teams", {}).get("away", {}).get("name"),
+                "MARKET=",
+                signal[0] if len(signal) > 0 else "UNKNOWN",
+                "SCORE=",
+                live_quality_score
+            )
+            continue
+
         fixture_id = match["fixture"]["id"]
 
         home_goals = match["goals"]["home"] or 0
