@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
+from match_dynamics import record_match_dynamics
 
 # =========================================================
 # CONFIG
@@ -1432,6 +1433,13 @@ def analyze_live_match(fixture):
         total_corners = home_corners + away_corners
         total_fouls = home_fouls + away_fouls
         total_cards = home_yellow + away_yellow
+
+        # Independent, conservative dynamics module. Test-only: records candidates
+        # to match_dynamics.db and does not send Telegram or alter existing markets.
+        record_match_dynamics(
+            fixture_id, minute, home, away, home_stats, away_stats
+        )
+
 
         print(
             "LIVE ENGINE:", home_team, away_team,
