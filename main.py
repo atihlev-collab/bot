@@ -9536,6 +9536,8 @@ def tipster_filter_signals(all_signals):
                 "RESULT=", reason
             )
 
+            # Final selector: preserve all qualifying markets in the pool.
+            # The one-market-per-fixture choice is performed only after sorting.
             if ok:
                 passed.append(item)
 
@@ -9730,25 +9732,18 @@ def prematch_loop():
     )                                          
 
 
-    top_signals = []                        
-    used_fixtures = set()                   
+    top_signals = []
+    used_fixtures = set()
 
-    for signal_item in all_signals:         
+    for signal_item in all_signals:
+        fixture_id = signal_item[1]
 
-        fixture_id = signal_item[1]         
+        # Select the best qualifying market for each fixture, rather than
+        # discarding the entire fixture when its first candidate fails odds/gates.
+        top_signals.append(signal_item)
+        used_fixtures.add(fixture_id)
 
-        if fixture_id in used_fixtures:     
-            continue                        
-
-        top_signals.append(                 
-            signal_item                     
-        )                                   
-
-        used_fixtures.add(                  
-            fixture_id                      
-        )                                   
-
-        if len(top_signals) >= 5:           
+        if len(top_signals) >= 5:
             break                           
 
     for (
