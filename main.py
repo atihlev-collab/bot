@@ -1450,17 +1450,17 @@ def analyze_live_match(fixture):
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 29 <= minute <= 38:
-            fh_corner_probability = 66
+            fh_corner_probability = 68
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 76
-                and total_shots >= 10
+                best_pressure >= 78
+                and total_shots >= 11
                 and total_corners >= 4
-                and fh_corner_probability >= 68
+                and fh_corner_probability >= 69
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1527,30 +1527,30 @@ def analyze_live_match(fixture):
         away_dangerous_now = extract(away_stats, "Dangerous Attacks")
 
         if 20 <= minute <= 40 and total >= 1 and goal_diff <= 1:
-            fast_goal_probability = 66
+            fast_goal_probability = 68
             fast_goal_probability += max(0, best_pressure - 65) * 0.45
             fast_goal_probability += min(10, total_shots_on * 1.0)
             fast_goal_probability += min(6, total_corners * 0.5)
             fast_goal_probability = round(min(93, fast_goal_probability), 1)
 
             home_dominates = (
-                home_pressure >= 74
-                and away_pressure <= 56
-                and home_pressure - away_pressure >= 18
-                and home_shots_on >= away_shots_on + 2
-                and away_shots_on <= 2
+                home_pressure >= 76
+                and away_pressure <= 58
+                and home_pressure - away_pressure >= 19
+                and home_shots_on >= away_shots_on + 3
+                and away_shots_on <= 3
                 and home_total_shots >= away_total_shots + 3
-                and away_total_shots <= 7
+                and away_total_shots <= 8
                 and away_dangerous_now <= 30
             )
             away_dominates = (
-                away_pressure >= 74
-                and home_pressure <= 56
+                away_pressure >= 76
+                and home_pressure <= 58
                 and away_pressure - home_pressure >= 18
-                and away_shots_on >= home_shots_on + 2
-                and home_shots_on <= 2
+                and away_shots_on >= home_shots_on + 3
+                and home_shots_on <= 3
                 and away_total_shots >= home_total_shots + 3
-                and home_total_shots <= 7
+                and home_total_shots <= 8
                 and home_dangerous_now <= 30
             )
 
@@ -1574,7 +1574,7 @@ def analyze_live_match(fixture):
         # Require a clear one-sided attacking advantage.
         # =========================================================
         if 41 <= minute <= 78 and goal_diff <= 1:
-            normal_goal_probability = 70
+            normal_goal_probability = 72
             normal_goal_probability += max(0, best_pressure - 70) * 0.45
             normal_goal_probability += min(12, total_shots_on * 1.0)
             normal_goal_probability += min(5, total_corners * 0.4)
@@ -1582,23 +1582,23 @@ def analyze_live_match(fixture):
             normal_goal_probability = round(min(94, normal_goal_probability), 1)
 
             home_dominates = (
-                home_pressure >= 78
-                and away_pressure <= 58
+                home_pressure >= 80
+                and away_pressure <= 60
                 and home_pressure - away_pressure >= 22
-                and home_shots_on >= away_shots_on + 4
-                and away_shots_on <= 4
+                and home_shots_on >= away_shots_on + 6
+                and away_shots_on <= 6
                 and home_total_shots >= away_total_shots + 4
-                and away_total_shots <= 9
+                and away_total_shots <= 12
                 and away_dangerous_now <= 35
             )
             away_dominates = (
-                away_pressure >= 78
-                and home_pressure <= 60
+                away_pressure >= 80
+                and home_pressure <= 62
                 and away_pressure - home_pressure >= 22
                 and away_shots_on >= home_shots_on + 3
-                and home_shots_on <= 3
+                and home_shots_on <= 6
                 and away_total_shots >= home_total_shots + 4
-                and home_total_shots <= 8
+                and home_total_shots <= 12
                 and home_dangerous_now <= 35
             )
 
@@ -1833,7 +1833,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 80
+        corner_probability = 82
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1844,10 +1844,10 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
-            and total_corners >= 10
-            and total_shots >= 18
-            and best_pressure >= 76
-            and corner_probability >= 78
+            and total_corners >= 12
+            and total_shots >= 20
+            and best_pressure >= 78
+            and corner_probability >= 79
             
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
@@ -1891,11 +1891,11 @@ def analyze_live_match(fixture):
             )
 
             if (
-                best_pressure >= 66
-                and total_shots_on >= 7
-                and total_shots >= 14
-                and (home_xg + away_xg) >= 1.5
-                and late_goal_probability >= 78
+                best_pressure >= 70
+                and total_shots_on >= 8
+                and total_shots >= 18
+                and (home_xg + away_xg) >= 1.9
+                and late_goal_probability >= 80
             ):
                 return (
                     "🔥 LATE GOAL",
