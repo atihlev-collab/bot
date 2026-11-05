@@ -1466,9 +1466,9 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 78
-                and total_shots >= 11
-                and total_corners >= 4
-                and fh_corner_probability >= 82
+                and total_shots >= 13
+                and total_corners >= 5
+                and fh_corner_probability >= 86
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1512,7 +1512,7 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
-            and card_probability >= 82
+            and card_probability >= 86
             and total_cards >= 5
             and total_fouls >= 18
             and goal_diff <= 2
@@ -1562,7 +1562,7 @@ def analyze_live_match(fixture):
                 and home_dangerous_now <= 30
             )
 
-            if fast_goal_probability >= 82 and (home_dominates or away_dominates):
+            if fast_goal_probability >= 86 and (home_dominates or away_dominates):
                 if home_dominates:
                     return (
                         "🎯 NEXT GOAL HOME",
@@ -1617,7 +1617,7 @@ def analyze_live_match(fixture):
                 "PROB=", normal_goal_probability
             )
 
-            if normal_goal_probability >= 82 and (home_dominates or away_dominates):
+            if normal_goal_probability >= 86 and (home_dominates or away_dominates):
                 if home_dominates:
                     return (
                         "🎯 NEXT GOAL HOME",
@@ -1764,7 +1764,7 @@ def analyze_live_match(fixture):
                     )
                 )
                 and under05_total_xg <= 0.4
-                and under05_probability >= 82
+                and under05_probability >= 86
             ):
                 return (
                     "🧊 UNDER 0.5 REMAINING GOALS",
@@ -1829,7 +1829,7 @@ def analyze_live_match(fixture):
             25 <= minute <= 72
             and total <= 3
             and both_teams_active
-            and remaining_probability >= 82
+            and remaining_probability >= 86
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1841,7 +1841,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 82
+        corner_probability = 68
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1852,10 +1852,10 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
-            and total_corners >= 12
-            and total_shots >= 20
-            and best_pressure >= 78
-            and corner_probability >= 82
+            and total_corners >= 14
+            and total_shots >= 22
+            and best_pressure >= 82
+            and corner_probability >= 86
             
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
@@ -1899,11 +1899,11 @@ def analyze_live_match(fixture):
             )
 
             if (
-                best_pressure >= 70
-                and total_shots_on >= 8
-                and total_shots >= 18
-                and (home_xg + away_xg) >= 1.9
-                and late_goal_probability >= 82
+                best_pressure >= 78
+                and total_shots_on >= 9
+                and total_shots >= 20
+                and (home_xg + away_xg) >= 2.2
+                and late_goal_probability >= 86
             ):
                 return (
                     "🔥 LATE GOAL",
@@ -9839,7 +9839,7 @@ def live_loop():
             print("LIVE QUALITY REJECT - INVALID SCORE:", match.get("fixture", {}).get("id"))
             continue
 
-        if not 0 <= live_quality_score <= 100 or live_quality_score < 82:
+        if not 0 <= live_quality_score <= 100 or live_quality_score < 86:
             print(
                 "LIVE QUALITY REJECT:",
                 match.get("teams", {}).get("home", {}).get("name"),
