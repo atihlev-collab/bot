@@ -864,6 +864,48 @@ def extract(team, stat_name):
     return 0
 
 
+def live_stat_available(team, stat_names):
+    """True only when the feed contains a real numeric value, not a missing/None stat."""
+    if isinstance(stat_names, str):
+        stat_names = (stat_names,)
+
+    aliases = {
+        "expected goals": {"expected goals", "expected_goals", "expected goals (xg)", "xg"},
+        "shots on goal": {"shots on goal", "shots on target"},
+        "total shots": {"total shots"},
+        "corner kicks": {"corner kicks", "corners"},
+        "yellow cards": {"yellow cards"},
+        "fouls": {"fouls"},
+    }
+    wanted = set()
+    for name in stat_names:
+        key = " ".join(str(name or "").strip().lower().replace("_", " ").split())
+        wanted.update(aliases.get(key, {key}))
+
+    try:
+        for item in team.get("statistics", []):
+            actual = " ".join(str(item.get("type") or "").strip().lower().replace("_", " ").split())
+            if actual in wanted:
+                value = item.get("value")
+                if value is None or value == "":
+                    return False
+                if isinstance(value, str):
+                    value = value.replace("%", "").strip()
+                float(value)
+                return True
+    except (TypeError, ValueError, AttributeError):
+        return False
+    return False
+
+
+def live_stats_have_both(home_stats, away_stats, *stat_names):
+    return all(
+        live_stat_available(team_stats, stat_name)
+        for team_stats in (home_stats, away_stats)
+        for stat_name in stat_names
+    )
+
+
 # =========================================================
 # PRESSURE ENGINE
 # =========================================================
@@ -1465,7 +1507,8 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 78
+                live_stats_have_both(home_stats, away_stats, "Total Shots", "Corner Kicks", "Shots on Goal")
+                and best_pressure >= 78
                 and total_shots >= 13
                 and total_corners >= 5
                 and fh_corner_probability >= 86
@@ -1511,7 +1554,8 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            72 <= minute <= 82
+            live_stats_have_both(home_stats, away_stats, "Fouls", "Yellow Cards")
+            and 72 <= minute <= 82
             and card_probability >= 88
             and total_cards >= 3
             and total_fouls >= 22
@@ -1534,7 +1578,12 @@ def analyze_live_match(fixture):
         home_dangerous_now = extract(home_stats, "Dangerous Attacks")
         away_dangerous_now = extract(away_stats, "Dangerous Attacks")
 
-        if 20 <= minute <= 40 and total >= 1 and goal_diff <= 1:
+        if (
+            20 <= minute <= 40
+            and total >= 1
+            and goal_diff <= 1
+            and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots")
+        ):
             fast_goal_probability = 68
             fast_goal_probability += max(0, best_pressure - 65) * 0.45
             fast_goal_probability += min(10, total_shots_on * 1.0)
@@ -1581,7 +1630,11 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 78
         # Require a clear one-sided attacking advantage.
         # =========================================================
-        if 41 <= minute <= 78 and goal_diff <= 1:
+        if (
+            41 <= minute <= 78
+            and goal_diff <= 1
+            and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots")
+        ):
             normal_goal_probability = 72
             normal_goal_probability += max(0, best_pressure - 70) * 0.45
             normal_goal_probability += min(12, total_shots_on * 1.0)
@@ -1828,6 +1881,7 @@ def analyze_live_match(fixture):
         if (
             25 <= minute <= 72
             and total <= 3
+            and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots", ("Expected Goals", "expected_goals"))
             and both_teams_active
             and remaining_probability >= 86
         ):
@@ -1852,6 +1906,7 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
+            and live_stats_have_both(home_stats, away_stats, "Corner Kicks", "Total Shots", "Shots on Goal")
             and total_corners >= 10
             and total_shots >= 18
             and best_pressure >= 78
@@ -1899,7 +1954,8 @@ def analyze_live_match(fixture):
             )
 
             if (
-                goal_diff <= 1
+                live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots", ("Expected Goals", "expected_goals"))
+                and goal_diff <= 1
                 and best_pressure >= 82
                 and total_shots_on >= 10
                 and total_shots >= 22
