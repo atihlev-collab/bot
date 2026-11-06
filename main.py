@@ -9189,34 +9189,34 @@ def analyze_prematch_match(match):
             away_over15_signal = True
 
         # ---------------------------------------------------------
+        # ---------------------------------------------------------
         # UNDER 2.5
         # ---------------------------------------------------------
         under_prob = 100 - over_prob
         under_quality = 0
 
-        if under_prob >= 78:
+        if under_prob >= 80:
             under_quality += 2
-        elif under_prob >= 64:
+        elif under_prob >= 70:
             under_quality += 1
-        if expected_goals <= 2.00:
+        if expected_goals <= 1.90:
             under_quality += 2
-        elif expected_goals <= 2.30:
+        elif expected_goals <= 2.20:
             under_quality += 1
-        if home_form["avg_scored"] + away_form["avg_scored"] <= 2.30:
+        if home_form["avg_scored"] + away_form["avg_scored"] <= 2.20:
             under_quality += 1
-        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] <= 2.40:
+        if home_form["recent_avg_scored"] + away_form["recent_avg_scored"] <= 2.20:
             under_quality += 1
-        if home_form["avg_conceded"] + away_form["avg_conceded"] <= 2.40:
+        if home_form["avg_conceded"] + away_form["avg_conceded"] <= 2.30:
             under_quality += 1
-        if max(home_form["over25_pct"], away_form["over25_pct"]) <= 50:
+        if max(home_form["over25_pct"], away_form["over25_pct"]) <= 48:
             under_quality += 1
-        if min(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) >= 30:
+        if min(home_form["clean_sheet_pct"], away_form["clean_sheet_pct"]) >= 32:
             under_quality += 1
         if (
             home_form["recent_avg_conceded"]
-            +
-            away_form["recent_avg_conceded"]
-        ) <= 2.20:
+            + away_form["recent_avg_conceded"]
+        ) <= 2.10:
             under_quality += 1
 
         print(
@@ -9226,19 +9226,20 @@ def analyze_prematch_match(match):
             "Q=", under_quality
         )
 
+        # Require independent confirmation from both teams' recent scoring
+        # and defensive profile; probability alone must not create a signal.
         if (
-            under_prob >= 70
-            and expected_goals <= 1.80
-            and under_quality >= 3.5
-            and home_form["avg_scored"] <= 1.40
-            and away_form["avg_scored"] <= 1.40    
-            and home_form["recent_avg_scored"] <= 1.20
-            and away_form["recent_avg_scored"] <= 1.20
+            under_prob >= 74
+            and expected_goals <= 2.10
+            and under_quality >= 4.5
+            and home_form["avg_scored"] <= 1.35
+            and away_form["avg_scored"] <= 1.35
+            and home_form["recent_avg_scored"] <= 1.15
+            and away_form["recent_avg_scored"] <= 1.15
             and (
                 home_form["avg_conceded"]
-                +
-                away_form["avg_conceded"]
-            ) <= 2.20
+                + away_form["avg_conceded"]
+            ) <= 2.30
         ):
             signals.append((
                 "🛡 UNDER 2.5",
@@ -9246,7 +9247,7 @@ def analyze_prematch_match(match):
                 round(under_prob, 1)
             ))
 
-        # ---------------------------------------------------------
+
         # OVER 3.5
         # ---------------------------------------------------------
         over35_prob = 0
@@ -9422,9 +9423,9 @@ TIPSTER_RULES = {
     # Selective PREMATCH gate: moderate thresholds, real odds and positive edge.
     "HOME WIN":      (72.0, 74.0, 1.40, 2.80, 2.0),
     "AWAY WIN":      (73.0, 75.0, 1.45, 3.20, 2.0),
-    "OVER 2.5":      (73.0, 74.0, 1.40, 2.50, 2.0),
+    "OVER 2.5":      (76.0, 76.0, 1.45, 2.50, 3.0),
     "BTTS":          (72.0, 73.0, 1.40, 2.60, 2.0),
-    "UNDER 2.5":     (73.0, 74.0, 1.40, 2.60, 2.0),
+    "UNDER 2.5":     (76.0, 76.0, 1.45, 2.60, 3.0),
     "HOME OVER 1.5": (70.0, 72.0, 1.40, 2.70, 1.5),
     "AWAY OVER 1.5": (71.0, 73.0, 1.45, 3.00, 1.5),
     "OVER 3.5":      (72.0, 74.0, 1.55, 3.20, 2.0),
