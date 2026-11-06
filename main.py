@@ -1513,7 +1513,7 @@ def analyze_live_match(fixture):
         if (
             72 <= minute <= 82
             and card_probability >= 88
-            and total_cards >= 6
+            and total_cards >= 3
             and total_fouls >= 22
             and goal_diff <= 2
         ):
@@ -1852,9 +1852,9 @@ def analyze_live_match(fixture):
 
         if (
             72 <= minute <= 82
-            and total_corners >= 14
-            and total_shots >= 22
-            and best_pressure >= 82
+            and total_corners >= 10
+            and total_shots >= 18
+            and best_pressure >= 78
             and corner_probability >= 86
             
         ):
@@ -9075,7 +9075,11 @@ def analyze_prematch_match(match):
             and btts_conf >= 66
             and expected_goals >= 3.20
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 58
-            and btts_quality >= 3.2
+            and min(
+                home_form["recent_avg_scored"],
+                away_form["recent_avg_scored"]
+            ) >= 0.90
+            and btts_quality >= 4.0
         ):
             signals.append((
                 "💎 BTTS",
@@ -9137,7 +9141,9 @@ def analyze_prematch_match(match):
             home_score >= 62
             and home_over15_probability >= 60
             and expected_goals >= 2.50
-            and home_over15_quality >= 3
+            and home_form["recent_avg_scored"] >= 1.20
+            and away_form["recent_avg_conceded"] >= 0.80
+            and home_over15_quality >= 4
         ):
             signals.append((
                 "🏠 HOME OVER 1.5",
@@ -9179,7 +9185,9 @@ def analyze_prematch_match(match):
             away_score >= 62
             and away_over15_probability >= 60
             and expected_goals >= 2.50
-            and away_over15_quality >= 3
+            and away_form["recent_avg_scored"] >= 1.20
+            and home_form["recent_avg_conceded"] >= 0.80
+            and away_over15_quality >= 4
         ):
             signals.append((
                 "✈️ AWAY OVER 1.5",
@@ -9740,8 +9748,10 @@ def prematch_loop():
     for signal_item in all_signals:
         fixture_id = signal_item[1]
 
-        # Select the best qualifying market for each fixture, rather than
-        # discarding the entire fixture when its first candidate fails odds/gates.
+        # Keep only the highest-ranked qualifying market per fixture.
+        # This prevents several correlated tips from the same match filling the daily list.
+        if fixture_id in used_fixtures:
+            continue
         top_signals.append(signal_item)
         used_fixtures.add(fixture_id)
 
