@@ -1513,11 +1513,8 @@ def analyze_live_match(fixture):
                 and total_corners >= 5
                 and fh_corner_probability >= 86
             ):
-                if not betano_live_market_available(fixture_id, "FH_CORNERS"):
-                    print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
-                else:
-                    return (
-                        "🚩 FIRST HALF OVER 1.5 CORNERS",
+                return (
+                    "🚩 FIRST HALF OVER 1.5 CORNERS",
                     fh_corner_probability,
                     minute,
                     fh_corner_probability
@@ -1561,11 +1558,8 @@ def analyze_live_match(fixture):
             and total_fouls >= 22
             and goal_diff <= 2
         ):
-            if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
-                print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🟨 OVER 1.5 NEXT CARDS",
+            return (
+                "🟨 OVER 1.5 NEXT CARDS",
                 card_probability,
                 minute,
                 card_probability
@@ -1643,24 +1637,24 @@ def analyze_live_match(fixture):
             normal_goal_probability = round(min(94, normal_goal_probability), 1)
 
             home_dominates = (
-                home_pressure >= 80
-                and away_pressure <= 60
-                and home_pressure - away_pressure >= 22
-                and home_shots_on >= away_shots_on + 6
+                home_pressure >= 76
+                and away_pressure <= 64
+                and home_pressure - away_pressure >= 18
+                and home_shots_on >= away_shots_on + 4
                 and away_shots_on <= 6
-                and home_total_shots >= away_total_shots + 4
-                and away_total_shots <= 12
-                and away_dangerous_now <= 35
+                and home_total_shots >= away_total_shots + 3
+                and away_total_shots <= 14
+                and away_dangerous_now <= 45
             )
             away_dominates = (
-                away_pressure >= 80
-                and home_pressure <= 62
-                and away_pressure - home_pressure >= 22
-                and away_shots_on >= home_shots_on + 3
+                away_pressure >= 76
+                and home_pressure <= 64
+                and away_pressure - home_pressure >= 18
+                and away_shots_on >= home_shots_on + 2
                 and home_shots_on <= 6
-                and away_total_shots >= home_total_shots + 4
-                and home_total_shots <= 12
-                and home_dangerous_now <= 35
+                and away_total_shots >= home_total_shots + 3
+                and home_total_shots <= 14
+                and home_dangerous_now <= 45
             )
 
             print(
@@ -1670,7 +1664,7 @@ def analyze_live_match(fixture):
                 "PROB=", normal_goal_probability
             )
 
-            if normal_goal_probability >= 86 and (home_dominates or away_dominates):
+            if normal_goal_probability >= 84 and (home_dominates or away_dominates):
                 if home_dominates:
                     return (
                         "🎯 NEXT GOAL HOME",
@@ -1841,30 +1835,42 @@ def analyze_live_match(fixture):
         # One-sided pressure alone is not enough for this market.
         # =========================================================
         home_attacking = (
-            home_pressure >= 44
-            and home_shots_on >= 3
-            and home_total_shots >= 6
-            and (home_xg >= 0.25 or home_shots_on >= 2)
+            (
+                home_pressure >= 40
+                and home_shots_on >= 2
+                and home_total_shots >= 5
+            )
+            or (
+                home_xg >= 0.55
+                and home_shots_on >= 2
+                and home_total_shots >= 6
+            )
         )
         away_attacking = (
-            away_pressure >= 44
-            and away_shots_on >= 3
-            and away_total_shots >= 6
-            and (away_xg >= 0.25 or away_shots_on >= 2)
+            (
+                away_pressure >= 40
+                and away_shots_on >= 2
+                and away_total_shots >= 5
+            )
+            or (
+                away_xg >= 0.55
+                and away_shots_on >= 2
+                and away_total_shots >= 6
+            )
         )
 
         both_teams_active = (
             home_attacking
             and away_attacking
-            and total_shots_on >= 5
-            and total_shots >= 12
-            and (home_xg + away_xg) >= 0.8
+            and total_shots_on >= 4
+            and total_shots >= 10
+            and (home_xg + away_xg) >= 0.65
         )
 
-        remaining_probability = 54
-        remaining_probability += min(12, (home_pressure + away_pressure) * 0.07)
-        remaining_probability += min(12, total_shots_on * 1.2)
-        remaining_probability += min(8, (home_xg + away_xg) * 3)
+        remaining_probability = 58
+        remaining_probability += min(12, (home_pressure + away_pressure) * 0.08)
+        remaining_probability += min(12, total_shots_on * 1.4)
+        remaining_probability += min(8, (home_xg + away_xg) * 4)
         remaining_probability += min(5, total_corners * 0.35)
         remaining_probability = round(min(92, remaining_probability), 1)
 
@@ -1883,7 +1889,7 @@ def analyze_live_match(fixture):
             and total <= 3
             and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots", ("Expected Goals", "expected_goals"))
             and both_teams_active
-            and remaining_probability >= 86
+            and remaining_probability >= 84
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1913,11 +1919,8 @@ def analyze_live_match(fixture):
             and corner_probability >= 86
             
         ):
-            if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
-                print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🚩 OVER 1.5 NEXT CORNERS",
+            return (
+                "🚩 OVER 1.5 NEXT CORNERS",
                 corner_probability,
                 minute,
                 corner_probability
