@@ -1847,7 +1847,10 @@ def analyze_live_match(fixture):
                 "SHOTS=", under05_home_shots, under05_away_shots,
                 "CORNERS=", under05_home_corners, under05_away_corners,
                 "DANGEROUS=", home_dangerous_attacks, away_dangerous_attacks,
-                "XG=", round(under05_total_xg, 2)
+                "XG=", (
+                    round(under05_total_xg, 2)
+                    if under05_xg_available else "N/A"
+                )
             )
 
             if (
