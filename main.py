@@ -182,8 +182,11 @@ def claim_live_signal(signal_key, fixture_id, country, league, home, away,
 
             # A fixture can produce only one LIVE recommendation, regardless of market.
             existing = conn.execute(
-                "SELECT 1 FROM live_signals WHERE fixture_id = ? LIMIT 1",
-                (fixture_id,)
+                """SELECT 1 FROM live_signals WHERE fixture_id = ?
+                   UNION ALL
+                   SELECT 1 FROM signals WHERE fixture_id = ?
+                   LIMIT 1""",
+                (fixture_id, fixture_id)
             ).fetchone()
             if existing:
                 print("LIVE REJECT - FIXTURE ALREADY SIGNALED:", fixture_id)
@@ -9498,8 +9501,11 @@ def send_prematch_signal(
                 print("PREMATCH REJECT - DAILY SIGNAL CAP REACHED (5):", fixture_id)
                 return False
             if conn.execute(
-                "SELECT 1 FROM signals WHERE fixture_id = ? LIMIT 1",
-                (fixture_id,)
+                """SELECT 1 FROM signals WHERE fixture_id = ?
+                   UNION ALL
+                   SELECT 1 FROM live_signals WHERE fixture_id = ?
+                   LIMIT 1""",
+                (fixture_id, fixture_id)
             ).fetchone():
                 print("PREMATCH REJECT - FIXTURE ALREADY SIGNALED:", fixture_id)
                 return False
