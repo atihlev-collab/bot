@@ -91,6 +91,7 @@ live_quiet_stats_cache = {}
 
 sent_prematch = {}
 team_form_cache = {}
+live_trend_cache = {}
 odds_cache = {}
 prematch_odds_cache = {}
 live_market_cache = {}
@@ -160,13 +161,40 @@ def init_database():
     conn.commit()
     conn.close()
 
+def daily_signal_count(conn):
+    """Count all successfully reserved/saved signals for the current Sofia day."""
+    day_prefix = datetime.now(TZ).date().isoformat() + "%"
+    row = conn.execute(
+        """SELECT
+             (SELECT COUNT(*) FROM live_signals WHERE created_at LIKE ?)
+           + (SELECT COUNT(*) FROM signals WHERE created_at LIKE ?)""",
+        (day_prefix, day_prefix)
+    ).fetchone()
+    return int(row[0] or 0)
+
+
 def claim_live_signal(signal_key, fixture_id, country, league, home, away,
                       home_goals, away_goals, minute, market, confidence, probability):
-    """Atomically reserve one LIVE market per fixture, preventing duplicate sends."""
+    """Atomically reserve at most one LIVE signal per fixture and five total signals per day."""
     try:
         with sqlite3.connect("v3_ai.db", timeout=10) as conn:
+            conn.execute("BEGIN IMMEDIATE")
+
+            # A fixture can produce only one LIVE recommendation, regardless of market.
+            existing = conn.execute(
+                "SELECT 1 FROM live_signals WHERE fixture_id = ? LIMIT 1",
+                (fixture_id,)
+            ).fetchone()
+            if existing:
+                print("LIVE REJECT - FIXTURE ALREADY SIGNALED:", fixture_id)
+                return False
+
+            if daily_signal_count(conn) >= 5:
+                print("DAILY SIGNAL CAP REACHED (5):", fixture_id)
+                return False
+
             cursor = conn.execute(
-                """INSERT OR IGNORE INTO live_signals
+                """INSERT INTO live_signals
                 (signal_key, fixture_id, country, league, home_team, away_team,
                  home_goals, away_goals, minute, market, confidence, probability,
                  created_at, telegram_sent, result)
@@ -178,7 +206,6 @@ def claim_live_signal(signal_key, fixture_id, country, league, home, away,
             return cursor.rowcount == 1
     except Exception as e:
         print("LIVE DEDUPE CLAIM ERROR:", repr(e))
-        # Fail closed: do not send if deduplication state cannot be secured.
         return False
 
 
@@ -1339,6 +1366,43 @@ def calculate_card_pressure(
 
              
 # =========================================================
+# LIVE RECENT-ACTIVITY TRACKER
+# =========================================================
+
+def update_live_trend(fixture_id, score, total_corners, total_shots,
+                      total_shots_on, total_cards, total_fouls):
+    now = time.time()
+    history = live_trend_cache.get(fixture_id, [])
+    if history and history[-1][1] != score:
+        history = []
+
+    history.append((
+        now, score, total_corners, total_shots,
+        total_shots_on, total_cards, total_fouls
+    ))
+    cutoff = now - 600
+    history = [item for item in history if item[0] >= cutoff]
+    live_trend_cache[fixture_id] = history
+
+    if len(history) < 2 or (now - history[0][0]) < 300:
+        return {
+            "minutes": 0, "corners": 0, "shots": 0,
+            "sot": 0, "cards": 0, "fouls": 0
+        }
+
+    first = history[0]
+    last = history[-1]
+    return {
+        "minutes": round((last[0] - first[0]) / 60, 1),
+        "corners": max(0, last[2] - first[2]),
+        "shots": max(0, last[3] - first[3]),
+        "sot": max(0, last[4] - first[4]),
+        "cards": max(0, last[5] - first[5]),
+        "fouls": max(0, last[6] - first[6])
+    }
+
+
+# =========================================================
 # LIVE ANALYSIS
 # =========================================================
 
@@ -1476,6 +1540,16 @@ def analyze_live_match(fixture):
         total_fouls = home_fouls + away_fouls
         total_cards = home_yellow + away_yellow
 
+        recent_activity = update_live_trend(
+            fixture_id,
+            (home, away),
+            total_corners,
+            total_shots,
+            total_shots_on,
+            total_cards,
+            total_fouls
+        )
+
         # Independent, conservative dynamics module. Test-only: records candidates
         # to match_dynamics.db and does not send Telegram or alter existing markets.
         record_match_dynamics(
@@ -1523,46 +1597,37 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CARDS
         # =========================================================
-        card_probability = calculate_card_pressure(
-            minute,
-            home_fouls,
-            away_fouls,
-            home_yellow,
-            away_yellow,
-            home_red,
-            away_red,
-            home_pressure,
-            away_pressure
+        # This is an activity score, not a calibrated probability. Require fresh
+        # card/foul activity; accumulated season/match totals alone are insufficient.
+        card_activity_score = 45
+        card_activity_score += min(16, total_cards * 4)
+        card_activity_score += min(12, total_fouls * 0.45)
+        card_activity_score += min(12, recent_activity["cards"] * 12)
+        card_activity_score += min(10, recent_activity["fouls"] * 1.5)
+        card_activity_score = round(min(90, card_activity_score), 1)
+
+        print(
+            "CARD CHECK:", minute, card_activity_score,
+            "TOTAL_CARDS=", total_cards, "TOTAL_FOULS=", total_fouls,
+            "RECENT=", recent_activity
         )
-
-        if goal_diff <= 1:
-            card_probability += 2
-        if home == away:
-            card_probability += 1
-        if minute >= 70:
-            card_probability += 4
-        if total_fouls >= 25:
-            card_probability += 5
-        if total_cards >= 3:
-            card_probability += 6
-
-        card_probability = min(95, card_probability)
-
-        print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
             live_stats_have_both(home_stats, away_stats, "Fouls", "Yellow Cards")
-            and 72 <= minute <= 82
-            and card_probability >= 88
+            and 72 <= minute <= 80
+            and recent_activity["minutes"] >= 5
+            and recent_activity["cards"] >= 1
+            and recent_activity["fouls"] >= 3
+            and card_activity_score >= 72
             and total_cards >= 3
             and total_fouls >= 22
-            and goal_diff <= 2
+            and goal_diff <= 1
         ):
             return (
                 "🟨 OVER 1.5 NEXT CARDS",
-                card_probability,
+                card_activity_score,
                 minute,
-                card_probability
+                card_activity_score
             )
 
         # =========================================================
@@ -1885,11 +1950,16 @@ def analyze_live_match(fixture):
         )
 
         if (
-            25 <= minute <= 72
-            and total <= 3
+            25 <= minute <= 68
+            and total <= 2
             and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots", ("Expected Goals", "expected_goals"))
+            and home_shots_on >= 2
+            and away_shots_on >= 2
+            and home_xg >= 0.55
+            and away_xg >= 0.55
+            and total_shots >= 12
             and both_teams_active
-            and remaining_probability >= 84
+            and remaining_probability >= 86
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1911,12 +1981,15 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            72 <= minute <= 82
+            72 <= minute <= 80
             and live_stats_have_both(home_stats, away_stats, "Corner Kicks", "Total Shots", "Shots on Goal")
-            and total_corners >= 10
-            and total_shots >= 18
-            and best_pressure >= 78
-            and corner_probability >= 86
+            and recent_activity["minutes"] >= 5
+            and recent_activity["corners"] >= 2
+            and recent_activity["shots"] >= 3
+            and total_corners >= 8
+            and total_shots >= 16
+            and best_pressure >= 72
+            and corner_probability >= 84
             
         ):
             return (
@@ -1960,10 +2033,13 @@ def analyze_live_match(fixture):
                 live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots", ("Expected Goals", "expected_goals"))
                 and goal_diff <= 1
                 and best_pressure >= 82
-                and total_shots_on >= 10
+                and total_shots_on >= 8
                 and total_shots >= 22
+                and recent_activity["minutes"] >= 5
+                and recent_activity["sot"] >= 1
+                and recent_activity["shots"] >= 2
                 and (home_xg + away_xg) >= 2.4
-                and late_goal_probability >= 88
+                and late_goal_probability >= 90
             ):
                 return (
                     "🔥 LATE GOAL",
@@ -3304,9 +3380,7 @@ def save_signal(
             odd,
             confidence,
 
-            datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            )
+            datetime.now(TZ).isoformat()
 
         )
 
@@ -9418,6 +9492,21 @@ def send_prematch_signal(
 
 ):                                
 
+    try:
+        with sqlite3.connect("v3_ai.db", timeout=10) as conn:
+            if daily_signal_count(conn) >= 5:
+                print("PREMATCH REJECT - DAILY SIGNAL CAP REACHED (5):", fixture_id)
+                return False
+            if conn.execute(
+                "SELECT 1 FROM signals WHERE fixture_id = ? LIMIT 1",
+                (fixture_id,)
+            ).fetchone():
+                print("PREMATCH REJECT - FIXTURE ALREADY SIGNALED:", fixture_id)
+                return False
+    except Exception as e:
+        print("PREMATCH DEDUPE/CAP CHECK ERROR:", repr(e))
+        return False
+
     message = f"""               
 🔥 PREMATCH V3
 
@@ -9928,9 +10017,8 @@ def live_loop():
         home_goals = match["goals"]["home"] or 0
         away_goals = match["goals"]["away"] or 0
 
-        # One signal per fixture and market for the entire match.
-        # Score is intentionally excluded so a score change cannot resend it.
-        key = f"live_{fixture_id}_{signal[0]}"
+        # One LIVE signal total per fixture, regardless of market or score changes.
+        key = f"live_{fixture_id}"
 
         if key in sent_live:
             continue
@@ -10042,10 +10130,7 @@ def live_loop():
 💰 Odds:
 {odds_text}
 
-💎 Confidence: {signal[1]}%
-
-🎯 Goal Probability:
-{goal_probability}%
+💎 Model Score: {signal[1]}%
 """
         )
 
