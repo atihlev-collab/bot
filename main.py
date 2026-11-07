@@ -1154,15 +1154,12 @@ def _catalog_has_market(catalog, market_type):
 
 
 def betano_live_market_available(fixture_id, market_type):
-    """Conservative availability gate for corner/card Telegram signals.
+    """Check Betano's market family for this fixture.
 
-    Requires BOTH:
-      1) Betano to list that market family for the fixture pre-match; and
-      2) API-Football live odds to show a compatible in-play market now.
-
-    API-Football's /odds/live feed is not documented as bookmaker-specific,
-    so this deliberately uses both checks instead of pretending it can prove
-    a Betano live price when the feed does not expose one.
+    Cards: require any cards market in Betano's fixture catalogue; no exact
+    selection/line is required. Other supported markets additionally require
+    a compatible open market in API-Football's generic live-odds feed, which
+    is not bookmaker-specific and therefore does not prove a Betano live price.
     """
     betano_catalog = get_betano_market_catalog(fixture_id)
     betano_ok = _catalog_has_market(betano_catalog, market_type)
