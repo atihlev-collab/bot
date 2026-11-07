@@ -1396,6 +1396,10 @@ def analyze_live_match(fixture):
         away_yellow = extract(away_stats, "Yellow Cards")
         home_xg = extract(home_stats, "Expected Goals")
         away_xg = extract(away_stats, "Expected Goals")
+        xg_available = (
+            _live_has_stat(home_stats, "Expected Goals")
+            and _live_has_stat(away_stats, "Expected Goals")
+        )
 
         home_pressure = calculate_pressure(home_stats)
         away_pressure = calculate_pressure(away_stats)
@@ -1884,21 +1888,25 @@ def analyze_live_match(fixture):
             home_pressure >= 44
             and home_shots_on >= 3
             and home_total_shots >= 6
-            and (home_xg >= 0.25 or home_shots_on >= 2)
         )
         away_attacking = (
             away_pressure >= 44
             and away_shots_on >= 3
             and away_total_shots >= 6
-            and (away_xg >= 0.25 or away_shots_on >= 2)
         )
 
+        # xG is optional because some live feeds do not provide it.
+        # When xG is absent, require stronger shot volume instead.
         both_teams_active = (
             home_attacking
             and away_attacking
-            and total_shots_on >= 5
-            and total_shots >= 12
-            and (home_xg + away_xg) >= 0.8
+            and total_shots_on >= (5 if xg_available else 7)
+            and total_shots >= (12 if xg_available else 16)
+            and (
+                (home_xg + away_xg) >= 0.8
+                if xg_available
+                else True
+            )
         )
 
         remaining_probability = 54
@@ -1922,8 +1930,8 @@ def analyze_live_match(fixture):
             25 <= minute <= 72
             and total <= 3
             and recent_ready and recent_home_attack and recent_away_attack
-            and _live_has_stat(home_stats, ("Shots on Goal", "Total Shots", "Expected Goals"))
-            and _live_has_stat(away_stats, ("Shots on Goal", "Total Shots", "Expected Goals"))
+            and _live_has_stat(home_stats, ("Shots on Goal", "Total Shots"))
+            and _live_has_stat(away_stats, ("Shots on Goal", "Total Shots"))
             and both_teams_active
             and remaining_probability >= 70
         ):
@@ -1999,12 +2007,16 @@ def analyze_live_match(fixture):
 
             if (
                 recent_ready and recent_any_attack and goal_diff <= 1
-                and _live_has_stat(home_stats, ("Shots on Goal", "Total Shots", "Expected Goals"))
-                and _live_has_stat(away_stats, ("Shots on Goal", "Total Shots", "Expected Goals"))
+                and _live_has_stat(home_stats, ("Shots on Goal", "Total Shots"))
+                and _live_has_stat(away_stats, ("Shots on Goal", "Total Shots"))
                 and best_pressure >= 70
-                and total_shots_on >= 8
-                and total_shots >= 18
-                and (home_xg + away_xg) >= 1.9
+                and total_shots_on >= (8 if xg_available else 10)
+                and total_shots >= (18 if xg_available else 22)
+                and (
+                    (home_xg + away_xg) >= 1.9
+                    if xg_available
+                    else True
+                )
                 and late_goal_probability >= 80
             ):
                 return (
