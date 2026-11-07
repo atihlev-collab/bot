@@ -1314,23 +1314,26 @@ def _live_has_stat(team_stats, stat_names):
         "corner kicks": {"corner kicks", "corners"},
         "expected goals": {"expected goals", "expected goals (xg)", "xg"},
     }
-    accepted = set(wanted)
-    for key in wanted:
-        accepted.update(aliases.get(key, set()))
     try:
+        available = set()
         for item in team_stats.get("statistics", []):
             actual = " ".join(str(item.get("type") or "").strip().lower().replace("_", " ").split())
-            if actual in accepted:
-                value = item.get("value")
-                if value is None or value == "":
-                    return False
-                if isinstance(value, str):
-                    value = value.replace("%", "").strip()
+            value = item.get("value")
+            if value is None or value == "":
+                continue
+            if isinstance(value, str):
+                value = value.replace("%", "").strip()
+            try:
                 float(value)
-                return True
+            except (TypeError, ValueError):
+                continue
+            available.add(actual)
+        return all(
+            bool(aliases.get(key, {key}) & available)
+            for key in wanted
+        )
     except (TypeError, ValueError, AttributeError):
         return False
-    return False
 
 
 def analyze_live_match(fixture):
