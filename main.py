@@ -1644,6 +1644,9 @@ def analyze_live_match(fixture):
             20 <= minute <= 40
             and total >= 1
             and goal_diff <= 1
+            and recent_activity["minutes"] >= 5
+            and recent_activity["shots"] >= 2
+            and recent_activity["sot"] >= 1
             and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots")
         ):
             fast_goal_probability = 68
@@ -1695,6 +1698,9 @@ def analyze_live_match(fixture):
         if (
             41 <= minute <= 78
             and goal_diff <= 1
+            and recent_activity["minutes"] >= 5
+            and recent_activity["shots"] >= 2
+            and recent_activity["sot"] >= 1
             and live_stats_have_both(home_stats, away_stats, "Shots on Goal", "Total Shots")
         ):
             normal_goal_probability = 72
