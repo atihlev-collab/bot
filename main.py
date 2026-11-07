@@ -1481,11 +1481,19 @@ def analyze_live_match(fixture):
             extract(home_stats, "Dangerous Attacks"),
             extract(away_stats, "Dangerous Attacks")
         )
+        # Keep enough history for slow full-fixture scans. With hundreds of
+        # live fixtures, the same match may be revisited more than 6 minutes
+        # later; a 360-second expiry made recent_ready permanently false.
         history = [item for item in live_recent_stats_cache.get(fixture_id, [])
-                   if now_live - item[0] <= 360]
+                   if now_live - item[0] <= 1800]
         history.append((now_live, live_snapshot))
-        live_recent_stats_cache[fixture_id] = history[-7:]
-        baseline = next((item for item in history if now_live - item[0] >= 120), None)
+        live_recent_stats_cache[fixture_id] = history[-20:]
+        # Use the closest snapshot that is at least 2 minutes old, not the
+        # oldest one, so deltas represent the shortest available interval.
+        baseline = next(
+            (item for item in reversed(history) if now_live - item[0] >= 120),
+            None
+        )
         recent_ready = baseline is not None
         if recent_ready:
             old = baseline[1]
