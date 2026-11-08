@@ -1302,7 +1302,7 @@ def analyze_live_match(fixture):
                 + away_form["unbeaten_pct"] * 0.20
                 + (away_form["avg_scored"] * 100 / 3) * 0.10
             )
-            away_pressure += min(12, round(form_bonus / 10)
+            away_pressure += min(12, round(form_bonus / 10))
 
         if home_xg >= 1.5:
             home_pressure += 8
