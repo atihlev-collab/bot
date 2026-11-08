@@ -193,39 +193,86 @@ def blocked_league(league):
 # =========================================================
 
 def get_live_matches():
-    try:
-        response = requests.get(
-            f"{BASE_URL}/fixtures",
-            headers=HEADERS,
-            params={"live": "all"},
-            timeout=20
-        )
-        print("LIVE API HTTP:", response.status_code)
-        response.raise_for_status()
-        data = response.json()
-        errors = data.get("errors") or {}
-        if errors:
-            print("LIVE API ERRORS:", errors)
-        results = data.get("response") or []
-        print("LIVE API RESULTS:", len(results))
-        if not results and not errors:
-            print("LIVE API EMPTY RESPONSE:", {
-                "results": data.get("results"),
-                "paging": data.get("paging"),
-                "parameters": data.get("parameters")
-            })
-        return results
-    except requests.exceptions.RequestException as e:
-        print("LIVE API REQUEST ERROR:", repr(e))
-        if getattr(e, "response", None) is not None:
-            print("LIVE API ERROR BODY:", e.response.text[:1000])
+    """
+    Fetch live fixtures. If the provider's live=all filter unexpectedly returns
+    an empty list, fall back to today's fixtures in Sofia time and retain only
+    statuses that are actually in play. This avoids treating an empty live
+    filter response as proof that there are no live matches.
+    """
+    live_statuses = {
+        "1H", "HT", "2H", "ET", "BT", "P", "LIVE",
+        "INT", "SUSP", "中", "2H"
+    }
+
+    def request_fixtures(params, label):
+        try:
+            response = requests.get(
+                f"{BASE_URL}/fixtures",
+                headers=HEADERS,
+                params=params,
+                timeout=25
+            )
+            print(f"{label} API HTTP:", response.status_code)
+            response.raise_for_status()
+            data = response.json()
+            errors = data.get("errors") or {}
+            if errors:
+                print(f"{label} API ERRORS:", errors)
+            fixtures = data.get("response") or []
+            print(
+                f"{label} API RESULTS:",
+                len(fixtures),
+                "| paging=", data.get("paging"),
+                "| parameters=", data.get("parameters")
+            )
+            return fixtures
+        except requests.exceptions.RequestException as e:
+            print(f"{label} API REQUEST ERROR:", repr(e))
+            if getattr(e, "response", None) is not None:
+                print(f"{label} API ERROR BODY:", e.response.text[:1000])
+            return None
+        except (ValueError, TypeError, AttributeError) as e:
+            print(f"{label} API PARSE ERROR:", repr(e))
+            return None
+        except Exception as e:
+            print(f"{label} API UNEXPECTED ERROR:", repr(e))
+            return None
+
+    # Primary API-Football live endpoint.
+    live_fixtures = request_fixtures({"live": "all"}, "LIVE")
+    if live_fixtures:
+        return live_fixtures
+
+    print("LIVE API FALLBACK: live=all returned no fixtures; checking today's fixtures")
+    today = datetime.now(TZ).strftime("%Y-%m-%d")
+    daily_fixtures = request_fixtures(
+        {"date": today, "timezone": "Europe/Sofia"},
+        "LIVE DATE FALLBACK"
+    )
+    if daily_fixtures is None:
         return []
-    except (ValueError, TypeError, AttributeError) as e:
-        print("LIVE API PARSE ERROR:", repr(e))
-        return []
-    except Exception as e:
-        print("LIVE API UNEXPECTED ERROR:", repr(e))
-        return []
+
+    live_results = []
+    for fixture in daily_fixtures:
+        try:
+            status = str(
+                fixture.get("fixture", {}).get("status", {}).get("short", "")
+            ).upper()
+            if status in live_statuses:
+                live_results.append(fixture)
+        except (AttributeError, TypeError):
+            continue
+
+    print(
+        "LIVE DATE FALLBACK IN-PLAY RESULTS:",
+        len(live_results),
+        "| date=", today,
+        "| statuses=", sorted({
+            str(x.get("fixture", {}).get("status", {}).get("short", ""))
+            for x in live_results
+        })
+    )
+    return live_results
 
 # =========================================================
 # LIVE STATISTICS
