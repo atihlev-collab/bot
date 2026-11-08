@@ -759,33 +759,38 @@ def get_match_odds(fixture_id):
 # =========================================================
 
 def extract(team, stat_name):
+    """Read API-Football stats with normalized names and decimal support."""
+    aliases = {
+        "expected goals": {"expected goals", "expected_goals", "expected goals (xg)", "xg"},
+        "shots on goal": {"shots on goal", "shots on target"},
+        "total shots": {"total shots"},
+        "corner kicks": {"corner kicks", "corners"},
+        "ball possession": {"ball possession"},
+    }
+
+    def normalize(value):
+        return " ".join(
+            str(value or "").strip().lower().replace("_", " ").split()
+        )
+
+    wanted = normalize(stat_name)
+    accepted = aliases.get(wanted, {wanted})
 
     try:
+        for stat in team.get("statistics", []):
+            if normalize(stat.get("type")) not in accepted:
+                continue
 
-        for stat in team["statistics"]:
+            value = stat.get("value")
+            if value is None or value == "":
+                return 0
 
-            if stat["type"] == stat_name:
+            if isinstance(value, str):
+                value = value.replace("%", "").strip()
 
-                value = stat["value"]
-
-                if value is None:
-                    return 0
-
-                if isinstance(value, str):
-
-                    value = value.replace("%", "")
-
-                    try:
-                        value = int(value)
-
-                    except:
-
-                        return 0
-
-                return value
-
-    except:
-
+            number = float(value)
+            return int(number) if number.is_integer() else number
+    except (TypeError, ValueError, AttributeError):
         pass
 
     return 0
@@ -1390,11 +1395,8 @@ def analyze_live_match(fixture):
                 and total_corners >= 5
                 and fh_corner_probability >= 68
             ):
-                if not betano_live_market_available(fixture_id, "FH_CORNERS"):
-                    print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
-                else:
-                    return (
-                        "🚩 FIRST HALF OVER 1.5 CORNERS",
+                return (
+                    "🚩 FIRST HALF OVER 1.5 CORNERS",
                     fh_corner_probability,
                     minute,
                     fh_corner_probability
@@ -1437,11 +1439,8 @@ def analyze_live_match(fixture):
             and total_fouls >= 22
             and goal_diff <= 2
         ):
-            if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
-                print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🟨 OVER 1.5 NEXT CARDS",
+            return (
+                "🟨 OVER 1.5 NEXT CARDS",
                 card_probability,
                 minute,
                 card_probability
@@ -1574,16 +1573,13 @@ def analyze_live_match(fixture):
         if (
             72 <= minute <= 82
             and total_corners >= 10
+            and total_corners <= 14
             and total_shots >= 20
             and best_pressure >= 78
             and corner_probability >= 78
-            and total_corners <= 10
         ):
-            if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
-                print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
-            else:
-                return (
-                    "🚩 OVER 1.5 NEXT CORNERS",
+            return (
+                "🚩 OVER 1.5 NEXT CORNERS",
                 corner_probability,
                 minute,
                 corner_probability
@@ -9637,41 +9633,8 @@ def live_loop():
         country = match["league"]["country"]      
         league = match["league"]["name"]         
 
-        odds_text = "-"                          
-
-        match_odds = get_match_odds(              
-
-            fixture_id                           
-        )                                         
-
-        home_odd = None                           
-        away_odd = None                           
-
-        if match_odds:                            
-            home_odd = match_odds[0]              
-            away_odd = match_odds[2]              
-     
-        if (                                   
-            home_odd is not None               
-            or                                 
-            away_odd is not None               
-        ):                                      
-        
-            if "HOME" in signal[0]:            
-        
-                odds_text = str(               
-        
-                    home_odd                   
-        
-                )                              
-        
-            elif "AWAY" in signal[0]:           
-        
-                odds_text = str(               
-        
-                    away_odd                    
-        
-                )                              
+        # LIVE recommendations are statistics-based; do not request Betano odds.
+        odds_text = "N/A (LIVE odds not used)"
 
                                                
 
