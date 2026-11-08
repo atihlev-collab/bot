@@ -201,7 +201,7 @@ def get_live_matches():
     """
     live_statuses = {
         "1H", "HT", "2H", "ET", "BT", "P", "LIVE",
-        "INT", "SUSP", "中", "2H"
+        "INT", "SUSP", "PEN"
     }
 
     def request_fixtures(params, label):
