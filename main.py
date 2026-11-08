@@ -9665,34 +9665,27 @@ def live_loop():
 """
 )          
          
-if __name__ == "__main__":                         
+if __name__ == "__main__":
 
-    print("MAIN V3 STARTED")                      
+    print("MAIN V3 STARTED")
 
-    init_database()                               
+    init_database()
 
-    last_prematch_scan = 0                         
+    last_prematch_scan = 0
 
-    while True:                                    
+    while True:
 
-        if (                                       
-            time.time()                            
-            -                                     
-            last_prematch_scan                     
-            >=                                    
-            3600                                   
-        ):                                         
+        # Run LIVE first so the initial PREMATCH scan cannot delay LIVE startup.
+        live_loop()
 
-            check_prematch_results()               
+        if time.time() - last_prematch_scan >= 3600:
 
-            market_roi_report()                    
+            check_prematch_results()
 
-            prematch_loop()                        
+            market_roi_report()
 
-            last_prematch_scan = (                
-                time.time()                        
-            )                                      
+            prematch_loop()
 
-        live_loop()                               
+            last_prematch_scan = time.time()
 
-        time.sleep(60) 
+        time.sleep(60)
