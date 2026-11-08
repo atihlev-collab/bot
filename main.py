@@ -33,6 +33,9 @@ LIVE_BETS = {}
 
 TZ = ZoneInfo("Europe/Sofia")
 
+LIVE_SCAN_INTERVAL = 60  # LIVE scan every minute, start-to-start
+PREMATCH_SCAN_INTERVAL = 3600  # PREMATCH scan every hour
+
 bot = Bot(token=BOT_TOKEN)
 
 logging.basicConfig(level=logging.WARNING)
@@ -9692,27 +9695,47 @@ def live_loop():
 """
 )          
          
+def _live_worker_loop():
+    """Run LIVE independently on a fixed 60-second start-to-start cadence."""
+    print(f"LIVE WORKER STARTED | interval={LIVE_SCAN_INTERVAL}s", flush=True)
+    while True:
+        scan_started = time.time()
+        try:
+            live_loop()
+        except Exception:
+            logging.exception("LIVE WORKER ERROR")
+
+        elapsed = time.time() - scan_started
+        time.sleep(max(0.0, LIVE_SCAN_INTERVAL - elapsed))
+
+
 if __name__ == "__main__":
 
     print("MAIN V3 STARTED")
 
     init_database()
 
+    # LIVE runs independently so PREMATCH work cannot delay the minute scan.
+    live_worker = threading.Thread(
+        target=_live_worker_loop,
+        name="live-scanner-worker",
+        daemon=True,
+    )
+    live_worker.start()
+
     last_prematch_scan = 0
 
     while True:
 
-        # Run LIVE first so the initial PREMATCH scan cannot delay LIVE startup.
-        live_loop()
+        if time.time() - last_prematch_scan >= PREMATCH_SCAN_INTERVAL:
 
-        if time.time() - last_prematch_scan >= 3600:
+            try:
+                check_prematch_results()
+                market_roi_report()
+                prematch_loop()
+            except Exception:
+                logging.exception("PREMATCH SCHEDULER ERROR")
+            finally:
+                last_prematch_scan = time.time()
 
-            check_prematch_results()
-
-            market_roi_report()
-
-            prematch_loop()
-
-            last_prematch_scan = time.time()
-
-        time.sleep(60)
+        time.sleep(30)
