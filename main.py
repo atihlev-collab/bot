@@ -86,6 +86,8 @@ BAD_COUNTRIES = [
 # =========================================================
 
 sent_live = {}
+live_daily_market_counts = {}
+live_daily_market_date = None
 
 sent_prematch = {}
 team_form_cache = {}
@@ -1236,46 +1238,30 @@ def analyze_live_match(fixture):
     try:
         fixture_id = fixture["fixture"]["id"]
         minute = fixture["fixture"]["status"].get("elapsed") or 0
-
         if minute < 25 or minute > 90:
             return None
 
         home_team = fixture["teams"]["home"]["name"]
         away_team = fixture["teams"]["away"]["name"]
         country = fixture["league"].get("country", "")
-
         league_name = fixture["league"].get("name", "")
         check_text = f"{country} {league_name} {home_team} {away_team}".lower()
         blocked_live = [
-            "reserve", "reserves", "women", "woman", "female",
-            "ladies", "femenina", "feminine", "feminin", "femminile",
-            "frauen", "damen", "feminino",
-            "u17", "u18", "u19", "u20", "u21", "u22", "u23",
-            "russia", "belarus"
+            "reserve", "reserves", "women", "woman", "female", "ladies",
+            "femenina", "feminine", "feminin", "femminile", "frauen",
+            "damen", "feminino", "u17", "u18", "u19", "u20", "u21",
+            "u22", "u23", "russia", "belarus"
         ]
-
-        if country in ["Russia", "Belarus"]:
-            return None
-
-        if any(word in check_text for word in blocked_live):
+        if country in ["Russia", "Belarus"] or any(w in check_text for w in blocked_live):
             print("LIVE BLOCKED MATCH:", home_team, away_team, league_name)
             return None
 
-        if home_team.strip().lower().endswith((" w", " women", " ladies")):
-            return None
-        if away_team.strip().lower().endswith((" w", " women", " ladies")):
-            return None
-
         stats = get_statistics(fixture_id)
-
         print("LIVE STATS:", fixture_id, len(stats))
-
         if len(stats) < 2:
             return None
 
-        home_stats = stats[0]
-        away_stats = stats[1]
-
+        home_stats, away_stats = stats[0], stats[1]
         home = fixture["goals"].get("home", 0) or 0
         away = fixture["goals"].get("away", 0) or 0
         total = home + away
@@ -1299,16 +1285,8 @@ def analyze_live_match(fixture):
         home_pressure = calculate_pressure(home_stats)
         away_pressure = calculate_pressure(away_stats)
 
-        home_form = get_team_form(
-            fixture["teams"]["home"]["id"],
-            venue="home"
-        )
-        away_form = get_team_form(
-            fixture["teams"]["away"]["id"],
-            venue="away"
-        )
-
-        # Small form adjustment. Live statistics remain the main signal.
+        home_form = get_team_form(fixture["teams"]["home"]["id"], venue="home")
+        away_form = get_team_form(fixture["teams"]["away"]["id"], venue="away")
         if home_form:
             form_bonus = (
                 home_form["form_pct"] * 0.40
@@ -1317,7 +1295,6 @@ def analyze_live_match(fixture):
                 + (home_form["avg_scored"] * 100 / 3) * 0.10
             )
             home_pressure += min(12, round(form_bonus / 10))
-
         if away_form:
             form_bonus = (
                 away_form["form_pct"] * 0.40
@@ -1325,20 +1302,17 @@ def analyze_live_match(fixture):
                 + away_form["unbeaten_pct"] * 0.20
                 + (away_form["avg_scored"] * 100 / 3) * 0.10
             )
-            away_pressure += min(12, round(form_bonus / 10))
+            away_pressure += min(12, round(form_bonus / 10)
 
-        # xG adjustment.
         if home_xg >= 1.5:
             home_pressure += 8
         elif home_xg >= 0.9:
             home_pressure += 4
-
         if away_xg >= 1.5:
             away_pressure += 8
         elif away_xg >= 0.9:
             away_pressure += 4
 
-        # Red cards strongly change the game state.
         if home_red > away_red:
             home_pressure -= 25
             away_pressure += 15
@@ -1346,7 +1320,6 @@ def analyze_live_match(fixture):
             away_pressure -= 25
             home_pressure += 15
 
-        # Team leading comfortably often reduces attacking urgency.
         if goal_diff >= 2 and minute >= 60:
             if home > away:
                 home_pressure -= 8
@@ -1357,7 +1330,6 @@ def analyze_live_match(fixture):
 
         home_pressure = max(0, min(100, home_pressure))
         away_pressure = max(0, min(100, away_pressure))
-
         best_pressure = max(home_pressure, away_pressure)
         pressure_diff = abs(home_pressure - away_pressure)
         total_shots_on = home_shots_on + away_shots_on
@@ -1365,268 +1337,154 @@ def analyze_live_match(fixture):
         total_corners = home_corners + away_corners
         total_fouls = home_fouls + away_fouls
         total_cards = home_yellow + away_yellow
+        total_xg = home_xg + away_xg
 
         print(
-            "LIVE ENGINE:", home_team, away_team,
-            "MIN=", minute,
-            "SCORE=", home, away,
-            "PRESS=", home_pressure, away_pressure,
+            "LIVE ENGINE:", home_team, away_team, "MIN=", minute,
+            "SCORE=", home, away, "PRESS=", home_pressure, away_pressure,
             "SOT=", home_shots_on, away_shots_on,
             "SHOTS=", home_total_shots, away_total_shots,
             "CORNERS=", home_corners, away_corners,
-            "XG=", home_xg, away_xg,
-            "CARDS=", total_cards,
-            "FOULS=", total_fouls
+            "XG=", home_xg, away_xg, "CARDS=", total_cards, "FOULS=", total_fouls
         )
 
-        # =========================================================
-        # FIRST HALF OVER 1.5 CORNERS
-        # =========================================================
+        # Collect every qualifying market independently, then select one best
+        # candidate. A market earlier in the function can no longer hide another.
+        candidates = []
+
+        # FIRST-HALF CORNERS
         if 29 <= minute <= 38:
-            fh_corner_probability = 60
-            fh_corner_probability += max(0, best_pressure - 65) * 0.8
-            fh_corner_probability += min(10, total_shots * 0.5)
-            fh_corner_probability += min(8, total_corners * 1.2)
-            fh_corner_probability = round(min(95, fh_corner_probability), 1)
+            p = 60 + max(0, best_pressure - 65) * 0.8
+            p += min(10, total_shots * 0.5) + min(8, total_corners * 1.2)
+            p = round(min(95, p), 1)
+            if best_pressure >= 78 and total_shots >= 7 and total_corners >= 5 and p >= 68:
+                candidates.append((p + 2, ("🚩 FIRST HALF OVER 1.5 CORNERS", p, minute, p)))
 
-            if (
-                best_pressure >= 78
-                and total_shots >= 7
-                and total_corners >= 5
-                and fh_corner_probability >= 68
-            ):
-                return (
-                    "🚩 FIRST HALF OVER 1.5 CORNERS",
-                    fh_corner_probability,
-                    minute,
-                    fh_corner_probability
-                )
-
-        # =========================================================
-        # OVER 1.5 NEXT CARDS
-        # =========================================================
-        card_probability = calculate_card_pressure(
-            minute,
-            home_fouls,
-            away_fouls,
-            home_yellow,
-            away_yellow,
-            home_red,
-            away_red,
-            home_pressure,
-            away_pressure
+        # NEXT CARDS: require a genuinely active/foul-heavy match, not just elapsed time.
+        card_pressure = calculate_card_pressure(
+            minute, home_fouls, away_fouls, home_yellow, away_yellow,
+            home_red, away_red,
+            extract(home_stats, "Dangerous Attacks"),
+            extract(away_stats, "Dangerous Attacks")
         )
-
         if goal_diff <= 1:
-            card_probability += 2
+            card_pressure += 2
         if home == away:
-            card_probability += 1
+            card_pressure += 1
         if minute >= 70:
-            card_probability += 4
-        if total_fouls >= 30:
-            card_probability += 5
-        if total_cards >= 4:
-            card_probability += 6
-
-        card_probability = min(95, card_probability)
-
-        print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
-
+            card_pressure += 3
+        card_pressure = min(95, card_pressure)
+        print("CARD CHECK:", minute, card_pressure, total_cards, total_fouls)
         if (
-            72 <= minute <= 82
-            and card_probability >= 78
-            and total_cards >= 6
-            and total_fouls >= 22
+            72 <= minute <= 82 and card_pressure >= 74
+            and total_cards >= 4 and total_fouls >= 18
             and goal_diff <= 2
         ):
-            return (
-                "🟨 OVER 1.5 NEXT CARDS",
-                card_probability,
-                minute,
-                card_probability
-            )
+            candidates.append((card_pressure + 3, ("🟨 OVER 1.5 NEXT CARDS", card_pressure, minute, card_pressure)))
 
-        # =========================================================
-        # FAST NEXT GOAL - 20 TO 40
-        # =========================================================
-        if 20 <= minute <= 40 and total >= 1:
-            fast_goal_probability = 66
-            fast_goal_probability += max(0, best_pressure - 65) * 0.65
-            fast_goal_probability += min(12, total_shots_on * 1.5)
-            fast_goal_probability += min(6, total_corners)
-            fast_goal_probability += min(8, total * 2)
-            fast_goal_probability += min(8, pressure_diff * 0.25)
-            fast_goal_probability = round(min(95, fast_goal_probability), 1)
+        # FAST NEXT GOAL
+        if 25 <= minute <= 40 and total >= 1:
+            p = 62 + max(0, best_pressure - 62) * 0.65
+            p += min(12, total_shots_on * 1.5) + min(6, total_corners)
+            p += min(8, pressure_diff * 0.25)
+            p = round(min(95, p), 1)
+            if best_pressure >= 70 and total_shots_on >= 4 and pressure_diff >= 6 and p >= 72:
+                if home_pressure >= away_pressure + 8 and home_shots_on >= away_shots_on:
+                    candidates.append((p + 4, ("🎯 NEXT GOAL HOME", p, minute, p)))
+                elif away_pressure >= home_pressure + 8 and away_shots_on >= home_shots_on:
+                    candidates.append((p + 4, ("🎯 NEXT GOAL AWAY", p, minute, p)))
 
-            if (
-                best_pressure >= 68
-                and total_shots_on >= 4
-                and pressure_diff >= 4
-                and fast_goal_probability >= 62
-            ):
-                if (
-                    home_pressure >= away_pressure + 7
-                    and home_shots_on >= away_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL HOME",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
-
-                if (
-                    away_pressure >= home_pressure + 7
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
-
-        # =========================================================
-        # NORMAL NEXT GOAL - 41 TO 78
-        # =========================================================
+        # NORMAL NEXT GOAL: more reachable than the old 86 pressure / 13 SOT gate.
         if 41 <= minute <= 78:
-            normal_goal_probability = 82
-            normal_goal_probability += max(0, best_pressure - 67) * 0.70
-            normal_goal_probability += min(14, total_shots_on * 1.4)
-            normal_goal_probability += min(7, total_corners * 0.7)
-            normal_goal_probability += min(8, pressure_diff * 0.25)
-            normal_goal_probability += min(6, (home_xg + away_xg) * 2)
-            normal_goal_probability = round(min(95, normal_goal_probability), 1)
+            p = 68 + max(0, best_pressure - 65) * 0.65
+            p += min(14, total_shots_on * 1.25) + min(7, total_corners * 0.6)
+            p += min(8, pressure_diff * 0.22) + min(6, total_xg * 2)
+            p = round(min(95, p), 1)
+            print("NORMAL NEXT GOAL:", p, pressure_diff)
+            if best_pressure >= 78 and total_shots_on >= 7 and pressure_diff >= 18 and p >= 80:
+                if home_pressure >= away_pressure + 10 and home_shots_on >= away_shots_on:
+                    candidates.append((p + 4, ("🎯 NEXT GOAL HOME", p, minute, p)))
+                elif away_pressure >= home_pressure + 10 and away_shots_on >= home_shots_on:
+                    candidates.append((p + 4, ("🎯 NEXT GOAL AWAY", p, minute, p)))
 
-            print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
-
-            if (
-                best_pressure >= 86
-                and total_shots_on >= 13
-                and pressure_diff >= 34
-                and normal_goal_probability >= 87 
-            ):
-                if (
-                    home_pressure >= away_pressure + 14
-                    and home_shots_on >= away_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL HOME",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
-
-                if (
-                    away_pressure >= home_pressure + 14
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
-
-        # =========================================================
         # OVER 1.5 REMAINING GOALS
-        # =========================================================
-        remaining_probability = 45
-        remaining_probability += max(0, best_pressure - 55) * 0.55
-        remaining_probability += min(15, total_shots_on * 1.4)
-        remaining_probability += min(8, total_corners * 0.7)
-        remaining_probability += min(10, (home_xg + away_xg) * 2.2)
-        if total >= 2:
-            remaining_probability += 4
-        remaining_probability = round(min(95, remaining_probability), 1)
-
-        print("OVER15 REMAINING CHECK:", minute, remaining_probability)
-
+        remaining_p = 44 + max(0, best_pressure - 54) * 0.55
+        remaining_p += min(15, total_shots_on * 1.35) + min(8, total_corners * 0.65)
+        remaining_p += min(10, total_xg * 2.2)
+        if total >= 1:
+            remaining_p += 3
+        remaining_p = round(min(95, remaining_p), 1)
+        print("OVER15 REMAINING CHECK:", minute, remaining_p)
         if (
-            25 <= minute <= 65
-            and best_pressure >= 64
-            and total_shots_on >= 5
-            and total_shots >= 8
-            and (home_xg + away_xg) >= 1.4
-            and remaining_probability >= 60
-            and total <= 1
+            25 <= minute <= 65 and total <= 1
+            and best_pressure >= 60 and total_shots_on >= 4
+            and total_shots >= 7 and total_xg >= 1.2
+            and remaining_p >= 62
         ):
-            return (
-                "🚀 OVER 1.5 REMAINING GOALS",
-                remaining_probability,
-                minute,
-                remaining_probability
-            )
+            candidates.append((remaining_p + 3, ("🚀 OVER 1.5 REMAINING GOALS", remaining_p, minute, remaining_p)))
 
-        # =========================================================
-        # OVER 1.5 NEXT CORNERS
-        # =========================================================
-        corner_probability = 80
-        corner_probability += max(0, best_pressure - 60) * 0.55
-        corner_probability += min(14, total_corners * 1.2)
-        corner_probability += min(12, total_shots * 0.45)
-        corner_probability += min(6, total_shots_on * 0.6)
-        corner_probability = round(min(95, corner_probability), 1)
-
-        print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
-
+        # NEXT CORNERS: slightly wider match-state range, still requires sustained activity.
+        corner_p = 68 + max(0, best_pressure - 58) * 0.5
+        corner_p += min(14, total_corners * 1.1) + min(12, total_shots * 0.4)
+        corner_p += min(6, total_shots_on * 0.5)
+        corner_p = round(min(95, corner_p), 1)
+        print("CORNER CHECK:", minute, corner_p, total_corners, total_shots)
         if (
-            72 <= minute <= 82
-            and total_corners >= 10
-            and total_corners <= 14
-            and total_shots >= 20
-            and best_pressure >= 78
-            and corner_probability >= 78
+            72 <= minute <= 82 and 8 <= total_corners <= 14
+            and total_shots >= 16 and best_pressure >= 70
+            and corner_p >= 78
         ):
-            return (
-                "🚩 OVER 1.5 NEXT CORNERS",
-                corner_probability,
-                minute,
-                corner_probability
-            )
+            candidates.append((corner_p + 2, ("🚩 OVER 1.5 NEXT CORNERS", corner_p, minute, corner_p)))
 
-        # =========================================================
-        # LATE GOAL
-        # =========================================================
-        if 75 <= minute <= 88:
-            late_goal_probability = 41
-            late_goal_probability += max(0, best_pressure - 60) * 0.65
-            late_goal_probability += min(15, total_shots_on * 1.3)
-            late_goal_probability += min(8, total_corners * 0.6)
-            late_goal_probability += min(10, (home_xg + away_xg) * 2)
+        # UNDER 0.5 REMAINING GOALS: quiet game state in the 65-80 minute window.
+        # API-Football supplies cumulative stats here, so require several independent
+        # low-activity indicators and reject red-card game states.
+        quiet_p = 96 - best_pressure * 0.16 - total_shots * 0.38
+        quiet_p -= total_shots_on * 1.0 + total_corners * 0.35 + total_xg * 2.5
+        quiet_p = round(max(0, min(95, quiet_p)), 1)
+        if (
+            65 <= minute <= 80 and total <= 3 and goal_diff <= 2
+            and home_red == 0 and away_red == 0
+            and best_pressure <= 48 and total_shots <= 16
+            and total_shots_on <= 5 and total_corners <= 9
+            and total_xg <= 1.8 and quiet_p >= 62
+        ):
+            candidates.append((quiet_p + 6, ("🧊 UNDER 0.5 GOALS (NO MORE GOALS)", quiet_p, minute, quiet_p)))
 
-            if goal_diff <= 1:
-                late_goal_probability += 4
-
-            late_goal_probability = round(min(95, late_goal_probability), 1)
-
-            print("LATE GOAL CHECK:", minute, late_goal_probability)
-
+        # LATE GOAL: only close matches with a clear attacking chase; no comfortable leads.
+        if 75 <= minute <= 86 and goal_diff <= 1:
+            if home > away:
+                chasing_pressure, chasing_sot = away_pressure, away_shots_on
+            elif away > home:
+                chasing_pressure, chasing_sot = home_pressure, home_shots_on
+            else:
+                chasing_pressure, chasing_sot = best_pressure, total_shots_on
+            late_p = 40 + max(0, best_pressure - 62) * 0.55
+            late_p += min(15, total_shots_on * 1.15) + min(8, total_corners * 0.5)
+            late_p += min(10, total_xg * 1.8)
+            if goal_diff == 0:
+                late_p += 3
+            late_p = round(min(95, late_p), 1)
+            print("LATE GOAL CHECK:", minute, late_p, "CHASE=", chasing_pressure, chasing_sot)
             if (
-                best_pressure >= 54
-                and total_shots_on >= 3
-                and total_shots >= 7
-                and total_corners >= 4
-                and (home_xg + away_xg) >= 1.2
-                and late_goal_probability >= 60
+                best_pressure >= 68 and chasing_pressure >= 58
+                and chasing_sot >= 2 and total_shots_on >= 6
+                and total_shots >= 14 and total_xg >= 1.5
+                and late_p >= 68
             ):
-                return (
-                    "🔥 LATE GOAL",
-                    late_goal_probability,
-                    minute,
-                    late_goal_probability
-                )
+                candidates.append((late_p - 8, ("🔥 LATE GOAL", late_p, minute, late_p)))
 
-        return None
+        if not candidates:
+            return None
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        selected = candidates[0][1]
+        print("LIVE SELECTED MARKET:", fixture_id, selected[0], "CANDIDATES=", [c[1][0] for c in candidates])
+        return selected
 
     except Exception as e:
         print("LIVE ANALYSIS ERROR:", repr(e))
         return None
 
-
-# =========================================================    
-# REST & FATIGUE ENGINE                                        
-# =========================================================    
 
 def calculate_rest_fatigue(                                    
     games                                                       
@@ -9526,122 +9384,43 @@ def prematch_loop():
 # =========================================================
 
 def live_loop():
+    global live_daily_market_counts, live_daily_market_date
 
     matches = get_live_matches()
-
     print(f"Live matches: {len(matches)}")
-
     print("LIVE SCAN START")
 
+    today = datetime.now(TZ).date().isoformat()
+    if live_daily_market_date != today:
+        live_daily_market_date = today
+        live_daily_market_counts = {}
+
     for match in matches:
-
-        signal = analyze_live_match(
-            match
-        )
-
+        signal = analyze_live_match(match)
         if not signal:
             continue
 
         fixture_id = match["fixture"]["id"]
+        market_name = signal[0]
+        market_day_count = live_daily_market_counts.get(market_name, 0)
+        if market_day_count >= 3:
+            print("LIVE DAILY MARKET CAP:", market_name, market_day_count)
+            continue
 
-        home_goals = match["goals"]["home"] or 0
-        away_goals = match["goals"]["away"] or 0
-
-        key = (
-            f"live_{fixture_id}_"
-            f"{home_goals}_{away_goals}_"
-            f"{signal[0]}"
-        )
-
+        # One signal per fixture and market, even if the score changes later.
+        key = f"live_{fixture_id}_{market_name}"
         if key in sent_live:
             continue
 
-        sent_live[key] = time.time()
-
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
-
-        home_goals = (
-            match["goals"]["home"] or 0
-        )
-
-        away_goals = (
-            match["goals"]["away"] or 0
-        )
-
         minute = signal[2]
-
-        goal_probability = signal[3]
-        
-        stats = get_statistics(
-            fixture_id
-        )
-
-        home_pressure = 0
-        away_pressure = 0
-
-        home_shots = 0
-        away_shots = 0 
-
-        home_corners = 0
-        away_corners = 0
-        
-        home_xg = 0            
-        away_xg = 0            
-
-        if len(stats) >= 2:
-
-            home_pressure = calculate_pressure(
-                stats[0]
-            )
-
-            away_pressure = calculate_pressure(
-                stats[1]
-            )
-
-
-            home_form = get_team_form(     
-                match["teams"]["home"]["id"],
-                venue="home"              
-            )                            
-
-            away_form = get_team_form(     
-                match["teams"]["away"]["id"],
-                venue="away"              
-            )                             
-
-            home_shots = extract(
-                stats[0],
-                "Shots on Goal"
-            )
-
-            away_shots = extract(
-                stats[1],
-                "Shots on Goal"
-            )
-
-            home_corners = extract(
-                stats[0],
-                "Corner Kicks"
-            )
-
-            away_corners = extract(
-                stats[1],
-                "Corner Kicks"
-            )           
-        
-        country = match["league"]["country"]      
-        league = match["league"]["name"]         
-
-        # LIVE recommendations are statistics-based; do not request Betano odds.
+        probability = signal[3]
+        country = match["league"].get("country", "")
+        league = match["league"].get("name", "")
         odds_text = "N/A (LIVE odds not used)"
 
-                                               
-
-        send_telegram(                            
-
-            f"""                                
-🔥 LIVE SIGNAL
+        message = f"""🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
 
@@ -9653,18 +9432,22 @@ def live_loop():
 
 ⏱ Minute: {minute}
 
-🔥{signal[0]}🔥
+🔥{market_name}🔥
 
 💰 Odds:
 {odds_text}
 
 💎 Confidence: {signal[1]}%
 
-🎯 Goal Probability:
-{goal_probability}%
+📊 Signal Probability:
+{probability}%
 """
-)          
-         
+        if send_telegram(message):
+            sent_live[key] = time.time()
+            live_daily_market_counts[market_name] = market_day_count + 1
+            print("LIVE SIGNAL SENT:", fixture_id, market_name, live_daily_market_counts[market_name])
+
+
 if __name__ == "__main__":
 
     print("MAIN V3 STARTED")
