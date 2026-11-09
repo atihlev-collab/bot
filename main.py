@@ -1420,10 +1420,10 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 78
+                best_pressure >= 76
                 and total_shots >= 7
-                and total_corners >= 5
-                and fh_corner_probability >= 68
+                and total_corners >= 4
+                and fh_corner_probability >= 66
             ):
                 return (
                     "🚩 FIRST HALF OVER 1.5 CORNERS",
@@ -1465,8 +1465,8 @@ def analyze_live_match(fixture):
         if (
             72 <= minute <= 82
             and card_probability >= 78
-            and total_cards >= 6
-            and total_fouls >= 22
+            and total_cards >= 5
+            and total_fouls >= 20
             and goal_diff <= 2
         ):
             return (
@@ -1489,10 +1489,10 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 68
+                best_pressure >= 66
                 and total_shots_on >= 4
                 and pressure_diff >= 4
-                and fast_goal_probability >= 62
+                and fast_goal_probability >= 60
             ):
                 if (
                     home_pressure >= away_pressure + 7
@@ -1520,7 +1520,7 @@ def analyze_live_match(fixture):
         # NORMAL NEXT GOAL - 41 TO 78
         # =========================================================
         if 41 <= minute <= 78:
-            normal_goal_probability = 82
+            normal_goal_probability = 80
             normal_goal_probability += max(0, best_pressure - 67) * 0.70
             normal_goal_probability += min(14, total_shots_on * 1.4)
             normal_goal_probability += min(7, total_corners * 0.7)
@@ -1531,13 +1531,13 @@ def analyze_live_match(fixture):
             print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
             if (
-                best_pressure >= 86
-                and total_shots_on >= 13
+                best_pressure >= 82
+                and total_shots_on >= 11
                 and pressure_diff >= 34
-                and normal_goal_probability >= 87 
+                and normal_goal_probability >= 86
             ):
                 if (
-                    home_pressure >= away_pressure + 14
+                    home_pressure >= away_pressure + 13
                     and home_shots_on >= away_shots_on
                 ):
                     return (
@@ -1548,7 +1548,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 14
+                    away_pressure >= home_pressure + 13
                     and away_shots_on >= home_shots_on
                 ):
                     return (
@@ -1575,7 +1575,7 @@ def analyze_live_match(fixture):
         if (
             25 <= minute <= 65
             and best_pressure >= 64
-            and total_shots_on >= 5
+            and total_shots_on >= 4
             and total_shots >= 8
             and (home_xg + away_xg) >= 1.4
             and remaining_probability >= 60
@@ -1591,7 +1591,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 80
+        corner_probability = 78
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1603,7 +1603,7 @@ def analyze_live_match(fixture):
         if (
             72 <= minute <= 82
             and total_corners >= 10
-            and total_corners <= 14
+            and total_corners <= 12
             and total_shots >= 20
             and best_pressure >= 78
             and corner_probability >= 78
@@ -1635,8 +1635,8 @@ def analyze_live_match(fixture):
             if (
                 best_pressure >= 54
                 and total_shots_on >= 3
-                and total_shots >= 7
-                and total_corners >= 4
+                and total_shots >= 8
+                and total_corners >= 5
                 and (home_xg + away_xg) >= 1.2
                 and late_goal_probability >= 60
             ):
