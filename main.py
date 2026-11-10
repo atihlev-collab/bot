@@ -2,7 +2,7 @@
 # MAIN V3
 # CLEAN BETTING SYSTEM
 # =========================================================
-ефедед
+
 import requests
 import sqlite3
 import asyncio
