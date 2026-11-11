@@ -1413,17 +1413,17 @@ def analyze_live_match(fixture):
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 29 <= minute <= 38:
-            fh_corner_probability = 60
+            fh_corner_probability = 58
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 76
+                best_pressure >= 74
                 and total_shots >= 7
                 and total_corners >= 4
-                and fh_corner_probability >= 66
+                and fh_corner_probability >= 64
             ):
                 return (
                     "🚩 FIRST HALF OVER 1.5 CORNERS",
@@ -1489,13 +1489,13 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 66
-                and total_shots_on >= 4
-                and pressure_diff >= 4
-                and fast_goal_probability >= 60
+                best_pressure >= 68
+                and total_shots_on >= 5
+                and pressure_diff >= 5
+                and fast_goal_probability >= 62
             ):
                 if (
-                    home_pressure >= away_pressure + 7
+                    home_pressure >= away_pressure + 8
                     and home_shots_on >= away_shots_on
                 ):
                     return (
@@ -1506,7 +1506,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 7
+                    away_pressure >= home_pressure + 8
                     and away_shots_on >= home_shots_on
                 ):
                     return (
@@ -1532,12 +1532,12 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 82
-                and total_shots_on >= 11
-                and pressure_diff >= 34
+                and total_shots_on >= 12
+                and pressure_diff >= 36
                 and normal_goal_probability >= 86
             ):
                 if (
-                    home_pressure >= away_pressure + 13
+                    home_pressure >= away_pressure + 14
                     and home_shots_on >= away_shots_on
                 ):
                     return (
@@ -1548,7 +1548,7 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 13
+                    away_pressure >= home_pressure + 14
                     and away_shots_on >= home_shots_on
                 ):
                     return (
@@ -1619,26 +1619,26 @@ def analyze_live_match(fixture):
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
-            late_goal_probability = 41
+            late_goal_probability = 50
             late_goal_probability += max(0, best_pressure - 60) * 0.65
             late_goal_probability += min(15, total_shots_on * 1.3)
             late_goal_probability += min(8, total_corners * 0.6)
             late_goal_probability += min(10, (home_xg + away_xg) * 2)
 
             if goal_diff <= 1:
-                late_goal_probability += 4
+                late_goal_probability += 5
 
             late_goal_probability = round(min(95, late_goal_probability), 1)
 
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 54
-                and total_shots_on >= 3
-                and total_shots >= 8
+                best_pressure >= 58
+                and total_shots_on >= 11
+                and total_shots >= 20
                 and total_corners >= 5
-                and (home_xg + away_xg) >= 1.2
-                and late_goal_probability >= 60
+                and (home_xg + away_xg) >= 1.9
+                and late_goal_probability >= 66
             ):
                 return (
                     "🔥 LATE GOAL",
