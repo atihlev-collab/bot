@@ -1574,9 +1574,9 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 64
-            and total_shots_on >= 4
-            and total_shots >= 8
+            and best_pressure >= 68
+            and total_shots_on >= 5
+            and total_shots >= 10
             and (home_xg + away_xg) >= 1.4
             and remaining_probability >= 60
             and total <= 1
@@ -1619,7 +1619,7 @@ def analyze_live_match(fixture):
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
-            late_goal_probability = 50
+            late_goal_probability = 58
             late_goal_probability += max(0, best_pressure - 60) * 0.65
             late_goal_probability += min(15, total_shots_on * 1.3)
             late_goal_probability += min(8, total_corners * 0.6)
@@ -1633,12 +1633,12 @@ def analyze_live_match(fixture):
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 58
-                and total_shots_on >= 11
-                and total_shots >= 20
-                and total_corners >= 5
+                best_pressure >= 64
+                and total_shots_on >= 12
+                and total_shots >= 22
+                and total_corners >= 6
                 and (home_xg + away_xg) >= 1.9
-                and late_goal_probability >= 66
+                and late_goal_probability >= 69
             ):
                 return (
                     "🔥 LATE GOAL",
