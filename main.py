@@ -1591,7 +1591,8 @@ def analyze_live_match(fixture):
 
         # =========================================================
         # OVER 0.5 FIRST-HALF GOALS — CONVERTED FROM FAST NEXT GOAL
-        # Strict 20-40 minute window; only when the score is still 0-0.
+        # 20-40 minute window; predicts one additional goal before half-time,
+        # regardless of the current score.
         # =========================================================
         fh_total_xg = home_xg + away_xg
         fh_goal_probability = 55.0
@@ -1604,7 +1605,6 @@ def analyze_live_match(fixture):
         fh_recent_activity = (
             live_dynamics.get("ready") is True
             and float(live_dynamics.get("window_minutes") or 0.0) >= 2.0
-            and not live_dynamics.get("score_changed_in_window", False)
             and float(live_dynamics.get("attack_index") or 0.0) >= 14.0
             and (
                 float(fh_deltas.get("shots") or 0.0) >= 1.0
@@ -1624,7 +1624,7 @@ def analyze_live_match(fixture):
             for wanted in ("total shots", "shots on goal")
         )
         if (
-            20 <= minute <= 40 and total == 0
+            20 <= minute <= 40
             and home_red == 0 and away_red == 0
             and best_pressure >= 74 and total_shots >= 7
             and total_shots_on >= 3 and fh_total_xg >= 0.55
