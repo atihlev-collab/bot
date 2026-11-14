@@ -1463,10 +1463,10 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            72 <= minute <= 82
-            and card_probability >= 78
+            70 <= minute <= 80
+            and card_probability >= 79
             and total_cards >= 5
-            and total_fouls >= 20
+            and total_fouls >= 22
             and goal_diff <= 2
         ):
             return (
@@ -1533,7 +1533,7 @@ def analyze_live_match(fixture):
             if (
                 best_pressure >= 82
                 and total_shots_on >= 12
-                and pressure_diff >= 36
+                and pressure_diff >= 38
                 and normal_goal_probability >= 86
             ):
                 if (
@@ -1574,9 +1574,9 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 68
-            and total_shots_on >= 5
-            and total_shots >= 10
+            and best_pressure >= 69
+            and total_shots_on >= 6
+            and total_shots >= 12
             and (home_xg + away_xg) >= 1.4
             and remaining_probability >= 60
             and total <= 1
@@ -1591,7 +1591,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 78
+        corner_probability = 79
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1601,12 +1601,12 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            72 <= minute <= 82
+            70 <= minute <= 80
             and total_corners >= 10
             and total_corners <= 12
-            and total_shots >= 20
-            and best_pressure >= 78
-            and corner_probability >= 78
+            and total_shots >= 22
+            and best_pressure >= 79
+            and corner_probability >= 79
         ):
             return (
                 "🚩 OVER 1.5 NEXT CORNERS",
@@ -1619,7 +1619,7 @@ def analyze_live_match(fixture):
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
-            late_goal_probability = 58
+            late_goal_probability = 62
             late_goal_probability += max(0, best_pressure - 60) * 0.65
             late_goal_probability += min(15, total_shots_on * 1.3)
             late_goal_probability += min(8, total_corners * 0.6)
@@ -1633,9 +1633,9 @@ def analyze_live_match(fixture):
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 64
-                and total_shots_on >= 12
-                and total_shots >= 22
+                best_pressure >= 68
+                and total_shots_on >= 13
+                and total_shots >= 23
                 and total_corners >= 6
                 and (home_xg + away_xg) >= 1.9
                 and late_goal_probability >= 69
