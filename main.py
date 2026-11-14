@@ -1616,6 +1616,44 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
+        # UNDER 0.5 REMAINING GOALS — ADAPTED FROM MAIN V4
+        # =========================================================
+        # Current LIVE snapshot only: no rolling-history wait, no odds lookup.
+        # Keep the original V4 minute, score, red-card, pressure and volume gates.
+        total_xg = home_xg + away_xg
+        quiet_probability = 96 - best_pressure * 0.16 - total_shots * 0.38
+        quiet_probability -= total_shots_on * 1.0 + total_corners * 0.35 + total_xg * 2.5
+        quiet_probability = round(max(0, min(95, quiet_probability)), 1)
+
+        if (
+            65 <= minute <= 80
+            and total <= 3
+            and goal_diff <= 2
+            and home_red == 0
+            and away_red == 0
+            and best_pressure <= 48
+            and total_shots <= 16
+            and total_shots_on <= 5
+            and total_corners <= 9
+            and total_xg <= 1.8
+            and quiet_probability >= 62
+        ):
+            print(
+                f"LIVE UNDER 0.5 QUALIFIED | fixture={fixture_id} | "
+                f"minute={minute} | score={home}-{away} | "
+                f"pressure={best_pressure} | shots={total_shots} | "
+                f"shots_on={total_shots_on} | corners={total_corners} | "
+                f"xg={total_xg:.2f} | probability={quiet_probability:.1f}",
+                flush=True,
+            )
+            return (
+                "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
+                quiet_probability,
+                minute,
+                quiet_probability
+            )
+
+        # =========================================================
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
