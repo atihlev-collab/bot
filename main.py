@@ -19,6 +19,7 @@ from zoneinfo import ZoneInfo
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
+from live_match_dynamics import record_live_snapshot, evaluate_match_dynamics
 
 # =========================================================
 # CONFIG
@@ -1396,6 +1397,38 @@ def analyze_live_match(fixture):
         total_fouls = home_fouls + away_fouls
         total_cards = home_yellow + away_yellow
 
+        # Build the normalized cumulative-stat snapshot used by main-v4's
+        # rolling LIVE dynamics engine. This runs on every scan, before any
+        # market can return early, so the history is not limited to UNDER 0.5.
+        dynamics_stats = {
+            "home": {
+                "total shots": home_total_shots,
+                "shots on goal": home_shots_on,
+                "dangerous attacks": extract(home_stats, "Dangerous Attacks"),
+                "expected goals": home_xg,
+                "corner kicks": home_corners,
+                "fouls": home_fouls,
+                "yellow cards": home_yellow,
+                "red cards": home_red,
+            },
+            "away": {
+                "total shots": away_total_shots,
+                "shots on goal": away_shots_on,
+                "dangerous attacks": extract(away_stats, "Dangerous Attacks"),
+                "expected goals": away_xg,
+                "corner kicks": away_corners,
+                "fouls": away_fouls,
+                "yellow cards": away_yellow,
+                "red cards": away_red,
+            },
+        }
+        record_live_snapshot(
+            fixture_id, minute, dynamics_stats, home, away
+        )
+        live_dynamics = evaluate_match_dynamics(
+            fixture_id, minute, dynamics_stats
+        )
+
         print(
             "LIVE ENGINE:", home_team, away_team,
             "MIN=", minute,
@@ -1616,41 +1649,68 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # UNDER 0.5 REMAINING GOALS — ADAPTED FROM MAIN V4
+        # UNDER 0.5 REMAINING GOALS — MAIN-V4 DYNAMIC QUALITY GATE
         # =========================================================
-        # Current LIVE snapshot only: no rolling-history wait, no odds lookup.
-        # Keep the original V4 minute, score, red-card, pressure and volume gates.
-        total_xg = home_xg + away_xg
-        quiet_probability = 96 - best_pressure * 0.16 - total_shots * 0.38
-        quiet_probability -= total_shots_on * 1.0 + total_corners * 0.35 + total_xg * 2.5
-        quiet_probability = round(max(0, min(95, quiet_probability)), 1)
+        # Require complete core shot stats and a real cooling trend from
+        # rolling snapshots. No bookmaker odds or Betano lookup is used.
+        required_goal_stats = ("total shots", "shots on goal")
 
-        if (
-            65 <= minute <= 80
-            and total <= 3
-            and goal_diff <= 2
-            and home_red == 0
-            and away_red == 0
-            and best_pressure <= 48
-            and total_shots <= 16
-            and total_shots_on <= 5
-            and total_corners <= 9
-            and total_xg <= 1.8
-            and quiet_probability >= 62
-        ):
+        def _has_live_stat(team_stats, wanted):
+            wanted = {name.strip().lower() for name in wanted}
+            for item in (team_stats or {}).get("statistics", []) or []:
+                stat_name = str(item.get("type") or "").strip().lower()
+                if stat_name in wanted and item.get("value") not in (None, ""):
+                    return True
+            return False
+
+        stats_complete = all(
+            all(_has_live_stat(team_stats, (key,)) for key in required_goal_stats)
+            for team_stats in (home_stats, away_stats)
+        )
+        dynamics_deltas = live_dynamics.get("deltas") or {}
+        under_probability = float(live_dynamics.get("no_more_goals") or 0.0)
+
+        under_gate_failed = (
+            not stats_complete
+            or not live_dynamics.get("ready")
+            or float(live_dynamics.get("window_minutes") or 0.0) < 4.0
+            or under_probability < 78.0
+            or not live_dynamics.get("cooling")
+            or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
+            or float(dynamics_deltas.get("shots", 99) if dynamics_deltas.get("shots") is not None else 99) > 1.0
+            or float(dynamics_deltas.get("shots_on", 99) if dynamics_deltas.get("shots_on") is not None else 99) > 0.0
+            or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 4.0
+            or float(dynamics_deltas.get("xg", 99) if dynamics_deltas.get("xg") is not None else 99) >= 0.03
+            or minute < 70
+            or minute > 88
+        )
+
+        print(
+            f"LIVE UNDER 0.5 DYNAMICS | fixture={fixture_id} | "
+            f"minute={minute} | ready={live_dynamics.get('ready')} | "
+            f"window={live_dynamics.get('window_minutes')} | "
+            f"no_more={under_probability:.1f} | "
+            f"cooling={live_dynamics.get('cooling')} | "
+            f"attack_index={live_dynamics.get('attack_index')} | "
+            f"deltas={dynamics_deltas} | stats_complete={stats_complete} | "
+            f"gate_failed={under_gate_failed}",
+            flush=True,
+        )
+
+        if not under_gate_failed:
             print(
                 f"LIVE UNDER 0.5 QUALIFIED | fixture={fixture_id} | "
                 f"minute={minute} | score={home}-{away} | "
-                f"pressure={best_pressure} | shots={total_shots} | "
-                f"shots_on={total_shots_on} | corners={total_corners} | "
-                f"xg={total_xg:.2f} | probability={quiet_probability:.1f}",
+                f"probability={under_probability:.1f} | "
+                f"window={live_dynamics.get('window_minutes')}m | "
+                f"attack_index={live_dynamics.get('attack_index')}",
                 flush=True,
             )
             return (
                 "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
-                quiet_probability,
+                under_probability,
                 minute,
-                quiet_probability
+                under_probability
             )
 
         # =========================================================
