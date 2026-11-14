@@ -1771,7 +1771,7 @@ def analyze_live_match(fixture):
         dynamics_deltas = live_dynamics.get("deltas") or {}
         # Match the V4 probability ceiling and shared quality checks.
         under_probability = round(min(
-            82.0, max(0.0, float(live_dynamics.get("no_more_goals") or 0.0))
+            90.0, max(0.0, float(live_dynamics.get("no_more_goals") or 0.0))
         ), 1)
         under_dangerous = (
             (extract(home_stats, "Dangerous Attacks") or 0)
