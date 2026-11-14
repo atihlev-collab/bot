@@ -1706,7 +1706,6 @@ def analyze_live_match(fixture):
             or under_risk > 42
             or not live_dynamics.get("ready")
             or float(live_dynamics.get("window_minutes") or 0.0) < 4.0
-            or under_probability < 78.0
             or not live_dynamics.get("cooling")
             or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
             or float(dynamics_deltas.get("shots", 99) if dynamics_deltas.get("shots") is not None else 99) > 1.0
