@@ -115,7 +115,7 @@ def record_live_snapshot(fixture_id, minute, stats, home_goals=0, away_goals=0, 
         print("LIVE DYNAMICS SNAPSHOT ERROR:", fixture_id, repr(exc), flush=True)
 
 
-def evaluate_match_dynamics(fixture_id, minute, stats, now=None):
+def evaluate_match_dynamics(fixture_id, minute, stats, home_goals=0, away_goals=0, now=None):
     """Return rolling deltas and a conservative no-more-goals estimate."""
     now = float(now if now is not None else time.time())
     current = {
@@ -134,6 +134,7 @@ def evaluate_match_dynamics(fixture_id, minute, stats, now=None):
         "deltas": {key: 0.0 for key in current},
         "attack_index": 0.0,
         "cooling": False,
+        "score_changed_in_window": False,
         "goal_lambda": None,
         "no_more_goals": None,
         "one_or_more_goals": None,
@@ -147,7 +148,7 @@ def evaluate_match_dynamics(fixture_id, minute, stats, now=None):
     try:
         with _connect() as conn:
             baseline = conn.execute("""
-                SELECT captured_at, shots, shots_on, dangerous, xg,
+                SELECT captured_at, home_goals, away_goals, shots, shots_on, dangerous, xg,
                        corners, fouls, yellow, red
                 FROM live_match_snapshots
                 WHERE fixture_id=? AND captured_at<=? AND captured_at>=?
@@ -167,9 +168,13 @@ def evaluate_match_dynamics(fixture_id, minute, stats, now=None):
     if age < MIN_DYNAMICS_AGE_SECONDS:
         return result
     window_minutes = age / 60.0
+    result["score_changed_in_window"] = (
+        int(_num(home_goals)) != int(_num(baseline[1]))
+        or int(_num(away_goals)) != int(_num(baseline[2]))
+    )
     old_keys = ("shots", "shots_on", "dangerous", "xg", "corners", "fouls", "yellow", "red")
     deltas = {
-        key: max(0.0, current[key] - _num(baseline[index + 1]))
+        key: max(0.0, current[key] - _num(baseline[index + 3]))
         for index, key in enumerate(old_keys)
     }
     result["ready"] = True
