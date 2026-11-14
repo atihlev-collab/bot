@@ -1646,45 +1646,60 @@ def analyze_live_match(fixture):
 
         # =========================================================
         # NORMAL NEXT GOAL - 41 TO 78
+        # Probability is driven by the recent rolling attack window,
+        # not inflated by cumulative match totals.
         # =========================================================
         if 41 <= minute <= 78:
-            normal_goal_probability = 80
-            normal_goal_probability += max(0, best_pressure - 67) * 0.70
-            normal_goal_probability += min(14, total_shots_on * 1.4)
-            normal_goal_probability += min(7, total_corners * 0.7)
-            normal_goal_probability += min(8, pressure_diff * 0.25)
-            normal_goal_probability += min(6, (home_xg + away_xg) * 2)
-            normal_goal_probability = round(min(95, normal_goal_probability), 1)
+            ng_deltas = live_dynamics.get("deltas") or {}
+            ng_window = float(live_dynamics.get("window_minutes") or 0.0)
+            ng_attack_index = float(live_dynamics.get("attack_index") or 0.0)
+            ng_recent_ready = (
+                live_dynamics.get("ready") is True
+                and ng_window >= 1.8
+            )
+            normal_goal_probability = round(
+                min(90.0, 55.0 + ng_attack_index * 0.45), 1
+            )
+            print(
+                "NORMAL NEXT GOAL:",
+                normal_goal_probability,
+                "recent_attack=", ng_attack_index,
+                "recent_ready=", ng_recent_ready,
+                "recent_deltas=", ng_deltas,
+                flush=True,
+            )
 
-            print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
+            ng_home_direction = (
+                home_pressure >= away_pressure + 8
+                and home_shots_on >= away_shots_on
+            )
+            ng_away_direction = (
+                away_pressure >= home_pressure + 8
+                and away_shots_on >= home_shots_on
+            )
+            ng_common_gate = (
+                ng_recent_ready
+                and ng_attack_index >= 35.0
+                and best_pressure >= 60
+                and total_shots_on >= 3
+                and normal_goal_probability >= 70
+            )
 
-            if (
-                best_pressure >= 82
-                and total_shots_on >= 12
-                and pressure_diff >= 38
-                and normal_goal_probability >= 86
-            ):
-                if (
-                    home_pressure >= away_pressure + 14
-                    and home_shots_on >= away_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL HOME",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
+            if ng_common_gate and ng_home_direction:
+                return (
+                    "🎯 NEXT GOAL HOME",
+                    normal_goal_probability,
+                    minute,
+                    normal_goal_probability
+                )
 
-                if (
-                    away_pressure >= home_pressure + 14
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
+            if ng_common_gate and ng_away_direction:
+                return (
+                    "🎯 NEXT GOAL AWAY",
+                    normal_goal_probability,
+                    minute,
+                    normal_goal_probability
+                )
 
         # =========================================================
         # OVER 1.5 REMAINING GOALS
