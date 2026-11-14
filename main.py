@@ -1470,7 +1470,6 @@ def analyze_live_match(fixture):
         )
         fh_under_gate_failed = (
             not (30 <= minute <= 35)
-            or total > 1
             or home_red > 0
             or away_red > 0
             or total_shots > 8
@@ -1482,7 +1481,6 @@ def analyze_live_match(fixture):
             or not fh_stats_complete
             or not live_dynamics.get("ready")
             or fh_window_minutes < 2.0
-            or live_dynamics.get("score_changed_in_window", False)
             or not live_dynamics.get("cooling")
             or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
             or float(fh_deltas.get("shots", 99) if fh_deltas.get("shots") is not None else 99) > 1.0
@@ -1803,7 +1801,6 @@ def analyze_live_match(fixture):
 
         under_gate_failed = (
             not stats_complete
-            or live_dynamics.get("score_changed_in_window", False)
             or under_probability < 83
             or under_confidence < 72
             or under_risk > 35
