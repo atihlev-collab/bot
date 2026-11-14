@@ -1426,7 +1426,7 @@ def analyze_live_match(fixture):
             fixture_id, minute, dynamics_stats, home, away
         )
         live_dynamics = evaluate_match_dynamics(
-            fixture_id, minute, dynamics_stats
+            fixture_id, minute, dynamics_stats, home, away
         )
 
         print(
@@ -1668,10 +1668,42 @@ def analyze_live_match(fixture):
             for team_stats in (home_stats, away_stats)
         )
         dynamics_deltas = live_dynamics.get("deltas") or {}
-        under_probability = float(live_dynamics.get("no_more_goals") or 0.0)
+        # Match the V4 probability ceiling and shared quality checks.
+        under_probability = round(min(
+            82.0, max(0.0, float(live_dynamics.get("no_more_goals") or 0.0))
+        ), 1)
+        under_dangerous = (
+            (extract(home_stats, "Dangerous Attacks") or 0)
+            + (extract(away_stats, "Dangerous Attacks") or 0)
+        )
+        under_confidence = (
+            58.0
+            + min(12.0, total_shots_on * 1.4)
+            + min(8.0, total_shots * 0.35)
+            + min(8.0, (home_xg + away_xg) * 3.0)
+            + min(6.0, under_dangerous * 0.06)
+            + (1.0 if 30 <= minute <= 82 else 0.0)
+        )
+        under_confidence = round(max(55.0, min(88.0, under_confidence)), 1)
+        under_risk = 18
+        if under_probability < 78:
+            under_risk += 7
+        if under_confidence < 82:
+            under_risk += 7
+        if total_shots_on < 3:
+            under_risk += 7
+        if total_shots < 8:
+            under_risk += 5
+        if minute < 25 or minute > 82:
+            under_risk += 8
+        under_risk = min(100, under_risk)
 
         under_gate_failed = (
             not stats_complete
+            or live_dynamics.get("score_changed_in_window", False)
+            or under_probability < 78
+            or under_confidence < 66
+            or under_risk > 42
             or not live_dynamics.get("ready")
             or float(live_dynamics.get("window_minutes") or 0.0) < 4.0
             or under_probability < 78.0
@@ -1690,6 +1722,8 @@ def analyze_live_match(fixture):
             f"minute={minute} | ready={live_dynamics.get('ready')} | "
             f"window={live_dynamics.get('window_minutes')} | "
             f"no_more={under_probability:.1f} | "
+            f"confidence={under_confidence:.1f} | risk={under_risk} | "
+            f"score_changed={live_dynamics.get('score_changed_in_window')} | "
             f"cooling={live_dynamics.get('cooling')} | "
             f"attack_index={live_dynamics.get('attack_index')} | "
             f"deltas={dynamics_deltas} | stats_complete={stats_complete} | "
@@ -1702,13 +1736,14 @@ def analyze_live_match(fixture):
                 f"LIVE UNDER 0.5 QUALIFIED | fixture={fixture_id} | "
                 f"minute={minute} | score={home}-{away} | "
                 f"probability={under_probability:.1f} | "
+                f"confidence={under_confidence:.1f} | risk={under_risk} | "
                 f"window={live_dynamics.get('window_minutes')}m | "
                 f"attack_index={live_dynamics.get('attack_index')}",
                 flush=True,
             )
             return (
                 "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
-                under_probability,
+                under_confidence,
                 minute,
                 under_probability
             )
