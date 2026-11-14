@@ -1443,6 +1443,76 @@ def analyze_live_match(fixture):
         )
 
         # =========================================================
+        # UNDER 0.5 FIRST-HALF GOALS — 30 TO 35 MINUTES
+        # Strict static limits plus a quiet 2-minute dynamics window.
+        # =========================================================
+        fh_deltas = live_dynamics.get("deltas") or {}
+        fh_window_minutes = float(live_dynamics.get("window_minutes") or 0.0)
+        fh_total_xg = home_xg + away_xg
+        fh_under_probability = 92.0
+        fh_under_probability -= best_pressure * 0.12
+        fh_under_probability -= total_shots * 0.55
+        fh_under_probability -= total_shots_on * 1.50
+        fh_under_probability -= total_corners * 0.70
+        fh_under_probability -= fh_total_xg * 5.0
+        fh_under_probability = round(
+            max(0.0, min(82.0, fh_under_probability)), 1
+        )
+        fh_stats_complete = all(
+            any(
+                str(item.get("type") or "").strip().lower() == wanted
+                and item.get("value") not in (None, "")
+                for item in (side.get("statistics") or [])
+                if isinstance(item, dict)
+            )
+            for side in (home_stats, away_stats)
+            for wanted in ("total shots", "shots on goal")
+        )
+        fh_under_gate_failed = (
+            not (30 <= minute <= 35)
+            or total > 1
+            or home_red > 0
+            or away_red > 0
+            or total_shots > 8
+            or total_shots_on > 2
+            or total_corners > 4
+            or fh_total_xg > 0.85
+            or best_pressure > 55
+            or fh_under_probability < 80
+            or not fh_stats_complete
+            or not live_dynamics.get("ready")
+            or fh_window_minutes < 2.0
+            or live_dynamics.get("score_changed_in_window", False)
+            or not live_dynamics.get("cooling")
+            or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
+            or float(fh_deltas.get("shots", 99) if fh_deltas.get("shots") is not None else 99) > 1.0
+            or float(fh_deltas.get("shots_on", 99) if fh_deltas.get("shots_on") is not None else 99) > 0.0
+            or float(fh_deltas.get("dangerous", 99) if fh_deltas.get("dangerous") is not None else 99) >= 3.0
+            or float(fh_deltas.get("xg", 99) if fh_deltas.get("xg") is not None else 99) >= 0.02
+        )
+        print(
+            f"LIVE FIRST-HALF UNDER 0.5 CHECK | fixture={fixture_id} | "
+            f"minute={minute} | probability={fh_under_probability:.1f} | "
+            f"window={fh_window_minutes:.1f} | ready={live_dynamics.get('ready')} | "
+            f"cooling={live_dynamics.get('cooling')} | "
+            f"gate_failed={fh_under_gate_failed}",
+            flush=True,
+        )
+        if not fh_under_gate_failed:
+            print(
+                f"LIVE FIRST-HALF UNDER 0.5 QUALIFIED | fixture={fixture_id} | "
+                f"minute={minute} | score={home}-{away} | "
+                f"probability={fh_under_probability:.1f}",
+                flush=True,
+            )
+            return (
+                "⚽ UNDER 0.5 FIRST HALF GOALS (NO MORE GOALS BEFORE HT)",
+                fh_under_probability,
+                minute,
+                fh_under_probability
+            )
+
+        # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 29 <= minute <= 38:
