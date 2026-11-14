@@ -1592,44 +1592,59 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # FAST NEXT GOAL - 20 TO 40
+        # OVER 0.5 FIRST-HALF GOALS — CONVERTED FROM FAST NEXT GOAL
+        # Strict 20-40 minute window; only when the score is still 0-0.
         # =========================================================
-        if 20 <= minute <= 40 and total >= 1:
-            fast_goal_probability = 66
-            fast_goal_probability += max(0, best_pressure - 65) * 0.65
-            fast_goal_probability += min(12, total_shots_on * 1.5)
-            fast_goal_probability += min(6, total_corners)
-            fast_goal_probability += min(8, total * 2)
-            fast_goal_probability += min(8, pressure_diff * 0.25)
-            fast_goal_probability = round(min(95, fast_goal_probability), 1)
-
-            if (
-                best_pressure >= 68
-                and total_shots_on >= 5
-                and pressure_diff >= 5
-                and fast_goal_probability >= 62
-            ):
-                if (
-                    home_pressure >= away_pressure + 8
-                    and home_shots_on >= away_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL HOME",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
-
-                if (
-                    away_pressure >= home_pressure + 8
-                    and away_shots_on >= home_shots_on
-                ):
-                    return (
-                        "🎯 NEXT GOAL AWAY",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
+        fh_total_xg = home_xg + away_xg
+        fh_goal_probability = 55.0
+        fh_goal_probability += max(0.0, best_pressure - 60.0) * 0.35
+        fh_goal_probability += min(14.0, total_shots_on * 2.0)
+        fh_goal_probability += min(10.0, fh_total_xg * 6.0)
+        fh_goal_probability += min(6.0, total_corners * 1.0)
+        fh_goal_probability = round(min(88.0, fh_goal_probability), 1)
+        fh_deltas = live_dynamics.get("deltas") or {}
+        fh_recent_activity = (
+            live_dynamics.get("ready") is True
+            and float(live_dynamics.get("window_minutes") or 0.0) >= 2.0
+            and not live_dynamics.get("score_changed_in_window", False)
+            and float(live_dynamics.get("attack_index") or 0.0) >= 14.0
+            and (
+                float(fh_deltas.get("shots") or 0.0) >= 1.0
+                or float(fh_deltas.get("shots_on") or 0.0) >= 1.0
+                or float(fh_deltas.get("dangerous") or 0.0) >= 8.0
+                or float(fh_deltas.get("xg") or 0.0) >= 0.05
+            )
+        )
+        fh_stats_complete = all(
+            any(
+                str(item.get("type") or "").strip().lower() == wanted
+                and item.get("value") not in (None, "")
+                for item in (side.get("statistics") or [])
+                if isinstance(item, dict)
+            )
+            for side in (home_stats, away_stats)
+            for wanted in ("total shots", "shots on goal")
+        )
+        if (
+            20 <= minute <= 40 and total == 0
+            and home_red == 0 and away_red == 0
+            and best_pressure >= 74 and total_shots >= 7
+            and total_shots_on >= 3 and fh_total_xg >= 0.55
+            and total_corners >= 2 and fh_goal_probability >= 76
+            and fh_recent_activity and fh_stats_complete
+        ):
+            print(
+                f"LIVE FIRST-HALF OVER 0.5 QUALIFIED | fixture={fixture_id} | "
+                f"minute={minute} | score={home}-{away} | "
+                f"probability={fh_goal_probability:.1f} | "
+                f"pressure={best_pressure:.1f} | shots={total_shots} | "
+                f"shots_on={total_shots_on} | xg={fh_total_xg:.2f}",
+                flush=True,
+            )
+            return (
+                "⚽ OVER 0.5 FIRST HALF GOALS (GOAL BEFORE HALF-TIME)",
+                fh_goal_probability, minute, fh_goal_probability
+            )
 
         # =========================================================
         # NORMAL NEXT GOAL - 41 TO 78
