@@ -1458,11 +1458,17 @@ def analyze_live_match(fixture):
                 and total_corners >= 4
                 and fh_corner_probability >= 64
             ):
-                return (
-                    "🚩 FIRST HALF OVER 1.5 CORNERS",
-                    fh_corner_probability,
-                    minute,
-                    fh_corner_probability
+                if betano_live_market_available(fixture_id, "FH_CORNERS") is True:
+                    return (
+                        "🚩 FIRST HALF OVER 1.5 CORNERS",
+                        fh_corner_probability,
+                        minute,
+                        fh_corner_probability
+                    )
+                print(
+                    f" LIVE MARKET HOLD | fixture={fixture_id} | market=FIRST_HALF_CORNERS | "
+                    "reason=Betano market not confirmed",
+                    flush=True,
                 )
 
         # =========================================================
@@ -1502,11 +1508,17 @@ def analyze_live_match(fixture):
             and total_fouls >= 22
             and goal_diff <= 2
         ):
-            return (
-                "🟨 OVER 1.5 NEXT CARDS",
-                card_probability,
-                minute,
-                card_probability
+            if betano_live_market_available(fixture_id, "NEXT_CARDS") is True:
+                return (
+                    "🟨 OVER 1.5 NEXT CARDS",
+                    card_probability,
+                    minute,
+                    card_probability
+                )
+            print(
+                f"LIVE MARKET HOLD | fixture={fixture_id} | market=NEXT_CARDS | "
+                "reason=Betano market not confirmed",
+                flush=True,
             )
 
         # =========================================================
@@ -1641,11 +1653,17 @@ def analyze_live_match(fixture):
             and best_pressure >= 79
             and corner_probability >= 79
         ):
-            return (
-                "🚩 OVER 1.5 NEXT CORNERS",
-                corner_probability,
-                minute,
-                corner_probability
+            if betano_live_market_available(fixture_id, "NEXT_CORNERS") is True:
+                return (
+                    "🚩 OVER 1.5 NEXT CORNERS",
+                    corner_probability,
+                    minute,
+                    corner_probability
+                )
+            print(
+                f"LIVE MARKET HOLD | fixture={fixture_id} | market=NEXT_CORNERS | "
+                "reason=Betano market not confirmed",
+                flush=True,
             )
 
         # =========================================================
