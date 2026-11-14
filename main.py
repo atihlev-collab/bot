@@ -1701,18 +1701,22 @@ def analyze_live_match(fixture):
         under_gate_failed = (
             not stats_complete
             or live_dynamics.get("score_changed_in_window", False)
-            or under_probability < 78
-            or under_confidence < 66
-            or under_risk > 42
+            or under_probability < 83
+            or under_confidence < 72
+            or under_risk > 35
+            or total_shots > 14
+            or total_shots_on > 5
+            or total_corners > 8
+            or (home_xg + away_xg) > 1.5
             or not live_dynamics.get("ready")
-            or float(live_dynamics.get("window_minutes") or 0.0) < 4.0
+            or float(live_dynamics.get("window_minutes") or 0.0) < 5.0
             or not live_dynamics.get("cooling")
-            or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
+            or float(live_dynamics.get("attack_index", 100) or 0.0) > 6.0
             or float(dynamics_deltas.get("shots", 99) if dynamics_deltas.get("shots") is not None else 99) > 1.0
             or float(dynamics_deltas.get("shots_on", 99) if dynamics_deltas.get("shots_on") is not None else 99) > 0.0
-            or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 4.0
-            or float(dynamics_deltas.get("xg", 99) if dynamics_deltas.get("xg") is not None else 99) >= 0.03
-            or minute < 70
+            or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 3.0
+            or float(dynamics_deltas.get("xg", 99) if dynamics_deltas.get("xg") is not None else 99) >= 0.02
+            or minute < 75
             or minute > 88
         )
 
