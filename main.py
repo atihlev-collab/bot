@@ -1472,11 +1472,11 @@ def analyze_live_match(fixture):
             not (30 <= minute <= 35)
             or home_red > 0
             or away_red > 0
-            or total_shots > 8
-            or total_shots_on > 3
-            or total_corners > 4
+            or total_shots > 7
+            or total_shots_on > 2
+            or total_corners > 3
             or fh_total_xg > 0.85
-            or best_pressure > 55
+            or best_pressure > 50
             or fh_under_probability < 80
             or not fh_stats_complete
             or not live_dynamics.get("ready")
