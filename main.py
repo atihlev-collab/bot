@@ -1472,9 +1472,9 @@ def analyze_live_match(fixture):
             not (30 <= minute <= 35)
             or home_red > 0
             or away_red > 0
-            or total_shots > 7
+            or total_shots > 4
             or total_shots_on > 2
-            or total_corners > 3
+            or total_corners > 2
             or fh_total_xg > 0.85
             or best_pressure > 50
             or fh_under_probability < 80
@@ -1680,9 +1680,9 @@ def analyze_live_match(fixture):
             ng_common_gate = (
                 ng_recent_ready
                 and ng_attack_index >= 35.0
-                and best_pressure >= 70
-                and total_shots_on >= 8
-                and normal_goal_probability >= 78
+                and best_pressure >= 8
+                and total_shots_on >= 9
+                and normal_goal_probability >= 80
             )
 
             if ng_common_gate and ng_home_direction:
