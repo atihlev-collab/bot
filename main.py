@@ -19,7 +19,6 @@ from zoneinfo import ZoneInfo
 from telegram import Bot
 
 from config import BOT_TOKEN, API_KEY, CHAT_ID
-from live_match_dynamics import record_live_snapshot, evaluate_match_dynamics
 
 # =========================================================
 # CONFIG
@@ -33,9 +32,6 @@ HEADERS = {
 LIVE_BETS = {}
 
 TZ = ZoneInfo("Europe/Sofia")
-
-LIVE_SCAN_INTERVAL = 60  # LIVE scan every minute, start-to-start
-PREMATCH_SCAN_INTERVAL = 3600  # PREMATCH scan every hour
 
 bot = Bot(token=BOT_TOKEN)
 
@@ -197,86 +193,31 @@ def blocked_league(league):
 # =========================================================
 
 def get_live_matches():
-    """
-    Fetch live fixtures. If the provider's live=all filter unexpectedly returns
-    an empty list, fall back to today's fixtures in Sofia time and retain only
-    statuses that are actually in play. This avoids treating an empty live
-    filter response as proof that there are no live matches.
-    """
-    live_statuses = {
-        "1H", "HT", "2H", "ET", "BT", "P", "LIVE",
-        "INT", "SUSP", "PEN"
-    }
 
-    def request_fixtures(params, label):
-        try:
-            response = requests.get(
-                f"{BASE_URL}/fixtures",
-                headers=HEADERS,
-                params=params,
-                timeout=25
-            )
-            print(f"{label} API HTTP:", response.status_code)
-            response.raise_for_status()
-            data = response.json()
-            errors = data.get("errors") or {}
-            if errors:
-                print(f"{label} API ERRORS:", errors)
-            fixtures = data.get("response") or []
-            print(
-                f"{label} API RESULTS:",
-                len(fixtures),
-                "| paging=", data.get("paging"),
-                "| parameters=", data.get("parameters")
-            )
-            return fixtures
-        except requests.exceptions.RequestException as e:
-            print(f"{label} API REQUEST ERROR:", repr(e))
-            if getattr(e, "response", None) is not None:
-                print(f"{label} API ERROR BODY:", e.response.text[:1000])
-            return None
-        except (ValueError, TypeError, AttributeError) as e:
-            print(f"{label} API PARSE ERROR:", repr(e))
-            return None
-        except Exception as e:
-            print(f"{label} API UNEXPECTED ERROR:", repr(e))
-            return None
+    try:
 
-    # Primary API-Football live endpoint.
-    live_fixtures = request_fixtures({"live": "all"}, "LIVE")
-    if live_fixtures:
-        return live_fixtures
+        r = requests.get(
 
-    print("LIVE API FALLBACK: live=all returned no fixtures; checking today's fixtures")
-    today = datetime.now(TZ).strftime("%Y-%m-%d")
-    daily_fixtures = request_fixtures(
-        {"date": today, "timezone": "Europe/Sofia"},
-        "LIVE DATE FALLBACK"
-    )
-    if daily_fixtures is None:
+            f"{BASE_URL}/fixtures",
+
+            headers=HEADERS,
+
+            params={
+                "live": "all"
+            },
+
+            timeout=20
+
+        ).json()
+
+        return r.get(
+            "response",
+            []
+        )
+
+    except:
+
         return []
-
-    live_results = []
-    for fixture in daily_fixtures:
-        try:
-            status = str(
-                fixture.get("fixture", {}).get("status", {}).get("short", "")
-            ).upper()
-            if status in live_statuses:
-                live_results.append(fixture)
-        except (AttributeError, TypeError):
-            continue
-
-    print(
-        "LIVE DATE FALLBACK IN-PLAY RESULTS:",
-        len(live_results),
-        "| date=", today,
-        "| statuses=", sorted({
-            str(x.get("fixture", {}).get("status", {}).get("short", ""))
-            for x in live_results
-        })
-    )
-    return live_results
 
 # =========================================================
 # LIVE STATISTICS
@@ -818,38 +759,33 @@ def get_match_odds(fixture_id):
 # =========================================================
 
 def extract(team, stat_name):
-    """Read API-Football stats with normalized names and decimal support."""
-    aliases = {
-        "expected goals": {"expected goals", "expected_goals", "expected goals (xg)", "xg"},
-        "shots on goal": {"shots on goal", "shots on target"},
-        "total shots": {"total shots"},
-        "corner kicks": {"corner kicks", "corners"},
-        "ball possession": {"ball possession"},
-    }
-
-    def normalize(value):
-        return " ".join(
-            str(value or "").strip().lower().replace("_", " ").split()
-        )
-
-    wanted = normalize(stat_name)
-    accepted = aliases.get(wanted, {wanted})
 
     try:
-        for stat in team.get("statistics", []):
-            if normalize(stat.get("type")) not in accepted:
-                continue
 
-            value = stat.get("value")
-            if value is None or value == "":
-                return 0
+        for stat in team["statistics"]:
 
-            if isinstance(value, str):
-                value = value.replace("%", "").strip()
+            if stat["type"] == stat_name:
 
-            number = float(value)
-            return int(number) if number.is_integer() else number
-    except (TypeError, ValueError, AttributeError):
+                value = stat["value"]
+
+                if value is None:
+                    return 0
+
+                if isinstance(value, str):
+
+                    value = value.replace("%", "")
+
+                    try:
+                        value = int(value)
+
+                    except:
+
+                        return 0
+
+                return value
+
+    except:
+
         pass
 
     return 0
@@ -958,42 +894,70 @@ def calculate_pressure(team):
 # =========================================================
 
 def get_upcoming_matches():
+
     matches = []
+
     now = datetime.now(TZ)
+
     for i in range(2):
-        date = (now + timedelta(days=i)).strftime("%Y-%m-%d")
+
+        date = (
+            now + timedelta(days=i)
+        ).strftime("%Y-%m-%d")
+
         try:
-            response = requests.get(
+
+            r = requests.get(
+
                 f"{BASE_URL}/fixtures",
+
                 headers=HEADERS,
-                params={"date": date},
+
+                params={
+                    "date": date
+                },
+
                 timeout=20
-            )
-            print("PREMATCH API HTTP:", date, response.status_code)
-            response.raise_for_status()
-            data = response.json()
-            errors = data.get("errors") or {}
-            if errors:
-                print("PREMATCH API ERRORS:", date, errors)
-            day_matches = data.get("response") or []
-            print("PREMATCH API RESULTS:", date, len(day_matches))
-            for match in day_matches:
+
+            ).json()
+
+            for match in r.get(
+                "response",
+                []
+            ):
+
                 fixture_time = datetime.fromisoformat(
-                    match["fixture"]["date"].replace("Z", "+00:00")
-                ).astimezone(TZ)
-                hours_left = (fixture_time - now).total_seconds() / 3600
+                    match["fixture"]["date"].replace(
+                        "Z",
+                        "+00:00"
+                    )
+                )
+
+                fixture_time = fixture_time.astimezone(
+                    TZ
+                )
+
+                hours_left = (
+                    fixture_time - now
+                ).total_seconds() / 3600
+
                 if 0 <= hours_left <= 12:
-                    matches.append(match)
-        except requests.exceptions.RequestException as e:
-            print("PREMATCH API REQUEST ERROR:", date, repr(e))
-            if getattr(e, "response", None) is not None:
-                print("PREMATCH API ERROR BODY:", e.response.text[:1000])
-        except (ValueError, TypeError, KeyError, AttributeError) as e:
-            print("PREMATCH API PARSE ERROR:", date, repr(e))
-        except Exception as e:
-            print("PREMATCH API UNEXPECTED ERROR:", date, repr(e))
-    matches.sort(key=lambda x: x["fixture"]["date"])
-    print("PREMATCH MATCHES IN 12H WINDOW:", len(matches))
+
+                    matches.append(
+                        match
+                    )
+
+        except:
+
+            pass
+
+    matches.sort(
+
+        key=lambda x:
+        x["fixture"]["date"]
+
+    )
+
     return matches
 
 
@@ -1397,38 +1361,6 @@ def analyze_live_match(fixture):
         total_fouls = home_fouls + away_fouls
         total_cards = home_yellow + away_yellow
 
-        # Build the normalized cumulative-stat snapshot used by main-v4's
-        # rolling LIVE dynamics engine. This runs on every scan, before any
-        # market can return early, so the history is not limited to UNDER 0.5.
-        dynamics_stats = {
-            "home": {
-                "total shots": home_total_shots,
-                "shots on goal": home_shots_on,
-                "dangerous attacks": extract(home_stats, "Dangerous Attacks"),
-                "expected goals": home_xg,
-                "corner kicks": home_corners,
-                "fouls": home_fouls,
-                "yellow cards": home_yellow,
-                "red cards": home_red,
-            },
-            "away": {
-                "total shots": away_total_shots,
-                "shots on goal": away_shots_on,
-                "dangerous attacks": extract(away_stats, "Dangerous Attacks"),
-                "expected goals": away_xg,
-                "corner kicks": away_corners,
-                "fouls": away_fouls,
-                "yellow cards": away_yellow,
-                "red cards": away_red,
-            },
-        }
-        record_live_snapshot(
-            fixture_id, minute, dynamics_stats, home, away
-        )
-        live_dynamics = evaluate_match_dynamics(
-            fixture_id, minute, dynamics_stats, home, away
-        )
-
         print(
             "LIVE ENGINE:", home_team, away_team,
             "MIN=", minute,
@@ -1443,74 +1375,6 @@ def analyze_live_match(fixture):
         )
 
         # =========================================================
-        # UNDER 0.5 FIRST-HALF GOALS — 30 TO 35 MINUTES
-        # Strict static limits plus a quiet 2-minute dynamics window.
-        # =========================================================
-        fh_deltas = live_dynamics.get("deltas") or {}
-        fh_window_minutes = float(live_dynamics.get("window_minutes") or 0.0)
-        fh_total_xg = home_xg + away_xg
-        fh_under_probability = 92.0
-        fh_under_probability -= best_pressure * 0.12
-        fh_under_probability -= total_shots * 0.55
-        fh_under_probability -= total_shots_on * 1.50
-        fh_under_probability -= total_corners * 0.70
-        fh_under_probability -= fh_total_xg * 5.0
-        fh_under_probability = round(
-            max(0.0, min(82.0, fh_under_probability)), 1
-        )
-        fh_stats_complete = all(
-            any(
-                str(item.get("type") or "").strip().lower() == wanted
-                and item.get("value") not in (None, "")
-                for item in (side.get("statistics") or [])
-                if isinstance(item, dict)
-            )
-            for side in (home_stats, away_stats)
-            for wanted in ("total shots", "shots on goal")
-        )
-        fh_under_gate_failed = (
-            not (30 <= minute <= 35)
-            or home_red > 0
-            or away_red > 0
-            or total_shots > 4
-            or total_shots_on > 2
-            or total_corners > 2
-            or fh_total_xg > 0.85
-            or best_pressure > 50
-            or fh_under_probability < 80
-            or not fh_stats_complete
-            or not live_dynamics.get("ready")
-            or fh_window_minutes < 2.0
-            or not live_dynamics.get("cooling")
-            or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
-            or float(fh_deltas.get("shots", 99) if fh_deltas.get("shots") is not None else 99) > 1.0
-            or float(fh_deltas.get("shots_on", 99) if fh_deltas.get("shots_on") is not None else 99) > 0.0
-            or float(fh_deltas.get("dangerous", 99) if fh_deltas.get("dangerous") is not None else 99) >= 3.0
-            or float(fh_deltas.get("xg", 99) if fh_deltas.get("xg") is not None else 99) >= 0.02
-        )
-        print(
-            f"LIVE FIRST-HALF UNDER 0.5 CHECK | fixture={fixture_id} | "
-            f"minute={minute} | probability={fh_under_probability:.1f} | "
-            f"window={fh_window_minutes:.1f} | ready={live_dynamics.get('ready')} | "
-            f"cooling={live_dynamics.get('cooling')} | "
-            f"gate_failed={fh_under_gate_failed}",
-            flush=True,
-        )
-        if not fh_under_gate_failed:
-            print(
-                f"LIVE FIRST-HALF UNDER 0.5 QUALIFIED | fixture={fixture_id} | "
-                f"minute={minute} | score={home}-{away} | "
-                f"probability={fh_under_probability:.1f}",
-                flush=True,
-            )
-            return (
-                "⚽ UNDER 0.5 FIRST HALF GOALS (NO MORE GOALS BEFORE HT)",
-                fh_under_probability,
-                minute,
-                fh_under_probability
-            )
-
-        # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 29 <= minute <= 38:
@@ -1521,22 +1385,19 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 76
-                and total_shots >= 8
-                and total_corners >= 4
-                and fh_corner_probability >= 66
+                best_pressure >= 78
+                and total_shots >= 7
+                and total_corners >= 5
+                and fh_corner_probability >= 68
             ):
-                if betano_live_market_available(fixture_id, "FH_CORNERS") is True:
+                if not betano_live_market_available(fixture_id, "FH_CORNERS"):
+                    print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
+                else:
                     return (
                         "🚩 FIRST HALF OVER 1.5 CORNERS",
-                        fh_corner_probability,
-                        minute,
-                        fh_corner_probability
-                    )
-                print(
-                    f" LIVE MARKET HOLD | fixture={fixture_id} | market=FIRST_HALF_CORNERS | "
-                    "reason=Betano market not confirmed",
-                    flush=True,
+                    fh_corner_probability,
+                    minute,
+                    fh_corner_probability
                 )
 
         # =========================================================
@@ -1570,136 +1431,103 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            70 <= minute <= 80
-            and card_probability >= 82
-            and total_cards >= 5
-            and total_fouls >= 24
+            72 <= minute <= 82
+            and card_probability >= 78
+            and total_cards >= 6
+            and total_fouls >= 22
             and goal_diff <= 2
         ):
-            if betano_live_market_available(fixture_id, "NEXT_CARDS") is True:
+            if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
+                print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
+            else:
                 return (
                     "🟨 OVER 1.5 NEXT CARDS",
-                    card_probability,
-                    minute,
-                    card_probability
-                )
-            print(
-                f"LIVE MARKET HOLD | fixture={fixture_id} | market=NEXT_CARDS | "
-                "reason=Betano market not confirmed",
-                flush=True,
+                card_probability,
+                minute,
+                card_probability
             )
 
         # =========================================================
-        # OVER 0.5 FIRST-HALF GOALS — CONVERTED FROM FAST NEXT GOAL
-        # 20-40 minute window; predicts one additional goal before half-time,
-        # regardless of the current score.
+        # FAST NEXT GOAL - 20 TO 40
         # =========================================================
-        fh_total_xg = home_xg + away_xg
-        fh_goal_probability = 60.0
-        fh_goal_probability += max(0.0, best_pressure - 60.0) * 0.35
-        fh_goal_probability += min(14.0, total_shots_on * 2.0)
-        fh_goal_probability += min(10.0, fh_total_xg * 6.0)
-        fh_goal_probability += min(6.0, total_corners * 1.0)
-        fh_goal_probability = round(min(88.0, fh_goal_probability), 1)
-        fh_deltas = live_dynamics.get("deltas") or {}
-        fh_recent_activity = (
-            live_dynamics.get("ready") is True
-            and float(live_dynamics.get("window_minutes") or 0.0) >= 2.0
-            and float(live_dynamics.get("attack_index") or 0.0) >= 14.0
-            and (
-                float(fh_deltas.get("shots") or 0.0) >= 1.0
-                or float(fh_deltas.get("shots_on") or 0.0) >= 1.0
-                or float(fh_deltas.get("dangerous") or 0.0) >= 8.0
-                or float(fh_deltas.get("xg") or 0.0) >= 0.05
-            )
-        )
-        fh_stats_complete = all(
-            any(
-                str(item.get("type") or "").strip().lower() == wanted
-                and item.get("value") not in (None, "")
-                for item in (side.get("statistics") or [])
-                if isinstance(item, dict)
-            )
-            for side in (home_stats, away_stats)
-            for wanted in ("total shots", "shots on goal")
-        )
-        if (
-            20 <= minute <= 40
-            and home_red == 0 and away_red == 0
-            and best_pressure >= 76 and total_shots >= 8
-            and total_shots_on >= 4 and fh_total_xg >= 0.95
-            and total_corners >= 3 and fh_goal_probability >= 78
-            and fh_recent_activity and fh_stats_complete
-        ):
-            print(
-                f"LIVE FIRST-HALF OVER 0.5 QUALIFIED | fixture={fixture_id} | "
-                f"minute={minute} | score={home}-{away} | "
-                f"probability={fh_goal_probability:.1f} | "
-                f"pressure={best_pressure:.1f} | shots={total_shots} | "
-                f"shots_on={total_shots_on} | xg={fh_total_xg:.2f}",
-                flush=True,
-            )
-            return (
-                "⚽ OVER 0.5 FIRST HALF GOALS (GOAL BEFORE HALF-TIME)",
-                fh_goal_probability, minute, fh_goal_probability
-            )
+        if 20 <= minute <= 40 and total >= 1:
+            fast_goal_probability = 66
+            fast_goal_probability += max(0, best_pressure - 65) * 0.65
+            fast_goal_probability += min(12, total_shots_on * 1.5)
+            fast_goal_probability += min(6, total_corners)
+            fast_goal_probability += min(8, total * 2)
+            fast_goal_probability += min(8, pressure_diff * 0.25)
+            fast_goal_probability = round(min(95, fast_goal_probability), 1)
+
+            if (
+                best_pressure >= 68
+                and total_shots_on >= 4
+                and pressure_diff >= 4
+                and fast_goal_probability >= 62
+            ):
+                if (
+                    home_pressure >= away_pressure + 7
+                    and home_shots_on >= away_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL HOME",
+                        fast_goal_probability,
+                        minute,
+                        fast_goal_probability
+                    )
+
+                if (
+                    away_pressure >= home_pressure + 7
+                    and away_shots_on >= home_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL AWAY",
+                        fast_goal_probability,
+                        minute,
+                        fast_goal_probability
+                    )
 
         # =========================================================
         # NORMAL NEXT GOAL - 41 TO 78
-        # Probability is driven by the recent rolling attack window,
-        # not inflated by cumulative match totals.
         # =========================================================
         if 41 <= minute <= 78:
-            ng_deltas = live_dynamics.get("deltas") or {}
-            ng_window = float(live_dynamics.get("window_minutes") or 0.0)
-            ng_attack_index = float(live_dynamics.get("attack_index") or 0.0)
-            ng_recent_ready = (
-                live_dynamics.get("ready") is True
-                and ng_window >= 1.8
-            )
-            normal_goal_probability = round(
-                min(90.0, 55.0 + ng_attack_index * 0.45), 1
-            )
-            print(
-                "NORMAL NEXT GOAL:",
-                normal_goal_probability,
-                "recent_attack=", ng_attack_index,
-                "recent_ready=", ng_recent_ready,
-                "recent_deltas=", ng_deltas,
-                flush=True,
-            )
+            normal_goal_probability = 82
+            normal_goal_probability += max(0, best_pressure - 67) * 0.70
+            normal_goal_probability += min(14, total_shots_on * 1.4)
+            normal_goal_probability += min(7, total_corners * 0.7)
+            normal_goal_probability += min(8, pressure_diff * 0.25)
+            normal_goal_probability += min(6, (home_xg + away_xg) * 2)
+            normal_goal_probability = round(min(95, normal_goal_probability), 1)
 
-            ng_home_direction = (
-                home_pressure >= away_pressure + 10
-                and home_shots_on >= away_shots_on
-            )
-            ng_away_direction = (
-                away_pressure >= home_pressure + 10
-                and away_shots_on >= home_shots_on
-            )
-            ng_common_gate = (
-                ng_recent_ready
-                and ng_attack_index >= 35.0
-                and best_pressure >= 8
-                and total_shots_on >= 9
-                and normal_goal_probability >= 80
-            )
+            print("NORMAL NEXT GOAL:", normal_goal_probability, pressure_diff)
 
-            if ng_common_gate and ng_home_direction:
-                return (
-                    "🎯 NEXT GOAL HOME",
-                    normal_goal_probability,
-                    minute,
-                    normal_goal_probability
-                )
+            if (
+                best_pressure >= 86
+                and total_shots_on >= 13
+                and pressure_diff >= 34
+                and normal_goal_probability >= 87 
+            ):
+                if (
+                    home_pressure >= away_pressure + 14
+                    and home_shots_on >= away_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL HOME",
+                        normal_goal_probability,
+                        minute,
+                        normal_goal_probability
+                    )
 
-            if ng_common_gate and ng_away_direction:
-                return (
-                    "🎯 NEXT GOAL AWAY",
-                    normal_goal_probability,
-                    minute,
-                    normal_goal_probability
-                )
+                if (
+                    away_pressure >= home_pressure + 14
+                    and away_shots_on >= home_shots_on
+                ):
+                    return (
+                        "🎯 NEXT GOAL AWAY",
+                        normal_goal_probability,
+                        minute,
+                        normal_goal_probability
+                    )
 
         # =========================================================
         # OVER 1.5 REMAINING GOALS
@@ -1717,11 +1545,11 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 72
-            and total_shots_on >= 7
-            and total_shots >= 14
-            and (home_xg + away_xg) >= 1.6
-            and remaining_probability >= 62
+            and best_pressure >= 64
+            and total_shots_on >= 5
+            and total_shots >= 8
+            and (home_xg + away_xg) >= 1.4
+            and remaining_probability >= 60
             and total <= 1
         ):
             return (
@@ -1734,7 +1562,7 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 79
+        corner_probability = 80
         corner_probability += max(0, best_pressure - 60) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
@@ -1744,152 +1572,47 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            70 <= minute <= 80
+            72 <= minute <= 82
             and total_corners >= 10
-            and total_corners <= 12
-            and total_shots >= 23
-            and best_pressure >= 80
-            and corner_probability >= 80
+            and total_shots >= 20
+            and best_pressure >= 78
+            and corner_probability >= 78
+            and total_corners <= 10
         ):
-            if betano_live_market_available(fixture_id, "NEXT_CORNERS") is True:
+            if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
+                print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
+            else:
                 return (
                     "🚩 OVER 1.5 NEXT CORNERS",
-                    corner_probability,
-                    minute,
-                    corner_probability
-                )
-            print(
-                f"LIVE MARKET HOLD | fixture={fixture_id} | market=NEXT_CORNERS | "
-                "reason=Betano market not confirmed",
-                flush=True,
-            )
-
-        # =========================================================
-        # UNDER 0.5 REMAINING GOALS — MAIN-V4 DYNAMIC QUALITY GATE
-        # =========================================================
-        # Require complete core shot stats and a real cooling trend from
-        # rolling snapshots. No bookmaker odds or Betano lookup is used.
-        required_goal_stats = ("total shots", "shots on goal")
-
-        def _has_live_stat(team_stats, wanted):
-            wanted = {name.strip().lower() for name in wanted}
-            for item in (team_stats or {}).get("statistics", []) or []:
-                stat_name = str(item.get("type") or "").strip().lower()
-                if stat_name in wanted and item.get("value") not in (None, ""):
-                    return True
-            return False
-
-        stats_complete = all(
-            all(_has_live_stat(team_stats, (key,)) for key in required_goal_stats)
-            for team_stats in (home_stats, away_stats)
-        )
-        dynamics_deltas = live_dynamics.get("deltas") or {}
-        # Match the V4 probability ceiling and shared quality checks.
-        under_probability = round(min(
-            90.0, max(0.0, float(live_dynamics.get("no_more_goals") or 0.0))
-        ), 1)
-        under_dangerous = (
-            (extract(home_stats, "Dangerous Attacks") or 0)
-            + (extract(away_stats, "Dangerous Attacks") or 0)
-        )
-        under_confidence = (
-            58.0
-            + min(12.0, total_shots_on * 1.4)
-            + min(8.0, total_shots * 0.35)
-            + min(8.0, (home_xg + away_xg) * 3.0)
-            + min(6.0, under_dangerous * 0.06)
-            + (1.0 if 30 <= minute <= 82 else 0.0)
-        )
-        under_confidence = round(max(55.0, min(88.0, under_confidence)), 1)
-        under_risk = 18
-        if under_probability < 78:
-            under_risk += 7
-        if under_confidence < 82:
-            under_risk += 7
-        if total_shots_on < 2:
-            under_risk += 7
-        if total_shots < 7:
-            under_risk += 5
-        if minute < 25 or minute > 82:
-            under_risk += 8
-        under_risk = min(100, under_risk)
-
-        under_gate_failed = (
-            not stats_complete
-            or under_probability < 83
-            or under_confidence < 72
-            or under_risk > 35
-            or total_shots > 12
-            or total_shots_on > 4
-            or total_corners > 7
-            or (home_xg + away_xg) > 1.3
-            or not live_dynamics.get("ready")
-            or float(live_dynamics.get("window_minutes") or 0.0) < 5.0
-            or not live_dynamics.get("cooling")
-            or float(live_dynamics.get("attack_index", 100) or 0.0) > 6.0
-            or float(dynamics_deltas.get("shots", 99) if dynamics_deltas.get("shots") is not None else 99) > 1.0
-            or float(dynamics_deltas.get("shots_on", 99) if dynamics_deltas.get("shots_on") is not None else 99) > 0.0
-            or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 3.0
-            or float(dynamics_deltas.get("xg", 99) if dynamics_deltas.get("xg") is not None else 99) >= 0.02
-            or minute < 75
-            or minute > 88
-        )
-
-        print(
-            f"LIVE UNDER 0.5 DYNAMICS | fixture={fixture_id} | "
-            f"minute={minute} | ready={live_dynamics.get('ready')} | "
-            f"window={live_dynamics.get('window_minutes')} | "
-            f"no_more={under_probability:.1f} | "
-            f"confidence={under_confidence:.1f} | risk={under_risk} | "
-            f"score_changed={live_dynamics.get('score_changed_in_window')} | "
-            f"cooling={live_dynamics.get('cooling')} | "
-            f"attack_index={live_dynamics.get('attack_index')} | "
-            f"deltas={dynamics_deltas} | stats_complete={stats_complete} | "
-            f"gate_failed={under_gate_failed}",
-            flush=True,
-        )
-
-        if not under_gate_failed:
-            print(
-                f"LIVE UNDER 0.5 QUALIFIED | fixture={fixture_id} | "
-                f"minute={minute} | score={home}-{away} | "
-                f"probability={under_probability:.1f} | "
-                f"confidence={under_confidence:.1f} | risk={under_risk} | "
-                f"window={live_dynamics.get('window_minutes')}m | "
-                f"attack_index={live_dynamics.get('attack_index')}",
-                flush=True,
-            )
-            return (
-                "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
-                under_confidence,
+                corner_probability,
                 minute,
-                under_probability
+                corner_probability
             )
 
         # =========================================================
         # LATE GOAL
         # =========================================================
         if 75 <= minute <= 88:
-            late_goal_probability = 66
+            late_goal_probability = 41
             late_goal_probability += max(0, best_pressure - 60) * 0.65
             late_goal_probability += min(15, total_shots_on * 1.3)
             late_goal_probability += min(8, total_corners * 0.6)
             late_goal_probability += min(10, (home_xg + away_xg) * 2)
 
             if goal_diff <= 1:
-                late_goal_probability += 5
+                late_goal_probability += 4
 
             late_goal_probability = round(min(95, late_goal_probability), 1)
 
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 72
-                and total_shots_on >= 15
-                and total_shots >= 25
-                and total_corners >= 7
-                and (home_xg + away_xg) >= 2.2
-                and late_goal_probability >= 72
+                best_pressure >= 54
+                and total_shots_on >= 3
+                and total_shots >= 7
+                and total_corners >= 4
+                and (home_xg + away_xg) >= 1.2
+                and late_goal_probability >= 60
             ):
                 return (
                     "🔥 LATE GOAL",
@@ -9914,8 +9637,41 @@ def live_loop():
         country = match["league"]["country"]      
         league = match["league"]["name"]         
 
-        # LIVE recommendations are statistics-based; do not request Betano odds.
-        odds_text = "N/A (LIVE odds not used)"
+        odds_text = "-"                          
+
+        match_odds = get_match_odds(              
+
+            fixture_id                           
+        )                                         
+
+        home_odd = None                           
+        away_odd = None                           
+
+        if match_odds:                            
+            home_odd = match_odds[0]              
+            away_odd = match_odds[2]              
+     
+        if (                                   
+            home_odd is not None               
+            or                                 
+            away_odd is not None               
+        ):                                      
+        
+            if "HOME" in signal[0]:            
+        
+                odds_text = str(               
+        
+                    home_odd                   
+        
+                )                              
+        
+            elif "AWAY" in signal[0]:           
+        
+                odds_text = str(               
+        
+                    away_odd                    
+        
+                )                              
 
                                                
 
@@ -9946,47 +9702,34 @@ def live_loop():
 """
 )          
          
-def _live_worker_loop():
-    """Run LIVE independently on a fixed 60-second start-to-start cadence."""
-    print(f"LIVE WORKER STARTED | interval={LIVE_SCAN_INTERVAL}s", flush=True)
-    while True:
-        scan_started = time.time()
-        try:
-            live_loop()
-        except Exception:
-            logging.exception("LIVE WORKER ERROR")
+if __name__ == "__main__":                         
 
-        elapsed = time.time() - scan_started
-        time.sleep(max(0.0, LIVE_SCAN_INTERVAL - elapsed))
+    print("MAIN V3 STARTED")                      
 
+    init_database()                               
 
-if __name__ == "__main__":
+    last_prematch_scan = 0                         
 
-    print("MAIN V3 STARTED")
+    while True:                                    
 
-    init_database()
+        if (                                       
+            time.time()                            
+            -                                     
+            last_prematch_scan                     
+            >=                                    
+            3600                                   
+        ):                                         
 
-    # LIVE runs independently so PREMATCH work cannot delay the minute scan.
-    live_worker = threading.Thread(
-        target=_live_worker_loop,
-        name="live-scanner-worker",
-        daemon=True,
-    )
-    live_worker.start()
+            check_prematch_results()               
 
-    last_prematch_scan = 0
+            market_roi_report()                    
 
-    while True:
+            prematch_loop()                        
 
-        if time.time() - last_prematch_scan >= PREMATCH_SCAN_INTERVAL:
+            last_prematch_scan = (                
+                time.time()                        
+            )                                      
 
-            try:
-                check_prematch_results()
-                market_roi_report()
-                prematch_loop()
-            except Exception:
-                logging.exception("PREMATCH SCHEDULER ERROR")
-            finally:
-                last_prematch_scan = time.time()
+        live_loop()                               
 
-        time.sleep(30)
+        time.sleep(60) 
