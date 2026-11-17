@@ -6467,16 +6467,26 @@ def analyze_prematch_match(match):
         if recent_attack_ok:
             home_score += 1
 
-        home_probability = max(                    
-            5,                                     
-            min(                                   
-                95,                                
-                round(                             
-                    50 + (home_score * 0.60),      
-                    1                              
-                )                                  
-            )                                      
-        )                                          
+        # Recalculate the final HOME probability after all score bonuses.
+        home_probability = max(
+            5,
+            min(95, round(50 + (home_score * 0.60), 1))
+        )
+
+        # Re-evaluate probability-dependent filters using the final probability.
+        market_ok = (
+            home_probability >= market_home + 5
+            and home_edge >= 0.5
+        )
+        false_favourite = (
+            home_odd is not None
+            and home_odd <= 1.80
+            and home_probability < 68
+            and home_edge < 2
+            and market_home >= 55
+            and form_gap < 10
+            and market_home >= home_probability + 10
+        )
         
         if (
             not goal_match                       
@@ -8593,23 +8603,26 @@ def analyze_prematch_match(match):
             away_score += 1
 
 
-        away_probability = max(                   
-            5,                                     
-            min(                                   
-                95,                                
-                round(                             
-                    (                              
-                        max(                        
-                            1,                      
-                            away_score + 80         
-                        )                          
-                        /                          
-                        total_strength            
-                    ) * 100,                       
-                    1                              
-                )                                  
-            )                                      
-        )                                          
+        # Use the same final probability scale as HOME WIN, after all bonuses.
+        away_probability = max(
+            5,
+            min(95, round(50 + (away_score * 0.60), 1))
+        )
+
+        # Re-evaluate probability-dependent filters using the final probability.
+        market_ok = (
+            away_probability >= market_away + 5
+            and away_edge >= 0.5
+        )
+        false_favourite = (
+            away_odd is not None
+            and away_odd <= 1.80
+            and away_probability < 68
+            and away_edge < 2
+            and market_away >= 55
+            and form_gap > -10
+            and market_away >= away_probability + 10
+        )
      
         
         if (
@@ -8900,7 +8913,7 @@ def analyze_prematch_match(match):
         home_over15_quality = 0
         if home_over15_probability >= 62:
             home_over15_quality += 2
-        elif home_over15_probability >= 62:
+        elif home_over15_probability >= 55:
             home_over15_quality += 1
         if home_form["avg_scored"] >= 1.80:
             home_over15_quality += 1
@@ -8942,7 +8955,7 @@ def analyze_prematch_match(match):
         away_over15_quality = 0
         if away_over15_probability >= 62:
             away_over15_quality += 2
-        elif away_over15_probability >= 62:
+        elif away_over15_probability >= 55:
             away_over15_quality += 1
         if away_form["avg_scored"] >= 1.80:
             away_over15_quality += 1
