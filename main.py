@@ -4241,6 +4241,7 @@ def analyze_prematch_match(match):
       
          
         if not match_odds:
+            print("PREMATCH REJECT:", fixture_id, "NO_COMPLETE_1X2_ODDS")
             return None
 
         home_odd = match_odds[0]                   
@@ -4297,6 +4298,7 @@ def analyze_prematch_match(match):
             "Belarus"
 
         ]:
+            print("PREMATCH REJECT:", fixture_id, "BLOCKED_COUNTRY", country)
             return None
 
         bad_words = [
@@ -4332,12 +4334,15 @@ def analyze_prematch_match(match):
         for word in bad_words:
 
             if word in league_text:
+                print("PREMATCH REJECT:", fixture_id, "BLOCKED_COMPETITION_TERM", word, league)
                 return None
 
         if country in BAD_COUNTRIES:
+            print("PREMATCH REJECT:", fixture_id, "BAD_COUNTRY", country)
             return None
 
         if blocked_league(league):
+            print("PREMATCH REJECT:", fixture_id, "BLOCKED_LEAGUE", country, league)
             return None
 
         home = match["teams"]["home"]["name"]
@@ -4354,15 +4359,19 @@ def analyze_prematch_match(match):
             return None
 
         if home.strip().lower().endswith((" w", " women", " ladies")):
+            print("PREMATCH REJECT:", fixture_id, "WOMEN_HOME_TEAM", home)
             return None
 
         if away.strip().lower().endswith((" w", " women", " ladies")):
+            print("PREMATCH REJECT:", fixture_id, "WOMEN_AWAY_TEAM", away)
             return None
 
         if " II" in home:
+            print("PREMATCH REJECT:", fixture_id, "RESERVE_HOME_TEAM", home)
             return None
 
         if " II" in away:
+            print("PREMATCH REJECT:", fixture_id, "RESERVE_AWAY_TEAM", away)
             return None
 
         home_id = match["teams"]["home"]["id"]
@@ -4501,6 +4510,7 @@ def analyze_prematch_match(match):
             venue="away"
         )
         if not home_form or not away_form:
+            print("PREMATCH REJECT:", fixture_id, "MISSING_TEAM_FORM", bool(home_form), bool(away_form))
             return None
 
         if (
@@ -4508,6 +4518,7 @@ def analyze_prematch_match(match):
             or
             away_form["played"] < 3
         ):
+            print("PREMATCH REJECT:", fixture_id, "INSUFFICIENT_FORM_MATCHES", home_form.get("played"), away_form.get("played"))
             return None
 
         if (
@@ -4515,6 +4526,7 @@ def analyze_prematch_match(match):
             and
             home_form["avg_scored"] < 1.0
         ):
+            print("PREMATCH REJECT:", fixture_id, "LOW_COMBINED_SCORING_FORM", home_form.get("avg_scored"), away_form.get("avg_scored"))
             return None
 
             
