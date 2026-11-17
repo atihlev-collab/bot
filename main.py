@@ -193,30 +193,19 @@ def blocked_league(league):
 # =========================================================
 
 def get_live_matches():
-
     try:
-
         r = requests.get(
-
             f"{BASE_URL}/fixtures",
-
             headers=HEADERS,
-
-            params={
-                "live": "all"
-            },
-
+            params={"live": "all"},
             timeout=20
-
         ).json()
-
-        return r.get(
-            "response",
-            []
-        )
-
-    except:
-
+        errors = r.get("errors")
+        if errors:
+            print("LIVE FIXTURES API RESPONSE ERRORS:", errors)
+        return r.get("response", [])
+    except Exception as e:
+        print("LIVE FIXTURES API ERROR:", repr(e))
         return []
 
 # =========================================================
@@ -224,36 +213,20 @@ def get_live_matches():
 # =========================================================
 
 def get_statistics(fixture_id):
-
     try:
-
         r = requests.get(
-
             f"{BASE_URL}/fixtures/statistics",
-
             headers=HEADERS,
-
-            params={
-                "fixture": fixture_id
-            },
-
+            params={"fixture": fixture_id},
             timeout=20
-
         ).json()
-
-        print(
-            "STATS RAW:",
-            fixture_id,
-            r
-        )
-        
-        return r.get(
-            "response",
-            []
-        )
-
-    except:
-
+        print("STATS RAW:", fixture_id, r)
+        errors = r.get("errors")
+        if errors:
+            print("LIVE STATISTICS API RESPONSE ERRORS:", fixture_id, errors)
+        return r.get("response", [])
+    except Exception as e:
+        print("LIVE STATISTICS API ERROR:", fixture_id, repr(e))
         return []
 
 # =========================================================
@@ -758,37 +731,40 @@ def get_match_odds(fixture_id):
 # EXTRACT STAT
 # =========================================================
 
+def normalize_stat_name(value):
+    return " ".join(
+        str(value or "").strip().lower().replace("_", " ").split()
+    )
+
+
 def extract(team, stat_name):
-
     try:
-
-        for stat in team["statistics"]:
-
-            if stat["type"] == stat_name:
-
-                value = stat["value"]
-
-                if value is None:
-                    return 0
-
-                if isinstance(value, str):
-
-                    value = value.replace("%", "")
-
-                    try:
-                        value = int(value)
-
-                    except:
-
-                        return 0
-
-                return value
-
-    except:
-
+        target = normalize_stat_name(stat_name)
+        for stat in team.get("statistics", []):
+            if normalize_stat_name(stat.get("type")) != target:
+                continue
+            value = stat.get("value")
+            if value is None:
+                return 0
+            if isinstance(value, str):
+                value = value.replace("%", "").strip()
+            number = float(value)
+            return int(number) if number.is_integer() else number
+    except Exception:
         pass
-
     return 0
+
+
+def has_stat_value(team, stat_name):
+    target = normalize_stat_name(stat_name)
+    try:
+        return any(
+            normalize_stat_name(stat.get("type")) == target
+            and stat.get("value") is not None
+            for stat in team.get("statistics", [])
+        )
+    except Exception:
+        return False
 
 
 # =========================================================
@@ -824,7 +800,13 @@ def calculate_pressure(team):
         "Dangerous Attacks"
     )
 
-    if shots_on == 0 and attacks < 35:
+    if (
+        shots_on == 0
+        and total_shots < 2
+        and corners == 0
+        and possession < 50
+        and attacks < 15
+    ):
         return 0
 
  
@@ -941,7 +923,7 @@ def get_upcoming_matches():
                     fixture_time - now
                 ).total_seconds() / 3600
 
-                if 0 <= hours_left <= 12:
+                if 0 <= hours_left <= 24:
 
                     matches.append(
                         match
@@ -1079,31 +1061,16 @@ def _catalog_has_market(catalog, market_type):
 
 
 def betano_live_market_available(fixture_id, market_type):
-    """Conservative availability gate for corner/card Telegram signals.
-
-    Requires BOTH:
-      1) Betano to list that market family for the fixture pre-match; and
-      2) API-Football live odds to show a compatible in-play market now.
-
-    API-Football's /odds/live feed is not documented as bookmaker-specific,
-    so this deliberately uses both checks instead of pretending it can prove
-    a Betano live price when the feed does not expose one.
-    """
+    """Check Betano market availability for corner/card signals."""
     betano_catalog = get_betano_market_catalog(fixture_id)
-    live_catalog = get_live_market_catalog(fixture_id)
-
     betano_ok = _catalog_has_market(betano_catalog, market_type)
-    live_ok = _catalog_has_market(live_catalog, market_type)
-
     print(
         "BETANO LIVE MARKET CHECK:",
         fixture_id,
         market_type,
-        "BETANO=", betano_ok,
-        "LIVE=", live_ok
+        "BETANO=", betano_ok
     )
-
-    return betano_ok and live_ok
+    return betano_ok
 
 # =========================================================
 # CARD PRESSURE
@@ -1231,7 +1198,7 @@ def analyze_live_match(fixture):
         fixture_id = fixture["fixture"]["id"]
         minute = fixture["fixture"]["status"].get("elapsed") or 0
 
-        if minute < 25 or minute > 90:
+        if minute < 20 or minute > 90:
             return None
 
         home_team = fixture["teams"]["home"]["name"]
@@ -1303,38 +1270,15 @@ def analyze_live_match(fixture):
         away_yellow = extract(away_stats, "Yellow Cards")
         home_xg = extract(home_stats, "Expected Goals")
         away_xg = extract(away_stats, "Expected Goals")
+        xg_available = (
+            has_stat_value(home_stats, "Expected Goals")
+            and has_stat_value(away_stats, "Expected Goals")
+        )
 
         home_pressure = calculate_pressure(home_stats)
         away_pressure = calculate_pressure(away_stats)
 
-        home_form = get_team_form(
-            fixture["teams"]["home"]["id"],
-            venue="home"
-        )
-        away_form = get_team_form(
-            fixture["teams"]["away"]["id"],
-            venue="away"
-        )
-
-        # Small form adjustment. Live statistics remain the main signal.
-        if home_form:
-            form_bonus = (
-                home_form["form_pct"] * 0.40
-                + home_form["recent_form_pct"] * 0.30
-                + home_form["unbeaten_pct"] * 0.20
-                + (home_form["avg_scored"] * 100 / 3) * 0.10
-            )
-            home_pressure += min(12, round(form_bonus / 10))
-
-        if away_form:
-            form_bonus = (
-                away_form["form_pct"] * 0.40
-                + away_form["recent_form_pct"] * 0.30
-                + away_form["unbeaten_pct"] * 0.20
-                + (away_form["avg_scored"] * 100 / 3) * 0.10
-            )
-            away_pressure += min(12, round(form_bonus / 10))
-
+        # LIVE signals use current match statistics only; no historical form inputs.
         # xG adjustment.
         if home_xg >= 1.5:
             home_pressure += 8
@@ -1501,13 +1445,13 @@ def analyze_live_match(fixture):
             home_pressure >= away_pressure + 22
             and home_shots_on >= away_shots_on + 2
             and home_total_shots >= away_total_shots + 4
-            and home_xg >= away_xg + 0.45
+            and (not xg_available or home_xg >= away_xg + 0.45)
         )
         away_dominant = (
             away_pressure >= home_pressure + 22
             and away_shots_on >= home_shots_on + 2
             and away_total_shots >= home_total_shots + 4
-            and away_xg >= home_xg + 0.45
+            and (not xg_available or away_xg >= home_xg + 0.45)
         )
 
         # =========================================================
@@ -1615,6 +1559,23 @@ def analyze_live_match(fixture):
 
         # OVER 1.5 remaining goals requires both teams to be involved in
         # attacking play; one-sided pressure is deliberately insufficient.
+        xg_or_stats_support = (
+            (
+                xg_available
+                and home_xg >= 0.35
+                and away_xg >= 0.35
+                and (home_xg + away_xg) >= 1.4
+            )
+            or
+            (
+                not xg_available
+                and home_shots_on >= 2
+                and away_shots_on >= 2
+                and total_shots >= 10
+                and total_corners >= 4
+            )
+        )
+
         both_teams_attacking = (
             home_attack
             and away_attack
@@ -1622,18 +1583,16 @@ def analyze_live_match(fixture):
             and away_shots_on >= 1
             and home_total_shots >= 3
             and away_total_shots >= 3
-            and home_xg >= 0.35
-            and away_xg >= 0.35
+            and xg_or_stats_support
         )
 
         if (
-            25 <= minute <= 65
+            20 <= minute <= 60
             and both_teams_attacking
             and home_pressure >= 48
             and away_pressure >= 48
             and total_shots_on >= 5
             and total_shots >= 8
-            and (home_xg + away_xg) >= 1.4
             and remaining_probability >= 60
             and total <= 1
         ):
@@ -1695,7 +1654,19 @@ def analyze_live_match(fixture):
                 and total_shots_on >= 4
                 and total_shots >= 9
                 and total_corners >= 4
-                and (home_xg + away_xg) >= 1.2
+                and (
+                    (
+                        xg_available
+                        and (home_xg + away_xg) >= 1.2
+                    )
+                    or
+                    (
+                        not xg_available
+                        and total_shots_on >= 6
+                        and total_shots >= 12
+                        and total_corners >= 5
+                    )
+                )
                 and late_goal_probability >= 60
             ):
                 return (
@@ -5714,13 +5685,7 @@ def analyze_prematch_match(match):
 
             ):                           
 
-                prob = min(                
-
-                    95,                    
-
-                    home_score            
-
-                )                         
+                prob = max(5, min(95, home_score + 50))                         
 
                 print(                  
 
@@ -7628,13 +7593,7 @@ def analyze_prematch_match(match):
         
         ):                                    
         
-            edge = value_edge(                
-        
-                min(95, away_score),          
-        
-                away_odd                       
-        
-            )                                 
+            edge = value_edge(max(5, min(95, away_score + 50)), away_odd)                                 
 
             # SMART VALUE SCORE
 
@@ -9398,7 +9357,7 @@ def prematch_loop():
 
     print("PREMATCH SCAN INPUT:", {
         "fixtures_received": len(matches),
-        "window_hours": 12
+        "window_hours": 24
     })
 
     for match in matches:
@@ -9689,6 +9648,7 @@ def live_loop():
     matches = get_live_matches()
 
     print(f"Live matches: {len(matches)}")
+    print(f"LIVE SCAN | raw_matches={len(matches)}")
 
     print("LIVE SCAN START")
 
@@ -9714,8 +9674,6 @@ def live_loop():
 
         if key in sent_live:
             continue
-
-        sent_live[key] = time.time()
 
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
@@ -9779,8 +9737,7 @@ def live_loop():
 
                                                
 
-        send_telegram(                            
-
+        send_ok = send_telegram(
             f"""                                
 🔥 LIVE SIGNAL
 
@@ -9804,7 +9761,11 @@ def live_loop():
 🎯 Goal Probability:
 {goal_probability}%
 """
-)          
+        )
+        if send_ok:
+            sent_live[key] = time.time()
+        else:
+            print("LIVE SEND FAILED:", fixture_id, signal[0])          
          
 if __name__ == "__main__":                         
 
