@@ -1268,8 +1268,22 @@ def analyze_live_match(fixture):
         if len(stats) < 2:
             return None
 
-        home_stats = stats[0]
-        away_stats = stats[1]
+        # Match API statistics to the fixture's actual team IDs. The API
+        # response order is normally home/away, but should not be assumed.
+        home_id = fixture["teams"]["home"]["id"]
+        away_id = fixture["teams"]["away"]["id"]
+        stats_by_team_id = {
+            item.get("team", {}).get("id"): item
+            for item in stats
+            if item.get("team", {}).get("id") is not None
+        }
+        if home_id in stats_by_team_id and away_id in stats_by_team_id:
+            home_stats = stats_by_team_id[home_id]
+            away_stats = stats_by_team_id[away_id]
+        else:
+            # Keep the established API order as a fallback if team IDs
+            # are missing from an otherwise valid statistics response.
+            home_stats, away_stats = stats[0], stats[1]
 
         home = fixture["goals"].get("home", 0) or 0
         away = fixture["goals"].get("away", 0) or 0
@@ -1500,7 +1514,9 @@ def analyze_live_match(fixture):
         # =========================================================
         # FAST NEXT GOAL - 20 TO 40
         # =========================================================
-        if 20 <= minute <= 40 and total >= 1:
+        # The outer LIVE guard starts analysis at minute 25.
+        # A 0-0 score is valid for a NEXT GOAL prediction.
+        if 25 <= minute <= 40:
             fast_goal_probability = 66
             fast_goal_probability += max(0, best_pressure - 65) * 0.65
             fast_goal_probability += min(12, total_shots_on * 1.5)
@@ -1647,7 +1663,6 @@ def analyze_live_match(fixture):
             and total_shots >= 22
             and best_pressure >= 79
             and corner_probability >= 79
-            and total_corners <= 10
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
                 print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -9647,72 +9662,21 @@ def live_loop():
 
         goal_probability = signal[3]
         
-        stats = get_statistics(
-            fixture_id
-        )
+        # Statistics and team form were already fetched and evaluated inside
+        # analyze_live_match(). Do not request the same LIVE data a second time.
 
-        home_pressure = 0
-        away_pressure = 0
-
-        home_shots = 0
-        away_shots = 0 
-
-        home_corners = 0
-        away_corners = 0
-        
-        home_xg = 0            
-        away_xg = 0            
-
-        if len(stats) >= 2:
-
-            home_pressure = calculate_pressure(
-                stats[0]
-            )
-
-            away_pressure = calculate_pressure(
-                stats[1]
-            )
-
-
-            home_form = get_team_form(     
-                match["teams"]["home"]["id"],
-                venue="home"              
-            )                            
-
-            away_form = get_team_form(     
-                match["teams"]["away"]["id"],
-                venue="away"              
-            )                             
-
-            home_shots = extract(
-                stats[0],
-                "Shots on Goal"
-            )
-
-            away_shots = extract(
-                stats[1],
-                "Shots on Goal"
-            )
-
-            home_corners = extract(
-                stats[0],
-                "Corner Kicks"
-            )
-
-            away_corners = extract(
-                stats[1],
-                "Corner Kicks"
-            )           
-        
         country = match["league"]["country"]      
         league = match["league"]["name"]         
 
         odds_text = "-"                          
 
-        match_odds = get_match_odds(              
-
-            fixture_id                           
-        )                                         
+        # LIVE goal signals are statistics-only: do not request or wait for
+        # odds. Keep the existing odds display behavior for corner/card markets.
+        goal_market = any(
+            marker in signal[0]
+            for marker in ("NEXT GOAL", "REMAINING GOALS", "LATE GOAL")
+        )
+        match_odds = None if goal_market else get_match_odds(fixture_id)
 
         home_odd = None                           
         away_odd = None                           
