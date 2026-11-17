@@ -1400,7 +1400,7 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 76
-                and total_shots >= 7
+                and total_shots >= 9
                 and total_corners >= 4
                 and fh_corner_probability >= 66
             ):
@@ -1445,10 +1445,10 @@ def analyze_live_match(fixture):
         print("CARD CHECK:", minute, card_probability, total_cards, total_fouls)
 
         if (
-            72 <= minute <= 82
+            70 <= minute <= 80
             and card_probability >= 76
-            and total_cards >= 4
-            and total_fouls >= 24
+            and total_cards >= 3
+            and total_fouls >= 21
             and goal_diff <= 1
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
@@ -1658,7 +1658,7 @@ def analyze_live_match(fixture):
         print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
 
         if (
-            72 <= minute <= 82
+            70 <= minute <= 80
             and total_corners >= 10
             and total_shots >= 22
             and best_pressure >= 79
@@ -1693,8 +1693,8 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 54
-                and total_shots_on >= 3
-                and total_shots >= 7
+                and total_shots_on >= 4
+                and total_shots >= 9
                 and total_corners >= 4
                 and (home_xg + away_xg) >= 1.2
                 and late_goal_probability >= 60
