@@ -8877,10 +8877,10 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 76
-            and btts_conf >= 72
-            and expected_goals >= 3.20
-            and min(home_form["scored_pct"], away_form["scored_pct"]) >= 60
+            btts_prob >= 72
+            and btts_conf >= 70
+            and expected_goals >= 3.00
+            and min(home_form["scored_pct"], away_form["scored_pct"]) >= 56
             and btts_quality >= 4
         ):
             signals.append((
@@ -8940,8 +8940,8 @@ def analyze_prematch_match(match):
 
         home_over15_signal = False
         if (
-            home_score >= 66
-            and home_over15_probability >= 64
+            home_score >= 64
+            and home_over15_probability >= 62
             and expected_goals >= 2.50
             and home_over15_quality >= 3
         ):
@@ -8982,8 +8982,8 @@ def analyze_prematch_match(match):
 
         away_over15_signal = False
         if (
-            away_score >= 66
-            and away_over15_probability >= 62
+            away_score >= 64
+            and away_over15_probability >= 60
             and expected_goals >= 2.50
             and away_over15_quality >= 3
         ):
@@ -9033,9 +9033,9 @@ def analyze_prematch_match(match):
         )
 
         if (
-            under_prob >= 70
+            under_prob >= 68
             and expected_goals <= 1.80
-            and under_quality >= 4
+            and under_quality >= 3
             and home_form["avg_scored"] <= 1.40
             and away_form["avg_scored"] <= 1.40    
             and home_form["recent_avg_scored"] <= 1.20
@@ -9069,9 +9069,9 @@ def analyze_prematch_match(match):
         )
 
         over35_quality = 0
-        if over35_prob >= 58:
+        if over35_prob >= 56:
             over35_quality += 2
-        elif over35_prob >= 55:
+        elif over35_prob >= 53:
             over35_quality += 1
         if expected_goals >= 4.00:
             over35_quality += 2
