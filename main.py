@@ -921,10 +921,10 @@ def get_upcoming_matches():
 
             ).json()
 
-            for match in r.get(
-                "response",
-                []
-            ):
+            daily_matches = r.get("response", [])
+            print("PREMATCH FIXTURE API:", date, "count=", len(daily_matches))
+
+            for match in daily_matches:
 
                 fixture_time = datetime.fromisoformat(
                     match["fixture"]["date"].replace(
@@ -947,9 +947,8 @@ def get_upcoming_matches():
                         match
                     )
 
-        except:
-
-            pass
+        except Exception as e:
+            print("PREMATCH FIXTURE API ERROR:", date, repr(e))
 
     matches.sort(
 
@@ -9321,11 +9320,13 @@ def tipster_selector_score(market, probability, confidence, odd):
 
 def tipster_filter_signals(all_signals):
     passed = []
+    rejection_counts = {}
     for item in all_signals:
         try:
             probability, fixture_id, match_date, kickoff_time, country, league, home, away, market, confidence, odds_text = item
 
             if odds_text in (None, "", "-"):
+                rejection_counts["NO_ODDS"] = rejection_counts.get("NO_ODDS", 0) + 1
                 print("TIPSTER REJECT:", home, away, market, "NO_ODDS")
                 continue
 
@@ -9346,10 +9347,18 @@ def tipster_filter_signals(all_signals):
 
             if ok:
                 passed.append(item)
+            else:
+                rejection_counts[reason] = rejection_counts.get(reason, 0) + 1
 
         except Exception as e:
+            rejection_counts["FILTER_ERROR"] = rejection_counts.get("FILTER_ERROR", 0) + 1
             print("TIPSTER FILTER ERROR:", repr(e))
 
+    print("PREMATCH TIPSTER SUMMARY:", {
+        "input_candidates": len(all_signals),
+        "passed": len(passed),
+        "rejected": rejection_counts
+    })
     return passed
 
 def prematch_loop():
@@ -9363,17 +9372,38 @@ def prematch_loop():
     )
 
     all_signals = []
+    scan_stats = {
+        "fixtures_received": len(matches),
+        "fixtures_with_model_signals": 0,
+        "fixtures_without_model_signals": 0,
+        "fixtures_without_odds": 0,
+        "market_candidates_before_final_gate": 0,
+        "top_five_selected": 0,
+        "sent": 0,
+        "send_failed": 0,
+        "already_sent_skipped": 0,
+    }
+
+    print("PREMATCH SCAN INPUT:", {
+        "fixtures_received": len(matches),
+        "window_hours": 12
+    })
 
     for match in matches:
+        fixture_id = match["fixture"]["id"]
+        home_name = match["teams"]["home"]["name"]
+        away_name = match["teams"]["away"]["name"]
+        league_name = match["league"]["name"]
 
-        signals = analyze_prematch_match(
-            match
-        )
+        signals = analyze_prematch_match(match)
 
         if not signals:
+            scan_stats["fixtures_without_model_signals"] += 1
+            print("PREMATCH NO MODEL SIGNAL:", fixture_id, home_name, "vs", away_name, "|", league_name)
             continue
 
-        fixture_id = match["fixture"]["id"]
+        scan_stats["fixtures_with_model_signals"] += 1
+        print("PREMATCH MODEL SIGNALS:", fixture_id, home_name, "vs", away_name, signals)
 
         match_odds = get_prematch_match_odds(
             fixture_id
@@ -9386,6 +9416,8 @@ def prematch_loop():
         )
 
         if not match_odds:
+            scan_stats["fixtures_without_odds"] += 1
+            print("PREMATCH FIXTURE SKIPPED: NO MATCH ODDS:", fixture_id, home_name, "vs", away_name)
             continue
 
         home_odd = match_odds[0]                     
@@ -9522,6 +9554,9 @@ def prematch_loop():
             )                                                 
    
 
+    scan_stats["market_candidates_before_final_gate"] = len(all_signals)
+    print("PREMATCH CANDIDATES BEFORE FINAL GATE:", len(all_signals))
+
     # TIPSTER PRO FINAL GATE
     all_signals = tipster_filter_signals(
         all_signals
@@ -9559,6 +9594,9 @@ def prematch_loop():
         if len(top_signals) >= 5:           
             break                           
 
+    scan_stats["top_five_selected"] = len(top_signals)
+    print("PREMATCH TOP MATCHES SELECTED:", len(top_signals))
+
     for (
         probability,
         fixture_id,
@@ -9587,7 +9625,8 @@ def prematch_loop():
                 -
                 sent_prematch[key]
             ) < 86400:
-
+                scan_stats["already_sent_skipped"] += 1
+                print("PREMATCH SEND SKIPPED: ALREADY SENT:", home, "vs", away, market)
                 continue       
 
         print(
@@ -9619,8 +9658,14 @@ def prematch_loop():
            
         )
 
-        if sent_ok:                                
-            sent_prematch[key] = time.time()                    
+        if sent_ok:
+            scan_stats["sent"] += 1
+            sent_prematch[key] = time.time()
+        else:
+            scan_stats["send_failed"] += 1
+            print("PREMATCH SEND FAILED:", home, "vs", away, market)
+
+    print("PREMATCH SCAN SUMMARY:", scan_stats)
 
 
 # =========================================================
