@@ -1447,6 +1447,56 @@ def analyze_live_match(fixture):
                 card_probability
             )
 
+        # LIVE attacking profiles. A passive side must have very little
+        # attacking output; pressure alone is not enough to call it passive.
+        home_attack = (
+            home_pressure >= 55
+            and (
+                home_shots_on >= 2
+                or home_total_shots >= 5
+                or home_corners >= 3
+                or home_xg >= 0.55
+            )
+        )
+        away_attack = (
+            away_pressure >= 55
+            and (
+                away_shots_on >= 2
+                or away_total_shots >= 5
+                or away_corners >= 3
+                or away_xg >= 0.55
+            )
+        )
+
+        home_passive = (
+            home_shots_on <= 1
+            and home_total_shots <= 3
+            and home_corners <= 1
+            and home_xg < 0.35
+            and home_pressure <= 48
+        )
+        away_passive = (
+            away_shots_on <= 1
+            and away_total_shots <= 3
+            and away_corners <= 1
+            and away_xg < 0.35
+            and away_pressure <= 48
+        )
+
+        # The dominant side must lead in every meaningful attacking indicator.
+        home_dominant = (
+            home_pressure >= away_pressure + 22
+            and home_shots_on >= away_shots_on + 2
+            and home_total_shots >= away_total_shots + 4
+            and home_xg >= away_xg + 0.45
+        )
+        away_dominant = (
+            away_pressure >= home_pressure + 22
+            and away_shots_on >= home_shots_on + 2
+            and away_total_shots >= home_total_shots + 4
+            and away_xg >= home_xg + 0.45
+        )
+
         # =========================================================
         # FAST NEXT GOAL - 20 TO 40
         # =========================================================
@@ -1460,14 +1510,14 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 66
-                and total_shots_on >= 4
-                and pressure_diff >= 4
-                and fast_goal_probability >= 60
+                best_pressure >= 72
+                and pressure_diff >= 22
+                and fast_goal_probability >= 68
             ):
                 if (
-                    home_pressure >= away_pressure + 6
-                    and home_shots_on >= away_shots_on
+                    home_dominant
+                    and away_passive
+                    and home_attack
                 ):
                     return (
                         "🎯 NEXT GOAL HOME",
@@ -1477,8 +1527,9 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 6
-                    and away_shots_on >= home_shots_on
+                    away_dominant
+                    and home_passive
+                    and away_attack
                 ):
                     return (
                         "🎯 NEXT GOAL AWAY",
@@ -1503,13 +1554,13 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 86
-                and total_shots_on >= 14
-                and pressure_diff >= 36
-                and normal_goal_probability >= 88 
+                and pressure_diff >= 28
+                and normal_goal_probability >= 88
             ):
                 if (
-                    home_pressure >= away_pressure + 14
-                    and home_shots_on >= away_shots_on
+                    home_dominant
+                    and away_passive
+                    and home_attack
                 ):
                     return (
                         "🎯 NEXT GOAL HOME",
@@ -1519,8 +1570,9 @@ def analyze_live_match(fixture):
                     )
 
                 if (
-                    away_pressure >= home_pressure + 14
-                    and away_shots_on >= home_shots_on
+                    away_dominant
+                    and home_passive
+                    and away_attack
                 ):
                     return (
                         "🎯 NEXT GOAL AWAY",
@@ -1541,11 +1593,29 @@ def analyze_live_match(fixture):
             remaining_probability += 4
         remaining_probability = round(min(95, remaining_probability), 1)
 
-        print("OVER15 REMAINING CHECK:", minute, remaining_probability)
+        print(
+            "OVER15 REMAINING CHECK:", minute, remaining_probability,
+            "HOME_ATTACK=", home_attack, "AWAY_ATTACK=", away_attack
+        )
+
+        # OVER 1.5 remaining goals requires both teams to be involved in
+        # attacking play; one-sided pressure is deliberately insufficient.
+        both_teams_attacking = (
+            home_attack
+            and away_attack
+            and home_shots_on >= 1
+            and away_shots_on >= 1
+            and home_total_shots >= 3
+            and away_total_shots >= 3
+            and home_xg >= 0.35
+            and away_xg >= 0.35
+        )
 
         if (
             25 <= minute <= 65
-            and best_pressure >= 64
+            and both_teams_attacking
+            and home_pressure >= 48
+            and away_pressure >= 48
             and total_shots_on >= 5
             and total_shots >= 8
             and (home_xg + away_xg) >= 1.4
