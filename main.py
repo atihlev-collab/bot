@@ -880,65 +880,44 @@ def get_upcoming_matches():
     matches = []
 
     now = datetime.now(TZ)
+    window_start = now.replace(hour=12, minute=0, second=0, microsecond=0)
 
-    for i in range(2):
+    # PREMATCH window is fixed to Bulgaria local time: 12:00 today to 12:00 tomorrow.
+    if now < window_start:
+        window_start -= timedelta(days=1)
 
-        date = (
-            now + timedelta(days=i)
-        ).strftime("%Y-%m-%d")
+    window_end = window_start + timedelta(days=1)
+    scan_dates = sorted({
+        window_start.strftime("%Y-%m-%d"),
+        window_end.strftime("%Y-%m-%d")
+    })
 
+    for date in scan_dates:
         try:
-
             r = requests.get(
-
                 f"{BASE_URL}/fixtures",
-
                 headers=HEADERS,
-
-                params={
-                    "date": date
-                },
-
+                params={"date": date},
                 timeout=20
-
             ).json()
 
             daily_matches = r.get("response", [])
             print("PREMATCH FIXTURE API:", date, "count=", len(daily_matches))
 
             for match in daily_matches:
-
                 fixture_time = datetime.fromisoformat(
-                    match["fixture"]["date"].replace(
-                        "Z",
-                        "+00:00"
-                    )
-                )
+                    match["fixture"]["date"].replace("Z", "+00:00")
+                ).astimezone(TZ)
 
-                fixture_time = fixture_time.astimezone(
-                    TZ
-                )
-
-                hours_left = (
-                    fixture_time - now
-                ).total_seconds() / 3600
-
-                if 0 <= hours_left <= 24:
-
-                    matches.append(
-                        match
-                    )
+                if window_start <= fixture_time < window_end:
+                    matches.append(match)
 
         except Exception as e:
             print("PREMATCH FIXTURE API ERROR:", date, repr(e))
 
-    matches.sort(
+    matches.sort(key=lambda x: x["fixture"]["date"])
 
-        key=lambda x:
-        x["fixture"]["date"]
-
-    )
-
+    print("PREMATCH FIXED WINDOW:", window_start.isoformat(), "->", window_end.isoformat())
     return matches
 
 
@@ -8898,110 +8877,8 @@ def analyze_prematch_match(match):
                 round(btts_prob, 1)
             ))
 
-        # ---------------------------------------------------------
-        # TEAM OVER 1.5 GOALS
-        # ---------------------------------------------------------
-        home_over15_probability = (
-            1
-            - poisson.pmf(0, home_attack)
-            - poisson.pmf(1, home_attack)
-        ) * 100
-        home_over15_probability = round(
-            max(5, min(95, home_over15_probability)), 1
-        )
-
-        away_over15_probability = (
-            1
-            - poisson.pmf(0, away_attack)
-            - poisson.pmf(1, away_attack)
-        ) * 100
-        away_over15_probability = round(
-            max(5, min(95, away_over15_probability)), 1
-        )
-
-        home_over15_quality = 0
-        if home_over15_probability >= 62:
-            home_over15_quality += 2
-        elif home_over15_probability >= 55:
-            home_over15_quality += 1
-        if home_form["avg_scored"] >= 1.80:
-            home_over15_quality += 1
-        if home_form["recent_avg_scored"] >= 1.70:
-            home_over15_quality += 1
-        if away_form["avg_conceded"] >= 1.30:
-            home_over15_quality += 1
-        if away_form["recent_avg_conceded"] >= 1.20:
-            home_over15_quality += 1
-        if home_form["scored_pct"] >= 75:
-            home_over15_quality += 1
-        if home_strength > away_strength:
-            home_over15_quality += 1
-        if home_edge >= 2:
-            home_over15_quality += 1
-        if home_form["recent_goal_diff"] >= 1:
-            home_over15_quality += 1
-
-        print(
-            "HOME O1.5 QUALITY:", home, away,
-            "PROB=", home_over15_probability,
-            "Q=", home_over15_quality
-        )
-
-        home_over15_signal = False
-        if (
-            home_score >= 64
-            and home_over15_probability >= 62
-            and expected_goals >= 2.50
-            and home_over15_quality >= 3
-        ):
-            signals.append((
-                "🏠 HOME OVER 1.5",
-                confidence_from_score(home_over15_probability),
-                round(home_over15_probability, 1)
-            ))
-            home_over15_signal = True
-
-        away_over15_quality = 0
-        if away_over15_probability >= 62:
-            away_over15_quality += 2
-        elif away_over15_probability >= 55:
-            away_over15_quality += 1
-        if away_form["avg_scored"] >= 1.80:
-            away_over15_quality += 1
-        if away_form["recent_avg_scored"] >= 1.70:
-            away_over15_quality += 1
-        if home_form["avg_conceded"] >= 1.30:
-            away_over15_quality += 1
-        if home_form["recent_avg_conceded"] >= 1.20:
-            away_over15_quality += 1
-        if away_form["scored_pct"] >= 75:
-            away_over15_quality += 1
-        if away_strength > home_strength:
-            away_over15_quality += 1
-        if away_edge >= 2:
-            away_over15_quality += 1
-        if away_form["recent_goal_diff"] >= 1:
-            away_over15_quality += 1
-
-        print(
-            "AWAY O1.5 QUALITY:", home, away,
-            "PROB=", away_over15_probability,
-            "Q=", away_over15_quality
-        )
-
-        away_over15_signal = False
-        if (
-            away_score >= 64
-            and away_over15_probability >= 60
-            and expected_goals >= 2.50
-            and away_over15_quality >= 3
-        ):
-            signals.append((
-                "✈️ AWAY OVER 1.5",
-                confidence_from_score(away_over15_probability),
-                round(away_over15_probability, 1)
-            ))
-            away_over15_signal = True
+        # PREMATCH HOME/AWAY OVER 1.5 GOALS signals are intentionally disabled.
+        # This does not affect LIVE OVER 1.5 REMAINING GOALS or corner/card markets.
 
         # ---------------------------------------------------------
         # UNDER 2.5
@@ -9279,6 +9156,8 @@ def tipster_final_gate(market, probability, confidence, odd):
     min_p, min_c, min_o, max_o, min_edge = TIPSTER_RULES.get(
         key, (74.0, 80.0, 1.40, 3.00, 2.0)
     )
+    # Global PREMATCH minimum price requested: never display/send odds below 1.50.
+    min_o = max(min_o, 1.50)
     edge, ev = tipster_price_metrics(p, o)
 
     # PREMATCH integrity guard: only reject extreme model-vs-market gaps.
