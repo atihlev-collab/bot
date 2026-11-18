@@ -1342,10 +1342,10 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 76
-                and total_shots >= 9
+                best_pressure >= 74
+                and total_shots >= 8
                 and total_corners >= 4
-                and fh_corner_probability >= 66
+                and fh_corner_probability >= 65
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
@@ -1562,9 +1562,9 @@ def analyze_live_match(fixture):
         xg_or_stats_support = (
             (
                 xg_available
-                and home_xg >= 0.35
-                and away_xg >= 0.35
-                and (home_xg + away_xg) >= 1.4
+                and home_xg >= 0.30
+                and away_xg >= 0.30
+                and (home_xg + away_xg) >= 1.3
             )
             or
             (
@@ -1589,11 +1589,11 @@ def analyze_live_match(fixture):
         if (
             20 <= minute <= 60
             and both_teams_attacking
-            and home_pressure >= 48
-            and away_pressure >= 48
+            and home_pressure >= 47
+            and away_pressure >= 47
             and total_shots_on >= 5
             and total_shots >= 8
-            and remaining_probability >= 60
+            and remaining_probability >= 59
             and total <= 1
         ):
             return (
