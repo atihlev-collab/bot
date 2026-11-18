@@ -1469,8 +1469,8 @@ def analyze_live_match(fixture):
             fast_goal_probability = round(min(95, fast_goal_probability), 1)
 
             if (
-                best_pressure >= 72
-                and pressure_diff >= 22
+                best_pressure >= 70
+                and pressure_diff >= 20
                 and fast_goal_probability >= 68
             ):
                 if (
