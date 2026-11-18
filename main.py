@@ -1633,8 +1633,10 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # LATE GOAL
+        # LATE GOAL - QUALITY GATES
         # =========================================================
+        # Late-match accumulated stats alone are not enough. Require a
+        # stronger pressure/statistics profile, especially after minute 80.
         if 75 <= minute <= 88:
             late_goal_probability = 41
             late_goal_probability += max(0, best_pressure - 60) * 0.65
@@ -1644,30 +1646,79 @@ def analyze_live_match(fixture):
 
             if goal_diff <= 1:
                 late_goal_probability += 4
+            elif goal_diff == 2:
+                late_goal_probability -= 8
+            else:
+                late_goal_probability -= 15
 
-            late_goal_probability = round(min(95, late_goal_probability), 1)
+            late_goal_probability = round(max(0, min(95, late_goal_probability)), 1)
 
-            print("LATE GOAL CHECK:", minute, late_goal_probability)
+            # 75-79: moderate tightening; 80-88: high bar due to less time.
+            if minute <= 79:
+                late_min_probability = 70
+                late_min_pressure = 65
+                late_min_shots_on = 5
+                late_min_shots = 11
+                late_min_corners = 4
+                late_xg_threshold = 1.4
+                late_fallback_sot = 6
+                late_fallback_shots = 14
+                late_fallback_corners = 5
+            else:
+                late_min_probability = 80
+                late_min_pressure = 72
+                late_min_shots_on = 6
+                late_min_shots = 13
+                late_min_corners = 5
+                late_xg_threshold = 1.6
+                late_fallback_sot = 7
+                late_fallback_shots = 16
+                late_fallback_corners = 6
+
+            # A two-goal margin needs even clearer evidence. A margin of
+            # three or more is rejected for this market.
+            if goal_diff == 2:
+                late_min_probability += 8
+                late_min_pressure += 8
+                late_min_shots_on += 1
+                late_min_shots += 2
+                late_min_corners += 1
+
+            xg_or_strong_fallback = (
+                (
+                    xg_available
+                    and (home_xg + away_xg) >= late_xg_threshold
+                )
+                or
+                (
+                    not xg_available
+                    and total_shots_on >= late_fallback_sot
+                    and total_shots >= late_fallback_shots
+                    and total_corners >= late_fallback_corners
+                )
+            )
+
+            print(
+                "LATE GOAL QUALITY CHECK:",
+                minute,
+                "PROB=", late_goal_probability,
+                "MIN_PROB=", late_min_probability,
+                "PRESS=", best_pressure,
+                "SOT=", total_shots_on,
+                "SHOTS=", total_shots,
+                "CORNERS=", total_corners,
+                "GOAL_DIFF=", goal_diff,
+                "XG_OK=", xg_or_strong_fallback
+            )
 
             if (
-                best_pressure >= 54
-                and total_shots_on >= 4
-                and total_shots >= 9
-                and total_corners >= 4
-                and (
-                    (
-                        xg_available
-                        and (home_xg + away_xg) >= 1.2
-                    )
-                    or
-                    (
-                        not xg_available
-                        and total_shots_on >= 6
-                        and total_shots >= 12
-                        and total_corners >= 5
-                    )
-                )
-                and late_goal_probability >= 60
+                goal_diff < 3
+                and best_pressure >= late_min_pressure
+                and total_shots_on >= late_min_shots_on
+                and total_shots >= late_min_shots
+                and total_corners >= late_min_corners
+                and xg_or_strong_fallback
+                and late_goal_probability >= late_min_probability
             ):
                 return (
                     "🔥 LATE GOAL",
