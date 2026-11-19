@@ -1351,8 +1351,6 @@ def analyze_live_match(fixture):
             away_pressure
         )
 
-        if goal_diff <= 1:
-            card_probability += 2
         if home == away:
             card_probability += 1
         if minute >= 70:
@@ -1371,7 +1369,6 @@ def analyze_live_match(fixture):
             and card_probability >= 76
             and total_cards >= 3
             and total_fouls >= 21
-            and goal_diff <= 1
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
                 print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
