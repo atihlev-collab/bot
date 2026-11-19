@@ -1580,22 +1580,53 @@ def analyze_live_match(fixture):
             )
 
         # =========================================================
-        # OVER 1.5 NEXT CORNERS
+        # OVER 1.5 NEXT CORNERS — COMBINED TWO-TEAM ACTIVITY
         # =========================================================
+        total_attacks = max(0, extract(home_stats, "Attacks") or 0) + max(0, extract(away_stats, "Attacks") or 0)
+        total_dangerous_attacks = max(0, extract(home_stats, "Dangerous Attacks") or 0) + max(0, extract(away_stats, "Dangerous Attacks") or 0)
+        combined_pressure = (home_pressure + away_pressure) / 2.0
+
+        # Balanced score: both teams' pressure and match-wide attacking volume.
+        # The score is deliberately not based on the stronger team alone.
+        corner_activity_score = (
+            min(100.0, total_attacks / 1.4) * 0.25
+            + min(100.0, total_dangerous_attacks / 0.8) * 0.30
+            + min(100.0, total_shots / 0.30) * 0.20
+            + min(100.0, total_shots_on / 0.10) * 0.10
+            + min(100.0, total_corners / 0.12) * 0.05
+            + min(100.0, (home_pressure + away_pressure) / 1.6) * 0.10
+        )
+        home_corner_involved = (
+            home_total_shots >= 3 or home_shots_on >= 1
+            or home_corners >= 2 or extract(home_stats, "Dangerous Attacks") >= 10
+        )
+        away_corner_involved = (
+            away_total_shots >= 3 or away_shots_on >= 1
+            or away_corners >= 2 or extract(away_stats, "Dangerous Attacks") >= 10
+        )
+        both_teams_corner_involved = home_corner_involved and away_corner_involved
+
         corner_probability = 80
-        corner_probability += max(0, best_pressure - 60) * 0.55
+        corner_probability += max(0, combined_pressure - 55) * 0.55
         corner_probability += min(14, total_corners * 1.2)
         corner_probability += min(12, total_shots * 0.45)
         corner_probability += min(6, total_shots_on * 0.6)
         corner_probability = round(min(95, corner_probability), 1)
 
-        print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
+        print(
+            "CORNER CHECK:", minute, corner_probability,
+            "ACTIVITY_SCORE=", round(corner_activity_score, 1),
+            "ATTACKS=", total_attacks, "DANGEROUS=", total_dangerous_attacks,
+            "PRESSURE=", round(home_pressure, 1), round(away_pressure, 1),
+            "CORNERS=", total_corners, "SHOTS=", total_shots
+        )
 
         if (
             70 <= minute <= 80
             and total_corners >= 10
             and total_shots >= 22
-            and best_pressure >= 79
+            and corner_activity_score >= 67
+            and both_teams_corner_involved
             and corner_probability >= 79
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
@@ -1603,10 +1634,10 @@ def analyze_live_match(fixture):
             else:
                 return (
                     "🚩 OVER 1.5 NEXT CORNERS",
-                corner_probability,
-                minute,
-                corner_probability
-            )
+                    corner_probability,
+                    minute,
+                    corner_probability
+                )
 
         # =========================================================
         # LATE GOAL - QUALITY GATES
