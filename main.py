@@ -1584,7 +1584,8 @@ def analyze_live_match(fixture):
         # =========================================================
         total_attacks = max(0, extract(home_stats, "Attacks") or 0) + max(0, extract(away_stats, "Attacks") or 0)
         total_dangerous_attacks = max(0, extract(home_stats, "Dangerous Attacks") or 0) + max(0, extract(away_stats, "Dangerous Attacks") or 0)
-        combined_pressure = (home_pressure + away_pressure) / 2.0
+        # One dominant team may generate enough sustained activity on its own.
+        combined_pressure = max(home_pressure, away_pressure)
 
         # Balanced score: both teams' pressure and match-wide attacking volume.
         # The score is deliberately not based on the stronger team alone.
@@ -1594,17 +1595,9 @@ def analyze_live_match(fixture):
             + min(100.0, total_shots / 0.30) * 0.20
             + min(100.0, total_shots_on / 0.10) * 0.10
             + min(100.0, total_corners / 0.12) * 0.05
-            + min(100.0, (home_pressure + away_pressure) / 1.6) * 0.10
+            + min(100.0, max(home_pressure, away_pressure)) * 0.10
         )
-        home_corner_involved = (
-            home_total_shots >= 3 or home_shots_on >= 1
-            or home_corners >= 2 or (extract(home_stats, "Dangerous Attacks") or 0) >= 10
-        )
-        away_corner_involved = (
-            away_total_shots >= 3 or away_shots_on >= 1
-            or away_corners >= 2 or (extract(away_stats, "Dangerous Attacks") or 0) >= 10
-        )
-        both_teams_corner_involved = home_corner_involved and away_corner_involved
+        # No requirement for both teams to be active: one side can drive the corner pressure.
 
         corner_probability = 80
         corner_probability += max(0, combined_pressure - 55) * 0.55
@@ -1626,7 +1619,6 @@ def analyze_live_match(fixture):
             and total_corners >= 10
             and total_shots >= 22
             and corner_activity_score >= 67
-            and both_teams_corner_involved
             and corner_probability >= 79
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
