@@ -1330,7 +1330,7 @@ def analyze_live_match(fixture):
             if (
                 total_corners >= 4
                 and total_shots >= 4
-                and total_dangerous_fh >= 30
+                and total_dangerous_fh >= 20
                 and total_pressure_fh >= 16
                 and fh_corner_probability >= 75
             ):
