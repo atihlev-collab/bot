@@ -1367,8 +1367,8 @@ def analyze_live_match(fixture):
         if (
             70 <= minute <= 80
             and card_probability >= 76
-            and total_cards >= 3
-            and total_fouls >= 21
+            and total_cards >= 4
+            and total_fouls >= 23
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
                 print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
