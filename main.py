@@ -1570,57 +1570,41 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 REMAINING GOALS
         # =========================================================
+        # Match-wide LIVE OVER 1.5: no per-team activity requirements.
+        combined_goal_pressure = home_pressure + away_pressure
+        total_remaining_xg = home_xg + away_xg
+        xg_or_stats_support = (
+            total_remaining_xg >= 1.3
+            or (
+                total_remaining_xg <= 0
+                and total_shots_on >= 6
+                and total_shots >= 16
+                and total_corners >= 4
+            )
+        )
         remaining_probability = 45
-        remaining_probability += max(0, best_pressure - 55) * 0.55
+        remaining_probability += max(0, combined_goal_pressure - 70) * 0.30
         remaining_probability += min(15, total_shots_on * 1.4)
         remaining_probability += min(8, total_corners * 0.7)
-        remaining_probability += min(10, (home_xg + away_xg) * 2.2)
+        remaining_probability += min(10, total_remaining_xg * 2.2)
         if total >= 2:
             remaining_probability += 4
         remaining_probability = round(min(95, remaining_probability), 1)
 
         print(
             "OVER15 REMAINING CHECK:", minute, remaining_probability,
-            "HOME_ATTACK=", home_attack, "AWAY_ATTACK=", away_attack
-        )
-
-        # OVER 1.5 remaining goals requires both teams to be involved in
-        # attacking play; one-sided pressure is deliberately insufficient.
-        xg_or_stats_support = (
-            (
-                xg_available
-                and home_xg >= 0.30
-                and away_xg >= 0.30
-                and (home_xg + away_xg) >= 1.3
-            )
-            or
-            (
-                not xg_available
-                and home_shots_on >= 2
-                and away_shots_on >= 2
-                and total_shots >= 10
-                and total_corners >= 4
-            )
-        )
-
-        both_teams_attacking = (
-            home_attack
-            and away_attack
-            and home_shots_on >= 1
-            and away_shots_on >= 1
-            and home_total_shots >= 3
-            and away_total_shots >= 3
-            and xg_or_stats_support
+            "COMBINED_PRESSURE=", round(combined_goal_pressure, 1),
+            "TOTAL_SHOTS=", total_shots, "TOTAL_SOT=", total_shots_on,
+            "TOTAL_CORNERS=", total_corners, "TOTAL_XG=", round(total_remaining_xg, 2)
         )
 
         if (
             20 <= minute <= 60
-            and both_teams_attacking
-            and home_pressure >= 47
-            and away_pressure >= 47
+            and combined_goal_pressure >= 94
             and total_shots_on >= 5
-            and total_shots >= 8
-            and remaining_probability >= 59
+            and total_shots >= 12
+            and xg_or_stats_support
+            and remaining_probability >= 72
             and total <= 1
         ):
             return (
