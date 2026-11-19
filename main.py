@@ -1311,6 +1311,49 @@ def analyze_live_match(fixture):
         )
 
         # =========================================================
+        # UNDER 0.5 REMAINING GOALS — CURRENT MATCH SNAPSHOT
+        # Aggregate both teams; no rolling-history wait or odds filter.
+        # =========================================================
+        under_combined_pressure = (home_pressure + away_pressure) / 2.0
+        total_under_xg = home_xg + away_xg
+        under_quiet_probability = 94.0
+        under_quiet_probability -= under_combined_pressure * 0.18
+        under_quiet_probability -= total_shots * 0.30
+        under_quiet_probability -= total_shots_on * 1.10
+        under_quiet_probability -= total_corners * 0.35
+        under_quiet_probability -= total_under_xg * 3.0
+        under_quiet_probability = round(max(0.0, min(90.0, under_quiet_probability)), 1)
+
+        if (
+            70 <= minute <= 80
+            and total <= 5
+            and home_red == 0 and away_red == 0
+            and under_combined_pressure <= 45
+            and total_shots <= 16
+            and total_shots_on <= 5
+            and total_corners <= 9
+            and total_under_xg <= 1.6
+            and under_quiet_probability >= 78
+        ):
+            return (
+                "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
+                under_quiet_probability,
+                minute,
+                under_quiet_probability
+            )
+
+        print(
+            "LIVE UNDER 0.5 CHECK:", minute,
+            "P=", under_quiet_probability,
+            "COMBINED_PRESS=", round(under_combined_pressure, 1),
+            "SHOTS=", total_shots,
+            "SOT=", total_shots_on,
+            "CORNERS=", total_corners,
+            "XG=", round(total_under_xg, 2),
+            "RED=", home_red + away_red
+        )
+
+        # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
         if 32 <= minute <= 40:
