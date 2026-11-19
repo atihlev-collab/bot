@@ -1598,11 +1598,11 @@ def analyze_live_match(fixture):
         )
         home_corner_involved = (
             home_total_shots >= 3 or home_shots_on >= 1
-            or home_corners >= 2 or extract(home_stats, "Dangerous Attacks") >= 10
+            or home_corners >= 2 or (extract(home_stats, "Dangerous Attacks") or 0) >= 10
         )
         away_corner_involved = (
             away_total_shots >= 3 or away_shots_on >= 1
-            or away_corners >= 2 or extract(away_stats, "Dangerous Attacks") >= 10
+            or away_corners >= 2 or (extract(away_stats, "Dangerous Attacks") or 0) >= 10
         )
         both_teams_corner_involved = home_corner_involved and away_corner_involved
 
