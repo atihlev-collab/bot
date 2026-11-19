@@ -1313,18 +1313,26 @@ def analyze_live_match(fixture):
         # =========================================================
         # FIRST HALF OVER 1.5 CORNERS
         # =========================================================
-        if 29 <= minute <= 38:
+        if 32 <= minute <= 40:
             fh_corner_probability = 60
             fh_corner_probability += max(0, best_pressure - 65) * 0.8
             fh_corner_probability += min(10, total_shots * 0.5)
             fh_corner_probability += min(8, total_corners * 1.2)
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
+            total_dangerous_fh = extract(home_stats, 'Dangerous Attacks') + extract(away_stats, 'Dangerous Attacks')
+            total_attacks_fh = extract(home_stats, 'Attacks') + extract(away_stats, 'Attacks')
+            total_pressure_fh = max(
+                total_dangerous_fh,
+                total_attacks_fh * 0.30 + total_shots * 1.50
+                + total_shots_on * 3.00 + total_corners * 2.00,
+            )
 
             if (
-                best_pressure >= 74
-                and total_shots >= 8
-                and total_corners >= 4
-                and fh_corner_probability >= 65
+                total_corners >= 4
+                and total_shots >= 4
+                and total_dangerous_fh >= 30
+                and total_pressure_fh >= 16
+                and fh_corner_probability >= 75
             ):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
