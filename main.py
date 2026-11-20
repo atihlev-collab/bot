@@ -909,8 +909,29 @@ def get_upcoming_matches():
                     match["fixture"]["date"].replace("Z", "+00:00")
                 ).astimezone(TZ)
 
-                if window_start <= fixture_time < window_end:
+                # PREMATCH must contain only fixtures that have not started yet.
+                # Exclude finished, live, postponed and cancelled fixtures even if
+                # their kickoff falls inside the rolling 24-hour window.
+                fixture_status = (
+                    match.get("fixture", {})
+                    .get("status", {})
+                    .get("short", "")
+                )
+
+                if (
+                    window_start <= fixture_time < window_end
+                    and fixture_time > now
+                    and fixture_status in {"NS", "TBD"}
+                ):
                     matches.append(match)
+                else:
+                    print(
+                        "PREMATCH FIXTURE SKIPPED:",
+                        match.get("fixture", {}).get("id"),
+                        "kickoff=", fixture_time.isoformat(),
+                        "status=", fixture_status,
+                        "now=", now.isoformat()
+                    )
 
         except Exception as e:
             print("PREMATCH FIXTURE API ERROR:", date, repr(e))
