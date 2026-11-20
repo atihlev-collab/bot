@@ -1338,11 +1338,11 @@ def analyze_live_match(fixture, excluded_markets=None):
         ):
             if "⚽ UNDER 0.5 GOALS (NO MORE GOALS)" not in excluded_markets:
                 return (
-                "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
-                under_quiet_probability,
-                minute,
-                under_quiet_probability
-            )
+                    "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
+                    under_quiet_probability,
+                    minute,
+                    under_quiet_probability
+                )
 
         print(
             "LIVE UNDER 0.5 CHECK:", minute,
@@ -1384,11 +1384,11 @@ def analyze_live_match(fixture, excluded_markets=None):
                 else:
                     if "🚩 FIRST HALF OVER 1.5 CORNERS" not in excluded_markets:
                         return (
-                        "🚩 FIRST HALF OVER 1.5 CORNERS",
-                    fh_corner_probability,
-                    minute,
-                    fh_corner_probability
-                )
+                            "🚩 FIRST HALF OVER 1.5 CORNERS",
+                        fh_corner_probability,
+                        minute,
+                        fh_corner_probability
+                    )
 
         # =========================================================
         # OVER 1.5 NEXT CARDS
@@ -1429,11 +1429,11 @@ def analyze_live_match(fixture, excluded_markets=None):
             else:
                 if "🟨 OVER 1.5 NEXT CARDS" not in excluded_markets:
                     return (
-                    "🟨 OVER 1.5 NEXT CARDS",
-                card_probability,
-                minute,
-                card_probability
-            )
+                        "🟨 OVER 1.5 NEXT CARDS",
+                    card_probability,
+                    minute,
+                    card_probability
+                )
 
         # LIVE attacking profiles. A passive side must have very little
         # attacking output; pressure alone is not enough to call it passive.
@@ -1511,11 +1511,11 @@ def analyze_live_match(fixture, excluded_markets=None):
                 ):
                     if "🎯 NEXT GOAL HOME" not in excluded_markets:
                         return (
-                        "🎯 NEXT GOAL HOME",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
+                            "🎯 NEXT GOAL HOME",
+                            fast_goal_probability,
+                            minute,
+                            fast_goal_probability
+                        )
 
                 if (
                     away_dominant
@@ -1524,11 +1524,11 @@ def analyze_live_match(fixture, excluded_markets=None):
                 ):
                     if "🎯 NEXT GOAL AWAY" not in excluded_markets:
                         return (
-                        "🎯 NEXT GOAL AWAY",
-                        fast_goal_probability,
-                        minute,
-                        fast_goal_probability
-                    )
+                            "🎯 NEXT GOAL AWAY",
+                            fast_goal_probability,
+                            minute,
+                            fast_goal_probability
+                        )
 
         # =========================================================
         # NORMAL NEXT GOAL - 41 TO 78
@@ -1556,11 +1556,11 @@ def analyze_live_match(fixture, excluded_markets=None):
                 ):
                     if "🎯 NEXT GOAL HOME" not in excluded_markets:
                         return (
-                        "🎯 NEXT GOAL HOME",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
+                            "🎯 NEXT GOAL HOME",
+                            normal_goal_probability,
+                            minute,
+                            normal_goal_probability
+                        )
 
                 if (
                     away_dominant
@@ -1569,11 +1569,11 @@ def analyze_live_match(fixture, excluded_markets=None):
                 ):
                     if "🎯 NEXT GOAL AWAY" not in excluded_markets:
                         return (
-                        "🎯 NEXT GOAL AWAY",
-                        normal_goal_probability,
-                        minute,
-                        normal_goal_probability
-                    )
+                            "🎯 NEXT GOAL AWAY",
+                            normal_goal_probability,
+                            minute,
+                            normal_goal_probability
+                        )
 
         # =========================================================
         # OVER 1.5 REMAINING GOALS
@@ -1617,11 +1617,11 @@ def analyze_live_match(fixture, excluded_markets=None):
         ):
             if "🚀 OVER 1.5 REMAINING GOALS" not in excluded_markets:
                 return (
-                "🚀 OVER 1.5 REMAINING GOALS",
-                remaining_probability,
-                minute,
-                remaining_probability
-            )
+                    "🚀 OVER 1.5 REMAINING GOALS",
+                    remaining_probability,
+                    minute,
+                    remaining_probability
+                )
 
         # =========================================================
         # OVER 1.5 NEXT CORNERS — COMBINED TWO-TEAM ACTIVITY
@@ -1670,11 +1670,11 @@ def analyze_live_match(fixture, excluded_markets=None):
             else:
                 if "🚩 OVER 1.5 NEXT CORNERS" not in excluded_markets:
                     return (
-                    "🚩 OVER 1.5 NEXT CORNERS",
-                    corner_probability,
-                    minute,
-                    corner_probability
-                )
+                        "🚩 OVER 1.5 NEXT CORNERS",
+                        corner_probability,
+                        minute,
+                        corner_probability
+                    )
 
         # =========================================================
         # LATE GOAL - QUALITY GATES
@@ -1766,11 +1766,11 @@ def analyze_live_match(fixture, excluded_markets=None):
             ):
                 if "🔥 LATE GOAL" not in excluded_markets:
                     return (
-                    "🔥 LATE GOAL",
-                    late_goal_probability,
-                    minute,
-                    late_goal_probability
-                )
+                        "🔥 LATE GOAL",
+                        late_goal_probability,
+                        minute,
+                        late_goal_probability
+                    )
 
         return None
 
