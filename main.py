@@ -1172,8 +1172,9 @@ def calculate_card_pressure(
 # LIVE ANALYSIS
 # =========================================================
 
-def analyze_live_match(fixture):
+def analyze_live_match(fixture, excluded_markets=None):
     try:
+        excluded_markets = set(excluded_markets or [])
         fixture_id = fixture["fixture"]["id"]
         minute = fixture["fixture"]["status"].get("elapsed") or 0
 
@@ -1335,7 +1336,8 @@ def analyze_live_match(fixture):
             and total_under_xg <= 1.6
             and under_quiet_probability >= 78
         ):
-            return (
+            if "⚽ UNDER 0.5 GOALS (NO MORE GOALS)" not in excluded_markets:
+                return (
                 "⚽ UNDER 0.5 GOALS (NO MORE GOALS)",
                 under_quiet_probability,
                 minute,
@@ -1380,7 +1382,8 @@ def analyze_live_match(fixture):
                 if not betano_live_market_available(fixture_id, "FH_CORNERS"):
                     print("SKIP FH CORNERS - MARKET NOT AVAILABLE:", fixture_id)
                 else:
-                    return (
+                    if "🚩 FIRST HALF OVER 1.5 CORNERS" not in excluded_markets:
+                        return (
                         "🚩 FIRST HALF OVER 1.5 CORNERS",
                     fh_corner_probability,
                     minute,
@@ -1424,7 +1427,8 @@ def analyze_live_match(fixture):
             if not betano_live_market_available(fixture_id, "NEXT_CARDS"):
                 print("SKIP NEXT CARDS - MARKET NOT AVAILABLE:", fixture_id)
             else:
-                return (
+                if "🟨 OVER 1.5 NEXT CARDS" not in excluded_markets:
+                    return (
                     "🟨 OVER 1.5 NEXT CARDS",
                 card_probability,
                 minute,
@@ -1505,7 +1509,8 @@ def analyze_live_match(fixture):
                     and away_passive
                     and home_attack
                 ):
-                    return (
+                    if "🎯 NEXT GOAL HOME" not in excluded_markets:
+                        return (
                         "🎯 NEXT GOAL HOME",
                         fast_goal_probability,
                         minute,
@@ -1517,7 +1522,8 @@ def analyze_live_match(fixture):
                     and home_passive
                     and away_attack
                 ):
-                    return (
+                    if "🎯 NEXT GOAL AWAY" not in excluded_markets:
+                        return (
                         "🎯 NEXT GOAL AWAY",
                         fast_goal_probability,
                         minute,
@@ -1548,7 +1554,8 @@ def analyze_live_match(fixture):
                     and away_passive
                     and home_attack
                 ):
-                    return (
+                    if "🎯 NEXT GOAL HOME" not in excluded_markets:
+                        return (
                         "🎯 NEXT GOAL HOME",
                         normal_goal_probability,
                         minute,
@@ -1560,7 +1567,8 @@ def analyze_live_match(fixture):
                     and home_passive
                     and away_attack
                 ):
-                    return (
+                    if "🎯 NEXT GOAL AWAY" not in excluded_markets:
+                        return (
                         "🎯 NEXT GOAL AWAY",
                         normal_goal_probability,
                         minute,
@@ -1607,7 +1615,8 @@ def analyze_live_match(fixture):
             and remaining_probability >= 72
             and total <= 1
         ):
-            return (
+            if "🚀 OVER 1.5 REMAINING GOALS" not in excluded_markets:
+                return (
                 "🚀 OVER 1.5 REMAINING GOALS",
                 remaining_probability,
                 minute,
@@ -1652,14 +1661,15 @@ def analyze_live_match(fixture):
         if (
             70 <= minute <= 80
             and total_corners >= 10
-            and total_shots >= 22
-            and corner_activity_score >= 67
-            and corner_probability >= 79
+            and total_shots >= 20
+            and best_pressure >= 76
+            and corner_probability >= 78
         ):
             if not betano_live_market_available(fixture_id, "NEXT_CORNERS"):
                 print("SKIP NEXT CORNERS - MARKET NOT AVAILABLE:", fixture_id)
             else:
-                return (
+                if "🚩 OVER 1.5 NEXT CORNERS" not in excluded_markets:
+                    return (
                     "🚩 OVER 1.5 NEXT CORNERS",
                     corner_probability,
                     minute,
@@ -1754,7 +1764,8 @@ def analyze_live_match(fixture):
                 and xg_or_strong_fallback
                 and late_goal_probability >= late_min_probability
             ):
-                return (
+                if "🔥 LATE GOAL" not in excluded_markets:
+                    return (
                     "🔥 LATE GOAL",
                     late_goal_probability,
                     minute,
@@ -9627,17 +9638,24 @@ def live_loop():
 
     for match in matches:
 
+        fixture_id = match["fixture"]["id"]
+        home_goals = match["goals"]["home"] or 0
+        away_goals = match["goals"]["away"] or 0
+
+        sent_prefix = f"live_{fixture_id}_{home_goals}_{away_goals}_"
+        excluded_markets = {
+            key[len(sent_prefix):]
+            for key in sent_live
+            if key.startswith(sent_prefix)
+        }
+
         signal = analyze_live_match(
-            match
+            match,
+            excluded_markets=excluded_markets
         )
 
         if not signal:
             continue
-
-        fixture_id = match["fixture"]["id"]
-
-        home_goals = match["goals"]["home"] or 0
-        away_goals = match["goals"]["away"] or 0
 
         key = (
             f"live_{fixture_id}_"
@@ -9675,7 +9693,7 @@ def live_loop():
         # odds. Keep the existing odds display behavior for corner/card markets.
         goal_market = any(
             marker in signal[0]
-            for marker in ("NEXT GOAL", "REMAINING GOALS", "LATE GOAL")
+            for marker in ("NEXT GOAL", "REMAINING GOALS", "LATE GOAL", "UNDER 0.5")
         )
         match_odds = None if goal_market else get_match_odds(fixture_id)
 
