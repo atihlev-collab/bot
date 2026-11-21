@@ -1443,56 +1443,100 @@ def analyze_live_match(fixture):
         )
 
         # =========================================================
-        # UNDER 0.5 FIRST-HALF GOALS — 30 TO 35 MINUTES
-        # Strict static limits plus a quiet 2-minute dynamics window.
+        # UNDER 0.5 FIRST-HALF GOALS — STRICT HIGH-SELECTIVITY GATE
+        # 30-35 minutes only. Require both teams to be quiet, complete
+        # stats, and a confirmed cooling trend over the rolling window.
         # =========================================================
         fh_deltas = live_dynamics.get("deltas") or {}
         fh_window_minutes = float(live_dynamics.get("window_minutes") or 0.0)
         fh_total_xg = home_xg + away_xg
-        fh_under_probability = 92.0
-        fh_under_probability -= best_pressure * 0.12
-        fh_under_probability -= total_shots * 0.55
-        fh_under_probability -= total_shots_on * 1.50
-        fh_under_probability -= total_corners * 0.70
-        fh_under_probability -= fh_total_xg * 5.0
+        fh_under_probability = 96.0
+        fh_under_probability -= best_pressure * 0.16
+        fh_under_probability -= total_shots * 0.90
+        fh_under_probability -= total_shots_on * 2.20
+        fh_under_probability -= total_corners * 1.00
+        fh_under_probability -= fh_total_xg * 8.0
         fh_under_probability = round(
             max(0.0, min(82.0, fh_under_probability)), 1
         )
-        fh_stats_complete = all(
-            any(
+
+        def _fh_has_stat(team_stats, wanted):
+            return any(
                 str(item.get("type") or "").strip().lower() == wanted
                 and item.get("value") not in (None, "")
-                for item in (side.get("statistics") or [])
+                for item in (team_stats or {}).get("statistics", [])
                 if isinstance(item, dict)
             )
+
+        fh_stats_complete = all(
+            _fh_has_stat(side, wanted)
             for side in (home_stats, away_stats)
-            for wanted in ("total shots", "shots on goal")
+            for wanted in ("total shots", "shots on goal", "dangerous attacks")
         )
+
+        # Use team-by-team values as well as totals: low combined stats must
+        # not hide one side applying sustained pressure.
+        fh_max_team_pressure = max(home_pressure, away_pressure)
+        fh_max_team_shots = max(home_total_shots, away_total_shots)
+        fh_max_team_sot = max(home_shots_on, away_shots_on)
+        fh_max_team_corners = max(home_corners, away_corners)
+        fh_attack_index = float(live_dynamics.get("attack_index", 100) or 0.0)
+        fh_delta_shots = float(
+            fh_deltas.get("shots", 99)
+            if fh_deltas.get("shots") is not None else 99
+        )
+        fh_delta_sot = float(
+            fh_deltas.get("shots_on", 99)
+            if fh_deltas.get("shots_on") is not None else 99
+        )
+        fh_delta_dangerous = float(
+            fh_deltas.get("dangerous", 99)
+            if fh_deltas.get("dangerous") is not None else 99
+        )
+        fh_delta_xg = float(
+            fh_deltas.get("xg", 99)
+            if fh_deltas.get("xg") is not None else 99
+        )
+
         fh_under_gate_failed = (
             not (30 <= minute <= 35)
             or home_red > 0
             or away_red > 0
-            or total_shots > 4
-            or total_shots_on > 2
-            or total_corners > 2
-            or fh_total_xg > 0.85
-            or best_pressure > 50
+            # Very low combined attacking output.
+            or total_shots > 3
+            or total_shots_on > 1
+            or total_corners > 1
+            or fh_total_xg > 0.45
+            or best_pressure > 42
+            # Neither side may be individually active.
+            or fh_max_team_pressure > 42
+            or fh_max_team_shots > 2
+            or fh_max_team_sot > 1
+            or fh_max_team_corners > 1
+            # Probability and data-quality floor.
             or fh_under_probability < 80
             or not fh_stats_complete
+            # Require a real, quiet rolling window, not a one-off snapshot.
             or not live_dynamics.get("ready")
             or fh_window_minutes < 2.0
             or not live_dynamics.get("cooling")
-            or float(live_dynamics.get("attack_index", 100) or 0.0) > 8.0
-            or float(fh_deltas.get("shots", 99) if fh_deltas.get("shots") is not None else 99) > 1.0
-            or float(fh_deltas.get("shots_on", 99) if fh_deltas.get("shots_on") is not None else 99) > 0.0
-            or float(fh_deltas.get("dangerous", 99) if fh_deltas.get("dangerous") is not None else 99) >= 3.0
-            or float(fh_deltas.get("xg", 99) if fh_deltas.get("xg") is not None else 99) >= 0.02
+            or fh_attack_index > 5.0
+            or fh_delta_shots > 0.0
+            or fh_delta_sot > 0.0
+            or fh_delta_dangerous >= 2.0
+            or fh_delta_xg >= 0.01
         )
         print(
             f"LIVE FIRST-HALF UNDER 0.5 CHECK | fixture={fixture_id} | "
             f"minute={minute} | probability={fh_under_probability:.1f} | "
+            f"pressure_home_away={home_pressure:.1f}/{away_pressure:.1f} | "
+            f"shots_home_away={home_total_shots}/{away_total_shots} | "
+            f"sot_home_away={home_shots_on}/{away_shots_on} | "
+            f"xg={fh_total_xg:.2f} | corners={total_corners} | "
             f"window={fh_window_minutes:.1f} | ready={live_dynamics.get('ready')} | "
             f"cooling={live_dynamics.get('cooling')} | "
+            f"attack_index={fh_attack_index:.1f} | deltas={fh_deltas} | "
+            f"stats_complete={fh_stats_complete} | "
             f"gate_failed={fh_under_gate_failed}",
             flush=True,
         )
