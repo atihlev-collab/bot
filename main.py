@@ -1740,12 +1740,15 @@ def analyze_live_match(fixture):
                 and home_pressure - away_pressure >= 16
                 and home_shots_on >= away_shots_on + 1
             )
+            # NEXT GOAL AWAY was also identified by the user as a losing market.
+            # Tighten its direction gate and require the away side to lead in SOT.
             ng_away_gate = (
                 ng_common_gate
+                and ng_attack_index >= 48.0
                 and ng_away_direction
-                and away_pressure >= 58
-                and away_pressure - home_pressure >= 12
-                and away_shots_on >= away_shots_on + 1
+                and away_pressure >= 64
+                and away_pressure - home_pressure >= 18
+                and away_shots_on >= home_shots_on + 1
             )
 
             if ng_home_gate:
@@ -1798,22 +1801,37 @@ def analyze_live_match(fixture):
         # =========================================================
         # OVER 1.5 NEXT CORNERS
         # =========================================================
-        corner_probability = 79
-        corner_probability += max(0, best_pressure - 60) * 0.55
-        corner_probability += min(14, total_corners * 1.2)
-        corner_probability += min(12, total_shots * 0.45)
-        corner_probability += min(6, total_shots_on * 0.6)
+        corner_deltas = live_dynamics.get("deltas") or {}
+        recent_corner_delta = float(corner_deltas.get("corners") or 0.0)
+        corner_window = float(live_dynamics.get("window_minutes") or 0.0)
+        corner_pressure = float(live_dynamics.get("corner_pressure") or 0.0)
+        # Reduce the inflated cumulative-only score: require recent corner
+        # momentum as well as sustained match pressure and shot volume.
+        corner_probability = 68
+        corner_probability += max(0, best_pressure - 65) * 0.45
+        corner_probability += min(10, total_corners * 0.8)
+        corner_probability += min(8, total_shots * 0.30)
+        corner_probability += min(8, recent_corner_delta * 5.0)
+        corner_probability += min(6, corner_pressure * 0.08)
         corner_probability = round(min(95, corner_probability), 1)
 
-        print("CORNER CHECK:", minute, corner_probability, total_corners, total_shots)
+        print(
+            "CORNER CHECK:", minute, corner_probability, total_corners,
+            total_shots, "recent_corners=", recent_corner_delta,
+            "corner_pressure=", corner_pressure,
+            "window=", corner_window
+        )
 
         if (
-            70 <= minute <= 80
-            and total_corners >= 10
-            and total_corners <= 12
-            and total_shots >= 23
-            and best_pressure >= 80
-            and corner_probability >= 80
+            70 <= minute <= 78
+            and total_corners >= 11
+            and total_shots >= 25
+            and best_pressure >= 84
+            and live_dynamics.get("ready") is True
+            and corner_window >= 2.0
+            and recent_corner_delta >= 1.0
+            and corner_pressure >= 32.0
+            and corner_probability >= 82
         ):
             if betano_live_market_available(fixture_id, "NEXT_CORNERS") is True:
                 return (
