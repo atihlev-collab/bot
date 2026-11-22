@@ -1565,10 +1565,10 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 76
-                and total_shots >= 8
-                and total_corners >= 4
-                and fh_corner_probability >= 66
+                best_pressure >= 72
+                and total_shots >= 7
+                and total_corners >= 3
+                and fh_corner_probability >= 65
             ):
                 if betano_live_market_available(fixture_id, "FH_CORNERS") is True:
                     return (
@@ -1615,9 +1615,9 @@ def analyze_live_match(fixture):
 
         if (
             70 <= minute <= 80
-            and card_probability >= 82
-            and total_cards >= 5
-            and total_fouls >= 24
+            and card_probability >= 80
+            and total_cards >= 4
+            and total_fouls >= 22
             and goal_diff <= 2
         ):
             if betano_live_market_available(fixture_id, "NEXT_CARDS") is True:
@@ -1721,15 +1721,34 @@ def analyze_live_match(fixture):
                 away_pressure >= home_pressure + 10
                 and away_shots_on >= home_shots_on
             )
+            # Outcome review 21.11.2026: NEXT GOAL HOME was the weakest
+            # high-volume LIVE market, especially minutes 71-80. Require
+            # stronger recent attack and a clear directional advantage.
             ng_common_gate = (
                 ng_recent_ready
-                and ng_attack_index >= 35.0
-                and best_pressure >= 8
-                and total_shots_on >= 9
-                and normal_goal_probability >= 80
+                and ng_attack_index >= 42.0
+                and best_pressure >= 55
+                and total_shots_on >= 10
+                and total_shots >= 18
+                and normal_goal_probability >= 82
+                and not (goal_diff >= 2 and minute >= 70)
+            )
+            ng_home_gate = (
+                ng_common_gate
+                and ng_home_direction
+                and home_pressure >= 62
+                and home_pressure - away_pressure >= 16
+                and home_shots_on >= away_shots_on + 1
+            )
+            ng_away_gate = (
+                ng_common_gate
+                and ng_away_direction
+                and away_pressure >= 58
+                and away_pressure - home_pressure >= 12
+                and away_shots_on >= away_shots_on + 1
             )
 
-            if ng_common_gate and ng_home_direction:
+            if ng_home_gate:
                 return (
                     "🎯 NEXT GOAL HOME",
                     normal_goal_probability,
@@ -1737,7 +1756,7 @@ def analyze_live_match(fixture):
                     normal_goal_probability
                 )
 
-            if ng_common_gate and ng_away_direction:
+            if ng_away_gate:
                 return (
                     "🎯 NEXT GOAL AWAY",
                     normal_goal_probability,
@@ -1760,13 +1779,14 @@ def analyze_live_match(fixture):
         print("OVER15 REMAINING CHECK:", minute, remaining_probability)
 
         if (
-            25 <= minute <= 65
-            and best_pressure >= 72
-            and total_shots_on >= 7
-            and total_shots >= 14
-            and (home_xg + away_xg) >= 1.6
-            and remaining_probability >= 62
+            25 <= minute <= 60
+            and best_pressure >= 78
+            and total_shots_on >= 8
+            and total_shots >= 16
+            and (home_xg + away_xg) >= 1.8
+            and remaining_probability >= 68
             and total <= 1
+            and home_red == 0 and away_red == 0
         ):
             return (
                 "🚀 OVER 1.5 REMAINING GOALS",
@@ -1928,12 +1948,14 @@ def analyze_live_match(fixture):
             print("LATE GOAL CHECK:", minute, late_goal_probability)
 
             if (
-                best_pressure >= 72
-                and total_shots_on >= 15
-                and total_shots >= 25
-                and total_corners >= 7
-                and (home_xg + away_xg) >= 2.2
-                and late_goal_probability >= 72
+                best_pressure >= 78
+                and total_shots_on >= 17
+                and total_shots >= 28
+                and total_corners >= 8
+                and (home_xg + away_xg) >= 2.5
+                and late_goal_probability >= 82
+                and goal_diff <= 1
+                and home_red == 0 and away_red == 0
             ):
                 return (
                     "🔥 LATE GOAL",
