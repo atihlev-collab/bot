@@ -35,6 +35,7 @@ LIVE_BETS = {}
 TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_SCAN_INTERVAL = 60  # LIVE scan every minute, start-to-start
+MAX_LIVE_SIGNALS_PER_DAY = 5  # target: no more than five LIVE alerts per Sofia calendar day
 PREMATCH_SCAN_INTERVAL = 3600  # PREMATCH scan every hour
 
 bot = Bot(token=BOT_TOKEN)
@@ -136,6 +137,17 @@ def init_database():
 
     )
 
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS live_signal_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fixture_id INTEGER NOT NULL,
+        market TEXT NOT NULL,
+        signal_date TEXT NOT NULL,
+        sent_at TEXT NOT NULL,
+        UNIQUE(fixture_id, signal_date)
+    )
     """)
 
     conn.commit()
@@ -9892,121 +9904,65 @@ def prematch_loop():
 
 def live_loop():
 
+    now = datetime.now(TZ)
+    today = now.strftime("%Y-%m-%d")
+
+    conn = sqlite3.connect("v3_ai.db")
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT COUNT(*) FROM live_signal_log WHERE signal_date = ?",
+        (today,)
+    )
+    sent_today = int(cur.fetchone()[0] or 0)
+    cur.execute(
+        "SELECT fixture_id FROM live_signal_log WHERE signal_date = ?",
+        (today,)
+    )
+    already_sent_fixtures = {int(row[0]) for row in cur.fetchall()}
+    conn.close()
+
+    remaining = max(0, MAX_LIVE_SIGNALS_PER_DAY - sent_today)
+    if remaining <= 0:
+        print(
+            f"LIVE DAILY LIMIT REACHED: {sent_today}/{MAX_LIVE_SIGNALS_PER_DAY}",
+            flush=True
+        )
+        return
+
     matches = get_live_matches()
-
-    print(f"Live matches: {len(matches)}")
-
+    print(f"Live matches: {len(matches)} | daily slots left: {remaining}")
     print("LIVE SCAN START")
 
+    candidates = []
     for match in matches:
+        fixture_id = int(match["fixture"]["id"])
+        if fixture_id in already_sent_fixtures:
+            continue
 
-        signal = analyze_live_match(
-            match
-        )
-
+        signal = analyze_live_match(match)
         if not signal:
             continue
 
-        fixture_id = match["fixture"]["id"]
+        # Rank eligible signals; do not send every match that passes a basic gate.
+        confidence = float(signal[1] or 0)
+        probability = float(signal[3] or 0)
+        quality_score = (probability * 0.60) + (confidence * 0.40)
+        candidates.append((quality_score, probability, confidence, match, signal))
 
-        home_goals = match["goals"]["home"] or 0
-        away_goals = match["goals"]["away"] or 0
+    candidates.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
 
-        key = (
-            f"live_{fixture_id}_"
-            f"{home_goals}_{away_goals}_"
-            f"{signal[0]}"
-        )
-
-        if key in sent_live:
-            continue
-
-        sent_live[key] = time.time()
-
+    for quality_score, probability, confidence, match, signal in candidates[:remaining]:
+        fixture_id = int(match["fixture"]["id"])
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
-
-        home_goals = (
-            match["goals"]["home"] or 0
-        )
-
-        away_goals = (
-            match["goals"]["away"] or 0
-        )
-
+        country = match["league"]["country"]
+        league = match["league"]["name"]
         minute = signal[2]
+        home_goals = match["goals"]["home"] or 0
+        away_goals = match["goals"]["away"] or 0
+        market = str(signal[0])
 
-        goal_probability = signal[3]
-        
-        stats = get_statistics(
-            fixture_id
-        )
-
-        home_pressure = 0
-        away_pressure = 0
-
-        home_shots = 0
-        away_shots = 0 
-
-        home_corners = 0
-        away_corners = 0
-        
-        home_xg = 0            
-        away_xg = 0            
-
-        if len(stats) >= 2:
-
-            home_pressure = calculate_pressure(
-                stats[0]
-            )
-
-            away_pressure = calculate_pressure(
-                stats[1]
-            )
-
-
-            home_form = get_team_form(     
-                match["teams"]["home"]["id"],
-                venue="home"              
-            )                            
-
-            away_form = get_team_form(     
-                match["teams"]["away"]["id"],
-                venue="away"              
-            )                             
-
-            home_shots = extract(
-                stats[0],
-                "Shots on Goal"
-            )
-
-            away_shots = extract(
-                stats[1],
-                "Shots on Goal"
-            )
-
-            home_corners = extract(
-                stats[0],
-                "Corner Kicks"
-            )
-
-            away_corners = extract(
-                stats[1],
-                "Corner Kicks"
-            )           
-        
-        country = match["league"]["country"]      
-        league = match["league"]["name"]         
-
-        # LIVE recommendations are statistics-based; do not request Betano odds.
-        odds_text = "N/A (LIVE odds not used)"
-
-                                               
-
-        send_telegram(                            
-
-            f"""                                
-🔥 LIVE SIGNAL
+        message = f"""🔥 LIVE SIGNAL
 
 🏆 {home} vs {away}
 
@@ -10014,22 +9970,57 @@ def live_loop():
 🏟 {league}
 
 📊 Score:
-{match["goals"]["home"] or 0} - {match["goals"]["away"] or 0}
+{home_goals} - {away_goals}
 
 ⏱ Minute: {minute}
 
-🔥{signal[0]}🔥
+🔥{market}🔥
 
 💰 Odds:
-{odds_text}
+N/A (LIVE odds not used)
 
-💎 Confidence: {signal[1]}%
+💎 Confidence: {confidence}%
 
 🎯 Goal Probability:
-{goal_probability}%
+{probability}%
+
+⭐ Quality score: {quality_score:.1f}
 """
-)          
-         
+
+        sent_ok = send_telegram(message)
+        if not sent_ok:
+            continue
+
+        sent_at = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
+        conn = sqlite3.connect("v3_ai.db")
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                INSERT OR IGNORE INTO live_signal_log
+                (fixture_id, market, signal_date, sent_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (fixture_id, market, today, sent_at)
+            )
+            conn.commit()
+            if cur.rowcount == 1:
+                already_sent_fixtures.add(fixture_id)
+                sent_live[f"live_{fixture_id}_{today}"] = time.time()
+                print(
+                    "LIVE SIGNAL SENT:",
+                    home, "vs", away, market,
+                    f"quality={quality_score:.1f}",
+                    f"daily={sent_today + 1}/{MAX_LIVE_SIGNALS_PER_DAY}",
+                    flush=True
+                )
+                sent_today += 1
+        finally:
+            conn.close()
+
+        if sent_today >= MAX_LIVE_SIGNALS_PER_DAY:
+            break
+
 def _live_worker_loop():
     """Run LIVE independently on a fixed 60-second start-to-start cadence."""
     print(f"LIVE WORKER STARTED | interval={LIVE_SCAN_INTERVAL}s", flush=True)
