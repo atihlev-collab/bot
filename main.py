@@ -9972,6 +9972,18 @@ def live_loop():
     # No daily maximum: send every candidate that clears the quality gate.
     # The threshold becomes stricter after approximately five signals.
     for quality_score, probability, confidence, match, signal in candidates:
+        # Re-evaluate the soft-target threshold after each sent signal.
+        # This prevents a single scan from flooding the channel past ~5.
+        min_quality = 84.0 if sent_today < 5 else 92.0
+        min_probability = 82.0 if sent_today < 5 else 90.0
+        min_confidence = 80.0 if sent_today < 5 else 90.0
+        if (
+            quality_score < min_quality
+            or probability < min_probability
+            or confidence < min_confidence
+        ):
+            continue
+
         fixture_id = int(match["fixture"]["id"])
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
