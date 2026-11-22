@@ -35,7 +35,6 @@ LIVE_BETS = {}
 TZ = ZoneInfo("Europe/Sofia")
 
 LIVE_SCAN_INTERVAL = 60  # LIVE scan every minute, start-to-start
-MAX_LIVE_SIGNALS_PER_DAY = 5  # target: no more than five LIVE alerts per Sofia calendar day
 PREMATCH_SCAN_INTERVAL = 3600  # PREMATCH scan every hour
 
 bot = Bot(token=BOT_TOKEN)
@@ -9921,16 +9920,11 @@ def live_loop():
     already_sent_fixtures = {int(row[0]) for row in cur.fetchall()}
     conn.close()
 
-    remaining = max(0, MAX_LIVE_SIGNALS_PER_DAY - sent_today)
-    if remaining <= 0:
-        print(
-            f"LIVE DAILY LIMIT REACHED: {sent_today}/{MAX_LIVE_SIGNALS_PER_DAY}",
-            flush=True
-        )
-        return
-
     matches = get_live_matches()
-    print(f"Live matches: {len(matches)} | daily slots left: {remaining}")
+    print(
+        f"Live matches: {len(matches)} | signals sent today: {sent_today} "
+        f"| soft target: about 5 (no hard cap)"
+    )
     print("LIVE SCAN START")
 
     candidates = []
@@ -9943,15 +9937,41 @@ def live_loop():
         if not signal:
             continue
 
-        # Rank eligible signals; do not send every match that passes a basic gate.
         confidence = float(signal[1] or 0)
         probability = float(signal[3] or 0)
         quality_score = (probability * 0.60) + (confidence * 0.40)
+
+        # Natural quality selection: normal threshold before the daily target;
+        # after ~5 signals, only exceptional candidates are allowed through.
+        min_quality = 84.0 if sent_today < 5 else 92.0
+        min_probability = 82.0 if sent_today < 5 else 90.0
+        min_confidence = 80.0 if sent_today < 5 else 90.0
+
+        if (
+            quality_score < min_quality
+            or probability < min_probability
+            or confidence < min_confidence
+        ):
+            print(
+                "LIVE QUALITY REJECT:",
+                match["teams"]["home"]["name"],
+                "vs",
+                match["teams"]["away"]["name"],
+                signal[0],
+                f"quality={quality_score:.1f}",
+                f"probability={probability:.1f}",
+                f"confidence={confidence:.1f}",
+                f"required={min_quality:.1f}",
+            )
+            continue
+
         candidates.append((quality_score, probability, confidence, match, signal))
 
     candidates.sort(key=lambda item: (item[0], item[1], item[2]), reverse=True)
 
-    for quality_score, probability, confidence, match, signal in candidates[:remaining]:
+    # No daily maximum: send every candidate that clears the quality gate.
+    # The threshold becomes stricter after approximately five signals.
+    for quality_score, probability, confidence, match, signal in candidates:
         fixture_id = int(match["fixture"]["id"])
         home = match["teams"]["home"]["name"]
         away = match["teams"]["away"]["name"]
@@ -10007,19 +10027,16 @@ N/A (LIVE odds not used)
             if cur.rowcount == 1:
                 already_sent_fixtures.add(fixture_id)
                 sent_live[f"live_{fixture_id}_{today}"] = time.time()
+                sent_today += 1
                 print(
                     "LIVE SIGNAL SENT:",
                     home, "vs", away, market,
                     f"quality={quality_score:.1f}",
-                    f"daily={sent_today + 1}/{MAX_LIVE_SIGNALS_PER_DAY}",
+                    f"daily_count={sent_today}",
                     flush=True
                 )
-                sent_today += 1
         finally:
             conn.close()
-
-        if sent_today >= MAX_LIVE_SIGNALS_PER_DAY:
-            break
 
 def _live_worker_loop():
     """Run LIVE independently on a fixed 60-second start-to-start cadence."""
