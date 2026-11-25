@@ -1540,28 +1540,28 @@ def analyze_live_match(fixture):
             or home_red > 0
             or away_red > 0
             # Very low combined attacking output.
-            or total_shots > 3
+            or total_shots > 4
             or total_shots_on > 1
-            or total_corners > 1
-            or fh_total_xg > 0.45
-            or best_pressure > 42
+            or total_corners > 2
+            or fh_total_xg > 0.50
+            or best_pressure > 45
             # Neither side may be individually active.
-            or fh_max_team_pressure > 42
-            or fh_max_team_shots > 2
+            or fh_max_team_pressure > 45
+            or fh_max_team_shots > 3
             or fh_max_team_sot > 1
-            or fh_max_team_corners > 1
+            or fh_max_team_corners > 2
             # Probability and data-quality floor.
-            or fh_under_probability < 80
+            or fh_under_probability < 78
             or not fh_stats_complete
             # Require a real, quiet rolling window, not a one-off snapshot.
             or not live_dynamics.get("ready")
             or fh_window_minutes < 2.0
             or not live_dynamics.get("cooling")
-            or fh_attack_index > 5.0
-            or fh_delta_shots > 0.0
+            or fh_attack_index > 6.0
+            or fh_delta_shots > 1.0
             or fh_delta_sot > 0.0
-            or fh_delta_dangerous >= 2.0
-            or fh_delta_xg >= 0.01
+            or fh_delta_dangerous >= 3.0
+            or fh_delta_xg >= 0.02
         )
         print(
             f"LIVE FIRST-HALF UNDER 0.5 CHECK | fixture={fixture_id} | "
@@ -1707,9 +1707,9 @@ def analyze_live_match(fixture):
         if (
             20 <= minute <= 40
             and home_red == 0 and away_red == 0
-            and best_pressure >= 76 and total_shots >= 8
-            and total_shots_on >= 4 and fh_total_xg >= 0.95
-            and total_corners >= 3 and fh_goal_probability >= 78
+            and best_pressure >= 73 and total_shots >= 7
+            and total_shots_on >= 4 and fh_total_xg >= 0.85
+            and total_corners >= 2 and fh_goal_probability >= 76
             and fh_recent_activity and fh_stats_complete
         ):
             print(
@@ -1820,11 +1820,11 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 60
-            and best_pressure >= 78
-            and total_shots_on >= 8
-            and total_shots >= 16
-            and (home_xg + away_xg) >= 1.8
-            and remaining_probability >= 68
+            and best_pressure >= 75
+            and total_shots_on >= 7
+            and total_shots >= 15
+            and (home_xg + away_xg) >= 1.7
+            and remaining_probability >= 66
             and total <= 1
             and home_red == 0 and away_red == 0
         ):
@@ -1935,21 +1935,21 @@ def analyze_live_match(fixture):
 
         under_gate_failed = (
             not stats_complete
-            or under_probability < 83
+            or under_probability < 82
             or under_confidence < 72
             or under_risk > 35
-            or total_shots > 12
+            or total_shots > 13
             or total_shots_on > 4
             or total_corners > 7
-            or (home_xg + away_xg) > 1.3
+            or (home_xg + away_xg) > 1.4
             or not live_dynamics.get("ready")
             or float(live_dynamics.get("window_minutes") or 0.0) < 5.0
             or not live_dynamics.get("cooling")
-            or float(live_dynamics.get("attack_index", 100) or 0.0) > 6.0
+            or float(live_dynamics.get("attack_index", 100) or 0.0) > 7.0
             or float(dynamics_deltas.get("shots", 99) if dynamics_deltas.get("shots") is not None else 99) > 1.0
             or float(dynamics_deltas.get("shots_on", 99) if dynamics_deltas.get("shots_on") is not None else 99) > 0.0
-            or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 3.0
-            or float(dynamics_deltas.get("xg", 99) if dynamics_deltas.get("xg") is not None else 99) >= 0.02
+            or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 4.0
+            or float(dynamics_deltas.get("xg", 99) if dynamics_deltas.get("xg") is not None else 99) >= 0.03
             or minute < 75
             or minute > 88
         )
@@ -2004,11 +2004,11 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 78
-                and total_shots_on >= 17
-                and total_shots >= 28
-                and total_corners >= 8
-                and (home_xg + away_xg) >= 2.5
-                and late_goal_probability >= 82
+                and total_shots_on >= 16
+                and total_shots >= 27
+                and total_corners >= 7
+                and (home_xg + away_xg) >= 2.4
+                and late_goal_probability >= 81
                 and goal_diff <= 1
                 and home_red == 0 and away_red == 0
             ):
