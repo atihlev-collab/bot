@@ -9095,12 +9095,12 @@ def analyze_prematch_match(match):
 
         over_signal = False
         if (
-            over_prob >= 78
+            over_prob >= 74
             and over_conf >= 68
-            and expected_goals >= 3.50
-            and over_quality >= 5     
-            and home_form["avg_scored"] >= 1.40         
-            and away_form["avg_scored"] >= 1.20
+            and expected_goals >= 3.20
+            and over_quality >= 4
+            and home_form["avg_scored"] >= 1.30
+            and away_form["avg_scored"] >= 1.10
         ):
             signals.append((
                 "⚽ OVER 2.5",
@@ -9177,11 +9177,11 @@ def analyze_prematch_match(match):
         )
 
         if (
-            btts_prob >= 76
-            and btts_conf >= 72
-            and expected_goals >= 3.20
+            btts_prob >= 72
+            and btts_conf >= 70
+            and expected_goals >= 2.90
             and min(home_form["scored_pct"], away_form["scored_pct"]) >= 60
-            and btts_quality >= 4
+            and btts_quality >= 3.5
         ):
             signals.append((
                 "💎 BTTS",
@@ -9213,7 +9213,7 @@ def analyze_prematch_match(match):
         home_over15_quality = 0
         if home_over15_probability >= 62:
             home_over15_quality += 2
-        elif home_over15_probability >= 62:
+        elif home_over15_probability >= 58:
             home_over15_quality += 1
         if home_form["avg_scored"] >= 1.80:
             home_over15_quality += 1
@@ -9255,7 +9255,7 @@ def analyze_prematch_match(match):
         away_over15_quality = 0
         if away_over15_probability >= 62:
             away_over15_quality += 2
-        elif away_over15_probability >= 62:
+        elif away_over15_probability >= 58:
             away_over15_quality += 1
         if away_form["avg_scored"] >= 1.80:
             away_over15_quality += 1
@@ -9528,8 +9528,8 @@ TIPSTER_RULES = {
     # PREMATCH-only quality gate: stricter probability/confidence and price edge.
     "HOME WIN":      (76.0, 82.0, 1.35, 2.80, 4.0),
     "AWAY WIN":      (76.0, 82.0, 1.40, 3.20, 4.0),
-    "OVER 2.5":      (75.0, 80.0, 1.40, 2.50, 4.0),
-    "BTTS":          (75.0, 80.0, 1.40, 2.50, 4.0),
+    "OVER 2.5":      (74.0, 76.0, 1.40, 2.50, 3.0),
+    "BTTS":          (72.0, 76.0, 1.40, 2.50, 3.0),
     "UNDER 2.5":     (75.0, 80.0, 1.40, 2.60, 4.0),
     "HOME OVER 1.5": (75.0, 80.0, 1.35, 2.70, 4.0),
     "AWAY OVER 1.5": (75.0, 80.0, 1.40, 3.00, 4.0),
