@@ -969,16 +969,24 @@ def calculate_pressure(team):
 # =========================================================
 
 def get_upcoming_matches():
+    """Fetch not-yet-started fixtures in the next 24 hours (Sofia local time)."""
     matches = []
     now = datetime.now(TZ)
+    seen_fixture_ids = set()
+    upcoming_statuses = {"NS", "TBD"}
+
+    # Two calendar dates are needed because a 24-hour window can cross midnight.
     for i in range(2):
         date = (now + timedelta(days=i)).strftime("%Y-%m-%d")
         try:
             response = requests.get(
                 f"{BASE_URL}/fixtures",
                 headers=HEADERS,
-                params={"date": date},
-                timeout=20
+                params={
+                    "date": date,
+                    "timezone": "Europe/Sofia"
+                },
+                timeout=25
             )
             print("PREMATCH API HTTP:", date, response.status_code)
             response.raise_for_status()
@@ -988,13 +996,30 @@ def get_upcoming_matches():
                 print("PREMATCH API ERRORS:", date, errors)
             day_matches = data.get("response") or []
             print("PREMATCH API RESULTS:", date, len(day_matches))
+
             for match in day_matches:
+                fixture = match.get("fixture") or {}
+                status = str((fixture.get("status") or {}).get("short") or "").upper()
+                if status not in upcoming_statuses:
+                    continue
+
+                fixture_id = fixture.get("id")
+                if fixture_id is None or fixture_id in seen_fixture_ids:
+                    continue
+
+                fixture_date = fixture.get("date")
+                if not fixture_date:
+                    continue
+
                 fixture_time = datetime.fromisoformat(
-                    match["fixture"]["date"].replace("Z", "+00:00")
+                    fixture_date.replace("Z", "+00:00")
                 ).astimezone(TZ)
-                hours_left = (fixture_time - now).total_seconds() / 3600
-                if 0 <= hours_left <= 12:
+                minutes_left = (fixture_time - now).total_seconds() / 60
+
+                if 0 <= minutes_left <= 24 * 60:
                     matches.append(match)
+                    seen_fixture_ids.add(fixture_id)
+
         except requests.exceptions.RequestException as e:
             print("PREMATCH API REQUEST ERROR:", date, repr(e))
             if getattr(e, "response", None) is not None:
@@ -1003,8 +1028,9 @@ def get_upcoming_matches():
             print("PREMATCH API PARSE ERROR:", date, repr(e))
         except Exception as e:
             print("PREMATCH API UNEXPECTED ERROR:", date, repr(e))
+
     matches.sort(key=lambda x: x["fixture"]["date"])
-    print("PREMATCH MATCHES IN 12H WINDOW:", len(matches))
+    print("PREMATCH MATCHES IN NEXT 24H WINDOW:", len(matches))
     return matches
 
 
@@ -9431,7 +9457,7 @@ def send_prematch_signal(
 ):                                
 
     message = f"""               
-🔥 PREMATCH V3
+🔥 PREMATCH V4
 
 🏆 {home} vs {away}
 
