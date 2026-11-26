@@ -1536,7 +1536,7 @@ def analyze_live_match(fixture):
         )
 
         fh_under_gate_failed = (
-            not (30 <= minute <= 35)
+            not (29 <= minute <= 36)
             or home_red > 0
             or away_red > 0
             # Very low combined attacking output.
@@ -1551,7 +1551,7 @@ def analyze_live_match(fixture):
             or fh_max_team_sot > 1
             or fh_max_team_corners > 2
             # Probability and data-quality floor.
-            or fh_under_probability < 78
+            or fh_under_probability < 77
             or not fh_stats_complete
             # Require a real, quiet rolling window, not a one-off snapshot.
             or not live_dynamics.get("ready")
@@ -1602,10 +1602,10 @@ def analyze_live_match(fixture):
             fh_corner_probability = round(min(95, fh_corner_probability), 1)
 
             if (
-                best_pressure >= 72
+                best_pressure >= 70
                 and total_shots >= 7
                 and total_corners >= 3
-                and fh_corner_probability >= 65
+                and fh_corner_probability >= 64
             ):
                 if betano_live_market_available(fixture_id, "FH_CORNERS") is True:
                     return (
@@ -1652,9 +1652,9 @@ def analyze_live_match(fixture):
 
         if (
             70 <= minute <= 80
-            and card_probability >= 80
+            and card_probability >= 82
             and total_cards >= 4
-            and total_fouls >= 22
+            and total_fouls >= 23
             and goal_diff <= 2
         ):
             if betano_live_market_available(fixture_id, "NEXT_CARDS") is True:
@@ -1707,9 +1707,9 @@ def analyze_live_match(fixture):
         if (
             20 <= minute <= 40
             and home_red == 0 and away_red == 0
-            and best_pressure >= 73 and total_shots >= 7
-            and total_shots_on >= 4 and fh_total_xg >= 0.85
-            and total_corners >= 2 and fh_goal_probability >= 76
+            and best_pressure >= 72 and total_shots >= 7
+            and total_shots_on >= 4 and fh_total_xg >= 0.80
+            and total_corners >= 2 and fh_goal_probability >= 75
             and fh_recent_activity and fh_stats_complete
         ):
             print(
@@ -1773,8 +1773,8 @@ def analyze_live_match(fixture):
             ng_home_gate = (
                 ng_common_gate
                 and ng_home_direction
-                and home_pressure >= 62
-                and home_pressure - away_pressure >= 16
+                and home_pressure >= 61
+                and home_pressure - away_pressure >= 15
                 and home_shots_on >= away_shots_on + 1
             )
             # NEXT GOAL AWAY was also identified by the user as a losing market.
@@ -1820,11 +1820,11 @@ def analyze_live_match(fixture):
 
         if (
             25 <= minute <= 60
-            and best_pressure >= 75
+            and best_pressure >= 74
             and total_shots_on >= 7
-            and total_shots >= 15
-            and (home_xg + away_xg) >= 1.7
-            and remaining_probability >= 66
+            and total_shots >= 14
+            and (home_xg + away_xg) >= 1.6
+            and remaining_probability >= 65
             and total <= 1
             and home_red == 0 and away_red == 0
         ):
@@ -1861,14 +1861,14 @@ def analyze_live_match(fixture):
 
         if (
             70 <= minute <= 78
-            and total_corners >= 11
-            and total_shots >= 25
-            and best_pressure >= 84
+            and total_corners >= 10
+            and total_shots >= 24
+            and best_pressure >= 83
             and live_dynamics.get("ready") is True
             and corner_window >= 2.0
             and recent_corner_delta >= 1.0
-            and corner_pressure >= 32.0
-            and corner_probability >= 82
+            and corner_pressure >= 30.0
+            and corner_probability >= 81
         ):
             if betano_live_market_available(fixture_id, "NEXT_CORNERS") is True:
                 return (
@@ -1935,8 +1935,8 @@ def analyze_live_match(fixture):
 
         under_gate_failed = (
             not stats_complete
-            or under_probability < 82
-            or under_confidence < 72
+            or under_probability < 81
+            or under_confidence < 71
             or under_risk > 35
             or total_shots > 13
             or total_shots_on > 4
@@ -1945,7 +1945,7 @@ def analyze_live_match(fixture):
             or not live_dynamics.get("ready")
             or float(live_dynamics.get("window_minutes") or 0.0) < 5.0
             or not live_dynamics.get("cooling")
-            or float(live_dynamics.get("attack_index", 100) or 0.0) > 7.0
+            or float(live_dynamics.get("attack_index", 100) or 0.0) > 7.5
             or float(dynamics_deltas.get("shots", 99) if dynamics_deltas.get("shots") is not None else 99) > 1.0
             or float(dynamics_deltas.get("shots_on", 99) if dynamics_deltas.get("shots_on") is not None else 99) > 0.0
             or float(dynamics_deltas.get("dangerous", 99) if dynamics_deltas.get("dangerous") is not None else 99) >= 4.0
@@ -2004,11 +2004,11 @@ def analyze_live_match(fixture):
 
             if (
                 best_pressure >= 78
-                and total_shots_on >= 16
-                and total_shots >= 27
+                and total_shots_on >= 15
+                and total_shots >= 26
                 and total_corners >= 7
-                and (home_xg + away_xg) >= 2.4
-                and late_goal_probability >= 81
+                and (home_xg + away_xg) >= 2.3
+                and late_goal_probability >= 80
                 and goal_diff <= 1
                 and home_red == 0 and away_red == 0
             ):
